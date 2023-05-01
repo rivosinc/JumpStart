@@ -1,0 +1,45 @@
+# SPDX-FileCopyrightText: 2023 Rivos Inc.
+#
+# SPDX-License-Identifier: LicenseRef-Rivos-Internal-Only
+
+include:
+  # https://gitlab.ba.rivosinc.com/rv/group_gitlab_config/raw/rivos/main/ci_includes/pre-commit-lint.yml
+  - project: 'rv/group_gitlab_config'
+    ref: rivos/main
+    file: '/ci_includes/pre-commit-lint.yml'
+
+stages:
+  - prebuild
+  - build
+
+variables:
+  GIT_STRATEGY: clone
+  GIT_SUBMODULE_STRATEGY: recursive
+
+default:
+  before_script:
+    - module load rivos/init
+       # dont export it too early else gitlab own git commands fail
+    - export GIT_CONFIG_GLOBAL="${CI_PROJECT_DIR}/.cache/gitconfig"
+    - mkdir -p "$(dirname ${GIT_CONFIG_GLOBAL})"
+    - touch "${GIT_CONFIG_GLOBAL}"
+    - git config --global url."${CI_SERVER_PROTOCOL}://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}:${CI_SERVER_PORT}/".insteadOf "git@${CI_SERVER_HOST}:"
+  after_script:
+    - git config --global --unset-all url."${CI_SERVER_PROTOCOL}://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}:${CI_SERVER_PORT}/".insteadOf
+  tags: [shell]
+
+build-and-test:
+  stage: build
+  rules:
+    # run if MR or periodic to check if infra change breaks something
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" || $CI_PIPELINE_SOURCE == "schedule"
+  script:
+    - meson setup builddir --cross-file cross-file.txt --buildtype release
+    - echo "Building jumpstart"
+    - meson compile -C builddir
+    - echo "Testing jumpstart"
+    - meson test -C builddir
+  artifacts:
+    when: always
+    paths:
+      - builddir/meson-logs/testlog.txt
