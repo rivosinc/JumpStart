@@ -2,4 +2,6 @@
 //
 // SPDX-License-Identifier: LicenseRef-Rivos-Internal-Only
 
-void just_return(void);
+#include <inttypes.h>
+
+extern int get_hart_id(void);

@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: 2023 Rivos Inc.
+#
+# SPDX-License-Identifier: LicenseRef-Rivos-Internal-Only
+
+option('directed_diag_main_c',
+       type : 'string',
+       value : '',
+       description : 'C file containing directed diag main().')
+
+
+option('directed_diag_memory_map_yaml',
+       type : 'string',
+       value : '',
+       description : 'Memory map of the directed diag.')

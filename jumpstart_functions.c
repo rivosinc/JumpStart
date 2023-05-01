@@ -2,6 +2,4 @@
 //
 // SPDX-License-Identifier: LicenseRef-Rivos-Internal-Only
 
-#include "helper_functions.h"
-
-int main() { just_return(); }
+#include "jumpstart_functions.h"
