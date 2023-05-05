@@ -62,9 +62,11 @@ class PageTables:
         self.memory_map_file = memory_map_file
         with open(memory_map_file, "r") as f:
             self.memory_map = yaml.safe_load(f)
-            self.memory_map['mappings'] = sorted(self.memory_map['mappings'],
-                                                 key=lambda x: x['va'],
-                                                 reverse=False)
+            mappings = sorted(self.memory_map['mappings'],
+                              key=lambda x: x['va'],
+                              reverse=False)
+            self.memory_map[
+                'mappings'] = self.split_mappings_at_page_granularity(mappings)
             f.close()
 
         assert ('satp_mode' in self.memory_map)
@@ -76,6 +78,23 @@ class PageTables:
 
         self.sparse_memory = {}
         self.create_pagetables_in_memory()
+
+    def split_mappings_at_page_granularity(self, mappings):
+        split_mappings = []
+        for entry in mappings:
+            va = entry['va']
+            pa = entry['pa']
+            for i in range(entry['num_pages']):
+                new_entry = entry.copy()
+                new_entry['va'] = va
+                new_entry['pa'] = va
+                new_entry['num_pages'] = 1
+                split_mappings.append(new_entry)
+
+                va += entry['page_size']
+                pa += entry['page_size']
+
+        return split_mappings
 
     def get_attribute(self, attribute):
         if attribute in self.common_attributes:
@@ -113,8 +132,8 @@ class PageTables:
                 self.get_attribute('num_levels'))
 
         for entry in self.memory_map['mappings']:
-            # TODO: support mappings that cover multiple pages.
-            assert (entry['size'] == 0x1000)
+            # TODO: support superpages
+            assert (entry['page_size'] == 0x1000)
 
             log.debug(f"Generating PTEs for {entry}")
 
