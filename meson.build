@@ -16,7 +16,7 @@ prog_python = find_program('python3')
 
 memory_map_tools_script = meson.current_source_dir() + '/scripts/memory_map_tools.py'
 
-jumpstart_sources = files('jumpstart_functions.c', 'start.S')
+jumpstart_sources = files('jumpstart_functions.c', 'start.S', 'jumpstart_functions.S')
 jumpstart_includes = include_directories('.')
 
 directed_diag_main_c = get_option('directed_diag_main_c')

@@ -60,14 +60,6 @@ supervisor_mode_entry_point:
   nop
   ret
 
-.section .text
-
-.global get_hart_id
-get_hart_id:
-  # TODO: need to implement this but can't read mhartid in S-mode
-  li  a0, 0
-  ret
-
 .section .data
 
 .balign 8
