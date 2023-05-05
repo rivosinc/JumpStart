@@ -25,7 +25,9 @@ meson compile -C builddir
 
 ## Testing
 
-JumpStart tests have a `main.c` and a memory map YAML file. Tests are in the `tests/` directory
+Tests are in the [`tests/`](tests) directory.
+
+JumpStart tests have a `main.c` and a memory map YAML file.
 
 ```
 meson setup builddir --cross-file cross-file.txt --buildtype release
@@ -35,9 +37,9 @@ meson test -C builddir
 
 ## Page Table Generator
 
-`scripts/memory_map_tools.py` takes a YAML file that has the program layout in memory and generates an assembly file with the page tables and a linker script that is used to build the directed diag ELF.
+[`scripts/memory_map_tools.py`](scripts/memory_map_tools.py) takes a YAML file that has the program layout in memory and generates an assembly file with the page tables and a linker script that is used to build the directed diag ELF.
 
-Example: [`tests/test000.memory_map.yaml`](tests/test000.memory_map.yaml)
+Example memory layout YAML: [`tests/test000.memory_map.yaml`](tests/test000.memory_map.yaml)
 
 ```
 ❯ ./scripts/memory_map_tools.py --help
