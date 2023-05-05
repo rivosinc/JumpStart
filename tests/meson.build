@@ -3,7 +3,8 @@
 # SPDX-License-Identifier: LicenseRef-Rivos-Internal-Only
 
 jumpstart_tests = [
-  ['Jump to main and check hartID', 'test000'],
+  ['Jump to main and exit. SATP.mode = sv39', 'test000'],
+  ['Jump to main and exit. SATP.mode = sv48', 'test001'],
 ]
 
 spike = find_program('spike', required : true)
@@ -15,9 +16,9 @@ foreach jumpstart_test : jumpstart_tests
   memory_map_file = meson.current_source_dir() + '/' + test_name +'.memory_map.yaml'
 
   memory_map_tools_output = custom_target(
-                                'Generate memory map related source files for build',
+                                'Generate memory map build files for ' + test_name,
                                 input : [memory_map_tools_script, memory_map_file ],
-                                output : [test_name + '.pagetables.s',
+                                output : [test_name + '.pagetables.S',
                                           test_name + '.linker_script.ld'],
                                 command : [prog_python,
                                           '@INPUT0@',
@@ -34,7 +35,6 @@ foreach jumpstart_test : jumpstart_tests
   # TODO: Support getting the SATP mode from the memory map file
   test_exe = executable(test_name,
                         sources: [jumpstart_sources, test_sources],
-                        c_args : '-DSATP_MODE=8',
                         include_directories: jumpstart_includes,
                         link_args: ['-T' + linker_script, '-nostdlib'])
 

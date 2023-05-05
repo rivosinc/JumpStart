@@ -1,0 +1,49 @@
+# SPDX-FileCopyrightText: 2023 Rivos Inc.
+#
+# SPDX-License-Identifier: LicenseRef-Rivos-Internal-Only
+
+satp_mode: "sv48"
+
+pagetable_level_ranges:
+  -
+    start: 0x80004000
+    size: 0x1000
+  -
+    start: 0x80005000
+    size: 0x1000
+  -
+    start: 0x80006000
+    size: 0x1000
+  -
+    start: 0x80007000
+    size: 0x1000
+
+mappings:
+  -
+    va: 0x80000000
+    pa: 0x80000000
+    xwr: "0b101"
+    page_size: 0x1000
+    num_pages: 1
+    section: "text.init"
+  -
+    va: 0x80001000
+    pa: 0x80001000
+    xwr: "0b101"
+    page_size: 0x1000
+    num_pages: 1
+    section: "text"
+  -
+    va: 0x80002000
+    pa: 0x80002000
+    xwr: "0b011"
+    page_size: 0x1000
+    num_pages: 2
+    section: "data"
+  -
+    va: 0x80004000
+    pa: 0x80004000
+    xwr: "0b001"
+    page_size: 0x1000
+    num_pages: 4
+    section: "rodata.pagetables"

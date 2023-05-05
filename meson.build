@@ -26,7 +26,7 @@ if directed_diag_main_c != '' and directed_diag_memory_map_yaml != ''
   memory_map_tools_output = custom_target(
                                 'Generate memory map related source files for build',
                                 input : [memory_map_tools_script, directed_diag_memory_map_yaml ],
-                                output : ['pagetables.s',
+                                output : ['pagetables.S',
                                           'linker_script.ld'],
                                 command : [prog_python,
                                           '@INPUT0@',
@@ -43,7 +43,6 @@ if directed_diag_main_c != '' and directed_diag_memory_map_yaml != ''
   # TODO: Support getting the SATP mode from the memory map file
   directed_diag_exe = executable('directed_diag',
                         sources: [jumpstart_sources, directed_diag_sources],
-                        c_args : '-DSATP_MODE=8',
                         include_directories: jumpstart_includes,
                         link_args: ['-T' + linker_script, '-nostdlib'])
 endif

@@ -2,10 +2,6 @@
 #
 # SPDX-License-Identifier: LicenseRef-Rivos-Internal-Only
 
-#define PAGE_OFFSET 12
-
-#define SATP_MODE_LSB 60
-
 #define MSTATUS_SUPERVISOR_SWITCH 0x0000000a00000800
 
 .section .text.init
@@ -24,14 +20,7 @@ _start:
 	la t0, 1f
 	csrw mtvec, t0
 
-  la  t0, pagetables_start
-  srai  t0, t0, PAGE_OFFSET
-  li  t1, SATP_MODE
-  slli  t1, t1, SATP_MODE_LSB
-  add  t0, t0, t1
-
-  csrw  satp, t0
-  fence.i
+  jal enable_mmu_for_supervisor_mode
 
   la  t0, supervisor_mode_entry_point
   csrw  mepc, t0
