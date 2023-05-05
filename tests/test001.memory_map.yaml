@@ -4,20 +4,6 @@
 
 satp_mode: "sv48"
 
-pagetable_level_ranges:
-  -
-    start: 0x80004000
-    size: 0x1000
-  -
-    start: 0x80005000
-    size: 0x1000
-  -
-    start: 0x80006000
-    size: 0x1000
-  -
-    start: 0x80007000
-    size: 0x1000
-
 mappings:
   -
     va: 0x80000000
@@ -40,10 +26,3 @@ mappings:
     page_size: 0x1000
     num_pages: 2
     section: "data"
-  -
-    va: 0x80004000
-    pa: 0x80004000
-    xwr: "0b001"
-    page_size: 0x1000
-    num_pages: 4
-    section: "rodata.pagetables"

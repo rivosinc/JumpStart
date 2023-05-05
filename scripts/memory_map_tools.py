@@ -62,18 +62,50 @@ class PageTables:
         self.memory_map_file = memory_map_file
         with open(memory_map_file, "r") as f:
             self.memory_map = yaml.safe_load(f)
+
+            assert ('satp_mode' in self.memory_map)
+            assert (self.memory_map['satp_mode'] in self.mode_attributes)
+
             mappings = sorted(self.memory_map['mappings'],
                               key=lambda x: x['va'],
                               reverse=False)
+            mappings = self.add_pagetable_section_to_mappings(mappings)
             self.memory_map[
                 'mappings'] = self.split_mappings_at_page_granularity(mappings)
             f.close()
 
-        assert ('satp_mode' in self.memory_map)
-        assert (self.memory_map['satp_mode'] in self.mode_attributes)
-
         self.sparse_memory = {}
         self.create_pagetables_in_memory()
+
+    def add_pagetable_section_to_mappings(self, mappings):
+        # Add an additional mapping afger the last mapping for the pagetables
+        last_mapping = mappings[-1]
+        pagetable_mapping = {}
+        pagetable_mapping['va'] = last_mapping['va'] + (
+            last_mapping['page_size'] * last_mapping['num_pages'])
+        pagetable_mapping['pa'] = last_mapping['pa'] + (
+            last_mapping['page_size'] * last_mapping['num_pages'])
+        pagetable_mapping['xwr'] = "0b001"
+        pagetable_mapping['page_size'] = 1 << self.get_attribute('page_offset')
+        # TODO: this is the minimum number of page tables we need.
+        pagetable_mapping['num_pages'] = self.get_attribute('num_levels')
+        pagetable_mapping['section'] = 'rodata.pagetables'
+        mappings.append(pagetable_mapping)
+
+        # TODO: We expect that the pagetable area is num_levels pages long
+        # and that each level gets assiged a page. We'll need to change this if
+        # each level needs a different number of pages.
+        self.pagetable_level_ranges = []
+        assert (
+            pagetable_mapping['num_pages'] == self.get_attribute('num_levels'))
+        for i in range(self.get_attribute('num_levels')):
+            level_range = {}
+            level_range['start'] = pagetable_mapping['va'] + (
+                i * pagetable_mapping['page_size'])
+            level_range['size'] = pagetable_mapping['page_size']
+            self.pagetable_level_ranges.append(level_range)
+
+        return mappings
 
     def split_mappings_at_page_granularity(self, mappings):
         split_mappings = []
@@ -114,8 +146,8 @@ class PageTables:
         return None
 
     def create_pagetables_in_memory(self):
-        assert (len(self.memory_map['pagetable_level_ranges']) ==
-                self.get_attribute('num_levels'))
+        assert (len(
+            self.pagetable_level_ranges) == self.get_attribute('num_levels'))
 
         for entry in self.memory_map['mappings']:
             # TODO: support superpages
@@ -127,19 +159,19 @@ class PageTables:
             current_level = 0
 
             while i >= 0:
-                current_level_range_start = self.memory_map[
-                    'pagetable_level_ranges'][current_level]['start']
-                current_level_range_end = current_level_range_start + self.memory_map[
-                    'pagetable_level_ranges'][current_level]['size']
+                current_level_range_start = self.pagetable_level_ranges[
+                    current_level]['start']
+                current_level_range_end = current_level_range_start + self.pagetable_level_ranges[
+                    current_level]['size']
 
                 pte_value = place_bits(0, 1,
                                        self.common_attributes["valid_bit"])
 
                 if i > 0:
-                    next_level_range_start = self.memory_map[
-                        'pagetable_level_ranges'][current_level + 1]['start']
-                    next_level_range_end = next_level_range_start + self.memory_map[
-                        'pagetable_level_ranges'][current_level + 1]['size']
+                    next_level_range_start = self.pagetable_level_ranges[
+                        current_level + 1]['start']
+                    next_level_range_end = next_level_range_start + self.pagetable_level_ranges[
+                        current_level + 1]['size']
                     next_level_pa = next_level_range_start + extract_bits(
                         entry['va'],
                         self.get_attribute('vpn_bits')[
@@ -181,12 +213,11 @@ class PageTables:
         # Make sure that we have the first and last addresses set so that we
         # know the range of the page table memory when generating the
         # page table section in the assembly file.
-        sparse_memory_start = self.memory_map['pagetable_level_ranges'][0][
-            'start']
-        sparse_memory_end = self.memory_map['pagetable_level_ranges'][
-            len(self.memory_map['pagetable_level_ranges']) -
-            1]['start'] + self.memory_map['pagetable_level_ranges'][
-                len(self.memory_map['pagetable_level_ranges']) - 1]['size']
+        sparse_memory_start = self.pagetable_level_ranges[0]['start']
+        sparse_memory_end = self.pagetable_level_ranges[
+            len(self.pagetable_level_ranges) -
+            1]['start'] + self.pagetable_level_ranges[
+                len(self.pagetable_level_ranges) - 1]['size']
         if sparse_memory_start not in self.sparse_memory:
             self.sparse_memory[sparse_memory_start] = 0
         if sparse_memory_end not in self.sparse_memory:
@@ -286,7 +317,7 @@ class PageTables:
         )
 
         # Step 1
-        a = self.memory_map['pagetable_level_ranges'][0]['start']
+        a = self.pagetable_level_ranges[0]['start']
         i = self.get_attribute('num_levels') - 1
 
         current_level = 0
