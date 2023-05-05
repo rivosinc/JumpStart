@@ -23,6 +23,8 @@ meson setup builddir --cross-file cross-file.txt --buildtype release -Ddirected_
 meson compile -C builddir
 ```
 
+This will build `builddir/directed_diag`
+
 ## Testing
 
 Tests are in the [`tests/`](tests) directory.
