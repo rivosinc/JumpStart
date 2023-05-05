@@ -118,16 +118,6 @@ class PageTables:
         return None
 
     def create_pagetables_in_memory(self):
-        sparse_memory_start = self.memory_map['pagetable_level_ranges'][0][
-            'start']
-        sparse_memory_end = self.memory_map['pagetable_level_ranges'][
-            len(self.memory_map['pagetable_level_ranges']) -
-            1]['start'] + self.memory_map['pagetable_level_ranges'][
-                len(self.memory_map['pagetable_level_ranges']) - 1]['size']
-        self.sparse_memory[sparse_memory_start] = 0
-        self.sparse_memory[sparse_memory_end -
-                           self.get_attribute('pte_size_in_bytes')] = 0
-
         assert (len(self.memory_map['pagetable_level_ranges']) ==
                 self.get_attribute('num_levels'))
 
@@ -191,6 +181,21 @@ class PageTables:
 
                 i -= 1
                 current_level += 1
+
+        # Make sure that we have the first and last addresses set so that we
+        # know the range of the page table memory when generating the
+        # page table section in the assembly file.
+        sparse_memory_start = self.memory_map['pagetable_level_ranges'][0][
+            'start']
+        sparse_memory_end = self.memory_map['pagetable_level_ranges'][
+            len(self.memory_map['pagetable_level_ranges']) -
+            1]['start'] + self.memory_map['pagetable_level_ranges'][
+                len(self.memory_map['pagetable_level_ranges']) - 1]['size']
+        if sparse_memory_start not in self.sparse_memory:
+            self.sparse_memory[sparse_memory_start] = 0
+        if sparse_memory_end not in self.sparse_memory:
+            self.sparse_memory[sparse_memory_end -
+                               self.get_attribute('pte_size_in_bytes')] = 0
 
     def generate_linker_script(self, output_linker_script):
         with open(output_linker_script, 'w') as file:
