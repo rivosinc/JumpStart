@@ -40,16 +40,16 @@ class PageTables:
             "satp_mode_encoding": 8,
             "pte_size_in_bytes": 8,
             "num_levels": 3,
-            "vpn_bits": [(20, 12), (29, 21), (38, 30)],
-            "ppn_bits": [(20, 12), (29, 21), (55, 30)],
+            "va_vpn_bits": [(20, 12), (29, 21), (38, 30)],
+            "pa_ppn_bits": [(20, 12), (29, 21), (55, 30)],
             "pte_ppn_bits": [(18, 10), (27, 19), (53, 28)],
         },
         "sv48": {
             "satp_mode_encoding": 9,
             "pte_size_in_bytes": 8,
             "num_levels": 4,
-            "vpn_bits": [(20, 12), (29, 21), (38, 30), (47, 39)],
-            "ppn_bits": [(20, 12), (29, 21), (38, 30), (55, 39)],
+            "va_vpn_bits": [(20, 12), (29, 21), (38, 30), (47, 39)],
+            "pa_ppn_bits": [(20, 12), (29, 21), (38, 30), (55, 39)],
             "pte_ppn_bits": [(18, 10), (27, 19), (36, 28), (53, 37)],
         }
     }
@@ -174,7 +174,7 @@ class PageTables:
                         current_level + 1]['size']
                     next_level_pa = next_level_range_start + extract_bits(
                         entry['va'],
-                        self.get_attribute('vpn_bits')[
+                        self.get_attribute('va_vpn_bits')[
                             i - 1]) * self.get_attribute('pte_size_in_bytes')
 
                     assert (next_level_pa < next_level_range_end)
@@ -191,17 +191,17 @@ class PageTables:
 
                     next_level_pa = entry['pa']
 
-                for ppn_id in range(len(self.get_attribute('ppn_bits'))):
+                for ppn_id in range(len(self.get_attribute('pa_ppn_bits'))):
                     ppn_value = extract_bits(
                         next_level_pa,
-                        self.get_attribute('ppn_bits')[ppn_id])
+                        self.get_attribute('pa_ppn_bits')[ppn_id])
                     pte_value = place_bits(
                         pte_value, ppn_value,
                         self.get_attribute('pte_ppn_bits')[ppn_id])
 
                 pte_address = current_level_range_start + extract_bits(
                     entry['va'],
-                    self.get_attribute('vpn_bits')[i]) * self.get_attribute(
+                    self.get_attribute('va_vpn_bits')[i]) * self.get_attribute(
                         'pte_size_in_bytes')
                 assert (pte_address < current_level_range_end)
 
@@ -328,7 +328,7 @@ class PageTables:
             log.info(f"    a = {hex(a)}; i = {i}")
             pte_address = a + extract_bits(
                 va,
-                self.get_attribute('vpn_bits')[i]) * self.get_attribute(
+                self.get_attribute('va_vpn_bits')[i]) * self.get_attribute(
                     'pte_size_in_bytes')
             pte_value = self.get_sparse_memory_contents_at(pte_address)
             if pte_value == None:
@@ -355,7 +355,7 @@ class PageTables:
                     pte_value,
                     self.get_attribute('pte_ppn_bits')[ppn_id])
                 a = place_bits(a, ppn_value,
-                               self.get_attribute('ppn_bits')[ppn_id])
+                               self.get_attribute('pa_ppn_bits')[ppn_id])
 
             if (xwr & 0x6) or (xwr & 0x1):
                 log.info(f"    This is a Leaf PTE")
