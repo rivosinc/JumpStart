@@ -11,18 +11,11 @@ mappings:
     xwr: "0b101"
     page_size: 0x1000
     num_pages: 1
-    section: "text.init"
+    section: ".text"
   -
     va: 0x80001000
     pa: 0x80001000
-    xwr: "0b101"
-    page_size: 0x1000
-    num_pages: 1
-    section: "text"
-  -
-    va: 0x80002000
-    pa: 0x80002000
     xwr: "0b011"
     page_size: 0x1000
     num_pages: 2
-    section: "data"
+    section: ".data"

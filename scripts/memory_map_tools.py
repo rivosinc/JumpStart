@@ -89,7 +89,7 @@ class PageTables:
         pagetable_mapping['page_size'] = 1 << self.get_attribute('page_offset')
         # TODO: this is the minimum number of page tables we need.
         pagetable_mapping['num_pages'] = self.get_attribute('num_levels')
-        pagetable_mapping['section'] = 'rodata.pagetables'
+        pagetable_mapping['section'] = '.rodata.pagetables'
         mappings.append(pagetable_mapping)
 
         # TODO: We expect that the pagetable area is num_levels pages long
@@ -245,8 +245,10 @@ class PageTables:
                     continue
 
                 file.write(f"   . = {hex(entry['va'])};\n")
-                file.write(f"   .{entry['section']} : {{\n")
-                file.write(f"      *(.{entry['section']})\n")
+                file.write(f"   {entry['section']} : {{\n")
+                if entry['section'] == ".text":
+                    file.write(f"      *(.text.jumpstart.init)\n")
+                file.write(f"      *({entry['section']})\n")
                 file.write(f"   }}\n\n")
 
                 previous_section = entry['section']
