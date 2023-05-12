@@ -40,17 +40,17 @@ class PageTables:
             "satp_mode_encoding": 8,
             "pte_size_in_bytes": 8,
             "num_levels": 3,
-            "va_vpn_bits": [(20, 12), (29, 21), (38, 30)],
-            "pa_ppn_bits": [(20, 12), (29, 21), (55, 30)],
-            "pte_ppn_bits": [(18, 10), (27, 19), (53, 28)],
+            "va_vpn_bits": [(38, 30), (29, 21), (20, 12)],
+            "pa_ppn_bits": [(55, 30), (29, 21), (20, 12)],
+            "pte_ppn_bits": [(53, 28), (27, 19), (18, 10)],
         },
         "sv48": {
             "satp_mode_encoding": 9,
             "pte_size_in_bytes": 8,
             "num_levels": 4,
-            "va_vpn_bits": [(20, 12), (29, 21), (38, 30), (47, 39)],
-            "pa_ppn_bits": [(20, 12), (29, 21), (38, 30), (55, 39)],
-            "pte_ppn_bits": [(18, 10), (27, 19), (36, 28), (53, 37)],
+            "va_vpn_bits": [(47, 39), (38, 30), (29, 21), (20, 12)],
+            "pa_ppn_bits": [(55, 39), (38, 30), (29, 21), (20, 12)],
+            "pte_ppn_bits": [(53, 37), (36, 28), (27, 19), (18, 10)],
         }
     }
 
@@ -98,10 +98,10 @@ class PageTables:
         self.pagetable_level_ranges = []
         assert (
             pagetable_mapping['num_pages'] == self.get_attribute('num_levels'))
-        for i in range(self.get_attribute('num_levels')):
+        for current_level in range(self.get_attribute('num_levels')):
             level_range = {}
             level_range['start'] = pagetable_mapping['va'] + (
-                i * pagetable_mapping['page_size'])
+                current_level * pagetable_mapping['page_size'])
             level_range['size'] = pagetable_mapping['page_size']
             self.pagetable_level_ranges.append(level_range)
 
@@ -112,7 +112,7 @@ class PageTables:
         for entry in mappings:
             va = entry['va']
             pa = entry['pa']
-            for i in range(entry['num_pages']):
+            for _ in range(entry['num_pages']):
                 new_entry = entry.copy()
                 new_entry['va'] = va
                 new_entry['pa'] = va
@@ -155,10 +155,9 @@ class PageTables:
 
             log.debug(f"Generating PTEs for {entry}")
 
-            i = self.get_attribute('num_levels') - 1
             current_level = 0
 
-            while i >= 0:
+            while current_level < self.get_attribute('num_levels'):
                 current_level_range_start = self.pagetable_level_ranges[
                     current_level]['start']
                 current_level_range_end = current_level_range_start + self.pagetable_level_ranges[
@@ -167,15 +166,15 @@ class PageTables:
                 pte_value = place_bits(0, 1,
                                        self.common_attributes["valid_bit"])
 
-                if i > 0:
+                if current_level < (self.get_attribute('num_levels') - 1):
                     next_level_range_start = self.pagetable_level_ranges[
                         current_level + 1]['start']
                     next_level_range_end = next_level_range_start + self.pagetable_level_ranges[
                         current_level + 1]['size']
                     next_level_pa = next_level_range_start + extract_bits(
                         entry['va'],
-                        self.get_attribute('va_vpn_bits')[
-                            i - 1]) * self.get_attribute('pte_size_in_bytes')
+                        self.get_attribute('va_vpn_bits')[current_level]
+                    ) * self.get_attribute('pte_size_in_bytes')
 
                     assert (next_level_pa < next_level_range_end)
                 else:
@@ -201,13 +200,12 @@ class PageTables:
 
                 pte_address = current_level_range_start + extract_bits(
                     entry['va'],
-                    self.get_attribute('va_vpn_bits')[i]) * self.get_attribute(
-                        'pte_size_in_bytes')
+                    self.get_attribute('va_vpn_bits')
+                    [current_level]) * self.get_attribute('pte_size_in_bytes')
                 assert (pte_address < current_level_range_end)
 
                 self.update_sparse_memory(pte_address, pte_value)
 
-                i -= 1
                 current_level += 1
 
         # Make sure that we have the first and last addresses set so that we
@@ -320,18 +318,17 @@ class PageTables:
 
         # Step 1
         a = self.pagetable_level_ranges[0]['start']
-        i = self.get_attribute('num_levels') - 1
 
         current_level = 0
         pte_value = 0
 
         # Step 2
         while True:
-            log.info(f"    a = {hex(a)}; i = {i}")
+            log.info(f"    a = {hex(a)}; current_level = {current_level}")
             pte_address = a + extract_bits(
                 va,
-                self.get_attribute('va_vpn_bits')[i]) * self.get_attribute(
-                    'pte_size_in_bytes')
+                self.get_attribute('va_vpn_bits')
+                [current_level]) * self.get_attribute('pte_size_in_bytes')
             pte_value = self.get_sparse_memory_contents_at(pte_address)
             if pte_value == None:
                 log.error(f"Expected PTE at {hex(pte_address)} is not present")
@@ -372,9 +369,8 @@ class PageTables:
                     log.error(f"PTE has D=1 but is not a Leaf PTE")
                     sys.exit(1)
 
-            i -= 1
             current_level += 1
-            if i < 0:
+            if current_level >= len(self.pagetable_level_ranges):
                 log.error(f"Ran out of levels")
                 sys.exit(1)
             continue
