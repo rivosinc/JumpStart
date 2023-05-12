@@ -24,7 +24,40 @@ def place_bits(value, bits, bit_range):
     return (value & ~(((1 << (msb - lsb + 1)) - 1) << lsb)) | (bits << lsb)
 
 
+class PageTablePage:
+
+    def __init__(self, sparse_memory_address, va, level, size):
+        self.sparse_memory_address = sparse_memory_address
+        self.va = va
+        self.level = level
+        self.size = size
+
+    def __str__(self):
+        return f"PageTablePage: sparse_memory_address={hex(self.sparse_memory_address)}, va={hex(self.va)}, level={hex(self.level)}, size={hex(self.size)}"
+
+    def get_sparse_memory_address(self):
+        return self.sparse_memory_address
+
+    def get_va(self):
+        return self.va
+
+    def get_level(self):
+        return self.level
+
+    def get_size(self):
+        return self.size
+
+    def contains(self, va, level):
+        if level != self.level:
+            return False
+        if va >= self.va and va < (self.va + self.size):
+            return True
+        return False
+
+
 class PageTables:
+    max_num_PT_pages_for_allocation = 4
+
     common_attributes = {
         "page_offset": 12,
         "valid_bit": (0, 0),
@@ -66,46 +99,31 @@ class PageTables:
             assert ('satp_mode' in self.memory_map)
             assert (self.memory_map['satp_mode'] in self.mode_attributes)
 
-            mappings = sorted(self.memory_map['mappings'],
-                              key=lambda x: x['va'],
-                              reverse=False)
-            mappings = self.add_pagetable_section_to_mappings(mappings)
-            self.memory_map[
-                'mappings'] = self.split_mappings_at_page_granularity(mappings)
+            self.memory_map['mappings'] = sorted(self.memory_map['mappings'],
+                                                 key=lambda x: x['va'],
+                                                 reverse=False)
             f.close()
 
-        self.sparse_memory = {}
-        self.create_pagetables_in_memory()
+        self.create_pagetables()
 
     def add_pagetable_section_to_mappings(self, mappings):
         # Add an additional mapping afger the last mapping for the pagetables
-        last_mapping = mappings[-1]
+        updated_mappings = mappings.copy()
+        last_mapping = updated_mappings[-1]
         pagetable_mapping = {}
-        pagetable_mapping['va'] = last_mapping['va'] + (
+        self.PT_section_start_address = last_mapping['va'] + (
             last_mapping['page_size'] * last_mapping['num_pages'])
+        pagetable_mapping['va'] = self.PT_section_start_address
         pagetable_mapping['pa'] = last_mapping['pa'] + (
             last_mapping['page_size'] * last_mapping['num_pages'])
         pagetable_mapping['xwr'] = "0b001"
         pagetable_mapping['page_size'] = 1 << self.get_attribute('page_offset')
-        # TODO: this is the minimum number of page tables we need.
-        pagetable_mapping['num_pages'] = self.get_attribute('num_levels')
+        pagetable_mapping[
+            'num_pages'] = self.num_PT_pages_available_to_allocate
         pagetable_mapping['section'] = '.rodata.pagetables'
-        mappings.append(pagetable_mapping)
+        updated_mappings.append(pagetable_mapping)
 
-        # TODO: We expect that the pagetable area is num_levels pages long
-        # and that each level gets assiged a page. We'll need to change this if
-        # each level needs a different number of pages.
-        self.pagetable_level_ranges = []
-        assert (
-            pagetable_mapping['num_pages'] == self.get_attribute('num_levels'))
-        for current_level in range(self.get_attribute('num_levels')):
-            level_range = {}
-            level_range['start'] = pagetable_mapping['va'] + (
-                current_level * pagetable_mapping['page_size'])
-            level_range['size'] = pagetable_mapping['page_size']
-            self.pagetable_level_ranges.append(level_range)
-
-        return mappings
+        return updated_mappings
 
     def split_mappings_at_page_granularity(self, mappings):
         split_mappings = []
@@ -131,25 +149,59 @@ class PageTables:
                 in self.mode_attributes[self.memory_map['satp_mode']])
         return self.mode_attributes[self.memory_map['satp_mode']][attribute]
 
-    def update_sparse_memory(self, pte_address, pte_value):
-        if pte_address in self.sparse_memory:
-            assert (self.sparse_memory[pte_address] == pte_value)
-            log.debug(
-                f"[{hex(pte_address)}] = {hex(pte_value)} (already exists)")
+    def update_pte_region_sparse_memory(self, address, value):
+        if address in self.pte_region_sparse_memory:
+            assert (self.pte_region_sparse_memory[address] == value)
+            log.debug(f"[{hex(address)}] = {hex(value)} (already exists)")
         else:
-            self.sparse_memory[pte_address] = pte_value
-            log.debug(f"[{hex(pte_address)}] = {hex(pte_value)}")
+            self.pte_region_sparse_memory[address] = value
+            log.debug(f"[{hex(address)}] = {hex(value)}")
 
-    def get_sparse_memory_contents_at(self, address):
-        if address in self.sparse_memory:
-            return self.sparse_memory[address]
+    def get_pte_region_sparse_memory_contents_at(self, address):
+        if address in self.pte_region_sparse_memory:
+            return self.pte_region_sparse_memory[address]
         return None
 
-    def create_pagetables_in_memory(self):
-        assert (len(
-            self.pagetable_level_ranges) == self.get_attribute('num_levels'))
+    def get_PT_page(self, va, level):
+        log.debug(f"get_PT_page({hex(va)}, {level})")
+        # look for an existing pagetable page that contains the given VA
+        for page in self.PT_pages:
+            if page.contains(va, level):
+                log.debug(f"Found existing pagetable page {page}")
+                return page
 
-        for entry in self.memory_map['mappings']:
+        # else allocate a new page
+        log.debug(
+            f"Allocating new pagetable page for VA {hex(va)} at level {level}")
+
+        if len(self.PT_pages) == self.num_PT_pages_available_to_allocate:
+            # Can't create any more pagetable pages
+            return None
+
+        PT_page_size = 1 << self.get_attribute('page_offset')
+        va_msb = 63
+        va_lsb = self.get_attribute('va_vpn_bits')[level][0]
+        start_va = extract_bits(va, (va_msb, va_lsb)) << va_lsb
+        va_range = 1 << (self.get_attribute('va_vpn_bits')[level][0] + 1)
+        new_PT_page = PageTablePage(
+            self.PT_section_start_address + PT_page_size * len(self.PT_pages),
+            start_va, level, va_range)
+
+        log.debug(f"Allocated new pagetable page {new_PT_page}")
+
+        self.PT_pages.append(new_PT_page)
+
+        return new_PT_page
+
+    # Populates the sparse memory with the pagetable entries and returns the
+    # updated mappings with the pagetable section added.
+    # Returns None if there are insufficient number of pagetable pages
+    # allocate from.
+    def allocate_PT_mappings(self):
+        updated_mappings = self.add_pagetable_section_to_mappings(
+            self.memory_map['mappings'])
+
+        for entry in self.split_mappings_at_page_granularity(updated_mappings):
             # TODO: support superpages
             assert (entry['page_size'] == 0x1000)
 
@@ -158,19 +210,36 @@ class PageTables:
             current_level = 0
 
             while current_level < self.get_attribute('num_levels'):
-                current_level_range_start = self.pagetable_level_ranges[
-                    current_level]['start']
-                current_level_range_end = current_level_range_start + self.pagetable_level_ranges[
-                    current_level]['size']
+                current_level_PT_page = self.get_PT_page(
+                    entry['va'], current_level)
+                if (current_level_PT_page is None):
+                    log.debug(
+                        f"Insufficient pagetable pages to create level {current_level + 1} pagetable for {entry}"
+                    )
+                    return None
+
+                current_level_range_start = current_level_PT_page.get_sparse_memory_address(
+                )
+                current_level_range_end = current_level_range_start + (
+                    1 << self.get_attribute('page_offset'))
 
                 pte_value = place_bits(0, 1,
                                        self.common_attributes["valid_bit"])
 
                 if current_level < (self.get_attribute('num_levels') - 1):
-                    next_level_range_start = self.pagetable_level_ranges[
-                        current_level + 1]['start']
-                    next_level_range_end = next_level_range_start + self.pagetable_level_ranges[
-                        current_level + 1]['size']
+                    next_level_pagetable = self.get_PT_page(
+                        entry['va'], current_level + 1)
+                    if next_level_pagetable is None:
+                        log.debug(
+                            f"Insufficient pagetable pages to create next level {current_level + 1} pagetable for {entry}"
+                        )
+                        return None
+
+                    next_level_range_start = next_level_pagetable.get_sparse_memory_address(
+                    )
+                    next_level_range_end = next_level_range_start + (
+                        1 << self.get_attribute('page_offset'))
+
                     next_level_pa = next_level_range_start + extract_bits(
                         entry['va'],
                         self.get_attribute('va_vpn_bits')[current_level]
@@ -204,23 +273,59 @@ class PageTables:
                     [current_level]) * self.get_attribute('pte_size_in_bytes')
                 assert (pte_address < current_level_range_end)
 
-                self.update_sparse_memory(pte_address, pte_value)
+                self.update_pte_region_sparse_memory(pte_address, pte_value)
 
                 current_level += 1
+
+        return updated_mappings
+
+    def create_pagetables(self):
+        # this is the minimum number of page tables we need.
+        self.num_PT_pages_available_to_allocate = self.get_attribute(
+            'num_levels')
+
+        while True:
+            self.PT_section_start_address = None
+            self.PT_pages = []
+            self.pte_region_sparse_memory = {}
+
+            updated_mappings = self.allocate_PT_mappings()
+            if updated_mappings == None:
+                if self.num_PT_pages_available_to_allocate >= self.max_num_PT_pages_for_allocation:
+                    log.error(
+                        f"Hit max number of PT pages ({self.max_num_PT_pages_for_allocation}) available to create pagetables"
+                    )
+                    sys.exit(1)
+
+                self.num_PT_pages_available_to_allocate += 1
+                log.debug(
+                    f"Increasing the number of pagetable pages to {self.num_PT_pages_available_to_allocate} and retrying PT allocation."
+                )
+                continue
+
+            break
+
+        # Update the existing mappings as we've added new mappings
+        # for the page table region.
+        self.memory_map['mappings'] = updated_mappings
 
         # Make sure that we have the first and last addresses set so that we
         # know the range of the page table memory when generating the
         # page table section in the assembly file.
-        sparse_memory_start = self.pagetable_level_ranges[0]['start']
-        sparse_memory_end = self.pagetable_level_ranges[
-            len(self.pagetable_level_ranges) -
-            1]['start'] + self.pagetable_level_ranges[
-                len(self.pagetable_level_ranges) - 1]['size']
-        if sparse_memory_start not in self.sparse_memory:
-            self.sparse_memory[sparse_memory_start] = 0
-        if sparse_memory_end not in self.sparse_memory:
-            self.sparse_memory[sparse_memory_end -
-                               self.get_attribute('pte_size_in_bytes')] = 0
+        assert (self.PT_section_start_address ==
+                self.PT_pages[0].get_sparse_memory_address())
+        pte_region_sparse_memory_start = self.PT_pages[
+            0].get_sparse_memory_address()
+        PT_page_size = 1 << self.get_attribute('page_offset')
+        pte_region_sparse_memory_end = self.PT_pages[
+            len(self.PT_pages) - 1].get_sparse_memory_address() + PT_page_size
+
+        if pte_region_sparse_memory_start not in self.pte_region_sparse_memory:
+            self.pte_region_sparse_memory[pte_region_sparse_memory_start] = 0
+        if pte_region_sparse_memory_end not in self.pte_region_sparse_memory:
+            self.pte_region_sparse_memory[
+                pte_region_sparse_memory_end -
+                self.get_attribute('pte_size_in_bytes')] = 0
 
     def generate_linker_script(self, output_linker_script):
         with open(output_linker_script, 'w') as file:
@@ -255,7 +360,7 @@ class PageTables:
             file.close()
 
     def generate_assembly_file(self, output_assembly_file):
-        pagetables_start_label = "pagetables_start"
+        pt_start_label = "pagetables_start"
 
         with open(output_assembly_file, 'w') as file:
             file.write(
@@ -274,7 +379,7 @@ class PageTables:
             )
             file.write(".global enable_mmu_for_supervisor_mode\n")
             file.write("enable_mmu_for_supervisor_mode:\n\n")
-            file.write(f"   la t0, {pagetables_start_label}\n")
+            file.write(f"   la t0, {pt_start_label}\n")
             file.write(f"   srai  t0, t0, PAGE_OFFSET\n")
             file.write(f"   li   t1, SATP_MODE_ENCODING\n")
             file.write(f"   slli  t1, t1, SATP_MODE_LSB\n")
@@ -284,11 +389,11 @@ class PageTables:
             file.write(f"   ret\n\n\n")
 
             file.write(".section .rodata.pagetables\n\n")
-            file.write(f".global {pagetables_start_label}\n")
-            file.write(f"{pagetables_start_label}:\n\n")
+            file.write(f".global {pt_start_label}\n")
+            file.write(f"{pt_start_label}:\n\n")
 
             pagetable_filled_memory_addresses = list(
-                sorted(self.sparse_memory.keys()))
+                sorted(self.pte_region_sparse_memory.keys()))
 
             pte_size_in_bytes = self.mode_attributes[
                 self.memory_map['satp_mode']]['pte_size_in_bytes']
@@ -300,11 +405,11 @@ class PageTables:
                         f".skip {hex(address - (last_filled_address + pte_size_in_bytes))}\n"
                     )
                 log.debug(
-                    f"Writing [{hex(address)}] = {hex(self.sparse_memory[address])}"
+                    f"Writing [{hex(address)}] = {hex(self.pte_region_sparse_memory[address])}"
                 )
                 file.write(f"\n# [{hex(address)}]\n")
                 file.write(
-                    f".{pte_size_in_bytes}byte {hex(self.sparse_memory[address])}\n"
+                    f".{pte_size_in_bytes}byte {hex(self.pte_region_sparse_memory[address])}\n"
                 )
 
                 last_filled_address = address
@@ -317,7 +422,9 @@ class PageTables:
         )
 
         # Step 1
-        a = self.pagetable_level_ranges[0]['start']
+        assert (self.PT_section_start_address ==
+                self.PT_pages[0].get_sparse_memory_address())
+        a = self.PT_pages[0].get_sparse_memory_address()
 
         current_level = 0
         pte_value = 0
@@ -329,7 +436,8 @@ class PageTables:
                 va,
                 self.get_attribute('va_vpn_bits')
                 [current_level]) * self.get_attribute('pte_size_in_bytes')
-            pte_value = self.get_sparse_memory_contents_at(pte_address)
+            pte_value = self.get_pte_region_sparse_memory_contents_at(
+                pte_address)
             if pte_value == None:
                 log.error(f"Expected PTE at {hex(pte_address)} is not present")
                 sys.exit(1)
@@ -370,7 +478,7 @@ class PageTables:
                     sys.exit(1)
 
             current_level += 1
-            if current_level >= len(self.pagetable_level_ranges):
+            if current_level >= self.get_attribute('num_levels'):
                 log.error(f"Ran out of levels")
                 sys.exit(1)
             continue

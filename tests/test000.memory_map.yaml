@@ -6,6 +6,13 @@ satp_mode: "sv39"
 
 mappings:
   -
+    va: 0x7f800000
+    pa: 0x7f800000
+    xwr: "0b101"
+    page_size: 0x1000
+    num_pages: 1
+    section: ".preamble"
+  -
     va: 0x80000000
     pa: 0x80000000
     xwr: "0b101"
