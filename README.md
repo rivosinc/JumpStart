@@ -25,7 +25,7 @@ meson compile -C builddir
 
 This will build `builddir/directed_diag`
 
-## Testing
+## Testing JumpStart
 
 Tests are in the [`tests/`](tests) directory.
 

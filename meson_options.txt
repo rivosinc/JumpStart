@@ -12,3 +12,8 @@ option('directed_diag_memory_map_yaml',
        type : 'string',
        value : '',
        description : 'Memory map of the directed diag.')
+
+option('data_structures_yaml',
+       type : 'string',
+       value : 'jumpstart_data_structures.yaml',
+       description : 'YAML containing details of the JumpStart data structures and defines to generate.')

@@ -3,8 +3,8 @@
 # SPDX-License-Identifier: LicenseRef-Rivos-Internal-Only
 
 jumpstart_tests = [
-  ['Jump to main and exit. SATP.mode = sv39', 'test000'],
-  ['Jump to main and exit. SATP.mode = sv48', 'test001'],
+  ['Jump to main, enable MMU, switch to supervisor mode and exit. SATP.mode = sv39', 'test000'],
+  ['Jump to main, enable MMU, switch to supervisor mode and exit. SATP.mode = sv48', 'test001'],
 ]
 
 spike = find_program('spike', required : true)
@@ -32,7 +32,6 @@ foreach jumpstart_test : jumpstart_tests
 
   test_sources = [pagetable_s, test_name + '.main.c']
 
-  # TODO: Support getting the SATP mode from the memory map file
   test_exe = executable(test_name,
                         sources: [jumpstart_sources, test_sources],
                         include_directories: jumpstart_includes,

@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: 2023 Rivos Inc.
+#
+# SPDX-License-Identifier: LicenseRef-Rivos-Internal-Only
+
+thread_attributes:
+  fields_and_sizes:
+    hart_id: 1
+    current_mode: 1
+    bookend_magic_number: 8
+  bookend_magic_number_value: 0x3317150533171505
+
+# Matches the MSTATUS.MPP encodings
+defines:
+  MSTATUS_MPP_USER_MODE: 0
+  MSTATUS_MPP_SUPERVISOR_MODE: 1
+  MSTATUS_MPP_HYPERVISOR_MODE: 2
+  MSTATUS_MPP_MACHINE_MODE: 3
+  SATP_MODE_SV39: 8
+  SATP_MODE_SV48: 9

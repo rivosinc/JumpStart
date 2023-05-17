@@ -70,7 +70,7 @@ class PageTables:
 
     mode_attributes = {
         "sv39": {
-            "satp_mode_encoding": 8,
+            "satp_mode": 8,
             "pte_size_in_bytes": 8,
             "num_levels": 3,
             "va_vpn_bits": [(38, 30), (29, 21), (20, 12)],
@@ -78,7 +78,7 @@ class PageTables:
             "pte_ppn_bits": [(53, 28), (27, 19), (18, 10)],
         },
         "sv48": {
-            "satp_mode_encoding": 9,
+            "satp_mode": 9,
             "pte_size_in_bytes": 8,
             "num_levels": 4,
             "va_vpn_bits": [(47, 39), (38, 30), (29, 21), (20, 12)],
@@ -372,20 +372,29 @@ class PageTables:
             file.write(
                 f"#define PAGE_OFFSET {self.get_attribute('page_offset')}\n")
             file.write(
-                f"#define SATP_MODE_ENCODING {self.get_attribute('satp_mode_encoding')}\n"
-            )
+                f"#define SATP_MODE {self.get_attribute('satp_mode')}\n")
             file.write(
                 f"#define SATP_MODE_LSB {self.get_attribute('satp_mode_lsb')}\n\n"
             )
-            file.write(".global enable_mmu_for_supervisor_mode\n")
-            file.write("enable_mmu_for_supervisor_mode:\n\n")
-            file.write(f"   la t0, {pt_start_label}\n")
-            file.write(f"   srai  t0, t0, PAGE_OFFSET\n")
-            file.write(f"   li   t1, SATP_MODE_ENCODING\n")
-            file.write(f"   slli  t1, t1, SATP_MODE_LSB\n")
-            file.write(f"   add  t0, t0, t1\n")
-            file.write(f"   csrw  satp, t0\n")
-            file.write(f"   fence.i\n")
+            file.write(".global get_diag_satp_ppn\n")
+            file.write("get_diag_satp_ppn:\n\n")
+            file.write(f"   la a0, {pt_start_label}\n")
+            file.write(f"   srai a0, a0, PAGE_OFFSET\n")
+            file.write(f"   ret\n\n\n")
+
+            file.write(".global get_page_offset\n")
+            file.write("get_page_offset:\n\n")
+            file.write(f"   li   a0, PAGE_OFFSET\n")
+            file.write(f"   ret\n\n\n")
+
+            file.write(".global get_diag_satp_mode_lsb\n")
+            file.write("get_diag_satp_mode_lsb:\n\n")
+            file.write(f"   li   a0, SATP_MODE_LSB\n")
+            file.write(f"   ret\n\n\n")
+
+            file.write(".global get_diag_satp_mode\n")
+            file.write("get_diag_satp_mode:\n\n")
+            file.write(f"   li   a0, SATP_MODE\n")
             file.write(f"   ret\n\n\n")
 
             file.write(".section .rodata.pagetables\n\n")

@@ -2,31 +2,27 @@
 #
 # SPDX-License-Identifier: LicenseRef-Rivos-Internal-Only
 
-.section .text.init
+#include "jumpstart_defines.h"
+
+.section .text.jumpstart.init
 
 .global _start
 _start:
-  nop
-  nop
-  nop
-  nop
-  nop
-  nop
-  nop
-  nop
-
 	la t0, 1f
 	csrw mtvec, t0
 
-  jal enable_mmu_for_supervisor_mode
-  jal jump_to_supervisor_mode
-
   la  sp, stack
+  mv  fp, sp
+
+  jal setup_thread_attributes
+
   jal main
 
   li t0, 1
   beqz a0, 1f
 
+.global jumpstart_fail
+jumpstart_fail:
   /* if t0 is not 1, spike run with --pass-fail will exit with
   non zero error code */
   li t0, 0
@@ -40,6 +36,11 @@ _start:
   ret
 
 .section .data
+
+.global thread_attributes_region
+thread_attributes_region:
+.4byte 0xcafe
+.balign 4096
 
 .balign 8
 brk:
