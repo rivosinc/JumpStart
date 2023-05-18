@@ -45,8 +45,8 @@ Example memory layout YAML: [`tests/test000.memory_map.yaml`](tests/test000.memo
 
 ```
 ❯ ./scripts/memory_map_tools.py --help
-usage: memory_map_tools.py [-h] --memory_map_file MEMORY_MAP_FILE [--output_assembly_file OUTPUT_ASSEMBLY_FILE] [--output_linker_script OUTPUT_LINKER_SCRIPT] [--output_header_file OUTPUT_HEADER_FILE]
-                           [--translate_VA TRANSLATE_VA] [-v]
+usage: memory_map_tools.py [-h] --memory_map_file MEMORY_MAP_FILE [--output_assembly_file OUTPUT_ASSEMBLY_FILE]
+                           [--output_linker_script OUTPUT_LINKER_SCRIPT] [--translate_VA TRANSLATE_VA] [-v]
 
 options:
   -h, --help            show this help message and exit
@@ -56,8 +56,6 @@ options:
                         Assembly file to generate with page table mappings
   --output_linker_script OUTPUT_LINKER_SCRIPT
                         Linker script to generate
-  --output_header_file OUTPUT_HEADER_FILE
-                        Header file with the defines for the Page Tables
   --translate_VA TRANSLATE_VA
                         Translate the given VA to PA
   -v, --verbose         Verbose output.
