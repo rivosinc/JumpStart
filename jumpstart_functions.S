@@ -76,6 +76,11 @@ jump_to_supervisor_mode:
   addi    fp, sp, 16
 
   jal get_thread_current_mode
+
+  # Already in supervisor mode
+  li  t1, MSTATUS_MPP_SUPERVISOR_MODE
+  beq a0, t1, 2f
+
   li  t1, MSTATUS_MPP_MACHINE_MODE
   bne a0, t1, jumpstart_fail
 
@@ -91,8 +96,75 @@ jump_to_supervisor_mode:
   li  a0, MSTATUS_MPP_SUPERVISOR_MODE
   jal set_thread_current_mode
 
+2:
   ld  ra, 8(sp)
   ld  fp, 0(sp)
   addi  sp, sp, 16
 
   ret
+
+.global jump_to_machine_mode
+jump_to_machine_mode:
+  addi  sp, sp, -16
+  sd  ra, 8(sp)
+  sd  fp, 0(sp)
+  addi    fp, sp, 16
+
+  jal get_thread_current_mode
+
+  # Already in machine mode
+  li  t1, MSTATUS_MPP_MACHINE_MODE
+  beq a0, t1, 1f
+
+  li  t1, MSTATUS_MPP_SUPERVISOR_MODE
+  bne a0, t1, jumpstart_fail
+
+  li  a7, SYSCALL_JUMP_TO_MACHINE_MODE
+  ecall
+
+1:
+  ld  ra, 8(sp)
+  ld  fp, 0(sp)
+  addi  sp, sp, 16
+  ret
+
+# syscall handlers
+
+handle_env_call_from_smode:
+  # a7 will contain the syscall number
+
+  li t0, SYSCALL_JUMP_TO_MACHINE_MODE
+  beq a7, t0, env_call_jump_to_machine_mode
+
+  j jumpstart_fail
+
+handle_env_call_from_mmode:
+  # a7 will contain the syscall number
+
+  j jumpstart_fail
+
+env_call_jump_to_machine_mode:
+  li  a0, MSTATUS_MPP_MACHINE_MODE
+  jal set_thread_current_mode
+
+  # MEPC will be pointing to the ECALL and we need to return to the
+  # instruction following it.
+  csrr ra, mepc
+  addi ra, ra, 4
+  ret
+
+# END syscall handlers
+
+# The mtvec.base must always be 4 byte aligned.
+.align 2
+.global exception_handler
+exception_handler:
+  csrr t0, mcause
+
+  li t1, MCAUSE_EC_ENV_CALL_FROM_SMODE
+  beq t0, t1, handle_env_call_from_smode
+
+  li t1, MCAUSE_EC_ENV_CALL_FROM_MMODE
+  beq t0, t1, handle_env_call_from_mmode
+
+  j jumpstart_fail

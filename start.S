@@ -8,7 +8,7 @@
 
 .global _start
 _start:
-	la t0, 1f
+	la t0, exception_handler
 	csrw mtvec, t0
 
   la  sp, stack
@@ -19,10 +19,16 @@ _start:
   jal main
 
 jumpstart_exit:
+  # a0 indicates PASS(1) and FAIL(0)
+  # s1 is callee saved
+  mv s1, a0
+
   jal disable_mmu_for_supervisor_mode
 
+  jal jump_to_machine_mode
+
   li t0, 1
-  beqz a0, 1f
+  beqz s1, 1f
 
 .global jumpstart_fail
 jumpstart_fail:

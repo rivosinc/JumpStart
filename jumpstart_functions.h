@@ -11,7 +11,9 @@
 
 void setup_mmu_for_supervisor_mode(void);
 void disable_mmu_for_supervisor_mode(void);
+
 void jump_to_supervisor_mode(void);
+void jump_to_machine_mode(void);
 
 uint64_t get_thread_bookend_magic_number(void);
 uint8_t get_thread_current_mode(void);

@@ -3,8 +3,9 @@
 # SPDX-License-Identifier: LicenseRef-Rivos-Internal-Only
 
 jumpstart_tests = [
-  ['Jump to main, enable MMU, switch to supervisor mode and exit. SATP.mode = sv39', 'test000'],
-  ['Jump to main, enable MMU, switch to supervisor mode and exit. SATP.mode = sv48', 'test001'],
+  ['Enable MMU (SATP.mode = sv39), switch to supervisor mode and exit.', 'test000'],
+  ['Enable MMU (SATP.mode = sv48), switch to supervisor mode and exit.', 'test001'],
+  ['Ping-pong between Machine and Supervisor modes', 'test002']
 ]
 
 spike = find_program('spike', required : true)

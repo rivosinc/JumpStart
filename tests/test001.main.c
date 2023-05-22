@@ -23,11 +23,13 @@ int main(void) {
   }
 
   setup_mmu_for_supervisor_mode();
-  jump_to_supervisor_mode();
 
+  jump_to_supervisor_mode();
   if (get_thread_current_mode() != MSTATUS_MPP_SUPERVISOR_MODE) {
     return 1;
   }
+
+  disable_mmu_for_supervisor_mode();
 
   return 0;
 }
