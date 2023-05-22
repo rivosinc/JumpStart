@@ -157,14 +157,23 @@ env_call_jump_to_machine_mode:
 
 # The mtvec.base must always be 4 byte aligned.
 .align 2
-.global exception_handler
-exception_handler:
+.global mtvec_exception_handler
+mtvec_exception_handler:
+  li  a0, MSTATUS_MPP_MACHINE_MODE
+  jal set_thread_current_mode
+
   csrr t0, mcause
 
   li t1, MCAUSE_EC_ENV_CALL_FROM_SMODE
   beq t0, t1, handle_env_call_from_smode
 
-  li t1, MCAUSE_EC_ENV_CALL_FROM_MMODE
-  beq t0, t1, handle_env_call_from_mmode
+  j jumpstart_fail
+
+# The stvec.base must always be 4 byte aligned.
+.align 2
+.global stvec_exception_handler
+stvec_exception_handler:
+  li  a0, MSTATUS_MPP_SUPERVISOR_MODE
+  jal set_thread_current_mode
 
   j jumpstart_fail

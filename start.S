@@ -8,8 +8,11 @@
 
 .global _start
 _start:
-	la t0, exception_handler
+	la t0, mtvec_exception_handler
 	csrw mtvec, t0
+
+	la t0, stvec_exception_handler
+	csrw stvec, t0
 
   la  sp, stack
   mv  fp, sp
