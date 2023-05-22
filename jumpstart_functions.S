@@ -34,6 +34,13 @@ setup_thread_attributes:
 
   ret
 
+.global disable_mmu_for_supervisor_mode
+disable_mmu_for_supervisor_mode:
+  li  t0, 0
+  csrw  satp, t0
+  fence.i
+  ret
+
 .global setup_mmu_for_supervisor_mode
 setup_mmu_for_supervisor_mode:
     addi  sp, sp, -16

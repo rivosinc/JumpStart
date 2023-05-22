@@ -18,6 +18,9 @@ _start:
 
   jal main
 
+jumpstart_exit:
+  jal disable_mmu_for_supervisor_mode
+
   li t0, 1
   beqz a0, 1f
 
