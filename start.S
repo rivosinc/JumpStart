@@ -67,11 +67,21 @@ loop_magic_store:
   # 3. In WFI
   wfi
 
-.section .data
+.section .data.jumpstart
 
 .global thread_attributes_region
 thread_attributes_region:
-.4byte 0xcafe
+.4byte 0x0
+.balign 4096
+
+.global mcause_handler_overrides
+mcause_handler_overrides:
+.4byte 0x0
+.balign 4096
+
+.global scause_handler_overrides
+scause_handler_overrides:
+.4byte 0x0
 .balign 4096
 
 .balign 8

@@ -4,7 +4,7 @@
 
 #include "jumpstart_defines.h"
 
-.section .text
+.section .text.jumpstart
 
 .global setup_thread_attributes
 setup_thread_attributes:

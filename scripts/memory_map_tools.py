@@ -57,6 +57,7 @@ class PageTablePage:
 
 class PageTables:
     max_num_PT_pages_for_allocation = 4
+    max_num_JumpStart_data_pages = 5
 
     common_attributes = {
         "page_offset": 12,
@@ -107,7 +108,7 @@ class PageTables:
         self.create_pagetables()
 
     def add_pagetable_section_to_mappings(self, mappings):
-        # Add an additional mapping afger the last mapping for the pagetables
+        # Add an additional mapping after the last mapping for the pagetables
         updated_mappings = mappings.copy()
         last_mapping = updated_mappings[-1]
         pagetable_mapping = {}
@@ -120,8 +121,26 @@ class PageTables:
         pagetable_mapping['page_size'] = 1 << self.get_attribute('page_offset')
         pagetable_mapping[
             'num_pages'] = self.num_PT_pages_available_to_allocate
-        pagetable_mapping['section'] = '.rodata.pagetables'
+        pagetable_mapping['section'] = '.rodata.jumpstart.pagetables'
         updated_mappings.append(pagetable_mapping)
+
+        return updated_mappings
+
+    def add_jumpstart_data_section_to_mappings(self, mappings):
+        updated_mappings = mappings.copy()
+        last_mapping = updated_mappings[-1]
+        jumpstart_data_section_mapping = {}
+        jumpstart_data_section_mapping['va'] = last_mapping['va'] + (
+            last_mapping['page_size'] * last_mapping['num_pages'])
+        jumpstart_data_section_mapping['pa'] = last_mapping['pa'] + (
+            last_mapping['page_size'] * last_mapping['num_pages'])
+        jumpstart_data_section_mapping['xwr'] = "0b011"
+        jumpstart_data_section_mapping['page_size'] = 1 << self.get_attribute(
+            'page_offset')
+        jumpstart_data_section_mapping[
+            'num_pages'] = self.max_num_JumpStart_data_pages
+        jumpstart_data_section_mapping['section'] = '.data.jumpstart'
+        updated_mappings.append(jumpstart_data_section_mapping)
 
         return updated_mappings
 
@@ -198,8 +217,10 @@ class PageTables:
     # Returns None if there are insufficient number of pagetable pages
     # allocate from.
     def allocate_PT_mappings(self):
-        updated_mappings = self.add_pagetable_section_to_mappings(
+        updated_mappings = self.add_jumpstart_data_section_to_mappings(
             self.memory_map['mappings'])
+        updated_mappings = self.add_pagetable_section_to_mappings(
+            updated_mappings)
 
         for entry in self.split_mappings_at_page_granularity(updated_mappings):
             # TODO: support superpages
@@ -351,6 +372,7 @@ class PageTables:
                 file.write(f"   {entry['section']} : {{\n")
                 if entry['section'] == ".text":
                     file.write(f"      *(.text.jumpstart.init)\n")
+                    file.write(f"      *(.text.jumpstart)\n")
                 file.write(f"      *({entry['section']})\n")
                 file.write(f"   }}\n\n")
 
@@ -397,7 +419,7 @@ class PageTables:
             file.write(f"   li   a0, SATP_MODE\n")
             file.write(f"   ret\n\n\n")
 
-            file.write(".section .rodata.pagetables\n\n")
+            file.write(".section .rodata.jumpstart.pagetables\n\n")
             file.write(f".global {pt_start_label}\n")
             file.write(f"{pt_start_label}:\n\n")
 

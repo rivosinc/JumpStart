@@ -9,7 +9,6 @@ thread_attributes:
     bookend_magic_number: 8
   bookend_magic_number_value: 0x3317150533171505
 
-# Matches the MSTATUS.MPP encodings
 defines:
   END_OF_SIM_MAGIC_ADDRESS: 0x800a0000
   L2CACHE_WAY_SIZE: 0x100000
