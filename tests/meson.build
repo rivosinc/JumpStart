@@ -11,7 +11,22 @@ jumpstart_tests = [
   ['Register and run Machine mode illegal instruction exception handler.', 'test003'],
 ]
 
-spike = find_program('spike', required : true)
+if build_machine.system() == 'linux'
+  lsb_release = find_program('lsb_release')
+  lsb_release_ret = run_command(lsb_release, ['-ds'], check: true)
+  if lsb_release_ret.stdout().contains('Ubuntu')
+    distro = 'ubuntu.20.04'
+  elif lsb_release_ret.stdout().contains('CentOS')
+    distro = 'centos.7'
+  endif
+
+  # Work around the module load slowness
+  spike_install_path = '/release/sw/sdk/modules/' + distro + '/x86_64/riscv-isa-sim/latest/bin/spike'
+
+  spike = find_program(spike_install_path, required : true)
+elif build_machine.system() == 'darwin'
+  spike = find_program('spike', required : true)
+endif
 
 foreach jumpstart_test : jumpstart_tests
   test_description = jumpstart_test[0]
