@@ -19,7 +19,7 @@ meson compile -C builddir
 
 Example:
 ```
-meson setup builddir --cross-file cross-file.txt --buildtype release -Ddirected_diag_memory_map_yaml=(pwd)/tests/test000.memory_map.yaml -Ddirected_diag_main_c=(pwd)/tests/test000.main.c
+meson setup builddir --cross-file cross-file.txt --buildtype release -Ddirected_diag_memory_map_yaml=(pwd)/tests/test000.memory_map.yaml -Ddirected_diag_main_c=(pwd)/tests/test000.c
 meson compile -C builddir
 ```
 

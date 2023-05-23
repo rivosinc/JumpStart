@@ -2,6 +2,8 @@
 #
 # SPDX-License-Identifier: LicenseRef-Rivos-Internal-Only
 
+fs = import('fs')
+
 jumpstart_tests = [
   ['Enable MMU (SATP.mode = sv39), switch to supervisor mode and exit.', 'test000'],
   ['Enable MMU (SATP.mode = sv48), switch to supervisor mode and exit.', 'test001'],
@@ -31,7 +33,15 @@ foreach jumpstart_test : jumpstart_tests
   pagetable_s = memory_map_tools_output[0]
   linker_script = memory_map_tools_output[1].full_path()
 
-  test_sources = [pagetable_s, test_name + '.main.c']
+  test_sources = [pagetable_s]
+
+  if fs.is_file(meson.current_source_dir() + '/' + test_name +'.c')
+    test_sources += [test_name + '.c']
+  endif
+
+  if fs.is_file(meson.current_source_dir() + '/' + test_name +'.S')
+    test_sources += [test_name + '.S']
+  endif
 
   test_exe = executable(test_name,
                         sources: [jumpstart_sources, test_sources],
