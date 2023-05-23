@@ -7,7 +7,8 @@ fs = import('fs')
 jumpstart_tests = [
   ['Enable MMU (SATP.mode = sv39), switch to supervisor mode and exit.', 'test000'],
   ['Enable MMU (SATP.mode = sv48), switch to supervisor mode and exit.', 'test001'],
-  ['Ping-pong between Machine and Supervisor modes', 'test002']
+  ['Ping-pong between Machine and Supervisor modes', 'test002'],
+  ['Register and run Machine mode illegal instruction exception handler.', 'test003'],
 ]
 
 spike = find_program('spike', required : true)

@@ -8,10 +8,10 @@
 
 .global _start
 _start:
-	la t0, mtvec_exception_handler
+	la t0, mtvec_trap_handler
 	csrw mtvec, t0
 
-	la t0, stvec_exception_handler
+	la t0, stvec_trap_handler
 	csrw stvec, t0
 
   la  sp, stack
@@ -74,15 +74,13 @@ thread_attributes_region:
 .4byte 0x0
 .balign 4096
 
-.global mcause_handler_overrides
-mcause_handler_overrides:
+.global trap_handler_overrides
+trap_handler_overrides:
 .4byte 0x0
 .balign 4096
 
-.global scause_handler_overrides
-scause_handler_overrides:
-.4byte 0x0
-.balign 4096
+.global trap_handler_overrides_end
+trap_handler_overrides_end:
 
 .balign 8
 brk:

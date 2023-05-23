@@ -22,6 +22,16 @@ setup_thread_attributes:
   csrr  a0, mhartid
   jal set_thread_hart_id
 
+  li t0, TRAP_ATTRIBUTES_STRUCT_SIZE_IN_BYTES
+  mul t0, a0, t0
+  la t1, trap_handler_overrides
+  add a0, t1, t0
+  la t1, trap_handler_overrides_end
+  # Make sure that we've allocated enough space for this core's trap handler
+  # overrides.
+  bgeu a0, t1, jumpstart_fail
+  jal set_thread_trap_override_struct_address
+
   li  a0, THREAD_ATTRIBUTES_BOOKEND_MAGIC_NUMBER_VALUE
   jal set_thread_bookend_magic_number
 
@@ -157,23 +167,42 @@ env_call_jump_to_machine_mode:
 
 # The mtvec.base must always be 4 byte aligned.
 .align 2
-.global mtvec_exception_handler
-mtvec_exception_handler:
+.global mtvec_trap_handler
+mtvec_trap_handler:
   li  a0, MSTATUS_MPP_MACHINE_MODE
   jal set_thread_current_mode
 
-  csrr t0, mcause
+  csrr a0, mcause
+  # returns the address of the trap handler if the user
+  # has registered one, else 0.
+  jal get_trap_handler_override
 
-  li t1, MCAUSE_EC_ENV_CALL_FROM_SMODE
-  beq t0, t1, handle_env_call_from_smode
+  beqz a0, 1f
+
+  jalr x0, a0
+
+1:
+  csrr a0, mcause
+  li t0, MCAUSE_EC_ENV_CALL_FROM_SMODE
+  beq a0, t0, handle_env_call_from_smode
 
   j jumpstart_fail
 
 # The stvec.base must always be 4 byte aligned.
 .align 2
-.global stvec_exception_handler
-stvec_exception_handler:
+.global stvec_trap_handler
+stvec_trap_handler:
   li  a0, MSTATUS_MPP_SUPERVISOR_MODE
   jal set_thread_current_mode
 
+  csrr a0, scause
+  # returns the address of the trap handler if the user
+  # has registered one, else 0.
+  jal get_trap_handler_override
+
+  beqz a0, 1f
+
+  jalr x0, a0
+
+1:
   j jumpstart_fail

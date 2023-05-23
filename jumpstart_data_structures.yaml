@@ -6,8 +6,15 @@ thread_attributes:
   fields_and_sizes:
     hart_id: 1
     current_mode: 1
+    trap_override_struct_address: 8
     bookend_magic_number: 8
   bookend_magic_number_value: 0x3317150533171505
+
+trap_override_attributes:
+  supervisor_mode_interrupt_handler_overrides: 16
+  supervisor_mode_exception_handler_overrides: 16
+  machine_mode_interrupt_handler_overrides: 16
+  machine_mode_exception_handler_overrides: 16
 
 defines:
   END_OF_SIM_MAGIC_ADDRESS: 0x800a0000
@@ -19,6 +26,9 @@ defines:
   MSTATUS_MPP_MACHINE_MODE: 3
   SATP_MODE_SV39: 8
   SATP_MODE_SV48: 9
+  MCAUSE_INTERRUPT_BIT_LSB: 63
+  MCAUSE_EC_MASK: 0x7FFFFFFFFFFFFFFFULL
+  MCAUSE_EC_ILLEGAL_INSTRUCTION: 2
   MCAUSE_EC_ENV_CALL_FROM_SMODE: 9
 
 syscall_numbers:

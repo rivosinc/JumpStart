@@ -98,6 +98,21 @@ def generate_data_structures(attributes_yaml, defines_file,
 
     data_structures_file_fd.write("};\n\n")
 
+    data_structures_file_fd.write("struct trap_override_attributes {\n")
+    current_offset = 0
+    for mode in attributes_data['trap_override_attributes']:
+        data_structures_file_fd.write(
+            f"    uint64_t {mode}[{attributes_data['trap_override_attributes'][mode]}];\n"
+        )
+        defines_file_fd.write(
+            f"#define NUM_{mode.upper()} {attributes_data['trap_override_attributes'][mode]}\n"
+        )
+        current_offset += attributes_data['trap_override_attributes'][mode] * 8
+    data_structures_file_fd.write("};\n\n")
+    defines_file_fd.write(
+        f"#define TRAP_ATTRIBUTES_STRUCT_SIZE_IN_BYTES {current_offset}\n\n")
+    defines_file_fd.write("\n")
+
     for field_name in thread_attribute_fields:
         # Add the gettrs to jumpstart_functions.h so that they are
         # user visible.
