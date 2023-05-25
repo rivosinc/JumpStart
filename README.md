@@ -10,16 +10,16 @@ Provides bare-metal kernel and build infrastructure for users to build directed 
 
 ## Building a directed diag
 
-To build a directed diag using user provided C file with `main()` and a memory map indicating the test memory layout:
+To build a directed diag using user provided source files (C and assembly) and a memory map indicating the diag memory layout:
 
 ```
-meson setup builddir --cross-file cross-file.txt --buildtype release -Ddirected_diag_memory_map_yaml=<PATH_TO_MEMORY_MAP_YAML> -Ddirected_diag_main_c=<PATH_TO_MAIN_C>
+meson setup builddir --cross-file cross-file.txt --buildtype release -Ddirected_diag_memory_map_yaml=<PATH_TO_MEMORY_MAP_YAML> -Ddirected_diag_sources=<COMMA SEPARATED LIST OF SOURCE FILES>
 meson compile -C builddir
 ```
 
 Example:
 ```
-meson setup builddir --cross-file cross-file.txt --buildtype release -Ddirected_diag_memory_map_yaml=(pwd)/tests/test000.memory_map.yaml -Ddirected_diag_main_c=(pwd)/tests/test000.c
+meson setup builddir --cross-file cross-file.txt --buildtype release -Ddirected_diag_memory_map_yaml=(pwd)/tests/test000.memory_map.yaml -Ddirected_diag_sources=(pwd)/tests/test000.c
 meson compile -C builddir
 ```
 
