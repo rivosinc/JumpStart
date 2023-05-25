@@ -2,10 +2,9 @@
 #
 # SPDX-License-Identifier: LicenseRef-Rivos-Internal-Only
 
-option('directed_diag_main_c',
-       type : 'string',
-       value : '',
-       description : 'C file containing directed diag main().')
+option('directed_diag_sources',
+       type : 'array',
+       description : 'C and assembly sources for the directed diag.')
 
 
 option('directed_diag_memory_map_yaml',

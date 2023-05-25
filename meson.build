@@ -37,10 +37,10 @@ jumpstart_sources += data_structures_generator_output
 jumpstart_includes = include_directories('.')
 
 memory_map_tools_script = meson.current_source_dir() + '/scripts/memory_map_tools.py'
-directed_diag_main_c = get_option('directed_diag_main_c')
+directed_diag_sources = get_option('directed_diag_sources')
 directed_diag_memory_map_yaml = get_option('directed_diag_memory_map_yaml')
 
-if directed_diag_main_c != '' and directed_diag_memory_map_yaml != ''
+if directed_diag_memory_map_yaml != '' and directed_diag_sources.length() > 0
   memory_map_tools_output = custom_target(
                                 'Generate memory map related source files for build',
                                 input : [memory_map_tools_script, directed_diag_memory_map_yaml],
@@ -56,7 +56,7 @@ if directed_diag_main_c != '' and directed_diag_memory_map_yaml != ''
   pagetable_s = memory_map_tools_output[0]
   linker_script = memory_map_tools_output[1].full_path()
 
-  directed_diag_sources = [pagetable_s, directed_diag_main_c]
+  directed_diag_sources = [pagetable_s, directed_diag_sources]
 
   directed_diag_exe = executable('directed_diag',
                         sources: [jumpstart_sources, directed_diag_sources],
