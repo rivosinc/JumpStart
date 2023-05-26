@@ -56,7 +56,7 @@ class PageTablePage:
 
 
 class PageTables:
-    max_num_PT_pages_for_allocation = 4
+    max_num_PT_pages_for_allocation = 5
     max_num_JumpStart_data_pages = 5
 
     common_attributes = {

@@ -1,0 +1,21 @@
+# SPDX-FileCopyrightText: 2023 Rivos Inc.
+#
+# SPDX-License-Identifier: LicenseRef-Rivos-Internal-Only
+
+satp_mode: "sv39"
+
+mappings:
+  -
+    va: 0x80000000
+    pa: 0x80000000
+    xwr: "0b101"
+    page_size: 0x1000
+    num_pages: 1
+    section: ".text"
+  -
+    va: 0x88000000
+    pa: 0x88000000
+    xwr: "0b011"
+    page_size: 0x1000
+    num_pages: 8
+    section: ".data"
