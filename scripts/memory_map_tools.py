@@ -55,7 +55,7 @@ class PageTablePage:
         return False
 
 
-class PageTables:
+class MemoryAttributes:
     max_num_JumpStart_data_pages = 5
     pt_start_label = "pagetables_start"
 
@@ -112,6 +112,10 @@ class PageTables:
             f.close()
 
         self.create_pagetables()
+        self.create_pmarr_ranges()
+
+    def create_pmarr_ranges(self):
+        pass
 
     def add_pagetable_section_to_mappings(self, mappings):
         # Add an additional mapping after the last mapping for the pagetables
@@ -567,7 +571,7 @@ def main():
         log.basicConfig(format="%(levelname)s: [%(threadName)s]: %(message)s",
                         level=log.INFO)
 
-    pagetables = PageTables(args.memory_map_file)
+    pagetables = MemoryAttributes(args.memory_map_file)
 
     if args.output_assembly_file is not None:
         pagetables.generate_assembly_file(args.output_assembly_file)
