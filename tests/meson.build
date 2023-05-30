@@ -26,7 +26,7 @@ foreach jumpstart_test : jumpstart_tests
   memory_map_tools_output = custom_target(
                                 'Generate memory map build files for ' + test_name,
                                 input : [memory_map_tools_script, memory_map_file ],
-                                output : [test_name + '.pagetables.S',
+                                output : [test_name + '.memory_attributes.S',
                                           test_name + '.linker_script.ld'],
                                 command : [prog_python,
                                           '@INPUT0@',

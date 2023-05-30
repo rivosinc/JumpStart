@@ -44,7 +44,7 @@ if directed_diag_memory_map_yaml != '' and directed_diag_sources.length() > 0
   memory_map_tools_output = custom_target(
                                 'Generate memory map related source files for build',
                                 input : [memory_map_tools_script, directed_diag_memory_map_yaml],
-                                output : ['pagetables.S',
+                                output : ['memory_attributes.S',
                                           'linker_script.ld'],
                                 command : [prog_python,
                                           '@INPUT0@',
