@@ -19,6 +19,8 @@ foreach jumpstart_test : jumpstart_tests
   test_description = jumpstart_test[0]
   test_name = jumpstart_test[1]
 
+  spike_additional_args = jumpstart_test.get(2, '')
+
   memory_map_file = meson.current_source_dir() + '/' + test_name +'.memory_map.yaml'
 
   memory_map_tools_output = custom_target(
@@ -51,6 +53,11 @@ foreach jumpstart_test : jumpstart_tests
                         include_directories: jumpstart_includes,
                         link_args: ['-T' + linker_script, '-nostdlib'])
 
-  test(test_description, spike, args : ['--pass-fail', test_exe])
+  spike_args = ['--pass-fail']
+  if spike_additional_args != ''
+    spike_args += spike_additional_args.split(' ')
+  endif
+
+  test(test_description, spike, args : [spike_args, test_exe])
 
 endforeach
