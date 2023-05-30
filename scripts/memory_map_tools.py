@@ -56,7 +56,6 @@ class PageTablePage:
 
 
 class PageTables:
-    max_num_PT_pages_for_allocation = 5
     max_num_JumpStart_data_pages = 5
 
     common_attributes = {
@@ -94,11 +93,17 @@ class PageTables:
                 f"Memory map file {memory_map_file} does not exist")
 
         self.memory_map_file = memory_map_file
+        self.max_num_pages_for_PT_allocation = 5
+
         with open(memory_map_file, "r") as f:
             self.memory_map = yaml.safe_load(f)
 
             assert ('satp_mode' in self.memory_map)
             assert (self.memory_map['satp_mode'] in self.mode_attributes)
+
+            if 'max_num_pages_for_PT_allocation' in self.memory_map:
+                self.max_num_pages_for_PT_allocation = self.memory_map[
+                    'max_num_pages_for_PT_allocation']
 
             self.memory_map['mappings'] = sorted(self.memory_map['mappings'],
                                                  key=lambda x: x['va'],
@@ -120,7 +125,7 @@ class PageTables:
         pagetable_mapping['xwr'] = "0b001"
         pagetable_mapping['page_size'] = 1 << self.get_attribute('page_offset')
         pagetable_mapping[
-            'num_pages'] = self.num_PT_pages_available_to_allocate
+            'num_pages'] = self.num_pages_available_for_PT_allocation
         pagetable_mapping['section'] = '.rodata.jumpstart.pagetables'
         updated_mappings.append(pagetable_mapping)
 
@@ -193,7 +198,7 @@ class PageTables:
         log.debug(
             f"Allocating new pagetable page for VA {hex(va)} at level {level}")
 
-        if len(self.PT_pages) == self.num_PT_pages_available_to_allocate:
+        if len(self.PT_pages) == self.num_pages_available_for_PT_allocation:
             # Can't create any more pagetable pages
             return None
 
@@ -302,7 +307,7 @@ class PageTables:
 
     def create_pagetables(self):
         # this is the minimum number of page tables we need.
-        self.num_PT_pages_available_to_allocate = self.get_attribute(
+        self.num_pages_available_for_PT_allocation = self.get_attribute(
             'num_levels')
 
         while True:
@@ -312,15 +317,15 @@ class PageTables:
 
             updated_mappings = self.allocate_PT_mappings()
             if updated_mappings == None:
-                if self.num_PT_pages_available_to_allocate >= self.max_num_PT_pages_for_allocation:
+                if self.num_pages_available_for_PT_allocation >= self.max_num_pages_for_PT_allocation:
                     log.error(
-                        f"Hit max number of PT pages ({self.max_num_PT_pages_for_allocation}) available to create pagetables"
+                        f"Hit max number of PT pages ({self.max_num_pages_for_PT_allocation}) available to create pagetables"
                     )
                     sys.exit(1)
 
-                self.num_PT_pages_available_to_allocate += 1
+                self.num_pages_available_for_PT_allocation += 1
                 log.debug(
-                    f"Increasing the number of pagetable pages to {self.num_PT_pages_available_to_allocate} and retrying PT allocation."
+                    f"Increasing the number of pagetable pages to {self.num_pages_available_for_PT_allocation} and retrying PT allocation."
                 )
                 continue
 
