@@ -93,7 +93,7 @@ class PageTables:
                 f"Memory map file {memory_map_file} does not exist")
 
         self.memory_map_file = memory_map_file
-        self.max_num_pages_for_PT_allocation = 5
+        self.max_num_pages_for_PT_allocation = 3
 
         with open(memory_map_file, "r") as f:
             self.memory_map = yaml.safe_load(f)
