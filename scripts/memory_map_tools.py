@@ -55,9 +55,9 @@ class PageTablePage:
         return False
 
 
-class MemoryAttributes:
-    max_num_JumpStart_data_pages = 5
+class PageTableAttributes:
     pt_start_label = "pagetables_start"
+    max_num_pages_for_PT_allocation = 3
 
     common_attributes = {
         "page_offset": 12,
@@ -88,22 +88,27 @@ class MemoryAttributes:
         }
     }
 
+
+class MemoryMap:
+    max_num_JumpStart_data_pages = 5
+    pt_attributes = PageTableAttributes()
+
     def __init__(self, memory_map_file):
         if os.path.exists(memory_map_file) is False:
             raise Exception(
                 f"Memory map file {memory_map_file} does not exist")
 
         self.memory_map_file = memory_map_file
-        self.max_num_pages_for_PT_allocation = 3
 
         with open(memory_map_file, "r") as f:
             self.memory_map = yaml.safe_load(f)
 
             assert ('satp_mode' in self.memory_map)
-            assert (self.memory_map['satp_mode'] in self.mode_attributes)
+            assert (self.memory_map['satp_mode']
+                    in self.pt_attributes.mode_attributes)
 
             if 'max_num_pages_for_PT_allocation' in self.memory_map:
-                self.max_num_pages_for_PT_allocation = self.memory_map[
+                self.pt_attributes.max_num_pages_for_PT_allocation = self.memory_map[
                     'max_num_pages_for_PT_allocation']
 
             self.memory_map['mappings'] = sorted(self.memory_map['mappings'],
@@ -172,11 +177,12 @@ class MemoryAttributes:
         return split_mappings
 
     def get_attribute(self, attribute):
-        if attribute in self.common_attributes:
-            return self.common_attributes[attribute]
-        assert (attribute
-                in self.mode_attributes[self.memory_map['satp_mode']])
-        return self.mode_attributes[self.memory_map['satp_mode']][attribute]
+        if attribute in self.pt_attributes.common_attributes:
+            return self.pt_attributes.common_attributes[attribute]
+        assert (attribute in self.pt_attributes.mode_attributes[
+            self.memory_map['satp_mode']])
+        return self.pt_attributes.mode_attributes[
+            self.memory_map['satp_mode']][attribute]
 
     def update_pte_region_sparse_memory(self, address, value):
         if address in self.pte_region_sparse_memory:
@@ -254,8 +260,8 @@ class MemoryAttributes:
                 current_level_range_end = current_level_range_start + (
                     1 << self.get_attribute('page_offset'))
 
-                pte_value = place_bits(0, 1,
-                                       self.common_attributes["valid_bit"])
+                pte_value = place_bits(
+                    0, 1, self.pt_attributes.common_attributes["valid_bit"])
 
                 if current_level < (self.get_attribute('num_levels') - 1):
                     next_level_pagetable = self.get_PT_page(
@@ -280,13 +286,16 @@ class MemoryAttributes:
                 else:
                     xwr_bits = int(entry['xwr'], 2)
                     assert (xwr_bits != 0x2 and xwr_bits != 0x6)
-                    pte_value = place_bits(pte_value, xwr_bits,
-                                           self.common_attributes["xwr_bits"])
+                    pte_value = place_bits(
+                        pte_value, xwr_bits,
+                        self.pt_attributes.common_attributes["xwr_bits"])
 
-                    pte_value = place_bits(pte_value, 1,
-                                           self.common_attributes["a_bit"])
-                    pte_value = place_bits(pte_value, 1,
-                                           self.common_attributes["d_bit"])
+                    pte_value = place_bits(
+                        pte_value, 1,
+                        self.pt_attributes.common_attributes["a_bit"])
+                    pte_value = place_bits(
+                        pte_value, 1,
+                        self.pt_attributes.common_attributes["d_bit"])
 
                     next_level_pa = entry['pa']
 
@@ -322,9 +331,9 @@ class MemoryAttributes:
 
             updated_mappings = self.allocate_PT_mappings()
             if updated_mappings == None:
-                if self.num_pages_available_for_PT_allocation >= self.max_num_pages_for_PT_allocation:
+                if self.num_pages_available_for_PT_allocation >= self.pt_attributes.max_num_pages_for_PT_allocation:
                     log.error(
-                        f"Hit max number of PT pages ({self.max_num_pages_for_PT_allocation}) available to create pagetables"
+                        f"Hit max number of PT pages ({self.pt_attributes.max_num_pages_for_PT_allocation}) available to create pagetables"
                     )
                     sys.exit(1)
 
@@ -402,7 +411,8 @@ class MemoryAttributes:
             f"#define SATP_MODE_LSB {self.get_attribute('satp_mode_lsb')}\n\n")
         file_descriptor.write(".global get_diag_satp_ppn\n")
         file_descriptor.write("get_diag_satp_ppn:\n\n")
-        file_descriptor.write(f"   la a0, {self.pt_start_label}\n")
+        file_descriptor.write(
+            f"   la a0, {self.pt_attributes.pt_start_label}\n")
         file_descriptor.write(f"   srai a0, a0, PAGE_OFFSET\n")
         file_descriptor.write(f"   ret\n\n\n")
 
@@ -426,13 +436,13 @@ class MemoryAttributes:
 
     def generate_page_table_data(self, file_descriptor):
         file_descriptor.write(".section .rodata.jumpstart.pagetables\n\n")
-        file_descriptor.write(f".global {self.pt_start_label}\n")
-        file_descriptor.write(f"{self.pt_start_label}:\n\n")
+        file_descriptor.write(f".global {self.pt_attributes.pt_start_label}\n")
+        file_descriptor.write(f"{self.pt_attributes.pt_start_label}:\n\n")
 
         pagetable_filled_memory_addresses = list(
             sorted(self.pte_region_sparse_memory.keys()))
 
-        pte_size_in_bytes = self.mode_attributes[
+        pte_size_in_bytes = self.pt_attributes.mode_attributes[
             self.memory_map['satp_mode']]['pte_size_in_bytes']
         last_filled_address = None
         for address in pagetable_filled_memory_addresses:
@@ -495,12 +505,14 @@ class MemoryAttributes:
                 f"    level{current_level} PTE: [{hex(pte_address)}] = {hex(pte_value)}"
             )
 
-            if extract_bits(pte_value,
-                            self.common_attributes['valid_bit']) == 0:
+            if extract_bits(
+                    pte_value,
+                    self.pt_attributes.common_attributes['valid_bit']) == 0:
                 log.error(f"PTE at {hex(pte_address)} is not valid")
                 sys.exit(1)
 
-            xwr = extract_bits(pte_value, self.common_attributes['xwr_bits'])
+            xwr = extract_bits(
+                pte_value, self.pt_attributes.common_attributes['xwr_bits'])
             if (xwr & 0x3) == 0x2:
                 log.error(f"PTE at {hex(pte_address)} has R=0 and W=1")
                 sys.exit(1)
@@ -517,12 +529,14 @@ class MemoryAttributes:
                 log.info(f"    This is a Leaf PTE")
                 break
             else:
-                if extract_bits(pte_value,
-                                self.common_attributes['a_bit']) != 0:
+                if extract_bits(
+                        pte_value,
+                        self.pt_attributes.common_attributes['a_bit']) != 0:
                     log.error(f"PTE has A=1 but is not a Leaf PTE")
                     sys.exit(1)
-                elif extract_bits(pte_value,
-                                  self.common_attributes['d_bit']) != 0:
+                elif extract_bits(
+                        pte_value,
+                        self.pt_attributes.common_attributes['d_bit']) != 0:
                     log.error(f"PTE has D=1 but is not a Leaf PTE")
                     sys.exit(1)
 
@@ -571,7 +585,7 @@ def main():
         log.basicConfig(format="%(levelname)s: [%(threadName)s]: %(message)s",
                         level=log.INFO)
 
-    pagetables = MemoryAttributes(args.memory_map_file)
+    pagetables = MemoryMap(args.memory_map_file)
 
     if args.output_assembly_file is not None:
         pagetables.generate_assembly_file(args.output_assembly_file)
