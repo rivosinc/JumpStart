@@ -4,9 +4,16 @@
 
 satp_mode: "sv39"
 
-max_num_pages_for_PT_allocation: 4
+max_num_pages_for_PT_allocation: 6
 
 mappings:
+  -
+    va: 0x42000000
+    pa: 0x42000000
+    xwr: "0b011"
+    page_size: 0x1000
+    num_pages: 4
+    section: ".data.uc"
   -
     va: 0x80000000
     pa: 0x80000000
@@ -19,5 +26,5 @@ mappings:
     pa: 0x88000000
     xwr: "0b011"
     page_size: 0x1000
-    num_pages: 8
-    section: ".data"
+    num_pages: 4
+    section: ".data.dms"

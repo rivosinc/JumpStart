@@ -10,7 +10,7 @@ jumpstart_tests = [
   ['Ping-pong between Machine and Supervisor modes', 'test002'],
   ['Register and run Machine mode illegal instruction exception handler.', 'test003'],
   ['HWP AMPM perf diag.', 'test004'],
-  ['Data block move.', 'test005'],
+  ['Data block move.', 'test005', '-m0x42000000:0x4000,0x80000000:0x1000,0x88000000:0x4000,0x88004000:0x4000,0x88009000:0x6000,0x800a0000:0x1000,0x800a0000:0x1001000'],
 ]
 
 spike = find_program('spike', required : true)
