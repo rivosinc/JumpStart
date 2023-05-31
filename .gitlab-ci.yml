@@ -19,6 +19,7 @@ variables:
 default:
   before_script:
     - module load rivos/init
+    - module load rivos-sdk/riscv-isa-sim
        # dont export it too early else gitlab own git commands fail
     - export GIT_CONFIG_GLOBAL="${CI_PROJECT_DIR}/.cache/gitconfig"
     - mkdir -p "$(dirname ${GIT_CONFIG_GLOBAL})"
