@@ -5,6 +5,7 @@
 # SPDX-License-Identifier: LicenseRef-Rivos-Internal-Only
 
 import argparse
+import enum
 import logging as log
 import os
 import sys
@@ -89,6 +90,110 @@ class PageTableAttributes:
     }
 
 
+class PmarrRegionMemoryType(enum.IntEnum):
+    PMA_UC = 0
+    PMA_WC = 1
+    PMA_WB = 2
+
+
+class PmarrAttributes:
+    base_lsb = 20
+    mask_lsb = 20
+
+    # Minimum size os 1M
+    minimum_size = 1024 * 1024
+
+    def __init__(self) -> None:
+        pass
+
+    def convert_memory_type_to_string(self, memory_type):
+        if memory_type == PmarrRegionMemoryType.PMA_UC:
+            return "uc"
+        elif memory_type == PmarrRegionMemoryType.PMA_WC:
+            return "wc"
+        elif memory_type == PmarrRegionMemoryType.PMA_WB:
+            return "wb"
+        else:
+            log.error(f"Unknown memory type {memory_type}")
+            sys.exit(1)
+
+    def convert_string_to_memory_type(self, memory_type_string):
+        if memory_type_string == "uc":
+            return PmarrRegionMemoryType.PMA_UC
+        elif memory_type_string == "wc":
+            return PmarrRegionMemoryType.PMA_WC
+        elif memory_type_string == "wb":
+            return PmarrRegionMemoryType.PMA_WB
+        else:
+            log.error(f"Unknown memory type {memory_type_string}")
+            sys.exit(1)
+
+
+class PmarrRegion:
+    pmarr_attributes = PmarrAttributes()
+
+    def __init__(self, start_address, end_address, memory_type_string) -> None:
+        self.start_address = (start_address >> self.pmarr_attributes.base_lsb
+                              ) << self.pmarr_attributes.base_lsb
+
+        self.end_address = self.start_address + self.pmarr_attributes.minimum_size
+        if end_address > self.end_address:
+            self.end_address = end_address
+
+        self.memory_type = self.pmarr_attributes.convert_string_to_memory_type(
+            memory_type_string)
+
+    def __str__(self):
+        return f"PmarrRegion: start_address={hex(self.start_address)}, end_address={hex(self.end_address)}, memory_type={self.pmarr_attributes.convert_memory_type_to_string(self.memory_type)}"
+
+    def can_add_to_region(self, start_address, end_address,
+                          memory_type_string):
+        memory_type = self.pmarr_attributes.convert_string_to_memory_type(
+            memory_type_string)
+
+        if (self.start_address <= (end_address - 1)) and (
+                start_address <=
+            (self.end_address - 1)) and memory_type != self.memory_type:
+            log.error(
+                f"Region [{hex(start_address)}, {hex(end_address)}, {memory_type_string}] overlaps with an existing PMARR region [{hex(self.start_address)}, {hex(self.end_address)}] with different memory type {self.pmarr_attributes.convert_memory_type_to_string(self.memory_type)}"
+            )
+            sys.exit(1)
+
+        if (self.start_address <= end_address) and (
+                start_address <=
+                self.end_address) and memory_type == self.memory_type:
+            return True
+
+        return False
+
+    def add_to_region(self, start_address, end_address):
+        assert ((self.start_address <= end_address)
+                and (start_address <= self.end_address))
+
+        if start_address < self.start_address:
+            self.start_address = start_address
+
+        if self.end_address < end_address:
+            self.end_address = end_address
+
+    def generate_pmarr_region_setup_code(self, file_descriptor, reg_id):
+        file_descriptor.write(f"   # {reg_id}: {self}\n")
+
+        pmarr_base_reg_value = int(self.memory_type) | self.start_address
+
+        region_size = self.end_address - self.start_address
+        # Assuming that the region size is a multiple of the minimum size
+        assert (region_size % self.pmarr_attributes.minimum_size == 0)
+        pmarr_mask = (0xffffffffffffffff <<
+                      (region_size.bit_length() - 1)) & 0xffffffffffffffff
+        pmarr_mask_reg_value = pmarr_mask | 0x3  # set the L and V bits.
+
+        file_descriptor.write(f"   li   t0, {hex(pmarr_base_reg_value)}\n")
+        file_descriptor.write(f"   csrw pmarr_base_{reg_id}, t0\n")
+        file_descriptor.write(f"   li   t0, {hex(pmarr_mask_reg_value)}\n")
+        file_descriptor.write(f"   csrw pmarr_mask_{reg_id}, t0\n\n")
+
+
 class MemoryMap:
     max_num_JumpStart_data_pages = 5
     pt_attributes = PageTableAttributes()
@@ -117,10 +222,33 @@ class MemoryMap:
             f.close()
 
         self.create_pagetables()
-        self.create_pmarr_ranges()
+        self.create_pmarr_regions()
 
-    def create_pmarr_ranges(self):
-        pass
+    def create_pmarr_regions(self):
+        self.pmarr_regions = []
+        for mapping in self.memory_map['mappings']:
+            if 'pmarr_memory_type' not in mapping:
+                continue
+
+            mapping_size = mapping['page_size'] * mapping['num_pages']
+
+            pmarr_memory_type = mapping['pmarr_memory_type']
+
+            matching_pmarr_region = None
+            for pmarr_region in self.pmarr_regions:
+                if pmarr_region.can_add_to_region(mapping['pa'],
+                                                  mapping['pa'] + mapping_size,
+                                                  pmarr_memory_type):
+                    matching_pmarr_region = pmarr_region
+                    break
+            if matching_pmarr_region is None:
+                new_pmarr_region = PmarrRegion(mapping['pa'],
+                                               mapping['pa'] + mapping_size,
+                                               pmarr_memory_type)
+                self.pmarr_regions.append(new_pmarr_region)
+            else:
+                matching_pmarr_region.add_to_region(
+                    mapping['pa'], mapping['pa'] + mapping_size)
 
     def add_pagetable_section_to_mappings(self, mappings):
         # Add an additional mapping after the last mapping for the pagetables
@@ -432,7 +560,16 @@ class MemoryMap:
         file_descriptor.write(f"   ret\n\n\n")
 
     def generate_pmarr_functions(self, file_descriptor):
-        pass
+        file_descriptor.write("\n")
+        file_descriptor.write(".global setup_pmarr\n")
+        file_descriptor.write("setup_pmarr:\n\n")
+        pmarr_reg_id = 0
+        for region in self.pmarr_regions:
+            region.generate_pmarr_region_setup_code(file_descriptor,
+                                                    pmarr_reg_id)
+            pmarr_reg_id += 1
+        file_descriptor.write(f"   ret\n\n\n")
+        file_descriptor.write("\n")
 
     def generate_page_table_data(self, file_descriptor):
         file_descriptor.write(".section .rodata.jumpstart.pagetables\n\n")

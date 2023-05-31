@@ -19,6 +19,8 @@ _start:
 
   jal setup_thread_attributes
 
+  jal setup_pmarr
+
   jal main
 
   # On the return from main, a0 will contain 0 for PASS and non-zero for FAIL.
