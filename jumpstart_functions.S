@@ -58,6 +58,16 @@ setup_mmu_for_supervisor_mode:
     sd  fp, 0(sp)
     addi    fp, sp, 16
 
+    # Enable menvcfg.pbmte
+    # The PBMTE bit controls whether the Svpbmt extension is
+    # available for use in S-mode and G-stage address translation
+    # (i.e., for page tables pointed to by satp or hgatp).
+    #define MENVCFG_PBMTE_ENABLE (1 << 62)
+    csrr  t0, menvcfg
+    li  t1, MENVCFG_PBMTE_ENABLE
+    or  t0, t0, t1
+    csrw  menvcfg, t0
+
     jal get_diag_satp_mode
     mv s2, a0
 

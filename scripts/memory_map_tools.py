@@ -56,6 +56,12 @@ class PageTablePage:
         return False
 
 
+class PbmtMode(enum.IntEnum):
+    PMA = 0
+    NC = 1
+    IO = 2
+
+
 class PageTableAttributes:
     pt_start_label = "pagetables_start"
     max_num_pages_for_PT_allocation = 3
@@ -68,6 +74,7 @@ class PageTableAttributes:
         "a_bit": (6, 6),
         "d_bit": (7, 7),
         "satp_mode_lsb": 60,
+        "pbmt_bits": (62, 61),
     }
 
     mode_attributes = {
@@ -88,6 +95,28 @@ class PageTableAttributes:
             "pte_ppn_bits": [(53, 37), (36, 28), (27, 19), (18, 10)],
         }
     }
+
+    def convert_pbmt_mode_string_to_mode(self, mode_string):
+        if mode_string == "pma":
+            return PbmtMode.PMA
+        elif mode_string == "nc":
+            return PbmtMode.NC
+        elif mode_string == "io":
+            return PbmtMode.IO
+        else:
+            log.error(f"Unknown pbmt mode {mode_string}")
+            sys.exit(1)
+
+    def convert_pbmt_mode_to_string(self, mode):
+        if mode == PbmtMode.PMA:
+            return "pma"
+        elif mode == PbmtMode.NC:
+            return "nc"
+        elif mode == PbmtMode.IO:
+            return "io"
+        else:
+            log.error(f"Unknown pbmt mode {mode}")
+            sys.exit(1)
 
 
 class PmarrRegionMemoryType(enum.IntEnum):
@@ -424,6 +453,13 @@ class MemoryMap:
                     pte_value = place_bits(
                         pte_value, 1,
                         self.pt_attributes.common_attributes["d_bit"])
+
+                    if 'pbmt_mode' in entry:
+                        pbmt_mode = self.pt_attributes.convert_pbmt_mode_string_to_mode(
+                            entry['pbmt_mode'])
+                        pte_value = place_bits(
+                            pte_value, pbmt_mode,
+                            self.pt_attributes.common_attributes["pbmt_bits"])
 
                     next_level_pa = entry['pa']
 
