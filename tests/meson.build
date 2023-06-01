@@ -7,11 +7,11 @@ fs = import('fs')
 jumpstart_tests = [
   # Specify --isa=rv64gc to the diags that will boot at 0x80000000
   # The default Sentinel behavior is to start at 0x7f800000.
-  ['Enable MMU (SATP.mode = sv39), switch to supervisor mode and exit.', 'test000', '--isa=rv64gc'],
-  ['Enable MMU (SATP.mode = sv48), switch to supervisor mode and exit.', 'test001', '--isa=rv64gc'],
-  ['Ping-pong between Machine and Supervisor modes', 'test002', '--isa=rv64gc'],
-  ['Register and run Machine mode illegal instruction exception handler.', 'test003', '--isa=rv64gc'],
-  ['HWP AMPM perf diag.', 'test004', '--isa=rv64gc'],
+  ['Enable MMU (SATP.mode = sv39), switch to supervisor mode and exit.', 'test000'],
+  ['Enable MMU (SATP.mode = sv48), switch to supervisor mode and exit.', 'test001'],
+  ['Ping-pong between Machine and Supervisor modes', 'test002'],
+  ['Register and run Machine mode illegal instruction exception handler.', 'test003'],
+  ['HWP AMPM perf diag.', 'test004'],
   # test005 has a memory region at 0x42000000 which is not enable by default on Spike.
   ['16K data block move from WB to UC (PBMT) region.', 'test005', '--isa=RV64GCHV_Zba_Zbb_Zbc_Zbs_Zbkb_Sstc_Svpbmt_Svinval_Sscofpmf_Zicbom_Zicbop_Zicboz_Zfh_Zkt_Zkr_Zicsr_Zifencei_Zawrs_Zicond_Xrivostime -m0x42000000:0x4000,0x80000000:0x1000,0x88000000:0x4000,0x88004000:0x4000,0x88009000:0x6000,0x800a0000:0x1000,0x800a0000:0x1001000'],
 ]
@@ -22,7 +22,7 @@ foreach jumpstart_test : jumpstart_tests
   test_description = jumpstart_test[0]
   test_name = jumpstart_test[1]
 
-  spike_additional_args = jumpstart_test.get(2, '')
+  spike_isa_string = jumpstart_test.get(2, '')
 
   memory_map_file = meson.current_source_dir() + '/' + test_name +'.memory_map.yaml'
 
@@ -57,8 +57,10 @@ foreach jumpstart_test : jumpstart_tests
                         link_args: ['-T' + linker_script, '-nostdlib'])
 
   spike_args = ['--pass-fail']
-  if spike_additional_args != ''
-    spike_args += spike_additional_args.split(' ')
+  if spike_isa_string != ''
+    spike_args += '--isa=' + spike_isa_string
+  else
+    spike_args += '--isa=' + get_option('spike_default_isa_string')
   endif
 
   test(test_description, spike, args : [spike_args, test_exe])
