@@ -5,13 +5,15 @@
 fs = import('fs')
 
 jumpstart_tests = [
-  ['Enable MMU (SATP.mode = sv39), switch to supervisor mode and exit.', 'test000'],
-  ['Enable MMU (SATP.mode = sv48), switch to supervisor mode and exit.', 'test001'],
-  ['Ping-pong between Machine and Supervisor modes', 'test002'],
-  ['Register and run Machine mode illegal instruction exception handler.', 'test003'],
-  ['HWP AMPM perf diag.', 'test004'],
+  # Specify --isa=rv64gc to the diags that will boot at 0x80000000
+  # The default Sentinel behavior is to start at 0x7f800000.
+  ['Enable MMU (SATP.mode = sv39), switch to supervisor mode and exit.', 'test000', '--isa=rv64gc'],
+  ['Enable MMU (SATP.mode = sv48), switch to supervisor mode and exit.', 'test001', '--isa=rv64gc'],
+  ['Ping-pong between Machine and Supervisor modes', 'test002', '--isa=rv64gc'],
+  ['Register and run Machine mode illegal instruction exception handler.', 'test003', '--isa=rv64gc'],
+  ['HWP AMPM perf diag.', 'test004', '--isa=rv64gc'],
   # test005 has a memory region at 0x42000000 which is not enable by default on Spike.
-  ['16K data block move from WB to UC (PBMT) region.', 'test005', '-m0x42000000:0x4000,0x80000000:0x1000,0x88000000:0x4000,0x88004000:0x4000,0x88009000:0x6000,0x800a0000:0x1000,0x800a0000:0x1001000'],
+  ['16K data block move from WB to UC (PBMT) region.', 'test005', '--isa=RV64GCHV_Zba_Zbb_Zbc_Zbs_Zbkb_Sstc_Svpbmt_Svinval_Sscofpmf_Zicbom_Zicbop_Zicboz_Zfh_Zkt_Zkr_Zicsr_Zifencei_Zawrs_Zicond_Xrivostime -m0x42000000:0x4000,0x80000000:0x1000,0x88000000:0x4000,0x88004000:0x4000,0x88009000:0x6000,0x800a0000:0x1000,0x800a0000:0x1001000'],
 ]
 
 spike = find_program('spike', required : true)
