@@ -12,9 +12,6 @@
 void setup_mmu_for_supervisor_mode(void);
 void disable_mmu_for_supervisor_mode(void);
 
-void jump_to_supervisor_mode(void);
-void jump_to_machine_mode(void);
-
 uint64_t get_trap_handler_override(uint64_t mcause);
 void register_trap_handler_override(uint8_t mode, uint64_t mcause,
                                     uint64_t handler_address);

@@ -12,8 +12,6 @@ extern uint64_t dest_area_end;
 int main(void) {
   setup_mmu_for_supervisor_mode();
 
-  jump_to_supervisor_mode();
-
   uint64_t *source_area_ptr = (uint64_t *)&source_area;
   uint64_t *source_area_end_ptr = (uint64_t *)&source_area_end;
   uint64_t *dest_area_ptr = (uint64_t *)&dest_area;

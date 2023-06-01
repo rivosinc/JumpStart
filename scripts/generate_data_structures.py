@@ -80,6 +80,7 @@ def generate_data_structures(attributes_yaml, defines_file,
         assembly_file_fd.write(
             f"#define THREAD_ATTRIBUTES_{field_name.upper()}_OFFSET {current_offset}\n\n"
         )
+        assembly_file_fd.write(f'.section .text.jumpstart\n')
         assembly_file_fd.write(f'.global get_thread_{field_name}\n')
         assembly_file_fd.write(f'get_thread_{field_name}:\n')
         assembly_file_fd.write(
@@ -89,6 +90,23 @@ def generate_data_structures(attributes_yaml, defines_file,
 
         assembly_file_fd.write(f'.global set_thread_{field_name}\n')
         assembly_file_fd.write(f'set_thread_{field_name}:\n')
+        assembly_file_fd.write(
+            f'    {get_memop_of_size(MemoryOp.STORE, attribute_size_in_bytes)}   a0, THREAD_ATTRIBUTES_{field_name.upper()}_OFFSET(tp)\n'
+        )
+        assembly_file_fd.write(f'    ret\n\n')
+
+        assembly_file_fd.write(f'.section .text.jumpstart.machine\n')
+        assembly_file_fd.write(
+            f'.global get_thread_{field_name}_in_machine_mode\n')
+        assembly_file_fd.write(f'get_thread_{field_name}_in_machine_mode:\n')
+        assembly_file_fd.write(
+            f'    {get_memop_of_size(MemoryOp.LOAD, attribute_size_in_bytes)}   a0, THREAD_ATTRIBUTES_{field_name.upper()}_OFFSET(tp)\n'
+        )
+        assembly_file_fd.write(f'    ret\n\n')
+
+        assembly_file_fd.write(
+            f'.global set_thread_{field_name}_in_machine_mode\n')
+        assembly_file_fd.write(f'set_thread_{field_name}_in_machine_mode:\n')
         assembly_file_fd.write(
             f'    {get_memop_of_size(MemoryOp.STORE, attribute_size_in_bytes)}   a0, THREAD_ATTRIBUTES_{field_name.upper()}_OFFSET(tp)\n'
         )

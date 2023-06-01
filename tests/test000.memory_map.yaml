@@ -13,17 +13,10 @@ mappings:
     xwr: "0b101"
     page_size: 0x1000
     num_pages: 1
-    section: ".preamble"
-  -
-    va: 0x80000000
-    pa: 0x80000000
-    xwr: "0b101"
-    page_size: 0x1000
-    num_pages: 1
     section: ".text"
   -
-    va: 0x80001000
-    pa: 0x80001000
+    va: 0x7f802000
+    pa: 0x7f802000
     xwr: "0b011"
     page_size: 0x1000
     num_pages: 1
