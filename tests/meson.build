@@ -22,7 +22,7 @@ foreach jumpstart_test : jumpstart_tests
   test_description = jumpstart_test[0]
   test_name = jumpstart_test[1]
 
-  spike_isa_string = jumpstart_test.get(2, '')
+  spike_isa_string_override = jumpstart_test.get(2, '')
 
   memory_map_file = meson.current_source_dir() + '/' + test_name +'.memory_map.yaml'
 
@@ -57,10 +57,14 @@ foreach jumpstart_test : jumpstart_tests
                         link_args: ['-T' + linker_script, '-nostdlib'])
 
   spike_args = ['--pass-fail']
-  if spike_isa_string != ''
-    spike_args += '--isa=' + spike_isa_string
+  if spike_isa_string_override != ''
+    spike_args += '--isa=' + spike_isa_string_override
   else
     spike_args += '--isa=' + get_option('spike_default_isa_string')
+  endif
+
+  if get_option('generate_spike_trace') == true
+    spike_args += ['-v1', '--log-commits']
   endif
 
   test(test_description, spike, args : [spike_args, test_exe])
