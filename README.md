@@ -8,6 +8,19 @@ SPDX-License-Identifier: LicenseRef-Rivos-Internal-Only
 
 Provides bare-metal kernel and build infrastructure for users to build directed diags.
 
+## Enviornment setup
+
+JumpStart requires at least meson 1.0.1. The toolchain & spike must be updated with rivos-sdk.
+
+```
+module load rivos/init
+module load rivos-sdk/riscv-isa-sim
+module load rivos-sdk/riscv-gnu-toolchain/
+
+Note: If the latest toolchain is not available for your distro, pick the specific toolchain package available for your installed distro.
+
+```  
+
 ## Building a directed diag
 
 To build a directed diag using user provided source files (C and assembly) and a memory map indicating the diag memory layout:
