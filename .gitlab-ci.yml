@@ -20,9 +20,6 @@ default:
   before_script:
     - module load rivos/init
     - module load rivos-sdk/riscv-isa-sim
-    # HACK to work around IT-2566
-    # https://rivosinc.atlassian.net/browse/IT-2566
-    - module load rivos-sdk/riscv-gnu-toolchain/20230504T194320.g76b3608
        # dont export it too early else gitlab own git commands fail
     - export GIT_CONFIG_GLOBAL="${CI_PROJECT_DIR}/.cache/gitconfig"
     - mkdir -p "$(dirname ${GIT_CONFIG_GLOBAL})"
