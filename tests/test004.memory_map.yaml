@@ -11,6 +11,7 @@ mappings:
     xwr: "0b101"
     page_size: 0x1000
     num_pages: 1
+    pmarr_memory_type: "wb"
     section: ".text"
 
   -
@@ -19,4 +20,5 @@ mappings:
     xwr: "0b011"
     page_size: 0x1000
     num_pages: 8
+    pmarr_memory_type: "wb"
     section: ".data"

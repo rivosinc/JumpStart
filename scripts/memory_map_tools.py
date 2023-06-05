@@ -257,7 +257,8 @@ class MemoryMap:
         self.pmarr_regions = []
         for mapping in self.memory_map['mappings']:
             if 'pmarr_memory_type' not in mapping:
-                continue
+                log.error("pmarr_memory_type is not specified in the mapping")
+                sys.exit(1)
 
             mapping_size = mapping['page_size'] * mapping['num_pages']
 
@@ -293,6 +294,7 @@ class MemoryMap:
         pagetable_mapping['page_size'] = 1 << self.get_attribute('page_offset')
         pagetable_mapping[
             'num_pages'] = self.num_pages_available_for_PT_allocation
+        pagetable_mapping['pmarr_memory_type'] = 'wb'
         pagetable_mapping['section'] = '.rodata.jumpstart.pagetables'
         updated_mappings.append(pagetable_mapping)
 
@@ -311,6 +313,7 @@ class MemoryMap:
             'page_offset')
         jumpstart_data_section_mapping[
             'num_pages'] = self.max_num_JumpStart_data_pages
+        jumpstart_data_section_mapping['pmarr_memory_type'] = 'wb'
         jumpstart_data_section_mapping['section'] = '.data.jumpstart'
         updated_mappings.append(jumpstart_data_section_mapping)
 
