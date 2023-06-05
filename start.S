@@ -22,6 +22,8 @@ _start:
 
   jal enable_svpbmt_for_supervisor_mode
 
+  jal enable_trap_delegation_to_supervisor_mode
+
   j jump_to_supervisor_mode_and_main
 
 # This function should fall into the initial 4K page set up in MCRR_0
@@ -63,6 +65,13 @@ setup_mcrr:
   ret
 
 .section .text.jumpstart.machine
+
+.global enable_trap_delegation_to_supervisor_mode
+enable_trap_delegation_to_supervisor_mode:
+  li t0, (1 << SCAUSE_EC_ENV_CALL_FROM_UMODE) | (1 << SCAUSE_EC_ILLEGAL_INSTRUCTION)
+  csrw medeleg, t0
+
+  ret
 
 .global machine_mode_return_point
 machine_mode_return_point:

@@ -9,6 +9,9 @@
 #include "jumpstart_data_structures.h"
 #include "jumpstart_defines.h"
 
+void jump_to_user_mode(void);
+void jump_to_supervisor_mode(void);
+
 void setup_mmu_for_supervisor_mode(void);
 void disable_mmu_for_supervisor_mode(void);
 
