@@ -14,7 +14,7 @@ int main(void) {
     return 1;
   }
 
-  if (get_thread_current_mode() != MSTATUS_MPP_SUPERVISOR_MODE) {
+  if (get_thread_current_mode() != SUPERVISOR_MODE_ENCODING) {
     return 1;
   }
 
@@ -22,12 +22,12 @@ int main(void) {
 
   for (int i = 0; i < 10; ++i) {
     jump_to_user_mode();
-    if (get_thread_current_mode() != MSTATUS_MPP_USER_MODE) {
+    if (get_thread_current_mode() != USER_MODE_ENCODING) {
       return 1;
     }
 
     jump_to_supervisor_mode();
-    if (get_thread_current_mode() != MSTATUS_MPP_SUPERVISOR_MODE) {
+    if (get_thread_current_mode() != SUPERVISOR_MODE_ENCODING) {
       return 1;
     }
   }

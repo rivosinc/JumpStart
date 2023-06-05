@@ -16,7 +16,7 @@ supervisor_entry_point:
 	la t0, stvec_trap_handler
 	csrw stvec, t0
 
-  li  a0, MSTATUS_MPP_SUPERVISOR_MODE
+  li  a0, SUPERVISOR_MODE_ENCODING
   jal set_thread_current_mode
 
   jal main
@@ -62,8 +62,6 @@ disable_mmu_for_supervisor_mode:
   fence.i
   ret
 
-#define SSTATUS_USER_SWITCH 0xA00000000
-
 .global jump_to_user_mode
 jump_to_user_mode:
 
@@ -75,22 +73,22 @@ jump_to_user_mode:
   jal get_thread_current_mode
 
   # Already in user mode
-  li  t1, MSTATUS_MPP_USER_MODE
+  li  t1, USER_MODE_ENCODING
   beq a0, t1, 2f
 
-  li  t1, MSTATUS_MPP_SUPERVISOR_MODE
+  li  t1, SUPERVISOR_MODE_ENCODING
   bne a0, t1, jumpstart_fail
 
   la  t0, 1f
   csrw  sepc, t0
   csrr  t0, sstatus
-  li  t1, SSTATUS_USER_SWITCH
+  li  t1, (USER_MODE_ENCODING << MSTATUS_SPP_SHIFT)
   or  t0, t0, t1
   csrw  sstatus, t0
   sret
 
 1:
-  li  a0, MSTATUS_MPP_USER_MODE
+  li  a0, USER_MODE_ENCODING
   jal set_thread_current_mode
 
 2:
@@ -110,10 +108,10 @@ jump_to_supervisor_mode:
   jal get_thread_current_mode
 
   # Already in machine mode
-  li  t1, MSTATUS_MPP_SUPERVISOR_MODE
+  li  t1, SUPERVISOR_MODE_ENCODING
   beq a0, t1, 1f
 
-  li  t1, MSTATUS_MPP_USER_MODE
+  li  t1, USER_MODE_ENCODING
   bne a0, t1, jumpstart_fail
 
   li  a7, SYSCALL_JUMP_TO_SUPERVISOR_MODE
@@ -129,7 +127,7 @@ jump_to_supervisor_mode:
 .align 2
 .global stvec_trap_handler
 stvec_trap_handler:
-  li  a0, MSTATUS_MPP_SUPERVISOR_MODE
+  li  a0, SUPERVISOR_MODE_ENCODING
   jal set_thread_current_mode
 
   csrr a0, scause

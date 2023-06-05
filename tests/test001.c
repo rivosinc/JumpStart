@@ -18,7 +18,7 @@ int main(void) {
     return 1;
   }
 
-  if (get_thread_current_mode() != MSTATUS_MPP_SUPERVISOR_MODE) {
+  if (get_thread_current_mode() != SUPERVISOR_MODE_ENCODING) {
     return 1;
   }
 

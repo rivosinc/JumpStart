@@ -15,7 +15,7 @@ void register_trap_handler_override(uint8_t mode, uint64_t mcause,
   uint64_t exception_code = mcause & MCAUSE_EC_MASK;
   uint64_t interrupt = mcause >> MCAUSE_INTERRUPT_BIT_LSB;
 
-  if (mode == MSTATUS_MPP_MACHINE_MODE) {
+  if (mode == MACHINE_MODE_ENCODING) {
     if (interrupt == 1) {
       if (exception_code >= NUM_MACHINE_MODE_INTERRUPT_HANDLER_OVERRIDES) {
         jumpstart_fail();
@@ -31,7 +31,7 @@ void register_trap_handler_override(uint8_t mode, uint64_t mcause,
       trap_overrides->machine_mode_exception_handler_overrides[exception_code] =
           handler_address;
     }
-  } else if (mode == MSTATUS_MPP_SUPERVISOR_MODE) {
+  } else if (mode == SUPERVISOR_MODE_ENCODING) {
     if (interrupt == 1) {
       if (exception_code >= NUM_SUPERVISOR_MODE_INTERRUPT_HANDLER_OVERRIDES) {
         jumpstart_fail();
@@ -65,7 +65,7 @@ uint64_t get_trap_handler_override(uint64_t mcause) {
   uint64_t exception_code = mcause & MCAUSE_EC_MASK;
   uint64_t interrupt = mcause >> MCAUSE_INTERRUPT_BIT_LSB;
 
-  if (mode == MSTATUS_MPP_MACHINE_MODE) {
+  if (mode == MACHINE_MODE_ENCODING) {
     if (interrupt == 1) {
       if (exception_code >= NUM_MACHINE_MODE_INTERRUPT_HANDLER_OVERRIDES) {
         jumpstart_fail();
@@ -81,7 +81,7 @@ uint64_t get_trap_handler_override(uint64_t mcause) {
       return trap_overrides
           ->machine_mode_exception_handler_overrides[exception_code];
     }
-  } else if (mode == MSTATUS_MPP_SUPERVISOR_MODE) {
+  } else if (mode == SUPERVISOR_MODE_ENCODING) {
     if (interrupt == 1) {
       if (exception_code >= NUM_SUPERVISOR_MODE_INTERRUPT_HANDLER_OVERRIDES) {
         jumpstart_fail();

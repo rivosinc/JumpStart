@@ -152,7 +152,7 @@ setup_thread_attributes:
   li  a0, THREAD_ATTRIBUTES_BOOKEND_MAGIC_NUMBER_VALUE
   jal set_thread_bookend_magic_number_in_machine_mode
 
-  li  a0, MSTATUS_MPP_MACHINE_MODE
+  li  a0, MACHINE_MODE_ENCODING
   jal set_thread_current_mode_in_machine_mode
 
   ld  ra, 8(sp)
@@ -176,14 +176,12 @@ enable_svpbmt_for_supervisor_mode:
 
   ret
 
-#define MSTATUS_SUPERVISOR_SWITCH 0x0000000a00000800
-
 .global jump_to_supervisor_mode_and_main
 jump_to_supervisor_mode_and_main:
   la  t0, supervisor_entry_point
   csrw  mepc, t0
   csrr  t0, mstatus
-  li  t1, MSTATUS_SUPERVISOR_SWITCH
+  li  t1, (SUPERVISOR_MODE_ENCODING << MSTATUS_MPP_SHIFT)
   or  t0, t0, t1
   csrw  mstatus, t0
 
@@ -209,7 +207,7 @@ mtvec_trap_handler:
   # TODO: save aware more of these as required.
   mv s1, a0
 
-  li  a0, MSTATUS_MPP_MACHINE_MODE
+  li  a0, MACHINE_MODE_ENCODING
   jal set_thread_current_mode_in_machine_mode
 
   mv a0, s1

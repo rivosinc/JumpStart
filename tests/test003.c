@@ -10,7 +10,7 @@ void test003_illegal_instruction_function(void);
 int main(void) {
 
   register_trap_handler_override(
-      MSTATUS_MPP_MACHINE_MODE, MCAUSE_EC_ILLEGAL_INSTRUCTION,
+      MACHINE_MODE_ENCODING, MCAUSE_EC_ILLEGAL_INSTRUCTION,
       (uint64_t)(&test003_illegal_instruction_handler));
 
   test003_illegal_instruction_function();
