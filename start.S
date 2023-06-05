@@ -8,17 +8,19 @@
 
 .global _start
 _start:
-	la t0, mtvec_trap_handler
-	csrw mtvec, t0
+  la t0, mtvec_trap_handler
+  csrw mtvec, t0
 
   la  sp, stack
   mv  fp, sp
 
+  jal is_Xrivospagewalk_supported
+  beqz a0, 1f
   jal setup_mcrr
-
-  jal setup_thread_attributes
-
   jal setup_pmarr
+
+1:
+  jal setup_thread_attributes
 
   jal enable_svpbmt_for_supervisor_mode
 
@@ -35,16 +37,6 @@ setup_mcrr:
   # Update the mask based on the number of machine mode code pages that this
   # diag actually has.
 
-  # HACK: SOC TB doesn't have MCRR so don't set it up for this env.
-  # SOC TB boots out of SOC_TB_BOOT_ADDRESS so we detect we're running
-  # a diag for this env by checking the address of _start.
-  la t0, _start
-  li t1, SOC_TB_BOOT_ADDRESS
-  bne t0, t1, 1f
-
-  ret
-
-1:
   # Determine the size of the machine mode code region.
   # The supervisor_entry_point immediately follows the machine mode code.
   la t0, _start
@@ -62,6 +54,21 @@ setup_mcrr:
   ori t0, t0, 0x1
   csrw mcrr_0_mask, t0
 
+  ret
+
+.global is_Xrivospagewalk_supported
+is_Xrivospagewalk_supported:
+  # HACK: detect whether we're running with the Xrivospagewalk extension
+  # enabled by checking our _start address. Tests that boot at 0x80000000
+  # don't have the extension enabled.
+  la t0, _start
+  li t1, SOC_TB_BOOT_ADDRESS
+
+  li a0, 1
+  bne t0, t1, 1f
+  li a0, 0
+
+1:
   ret
 
 .section .text.jumpstart.machine
