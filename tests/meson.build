@@ -10,7 +10,7 @@ jumpstart_tests = [
   ['Enable MMU (SATP.mode = sv39), switch to supervisor mode and exit.', 'test000'],
   ['Enable MMU (SATP.mode = sv48), switch to supervisor mode and exit.', 'test001'],
   ['Ping pong between Supervisor and User mode.', 'test002'],
-  # ['Register and run Machine mode illegal instruction exception handler.', 'test003'],
+  ['Register and run Supervisor mode illegal instruction exception handler.', 'test003'],
   ['HWP AMPM perf diag.', 'test004'],
   ['Boot at 0x8000_0000. 16K data block move from WB to UC (PBMT) region at 0x42000000.', 'test005', '--isa=RV64GCHV_Zba_Zbb_Zbc_Zbs_Zbkb_Sstc_Svpbmt_Svinval_Sscofpmf_Zicbom_Zicbop_Zicboz_Zfh_Zkt_Zkr_Zicsr_Zifencei_Zawrs_Zicond_Xrivostime -m0x42000000:0x4000,0x80000000:0x3000,0x88000000:0x4000,0x88004000:0x4000,0x88009000:0x6000,0x800a0000:0x1000,0x800a0000:0x1001000'],
 ]
