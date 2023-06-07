@@ -295,7 +295,8 @@ class MemoryMap:
         pagetable_mapping[
             'num_pages'] = self.num_pages_available_for_PT_allocation
         pagetable_mapping['pmarr_memory_type'] = 'wb'
-        pagetable_mapping['section'] = '.rodata.jumpstart.pagetables'
+        pagetable_mapping[
+            'linker_script_section'] = '.rodata.jumpstart.pagetables'
         updated_mappings.append(pagetable_mapping)
 
         return updated_mappings
@@ -314,7 +315,8 @@ class MemoryMap:
         jumpstart_data_section_mapping[
             'num_pages'] = self.max_num_JumpStart_data_pages
         jumpstart_data_section_mapping['pmarr_memory_type'] = 'wb'
-        jumpstart_data_section_mapping['section'] = '.data.jumpstart'
+        jumpstart_data_section_mapping[
+            'linker_script_section'] = '.data.jumpstart'
         updated_mappings.append(jumpstart_data_section_mapping)
 
         return updated_mappings
@@ -551,22 +553,27 @@ class MemoryMap:
             # are in consecutive order when the VAs are sorted.
             previous_section = None
             for entry in self.memory_map['mappings']:
-                if previous_section == entry['section']:
+                if 'linker_script_section' not in entry:
+                    # We don't generate linker script sections for entries
+                    # that don't have a linker_script_section attribute.
+                    continue
+
+                if previous_section == entry['linker_script_section']:
                     continue
 
                 file.write(f"   . = {hex(entry['va'])};\n")
-                file.write(f"   {entry['section']} : {{\n")
-                if entry['section'] == ".text":
+                file.write(f"   {entry['linker_script_section']} : {{\n")
+                if entry['linker_script_section'] == ".text":
                     file.write(f"      *(.text.jumpstart.machine.init)\n")
                     file.write(f"      *(.text.jumpstart.machine)\n")
                     file.write(
                         f"      *(.text.jumpstart.machine.supervisor.init)\n")
                     file.write(f"      *(.text.jumpstart.supervisor)\n")
                     file.write(f"      *(.text.jumpstart.*)\n")
-                file.write(f"      *({entry['section']})\n")
+                file.write(f"      *({entry['linker_script_section']})\n")
                 file.write(f"   }}\n\n")
 
-                previous_section = entry['section']
+                previous_section = entry['linker_script_section']
             file.write('\n}\n')
 
             file.close()

@@ -16,7 +16,7 @@ mappings:
     pbmt_mode: "io"
     # Setting up the PMARR is redundant as the PMBT overrides this.
     pmarr_memory_type: "uc"
-    section: ".data.uc"
+    linker_script_section: ".data.uc"
   -
     va: 0x80000000
     pa: 0x80000000
@@ -24,7 +24,7 @@ mappings:
     page_size: 0x1000
     num_pages: 1
     pmarr_memory_type: "wb"
-    section: ".text"
+    linker_script_section: ".text"
   -
     va: 0x88000000
     pa: 0x88000000
@@ -32,4 +32,4 @@ mappings:
     page_size: 0x1000
     num_pages: 4
     pmarr_memory_type: "wb"
-    section: ".data.dms"
+    linker_script_section: ".data.dms"
