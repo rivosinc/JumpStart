@@ -551,15 +551,14 @@ class MemoryMap:
             # The entries are already sorted by VA
             # we also expect that the pages for the same section
             # are in consecutive order when the VAs are sorted.
-            previous_section = None
+            defined_sections = []
             for entry in self.memory_map['mappings']:
                 if 'linker_script_section' not in entry:
                     # We don't generate linker script sections for entries
                     # that don't have a linker_script_section attribute.
                     continue
 
-                if previous_section == entry['linker_script_section']:
-                    continue
+                assert (entry['linker_script_section'] not in defined_sections)
 
                 file.write(f"   . = {hex(entry['va'])};\n")
                 file.write(f"   {entry['linker_script_section']} : {{\n")
@@ -573,7 +572,7 @@ class MemoryMap:
                 file.write(f"      *({entry['linker_script_section']})\n")
                 file.write(f"   }}\n\n")
 
-                previous_section = entry['linker_script_section']
+                defined_sections.append(entry['linker_script_section'])
             file.write('\n}\n')
 
             file.close()
