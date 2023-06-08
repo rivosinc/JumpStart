@@ -237,10 +237,6 @@ class MemoryMap:
         with open(memory_map_file, "r") as f:
             self.memory_map = yaml.safe_load(f)
 
-            assert ('satp_mode' in self.memory_map)
-            assert (self.memory_map['satp_mode']
-                    in self.pt_attributes.mode_attributes)
-
             if 'max_num_pages_for_PT_allocation' in self.memory_map:
                 self.pt_attributes.max_num_pages_for_PT_allocation = self.memory_map[
                     'max_num_pages_for_PT_allocation']
@@ -248,10 +244,31 @@ class MemoryMap:
             self.memory_map['mappings'] = sorted(self.memory_map['mappings'],
                                                  key=lambda x: x['va'],
                                                  reverse=False)
+
+            self.sanity_check_memory_map()
+
             f.close()
 
         self.create_pagetables()
         self.create_pmarr_regions()
+
+    def sanity_check_memory_map(self):
+        assert ('satp_mode' in self.memory_map)
+        assert (self.memory_map['satp_mode']
+                in self.pt_attributes.mode_attributes)
+
+        # check that the memory mappings don't overlap
+        # the mappings are sorted by the virtual address at this point.
+        last_region_end_address = 0
+        for mapping in self.memory_map['mappings']:
+            if mapping['va'] < last_region_end_address:
+                log.error(
+                    f"Memory mapping {mapping} overlaps with another memory mapping"
+                )
+                sys.exit(1)
+
+            last_region_end_address = mapping[
+                'va'] + mapping['num_pages'] * mapping['page_size']
 
     def create_pmarr_regions(self):
         self.pmarr_regions = []
