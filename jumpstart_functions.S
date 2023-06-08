@@ -48,7 +48,7 @@ setup_mmu_for_supervisor_mode:
 
   add  a0, a0, a2
   csrw  satp, a0
-  fence.i
+  sfence.vma
 
   ld  ra, 8(sp)
   ld  fp, 0(sp)
@@ -59,7 +59,7 @@ setup_mmu_for_supervisor_mode:
 disable_mmu_for_supervisor_mode:
   li  t0, 0
   csrw  satp, t0
-  fence.i
+  sfence.vma
   ret
 
 .global jump_to_user_mode
