@@ -11,7 +11,7 @@ _start:
   la t0, mtvec_trap_handler
   csrw mtvec, t0
 
-  la  sp, stack
+  la  sp, stack_bottom
   mv  fp, sp
 
   jal is_Xrivospagewalk_supported
@@ -255,13 +255,13 @@ trap_handler_overrides:
 .global trap_handler_overrides_end
 trap_handler_overrides_end:
 
-.balign 8
-brk:
-.long
+.align 12
+.global stack_top
+stack_top:
 
-.balign 4096
-heap:
 .rep 8192
-.byte 0
+.byte 0xab
 .endr
-stack:
+
+.global stack_bottom
+stack_bottom:
