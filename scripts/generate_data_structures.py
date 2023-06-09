@@ -80,6 +80,8 @@ def generate_data_structures(attributes_yaml, defines_file,
 
     data_structures_file_fd.write("#include <inttypes.h>\n\n")
 
+    total_size_of_c_structs = 0
+
     for c_struct in attributes_data['c_structs']:
         c_struct_fields = attributes_data['c_structs'][c_struct]['fields']
         current_offset = 0
@@ -156,6 +158,14 @@ def generate_data_structures(attributes_yaml, defines_file,
         defines_file_fd.write(
             f"#define {c_struct.upper()}_STRUCT_SIZE_IN_BYTES {current_offset}\n\n"
         )
+        total_size_of_c_structs += current_offset
+
+    if total_size_of_c_structs > (attributes_data['num_pages_for_c_structs'] *
+                                  4096):
+        log.error(
+            f"Total size of C structs ({total_size_of_c_structs}) exceeds maximum size allocated for C structs {attributes_data['num_pages_for_c_structs'] * 4096}"
+        )
+        sys.exit(1)
 
     for define_name in attributes_data['defines']:
         defines_file_fd.write(

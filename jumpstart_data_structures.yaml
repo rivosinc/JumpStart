@@ -4,6 +4,8 @@
 
 max_num_cpus_supported: 3
 
+num_pages_for_c_structs: 1
+
 c_structs:
   thread_attributes:
     fields:
