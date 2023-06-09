@@ -76,13 +76,13 @@ def generate_data_structures(attributes_yaml, defines_file,
         f"#define MAX_NUM_CPUS_SUPPORTED {attributes_data['max_num_cpus_supported']}\n\n"
     )
 
-    assembly_file_fd.write(".section .text\n\n")
-
     data_structures_file_fd.write("#include <inttypes.h>\n\n")
 
     total_size_of_c_structs = 0
 
     for c_struct in attributes_data['c_structs']:
+        assembly_file_fd.write(".section .text\n\n")
+
         c_struct_fields = attributes_data['c_structs'][c_struct]['fields']
         current_offset = 0
 
@@ -158,6 +158,16 @@ def generate_data_structures(attributes_yaml, defines_file,
         defines_file_fd.write(
             f"#define {c_struct.upper()}_STRUCT_SIZE_IN_BYTES {current_offset}\n\n"
         )
+
+        assembly_file_fd.write(f'.section .data.jumpstart\n\n')
+        assembly_file_fd.write(f'.global {c_struct}_region\n')
+        assembly_file_fd.write(f'{c_struct}_region:\n')
+        assembly_file_fd.write(f".rep {current_offset}\n")
+        assembly_file_fd.write(f'  .byte 0x00\n')
+        assembly_file_fd.write(f'.endr\n')
+        assembly_file_fd.write(f'.global {c_struct}_region_end\n')
+        assembly_file_fd.write(f'{c_struct}_region_end:\n\n')
+
         total_size_of_c_structs += current_offset
 
     if total_size_of_c_structs > (attributes_data['num_pages_for_c_structs'] *
@@ -174,7 +184,7 @@ def generate_data_structures(attributes_yaml, defines_file,
     assembly_file_fd.write(
         f".rep {attributes_data['num_pages_for_stack'] * 4096}\n")
     assembly_file_fd.write(f'.byte 0x00\n')
-    assembly_file_fd.write(f'.endr\n')
+    assembly_file_fd.write(f'  .endr\n')
     assembly_file_fd.write(f'.global stack_bottom\n')
     assembly_file_fd.write(f'stack_bottom:\n')
 

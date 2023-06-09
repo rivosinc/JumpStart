@@ -151,9 +151,9 @@ setup_thread_attributes:
 
   li t0, TRAP_OVERRIDE_ATTRIBUTES_STRUCT_SIZE_IN_BYTES
   mul t0, a0, t0
-  la t1, trap_handler_overrides
+  la t1, trap_override_attributes_region
   add a0, t1, t0
-  la t1, trap_handler_overrides_end
+  la t1, trap_override_attributes_region_end
   # Make sure that we've allocated enough space for this core's trap handler
   # overrides.
   bgeu a0, t1, jumpstart_fail
@@ -238,19 +238,3 @@ mtvec_trap_handler:
   beq t1, t0, handle_env_call_from_smode
 
   j jumpstart_fail
-
-
-.section .data.jumpstart
-
-.global thread_attributes_region
-thread_attributes_region:
-.4byte 0x0
-.balign 4096
-
-.global trap_handler_overrides
-trap_handler_overrides:
-.4byte 0x0
-.balign 4096
-
-.global trap_handler_overrides_end
-trap_handler_overrides_end:
