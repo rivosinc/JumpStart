@@ -582,10 +582,8 @@ class MemoryMap:
                 if entry['linker_script_section'] == ".text":
                     file.write(f"      *(.text.jumpstart.machine.init)\n")
                     file.write(f"      *(.text.jumpstart.machine)\n")
-                    file.write(
-                        f"      *(.text.jumpstart.machine.supervisor.init)\n")
-                    file.write(f"      *(.text.jumpstart.supervisor)\n")
-                    file.write(f"      *(.text.jumpstart.*)\n")
+                    file.write(f"      *(.text.jumpstart.supervisor.init)\n")
+                    file.write(f"      *(.text.jumpstart)\n")
                 file.write(f"      *({entry['linker_script_section']})\n")
                 file.write(f"   }}\n\n")
 
