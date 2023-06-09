@@ -8,7 +8,6 @@ thread_attributes:
     current_mode: 1
     trap_override_struct_address: 8
     bookend_magic_number: 8
-  bookend_magic_number_value: 0x3317150533171505
 
 trap_override_attributes:
   supervisor_mode_interrupt_handler_overrides: 16
@@ -17,6 +16,7 @@ trap_override_attributes:
   machine_mode_exception_handler_overrides: 16
 
 defines:
+  THREAD_ATTRIBUTES_BOOKEND_MAGIC_NUMBER_VALUE: 0x3317150533171505
   END_OF_SIM_MAGIC_ADDRESS: 0x800a0000
   L2CACHE_WAY_SIZE: 0x100000
   L2CACHE_NUM_WAYS: 16

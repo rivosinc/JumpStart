@@ -146,9 +146,6 @@ def generate_data_structures(attributes_yaml, defines_file,
         current_offset += 1
     defines_file_fd.write(
         f"#define THREAD_ATTRIBUTES_STRUCT_SIZE_IN_BYTES {current_offset}\n\n")
-    defines_file_fd.write(
-        f"#define THREAD_ATTRIBUTES_BOOKEND_MAGIC_NUMBER_VALUE 0x{attributes_data['thread_attributes']['bookend_magic_number_value']:08x}\n\n"
-    )
 
     for define_name in attributes_data['defines']:
         defines_file_fd.write(
