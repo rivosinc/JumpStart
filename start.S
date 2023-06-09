@@ -138,6 +138,9 @@ setup_thread_attributes:
   addi    fp, sp, 16
 
   csrr a0, mhartid
+  li t1, MAX_NUM_CPUS_SUPPORTED
+  bgeu a0, t1, jumpstart_fail
+
   li  t2, THREAD_ATTRIBUTES_STRUCT_SIZE_IN_BYTES
   mul t2, a0, t2
   la  t1, thread_attributes_region

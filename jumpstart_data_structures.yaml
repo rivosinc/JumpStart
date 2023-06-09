@@ -2,6 +2,8 @@
 #
 # SPDX-License-Identifier: LicenseRef-Rivos-Internal-Only
 
+max_num_cpus_supported: 3
+
 c_structs:
   thread_attributes:
     fields:
