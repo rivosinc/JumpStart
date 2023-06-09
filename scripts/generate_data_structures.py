@@ -38,6 +38,14 @@ def get_memop_of_size(memory_op_type, size_in_bytes):
         raise Exception(f'Invalid size: {size_in_bytes} bytes')
 
 
+field_type_to_size_in_bytes = {
+    'uint8_t': 1,
+    'uint16_t': 2,
+    'uint32_t': 4,
+    'uint64_t': 8,
+}
+
+
 def generate_data_structures(attributes_yaml, defines_file,
                              data_structures_file, assembly_file):
     log.debug(f'Generating data structures files from {attributes_yaml}')
@@ -65,87 +73,84 @@ def generate_data_structures(attributes_yaml, defines_file,
     )
     assembly_file_fd.write(".section .text\n\n")
 
-    thread_attribute_fields = attributes_data['thread_attributes'][
-        'fields_and_sizes']
     data_structures_file_fd.write("#include <inttypes.h>\n\n")
-    data_structures_file_fd.write("struct thread_attributes {\n")
-    current_offset = 0
-    for field_name in thread_attribute_fields:
-        attribute_size_in_bytes = thread_attribute_fields[field_name]
-        data_structures_file_fd.write(
-            f"    uint{attribute_size_in_bytes * 8}_t {field_name};\n")
-        # Take care of the padding that the compiler will add.
-        while (current_offset % attribute_size_in_bytes) != 0:
+
+    for c_struct in attributes_data['c_structs']:
+        c_struct_fields = attributes_data['c_structs'][c_struct]['fields']
+        current_offset = 0
+
+        data_structures_file_fd.write(f"struct {c_struct} {{\n")
+        for field_name in c_struct_fields:
+
+            num_field_elements = 1
+            if len(c_struct_fields[field_name].split(",")) > 1:
+                field_type = c_struct_fields[field_name].split(",")[0]
+                num_field_elements = int(
+                    c_struct_fields[field_name].split(",")[1])
+                defines_file_fd.write(
+                    f"#define NUM_{field_name.upper()} {num_field_elements}\n")
+            else:
+                field_type = c_struct_fields[field_name]
+
+            field_size_in_bytes = field_type_to_size_in_bytes[field_type]
+            if num_field_elements > 1:
+                data_structures_file_fd.write(
+                    f"    {field_type} {field_name}[{num_field_elements}];\n")
+            else:
+                data_structures_file_fd.write(
+                    f"    {field_type} {field_name};\n")
+
+            # Take care of the padding that the compiler will add.
+            while (current_offset % field_size_in_bytes) != 0:
+                current_offset += 1
+            assembly_file_fd.write(
+                f"#define {c_struct.upper()}_{field_name.upper()}_OFFSET {current_offset}\n\n"
+            )
+
+            assembly_file_fd.write(f'.section .text.jumpstart\n')
+            getter_method = f'get_{c_struct}_{field_name}'
+            assembly_file_fd.write(f'.global {getter_method}\n')
+            assembly_file_fd.write(f'{getter_method}:\n')
+            assembly_file_fd.write(
+                f'    {get_memop_of_size(MemoryOp.LOAD, field_size_in_bytes)}   a0, {c_struct.upper()}_{field_name.upper()}_OFFSET(tp)\n'
+            )
+            assembly_file_fd.write(f'    ret\n\n')
+
+            assembly_file_fd.write(f'.global set_{c_struct}_{field_name}\n')
+            assembly_file_fd.write(f'set_{c_struct}_{field_name}:\n')
+            assembly_file_fd.write(
+                f'    {get_memop_of_size(MemoryOp.STORE, field_size_in_bytes)}   a0, {c_struct.upper()}_{field_name.upper()}_OFFSET(tp)\n'
+            )
+            assembly_file_fd.write(f'    ret\n\n')
+
+            assembly_file_fd.write(f'.section .text.jumpstart.machine\n')
+            getter_method = f'get_{c_struct}_{field_name}_in_machine_mode'
+            assembly_file_fd.write(f'.global {getter_method}\n')
+            assembly_file_fd.write(f'{getter_method}:\n')
+            assembly_file_fd.write(
+                f'    {get_memop_of_size(MemoryOp.LOAD, field_size_in_bytes)}   a0, {c_struct.upper()}_{field_name.upper()}_OFFSET(tp)\n'
+            )
+            assembly_file_fd.write(f'    ret\n\n')
+
+            assembly_file_fd.write(
+                f'.global set_{c_struct}_{field_name}_in_machine_mode\n')
+            assembly_file_fd.write(
+                f'set_{c_struct}_{field_name}_in_machine_mode:\n')
+            assembly_file_fd.write(
+                f'    {get_memop_of_size(MemoryOp.STORE, field_size_in_bytes)}   a0, {c_struct.upper()}_{field_name.upper()}_OFFSET(tp)\n'
+            )
+            assembly_file_fd.write(f'    ret\n\n')
+
+            current_offset += field_size_in_bytes * num_field_elements
+
+        data_structures_file_fd.write("};\n\n")
+
+        # Align the end of the struct to 8 bytes.
+        while (current_offset % 8) != 0:
             current_offset += 1
-        assembly_file_fd.write(
-            f"#define THREAD_ATTRIBUTES_{field_name.upper()}_OFFSET {current_offset}\n\n"
-        )
-        assembly_file_fd.write(f'.section .text.jumpstart\n')
-        assembly_file_fd.write(f'.global get_thread_{field_name}\n')
-        assembly_file_fd.write(f'get_thread_{field_name}:\n')
-        assembly_file_fd.write(
-            f'    {get_memop_of_size(MemoryOp.LOAD, attribute_size_in_bytes)}   a0, THREAD_ATTRIBUTES_{field_name.upper()}_OFFSET(tp)\n'
-        )
-        assembly_file_fd.write(f'    ret\n\n')
-
-        assembly_file_fd.write(f'.global set_thread_{field_name}\n')
-        assembly_file_fd.write(f'set_thread_{field_name}:\n')
-        assembly_file_fd.write(
-            f'    {get_memop_of_size(MemoryOp.STORE, attribute_size_in_bytes)}   a0, THREAD_ATTRIBUTES_{field_name.upper()}_OFFSET(tp)\n'
-        )
-        assembly_file_fd.write(f'    ret\n\n')
-
-        assembly_file_fd.write(f'.section .text.jumpstart.machine\n')
-        assembly_file_fd.write(
-            f'.global get_thread_{field_name}_in_machine_mode\n')
-        assembly_file_fd.write(f'get_thread_{field_name}_in_machine_mode:\n')
-        assembly_file_fd.write(
-            f'    {get_memop_of_size(MemoryOp.LOAD, attribute_size_in_bytes)}   a0, THREAD_ATTRIBUTES_{field_name.upper()}_OFFSET(tp)\n'
-        )
-        assembly_file_fd.write(f'    ret\n\n')
-
-        assembly_file_fd.write(
-            f'.global set_thread_{field_name}_in_machine_mode\n')
-        assembly_file_fd.write(f'set_thread_{field_name}_in_machine_mode:\n')
-        assembly_file_fd.write(
-            f'    {get_memop_of_size(MemoryOp.STORE, attribute_size_in_bytes)}   a0, THREAD_ATTRIBUTES_{field_name.upper()}_OFFSET(tp)\n'
-        )
-        assembly_file_fd.write(f'    ret\n\n')
-
-        current_offset += attribute_size_in_bytes
-
-    data_structures_file_fd.write("};\n\n")
-
-    data_structures_file_fd.write("struct trap_override_attributes {\n")
-    current_offset = 0
-    for mode in attributes_data['trap_override_attributes']:
-        data_structures_file_fd.write(
-            f"    uint64_t {mode}[{attributes_data['trap_override_attributes'][mode]}];\n"
-        )
         defines_file_fd.write(
-            f"#define NUM_{mode.upper()} {attributes_data['trap_override_attributes'][mode]}\n"
+            f"#define {c_struct.upper()}_STRUCT_SIZE_IN_BYTES {current_offset}\n\n"
         )
-        current_offset += attributes_data['trap_override_attributes'][mode] * 8
-    data_structures_file_fd.write("};\n\n")
-    defines_file_fd.write(
-        f"#define TRAP_ATTRIBUTES_STRUCT_SIZE_IN_BYTES {current_offset}\n\n")
-    defines_file_fd.write("\n")
-
-    for field_name in thread_attribute_fields:
-        # Add the gettrs to jumpstart_functions.h so that they are
-        # user visible.
-        # data_structures_file_fd.write(
-        #     f'uint{thread_attribute_fields[field_name] * 8}_t get_{field_name}(void);\n'
-        # )
-        data_structures_file_fd.write(
-            f'void set_{field_name}(uint{thread_attribute_fields[field_name] * 8}_t value);\n'
-        )
-
-    # Align the end of the struct to 8 bytes.
-    while (current_offset % 8) != 0:
-        current_offset += 1
-    defines_file_fd.write(
-        f"#define THREAD_ATTRIBUTES_STRUCT_SIZE_IN_BYTES {current_offset}\n\n")
 
     for define_name in attributes_data['defines']:
         defines_file_fd.write(

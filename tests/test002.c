@@ -5,16 +5,16 @@
 #include "jumpstart_functions.h"
 
 int main(void) {
-  if (get_thread_hart_id() != 0) {
+  if (get_thread_attributes_hart_id() != 0) {
     return 1;
   }
 
-  if (get_thread_bookend_magic_number() !=
+  if (get_thread_attributes_bookend_magic_number() !=
       THREAD_ATTRIBUTES_BOOKEND_MAGIC_NUMBER_VALUE) {
     return 1;
   }
 
-  if (get_thread_current_mode() != SUPERVISOR_MODE_ENCODING) {
+  if (get_thread_attributes_current_mode() != SUPERVISOR_MODE_ENCODING) {
     return 1;
   }
 
@@ -22,12 +22,12 @@ int main(void) {
 
   for (int i = 0; i < 10; ++i) {
     jump_to_user_mode();
-    if (get_thread_current_mode() != USER_MODE_ENCODING) {
+    if (get_thread_attributes_current_mode() != USER_MODE_ENCODING) {
       return 1;
     }
 
     jump_to_supervisor_mode();
-    if (get_thread_current_mode() != SUPERVISOR_MODE_ENCODING) {
+    if (get_thread_attributes_current_mode() != SUPERVISOR_MODE_ENCODING) {
       return 1;
     }
   }

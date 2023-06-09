@@ -17,7 +17,7 @@ supervisor_entry_point:
 	csrw stvec, t0
 
   li  a0, SUPERVISOR_MODE_ENCODING
-  jal set_thread_current_mode
+  jal set_thread_attributes_current_mode
 
   jal main
 
@@ -70,7 +70,7 @@ jump_to_user_mode:
   sd  fp, 0(sp)
   addi    fp, sp, 16
 
-  jal get_thread_current_mode
+  jal get_thread_attributes_current_mode
 
   # Already in user mode
   li  t1, USER_MODE_ENCODING
@@ -89,7 +89,7 @@ jump_to_user_mode:
 
 1:
   li  a0, USER_MODE_ENCODING
-  jal set_thread_current_mode
+  jal set_thread_attributes_current_mode
 
 2:
   ld  ra, 8(sp)
@@ -105,7 +105,7 @@ jump_to_supervisor_mode:
   sd  fp, 0(sp)
   addi    fp, sp, 16
 
-  jal get_thread_current_mode
+  jal get_thread_attributes_current_mode
 
   # Already in machine mode
   li  t1, SUPERVISOR_MODE_ENCODING
@@ -128,7 +128,7 @@ jump_to_supervisor_mode:
 .global stvec_trap_handler
 stvec_trap_handler:
   li  a0, SUPERVISOR_MODE_ENCODING
-  jal set_thread_current_mode
+  jal set_thread_attributes_current_mode
 
   csrr a0, scause
   # returns the address of the trap handler if the user
