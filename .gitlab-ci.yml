@@ -19,6 +19,7 @@ variables:
 default:
   before_script:
     - module load rivos/init
+    - module load rivos-sdk/riscv-gnu-toolchain
     - module load rivos-sdk/riscv-isa-sim
        # dont export it too early else gitlab own git commands fail
     - export GIT_CONFIG_GLOBAL="${CI_PROJECT_DIR}/.cache/gitconfig"
@@ -36,9 +37,14 @@ build-and-test:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" || $CI_PIPELINE_SOURCE == "schedule"
   script:
     - meson setup builddir --cross-file cross-file.txt --buildtype release
-    - echo "Building jumpstart"
+    - echo "Building jumpstart release build"
     - meson compile -C builddir
-    - echo "Testing jumpstart"
+    - echo "Testing jumpstart release build"
+    - meson test -C builddir
+    - meson setup --reconfigure builddir --buildtype release
+    - echo "Building jumpstart debug build"
+    - meson compile -C builddir
+    - echo "Testing jumpstart debug build"
     - meson test -C builddir
   artifacts:
     when: always
