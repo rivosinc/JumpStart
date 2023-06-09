@@ -225,6 +225,7 @@ class PmarrRegion:
 
 class MemoryMap:
     pt_attributes = PageTableAttributes()
+    num_guard_pages_generated = 0
 
     def __init__(self, memory_map_file, attributes_yaml):
         if os.path.exists(memory_map_file) is False:
@@ -252,6 +253,15 @@ class MemoryMap:
         for page_count in jumpstart_attributes['page_counts']:
             self.num_jumpstart_data_pages += jumpstart_attributes[
                 'page_counts'][page_count]
+
+        # Add a guard page between the user sections and the jumpstart data section
+        self.memory_map['mappings'] = self.add_guard_page_to_mappings(
+            self.memory_map['mappings'])
+        self.memory_map[
+            'mappings'] = self.add_jumpstart_data_section_to_mappings(
+                self.memory_map['mappings'])
+        self.memory_map['mappings'] = self.add_guard_page_to_mappings(
+            self.memory_map['mappings'])
 
         self.create_pagetables()
         self.create_pmarr_regions()
@@ -342,6 +352,28 @@ class MemoryMap:
 
         return updated_mappings
 
+    def add_guard_page_to_mappings(self, mappings):
+        # Guard pages have no RWX permissions and are used to detect
+        # overflows or underflows in the jumpstart data section
+        updated_mappings = mappings.copy()
+        last_mapping = updated_mappings[-1]
+        guard_page_mapping = {}
+        guard_page_mapping['va'] = last_mapping['va'] + (
+            last_mapping['page_size'] * last_mapping['num_pages'])
+        guard_page_mapping['pa'] = last_mapping['pa'] + (
+            last_mapping['page_size'] * last_mapping['num_pages'])
+        guard_page_mapping['xwr'] = "0b000"
+        guard_page_mapping['page_size'] = 1 << self.get_attribute(
+            'page_offset')
+        guard_page_mapping['num_pages'] = 1
+        guard_page_mapping['pmarr_memory_type'] = 'wb'
+        guard_page_mapping[
+            'linker_script_section'] = f'.data.jumpstart.guard_page.{self.num_guard_pages_generated}'
+        self.num_guard_pages_generated += 1
+        updated_mappings.append(guard_page_mapping)
+
+        return updated_mappings
+
     def split_mappings_at_page_granularity(self, mappings):
         split_mappings = []
         for entry in mappings:
@@ -414,12 +446,10 @@ class MemoryMap:
     # Populates the sparse memory with the pagetable entries and returns the
     # updated mappings with the pagetable section added.
     # Returns None if there are insufficient number of pagetable pages
-    # allocate from.
+    # to allocate from.
     def allocate_PT_mappings(self):
-        updated_mappings = self.add_jumpstart_data_section_to_mappings(
-            self.memory_map['mappings'])
         updated_mappings = self.add_pagetable_section_to_mappings(
-            updated_mappings)
+            self.memory_map['mappings'])
 
         for entry in self.split_mappings_at_page_granularity(updated_mappings):
             # TODO: support superpages
@@ -668,6 +698,14 @@ class MemoryMap:
 
             last_filled_address = address
 
+    def generate_guard_pages(self, file_descriptor):
+        for guard_page_id in range(self.num_guard_pages_generated):
+            file_descriptor.write(
+                f"\n\n.section .data.jumpstart.guard_page.{guard_page_id}\n")
+            file_descriptor.write(f".global guard_page_{guard_page_id}\n")
+            file_descriptor.write(f"guard_page_{guard_page_id}:\n")
+            file_descriptor.write(f".zero 4096, 0x10\n\n")
+
     def generate_assembly_file(self, output_assembly_file):
         with open(output_assembly_file, 'w') as file:
             file.write(
@@ -678,6 +716,8 @@ class MemoryMap:
             self.generate_pmarr_functions(file)
 
             self.generate_page_table_data(file)
+
+            self.generate_guard_pages(file)
 
             file.close()
 
