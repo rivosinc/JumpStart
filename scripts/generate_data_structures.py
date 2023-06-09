@@ -167,6 +167,17 @@ def generate_data_structures(attributes_yaml, defines_file,
         )
         sys.exit(1)
 
+    assembly_file_fd.write(f'.section .data.jumpstart\n')
+    assembly_file_fd.write(f'.align 12\n')
+    assembly_file_fd.write(f'.global stack_top\n')
+    assembly_file_fd.write(f'stack_top:\n')
+    assembly_file_fd.write(
+        f".rep {attributes_data['num_pages_for_stack'] * 4096}\n")
+    assembly_file_fd.write(f'.byte 0x00\n')
+    assembly_file_fd.write(f'.endr\n')
+    assembly_file_fd.write(f'.global stack_bottom\n')
+    assembly_file_fd.write(f'stack_bottom:\n')
+
     for define_name in attributes_data['defines']:
         defines_file_fd.write(
             f"#define {define_name} {attributes_data['defines'][define_name]}\n"

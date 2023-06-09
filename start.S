@@ -254,14 +254,3 @@ trap_handler_overrides:
 
 .global trap_handler_overrides_end
 trap_handler_overrides_end:
-
-.align 12
-.global stack_top
-stack_top:
-
-.rep 8192
-.byte 0xab
-.endr
-
-.global stack_bottom
-stack_bottom:
