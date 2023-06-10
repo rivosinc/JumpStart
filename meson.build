@@ -18,7 +18,7 @@ add_project_arguments('-Wno-c++-compat',
 prog_python = find_program('python3')
 
 data_structures_generation_script = meson.current_source_dir() + '/scripts/generate_data_structures.py'
-data_strucutures_yaml = get_option('data_structures_yaml')
+data_strucutures_yaml = meson.current_source_dir() + '/jumpstart_data_structures.yaml'
 
 data_structures_generator_output = custom_target(
                                     'Generate the data structures for build',
@@ -43,12 +43,13 @@ directed_diag_memory_map_yaml = get_option('directed_diag_memory_map_yaml')
 if directed_diag_memory_map_yaml != '' and directed_diag_sources.length() > 0
   memory_map_tools_output = custom_target(
                                 'Generate memory map related source files for build',
-                                input : [memory_map_tools_script, directed_diag_memory_map_yaml],
+                                input : [memory_map_tools_script, directed_diag_memory_map_yaml, data_strucutures_yaml],
                                 output : ['memory_attributes.S',
                                           'linker_script.ld'],
                                 command : [prog_python,
                                           '@INPUT0@',
                                           '--memory_map', '@INPUT1@',
+                                          '--attributes_yaml', '@INPUT2@',
                                           '--output_assembly_file', '@OUTPUT0@',
                                           '--output_linker_script', '@OUTPUT1@',
                                           ])

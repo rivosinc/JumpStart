@@ -224,10 +224,9 @@ class PmarrRegion:
 
 
 class MemoryMap:
-    max_num_JumpStart_data_pages = 5
     pt_attributes = PageTableAttributes()
 
-    def __init__(self, memory_map_file):
+    def __init__(self, memory_map_file, attributes_yaml):
         if os.path.exists(memory_map_file) is False:
             raise Exception(
                 f"Memory map file {memory_map_file} does not exist")
@@ -237,17 +236,22 @@ class MemoryMap:
         with open(memory_map_file, "r") as f:
             self.memory_map = yaml.safe_load(f)
 
-            if 'max_num_pages_for_PT_allocation' in self.memory_map:
-                self.pt_attributes.max_num_pages_for_PT_allocation = self.memory_map[
-                    'max_num_pages_for_PT_allocation']
+        if 'max_num_pages_for_PT_allocation' in self.memory_map:
+            self.pt_attributes.max_num_pages_for_PT_allocation = self.memory_map[
+                'max_num_pages_for_PT_allocation']
 
-            self.memory_map['mappings'] = sorted(self.memory_map['mappings'],
-                                                 key=lambda x: x['va'],
-                                                 reverse=False)
+        self.memory_map['mappings'] = sorted(self.memory_map['mappings'],
+                                             key=lambda x: x['va'],
+                                             reverse=False)
 
-            self.sanity_check_memory_map()
+        self.sanity_check_memory_map()
 
-            f.close()
+        with open(attributes_yaml, "r") as f:
+            jumpstart_attributes = yaml.safe_load(f)
+        self.num_jumpstart_data_pages = 0
+        for page_count in jumpstart_attributes['page_counts']:
+            self.num_jumpstart_data_pages += jumpstart_attributes[
+                'page_counts'][page_count]
 
         self.create_pagetables()
         self.create_pmarr_regions()
@@ -330,7 +334,7 @@ class MemoryMap:
         jumpstart_data_section_mapping['page_size'] = 1 << self.get_attribute(
             'page_offset')
         jumpstart_data_section_mapping[
-            'num_pages'] = self.max_num_JumpStart_data_pages
+            'num_pages'] = self.num_jumpstart_data_pages
         jumpstart_data_section_mapping['pmarr_memory_type'] = 'wb'
         jumpstart_data_section_mapping[
             'linker_script_section'] = '.data.jumpstart'
@@ -760,6 +764,10 @@ def main():
                         help='Memory Map YAML file',
                         required=True,
                         type=str)
+    parser.add_argument('--attributes_yaml',
+                        help=f'YAML containing the jumpstart attributes.',
+                        required=True,
+                        type=str)
     parser.add_argument(
         '--output_assembly_file',
         help='Assembly file to generate with page table mappings',
@@ -787,7 +795,7 @@ def main():
         log.basicConfig(format="%(levelname)s: [%(threadName)s]: %(message)s",
                         level=log.INFO)
 
-    pagetables = MemoryMap(args.memory_map_file)
+    pagetables = MemoryMap(args.memory_map_file, args.attributes_yaml)
 
     if args.output_assembly_file is not None:
         pagetables.generate_assembly_file(args.output_assembly_file)

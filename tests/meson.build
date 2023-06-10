@@ -12,7 +12,7 @@ jumpstart_tests = [
   ['Ping pong between Supervisor and User mode.', 'test002'],
   ['Register and run Supervisor mode illegal instruction exception handler.', 'test003'],
   ['HWP AMPM perf diag.', 'test004'],
-  ['Boot at 0x8000_0000. 16K data block move from WB to UC (PBMT) region at 0x42000000.', 'test005', '--isa=RV64GCHV_Zba_Zbb_Zbc_Zbs_Zbkb_Sstc_Svpbmt_Svinval_Sscofpmf_Zicbom_Zicbop_Zicboz_Zfh_Zkt_Zkr_Zicsr_Zifencei_Zawrs_Zicond_Xrivostime -m0x42000000:0x4000,0x80000000:0x4000,0x88000000:0x4000,0x88004000:0x4000,0x88009000:0x10000,0x800a0000:0x1000,0x800a0000:0x1001000'],
+  ['Boot at 0x8000_0000. 16K data block move from WB to UC (PBMT) region at 0x42000000.', 'test005', '--isa=RV64GCHV_Zba_Zbb_Zbc_Zbs_Zbkb_Sstc_Svpbmt_Svinval_Sscofpmf_Zicbom_Zicbop_Zicboz_Zfh_Zkt_Zkr_Zicsr_Zifencei_Zawrs_Zicond_Xrivostime -m0x42000000:0x4000,0x80000000:0x4000,0x88000000:0xe000,0x800a0000:0x1000,0x800a0000:0x1001000'],
   ['UART test.', 'test007'],
 ]
 
@@ -28,12 +28,13 @@ foreach jumpstart_test : jumpstart_tests
 
   memory_map_tools_output = custom_target(
                                 'Generate memory map build files for ' + test_name,
-                                input : [memory_map_tools_script, memory_map_file ],
+                                input : [memory_map_tools_script, memory_map_file, data_strucutures_yaml],
                                 output : [test_name + '.memory_attributes.S',
                                           test_name + '.linker_script.ld'],
                                 command : [prog_python,
                                           '@INPUT0@',
                                           '--memory_map', '@INPUT1@',
+                                          '--attributes_yaml', '@INPUT2@',
                                           '--output_assembly_file', '@OUTPUT0@',
                                           '--output_linker_script', '@OUTPUT1@',
                                           ])

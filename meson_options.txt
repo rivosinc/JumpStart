@@ -12,11 +12,6 @@ option('directed_diag_memory_map_yaml',
        value : '',
        description : 'Memory map of the directed diag.')
 
-option('data_structures_yaml',
-       type : 'string',
-       value : 'jumpstart_data_structures.yaml',
-       description : 'YAML containing details of the JumpStart data structures and defines to generate.')
-
 option('spike_default_isa_string',
        type : 'string',
        value : 'rv64gchv_zba_zbb_zbc_zbs_zbkb_sstc_svpbmt_svinval_sscofpmf_zicbom_zicbop_zicboz_zfh_zfhmin_zfbfmin_zvfh_zvfhmin_zvfbfmin_zvfbfwma_zkt_zkr_zicsr_zifencei_zihintpause_zawrs_zicond_zvkned_zvbb_zvkg_zvknha_zvknhb_zvksh_zvksed_xrivostime_xrivospagewalk_smaia_ssaia',
