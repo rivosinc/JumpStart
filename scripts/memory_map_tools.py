@@ -327,7 +327,7 @@ class MemoryMap:
             'num_pages'] = self.num_pages_available_for_PT_allocation
         pagetable_mapping['pmarr_memory_type'] = 'wb'
         pagetable_mapping[
-            'linker_script_section'] = '.rodata.jumpstart.pagetables'
+            'linker_script_section'] = '.jumpstart.rodata.pagetables'
         updated_mappings.append(pagetable_mapping)
 
         return updated_mappings
@@ -347,7 +347,7 @@ class MemoryMap:
             'num_pages'] = self.num_jumpstart_data_pages
         jumpstart_data_section_mapping['pmarr_memory_type'] = 'wb'
         jumpstart_data_section_mapping[
-            'linker_script_section'] = '.data.jumpstart'
+            'linker_script_section'] = '.jumpstart.data'
         updated_mappings.append(jumpstart_data_section_mapping)
 
         return updated_mappings
@@ -368,7 +368,7 @@ class MemoryMap:
         guard_page_mapping['num_pages'] = 1
         guard_page_mapping['pmarr_memory_type'] = 'wb'
         guard_page_mapping[
-            'linker_script_section'] = f'.data.jumpstart.guard_page.{self.num_guard_pages_generated}'
+            'linker_script_section'] = f'.jumpstart.guard_page.{self.num_guard_pages_generated}'
         self.num_guard_pages_generated += 1
         updated_mappings.append(guard_page_mapping)
 
@@ -614,10 +614,10 @@ class MemoryMap:
                 file.write(f"   . = {hex(entry['va'])};\n")
                 file.write(f"   {entry['linker_script_section']} : {{\n")
                 if entry['linker_script_section'] == ".text":
-                    file.write(f"      *(.text.jumpstart.machine.init)\n")
-                    file.write(f"      *(.text.jumpstart.machine)\n")
-                    file.write(f"      *(.text.jumpstart.supervisor.init)\n")
-                    file.write(f"      *(.text.jumpstart)\n")
+                    file.write(f"      *(.jumpstart.text.machine.init)\n")
+                    file.write(f"      *(.jumpstart.text.machine)\n")
+                    file.write(f"      *(.jumpstart.text.supervisor.init)\n")
+                    file.write(f"      *(.jumpstart.text)\n")
                 file.write(f"      *({entry['linker_script_section']})\n")
                 file.write(f"   }}\n\n")
 
@@ -627,7 +627,7 @@ class MemoryMap:
             file.close()
 
     def generate_page_table_functions(self, file_descriptor):
-        file_descriptor.write(".section .text.jumpstart\n\n")
+        file_descriptor.write(".section .jumpstart.text\n\n")
         file_descriptor.write(
             f"#define PAGE_OFFSET {self.get_attribute('page_offset')}\n")
         file_descriptor.write(
@@ -659,7 +659,7 @@ class MemoryMap:
         file_descriptor.write(f"   ret\n\n\n")
 
     def generate_pmarr_functions(self, file_descriptor):
-        file_descriptor.write(".section .text.jumpstart.machine\n\n")
+        file_descriptor.write(".section .jumpstart.text.machine\n\n")
         file_descriptor.write("\n")
         file_descriptor.write(".global setup_pmarr\n")
         file_descriptor.write("setup_pmarr:\n\n")
@@ -672,7 +672,7 @@ class MemoryMap:
         file_descriptor.write("\n")
 
     def generate_page_table_data(self, file_descriptor):
-        file_descriptor.write(".section .rodata.jumpstart.pagetables\n\n")
+        file_descriptor.write(".section .jumpstart.rodata.pagetables\n\n")
         file_descriptor.write(f".global {self.pt_attributes.pt_start_label}\n")
         file_descriptor.write(f"{self.pt_attributes.pt_start_label}:\n\n")
 
@@ -701,7 +701,7 @@ class MemoryMap:
     def generate_guard_pages(self, file_descriptor):
         for guard_page_id in range(self.num_guard_pages_generated):
             file_descriptor.write(
-                f"\n\n.section .data.jumpstart.guard_page.{guard_page_id}\n")
+                f"\n\n.section .jumpstart.guard_page.{guard_page_id}\n")
             file_descriptor.write(f".global guard_page_{guard_page_id}\n")
             file_descriptor.write(f"guard_page_{guard_page_id}:\n")
             file_descriptor.write(f".zero 4096, 0x10\n\n")

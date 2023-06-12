@@ -49,7 +49,7 @@ field_type_to_size_in_bytes = {
 def generate_getter_and_setter_methods_for_field(assembly_file_fd, c_struct,
                                                  field_name,
                                                  field_size_in_bytes):
-    assembly_file_fd.write(f'.section .text.jumpstart\n')
+    assembly_file_fd.write(f'.section .jumpstart.text\n')
     getter_method = f'get_{c_struct}_{field_name}'
     assembly_file_fd.write(f'.global {getter_method}\n')
     assembly_file_fd.write(f'{getter_method}:\n')
@@ -65,7 +65,7 @@ def generate_getter_and_setter_methods_for_field(assembly_file_fd, c_struct,
     )
     assembly_file_fd.write(f'    ret\n\n')
 
-    assembly_file_fd.write(f'.section .text.jumpstart.machine\n')
+    assembly_file_fd.write(f'.section .jumpstart.text.machine\n')
     getter_method = f'get_{c_struct}_{field_name}_in_machine_mode'
     assembly_file_fd.write(f'.global {getter_method}\n')
     assembly_file_fd.write(f'{getter_method}:\n')
@@ -165,7 +165,7 @@ def generate_data_structures(attributes_yaml, defines_file,
             f"#define {c_struct.upper()}_STRUCT_SIZE_IN_BYTES {current_offset}\n\n"
         )
 
-        assembly_file_fd.write(f'.section .data.jumpstart\n\n')
+        assembly_file_fd.write(f'.section .jumpstart.data\n\n')
         assembly_file_fd.write(f'.global {c_struct}_region\n')
         assembly_file_fd.write(f'{c_struct}_region:\n')
         assembly_file_fd.write(f".rep {current_offset}\n")
@@ -183,7 +183,7 @@ def generate_data_structures(attributes_yaml, defines_file,
         )
         sys.exit(1)
 
-    assembly_file_fd.write(f'.section .data.jumpstart\n')
+    assembly_file_fd.write(f'.section .jumpstart.data\n')
     assembly_file_fd.write(f'.align 12\n')
     assembly_file_fd.write(f'.global stack_top\n')
     assembly_file_fd.write(f'stack_top:\n')
