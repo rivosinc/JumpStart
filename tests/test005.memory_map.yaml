@@ -8,16 +8,6 @@ max_num_pages_for_PT_allocation: 6
 
 mappings:
   -
-    va: 0x42000000
-    pa: 0x42000000
-    xwr: "0b011"
-    page_size: 0x1000
-    num_pages: 4
-    pbmt_mode: "io"
-    # Setting up the PMARR is redundant as the PMBT overrides this.
-    pmarr_memory_type: "uc"
-    linker_script_section: ".data.uc"
-  -
     va: 0x80000000
     pa: 0x80000000
     xwr: "0b101"
@@ -28,6 +18,16 @@ mappings:
   -
     va: 0x88000000
     pa: 0x88000000
+    xwr: "0b011"
+    page_size: 0x1000
+    num_pages: 4
+    pbmt_mode: "io"
+    # Setting up the PMARR is redundant as the PMBT overrides this.
+    pmarr_memory_type: "uc"
+    linker_script_section: ".data.uc"
+  -
+    va: 0x89000000
+    pa: 0x89000000
     xwr: "0b011"
     page_size: 0x1000
     num_pages: 4
