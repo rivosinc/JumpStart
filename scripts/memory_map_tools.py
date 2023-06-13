@@ -615,6 +615,11 @@ class MemoryMap:
                 file.write(f"   . = {hex(entry['va'])};\n")
                 file.write(f"   {entry['linker_script_section']} : {{\n")
                 if entry['linker_script_section'] == ".text":
+                    # The machine mode code has to be the start of the
+                    # text section as it has to fall into the default range
+                    # specified in MCRR_0.
+                    # The rest of the jumpstart code is placed in it's own
+                    # section .jumpstart.text.
                     file.write(f"      *(.jumpstart.text.machine.init)\n")
                     file.write(f"      *(.jumpstart.text.machine)\n")
                     file.write(f"      *(.jumpstart.text.supervisor.init)\n")
