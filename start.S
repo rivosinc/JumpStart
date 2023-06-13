@@ -4,7 +4,7 @@
 
 #include "jumpstart_defines.h"
 
-.section .jumpstart.text.machine.init
+.section .jumpstart.text.machine.init, "ax"
 
 .global _start
 _start:
@@ -71,7 +71,7 @@ is_Xrivospagewalk_supported:
 1:
   ret
 
-.section .jumpstart.text.machine
+.section .jumpstart.text.machine, "ax"
 
 .global enable_trap_delegation_to_supervisor_mode
 enable_trap_delegation_to_supervisor_mode:

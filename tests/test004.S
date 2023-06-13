@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: LicenseRef-Rivos-Internal-Only
 
-.section .text
+.section .text, "ax"
 
 .global hwp_ampm_diag
 hwp_ampm_diag:

@@ -8,7 +8,7 @@
 # start it on a new page. We'll use the supervisor_entry_point label to
 # determine the end of the machine mode code area so that we can set
 # up MCRR_0 correctly.
-.section .jumpstart.text.supervisor.init
+.section .jumpstart.text.supervisor.init, "ax"
 
 .align 12
 .global supervisor_entry_point
@@ -29,7 +29,7 @@ supervisor_entry_point:
 
   wfi
 
-.section .jumpstart.text
+.section .jumpstart.text, "ax"
 
 .global setup_mmu_for_supervisor_mode
 setup_mmu_for_supervisor_mode:
