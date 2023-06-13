@@ -4,6 +4,7 @@
 
 #pragma once
 
-void setup_uart(void);
-int puts(const char *str);
-int printk(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
+void setup_uart(void) __attribute__((section(".jumpstart.text")));
+int puts(const char *str) __attribute__((section(".jumpstart.text")));
+int printk(const char *fmt, ...) __attribute__((format(printf, 1, 2)))
+__attribute__((section(".jumpstart.text")));

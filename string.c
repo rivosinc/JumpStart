@@ -6,6 +6,13 @@
 
 #include "string.h"
 
+static char *ksprintn(char *nbuf, uintmax_t num, int base, int *lenp, int upper)
+    __attribute__((section(".jumpstart.text")));
+
+int islower(int c) __attribute__((section(".jumpstart.text")));
+int isupper(int c) __attribute__((section(".jumpstart.text")));
+int tolower(int c) __attribute__((section(".jumpstart.text")));
+
 inline int islower(int c) { return c >= 'a' && c <= 'z'; }
 
 inline int isupper(int c) { return c >= 'A' && c <= 'Z'; }

@@ -7,7 +7,10 @@
 #include "string.h"
 
 static int vprintk(const char *fmt, va_list args)
-    __attribute__((format(printf, 1, 0)));
+    __attribute__((format(printf, 1, 0)))
+    __attribute__((section(".jumpstart.text")));
+
+static void putch(char c) __attribute__((section(".jumpstart.text")));
 
 void setup_uart(void) {
   volatile uint32_t *uart_ctrl =
