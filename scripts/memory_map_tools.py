@@ -321,119 +321,58 @@ class MemoryMap:
                 matching_pmarr_region.add_to_region(
                     mapping['pa'], mapping['pa'] + mapping_size)
 
-    def add_pagetable_section_to_mappings(self, mappings):
-        # Add an additional mapping after the last mapping for the pagetables
+    def add_to_mappings(self, mappings, xwr, num_pages, pmarr_memory_type,
+                        linker_script_section):
+        # Adds the mapping to the end of the list of mappings
         updated_mappings = mappings.copy()
         last_mapping = updated_mappings[-1]
-        pagetable_mapping = {}
-        self.PT_section_start_address = last_mapping['va'] + (
-            last_mapping['page_size'] * last_mapping['num_pages'])
-        pagetable_mapping['va'] = self.PT_section_start_address
-        pagetable_mapping['pa'] = last_mapping['pa'] + (
-            last_mapping['page_size'] * last_mapping['num_pages'])
-        pagetable_mapping['xwr'] = "0b001"
-        pagetable_mapping['page_size'] = 1 << self.get_attribute('page_offset')
-        pagetable_mapping[
-            'num_pages'] = self.num_pages_available_for_PT_allocation
-        pagetable_mapping['pmarr_memory_type'] = 'wb'
-        pagetable_mapping[
-            'linker_script_section'] = '.jumpstart.rodata.pagetables'
-        updated_mappings.append(pagetable_mapping)
+        new_mapping = {}
+        new_mapping['va'] = last_mapping['va'] + (last_mapping['page_size'] *
+                                                  last_mapping['num_pages'])
+        new_mapping['pa'] = last_mapping['pa'] + (last_mapping['page_size'] *
+                                                  last_mapping['num_pages'])
+        new_mapping['xwr'] = xwr
+        new_mapping['page_size'] = 1 << self.get_attribute('page_offset')
+        new_mapping['num_pages'] = num_pages
+        new_mapping['pmarr_memory_type'] = pmarr_memory_type
+        new_mapping['linker_script_section'] = linker_script_section
+        updated_mappings.append(new_mapping)
+        return updated_mappings
 
+    def add_pagetable_section_to_mappings(self, mappings):
+        # Add an additional mapping after the last mapping for the pagetables
+        updated_mappings = self.add_to_mappings(
+            mappings, "0b001", self.num_pages_available_for_PT_allocation,
+            'wb', '.jumpstart.rodata.pagetables')
+        self.PT_section_start_address = updated_mappings[-1]['va']
         return updated_mappings
 
     def add_jumpstart_text_section_to_mappings(self, mappings):
-        updated_mappings = mappings.copy()
-        last_mapping = updated_mappings[-1]
-        jumpstart_text_section_mapping = {}
-        jumpstart_text_section_mapping['va'] = last_mapping['va'] + (
-            last_mapping['page_size'] * last_mapping['num_pages'])
-        jumpstart_text_section_mapping['pa'] = last_mapping['pa'] + (
-            last_mapping['page_size'] * last_mapping['num_pages'])
-        jumpstart_text_section_mapping['xwr'] = "0b101"
-        jumpstart_text_section_mapping['page_size'] = 1 << self.get_attribute(
-            'page_offset')
-        jumpstart_text_section_mapping[
-            'num_pages'] = self.num_jumpstart_text_pages
-        jumpstart_text_section_mapping['pmarr_memory_type'] = 'wb'
-        jumpstart_text_section_mapping[
-            'linker_script_section'] = '.jumpstart.text'
-        updated_mappings.append(jumpstart_text_section_mapping)
-
+        updated_mappings = self.add_to_mappings(mappings, "0b101",
+                                                self.num_jumpstart_text_pages,
+                                                'wb', '.jumpstart.text')
         return updated_mappings
 
     def add_jumpstart_data_section_to_mappings(self, mappings):
-        updated_mappings = mappings.copy()
-        last_mapping = updated_mappings[-1]
-        jumpstart_data_section_mapping = {}
-        jumpstart_data_section_mapping['va'] = last_mapping['va'] + (
-            last_mapping['page_size'] * last_mapping['num_pages'])
-        jumpstart_data_section_mapping['pa'] = last_mapping['pa'] + (
-            last_mapping['page_size'] * last_mapping['num_pages'])
-        jumpstart_data_section_mapping['xwr'] = "0b011"
-        jumpstart_data_section_mapping['page_size'] = 1 << self.get_attribute(
-            'page_offset')
-        jumpstart_data_section_mapping[
-            'num_pages'] = self.num_jumpstart_data_pages
-        jumpstart_data_section_mapping['pmarr_memory_type'] = 'wb'
-        jumpstart_data_section_mapping[
-            'linker_script_section'] = '.jumpstart.data'
-        updated_mappings.append(jumpstart_data_section_mapping)
-
+        updated_mappings = self.add_to_mappings(mappings, "0b011",
+                                                self.num_jumpstart_data_pages,
+                                                'wb', '.jumpstart.data')
         return updated_mappings
 
     def add_bss_and_rodata_sections_to_mappings(self, mappings):
-        updated_mappings = mappings.copy()
-        last_mapping = updated_mappings[-1]
-        jumpstart_data_section_mapping = {}
-        jumpstart_data_section_mapping['va'] = last_mapping['va'] + (
-            last_mapping['page_size'] * last_mapping['num_pages'])
-        jumpstart_data_section_mapping['pa'] = last_mapping['pa'] + (
-            last_mapping['page_size'] * last_mapping['num_pages'])
-        jumpstart_data_section_mapping['xwr'] = "0b011"
-        jumpstart_data_section_mapping['page_size'] = 1 << self.get_attribute(
-            'page_offset')
-        jumpstart_data_section_mapping['num_pages'] = 1
-        jumpstart_data_section_mapping['pmarr_memory_type'] = 'wb'
-        jumpstart_data_section_mapping['linker_script_section'] = '.bss'
-        updated_mappings.append(jumpstart_data_section_mapping)
-
-        last_mapping = updated_mappings[-1]
-        jumpstart_data_section_mapping = {}
-        jumpstart_data_section_mapping['va'] = last_mapping['va'] + (
-            last_mapping['page_size'] * last_mapping['num_pages'])
-        jumpstart_data_section_mapping['pa'] = last_mapping['pa'] + (
-            last_mapping['page_size'] * last_mapping['num_pages'])
-        jumpstart_data_section_mapping['xwr'] = "0b001"
-        jumpstart_data_section_mapping['page_size'] = 1 << self.get_attribute(
-            'page_offset')
-        jumpstart_data_section_mapping['num_pages'] = 1
-        jumpstart_data_section_mapping['pmarr_memory_type'] = 'wb'
-        jumpstart_data_section_mapping['linker_script_section'] = '.rodata'
-        updated_mappings.append(jumpstart_data_section_mapping)
-
+        updated_mappings = self.add_to_mappings(mappings, "0b011", 1, 'wb',
+                                                '.bss')
+        updated_mappings = self.add_to_mappings(updated_mappings, "0b001", 1,
+                                                'wb', '.rodata')
         return updated_mappings
 
     def add_guard_page_to_mappings(self, mappings):
         # Guard pages have no RWX permissions and are used to detect
         # overflows or underflows in the jumpstart data section
-        updated_mappings = mappings.copy()
-        last_mapping = updated_mappings[-1]
-        guard_page_mapping = {}
-        guard_page_mapping['va'] = last_mapping['va'] + (
-            last_mapping['page_size'] * last_mapping['num_pages'])
-        guard_page_mapping['pa'] = last_mapping['pa'] + (
-            last_mapping['page_size'] * last_mapping['num_pages'])
-        guard_page_mapping['xwr'] = "0b000"
-        guard_page_mapping['page_size'] = 1 << self.get_attribute(
-            'page_offset')
-        guard_page_mapping['num_pages'] = 1
-        guard_page_mapping['pmarr_memory_type'] = 'wb'
-        guard_page_mapping[
-            'linker_script_section'] = f'.jumpstart.guard_page.{self.num_guard_pages_generated}'
+        updated_mappings = self.add_to_mappings(
+            mappings, "0b000", 1, 'wb',
+            f'.jumpstart.guard_page.{self.num_guard_pages_generated}')
         self.num_guard_pages_generated += 1
-        updated_mappings.append(guard_page_mapping)
-
         return updated_mappings
 
     def split_mappings_at_page_granularity(self, mappings):
