@@ -612,6 +612,11 @@ class MemoryMap:
 
                 assert (entry['linker_script_section'] not in defined_sections)
 
+                file.write(f"   /* {entry['linker_script_section']}: \n")
+                file.write(
+                    f"       Range: {hex(entry['va'])} - {hex(entry['va'] + entry['num_pages'] * entry['page_size'])}\n"
+                )
+                file.write(f"   */\n")
                 file.write(f"   . = {hex(entry['va'])};\n")
                 file.write(f"   {entry['linker_script_section']} : {{\n")
                 if entry['linker_script_section'] == ".text":
