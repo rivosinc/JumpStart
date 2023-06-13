@@ -17,7 +17,7 @@ supervisor_entry_point:
 	csrw stvec, t0
 
   li  a0, SUPERVISOR_MODE_ENCODING
-  jal set_thread_attributes_current_mode
+  call set_thread_attributes_current_mode
 
   jal main
 
@@ -77,7 +77,7 @@ jump_to_user_mode:
   beq a0, t1, 2f
 
   li  t1, SUPERVISOR_MODE_ENCODING
-  bne a0, t1, jumpstart_fail
+  bne a0, t1, jumpstart_supervisor_fail
 
   la  t0, 1f
   csrw  sepc, t0
@@ -112,7 +112,7 @@ jump_to_supervisor_mode:
   beq a0, t1, 1f
 
   li  t1, USER_MODE_ENCODING
-  bne a0, t1, jumpstart_fail
+  bne a0, t1, jumpstart_supervisor_fail
 
   li  a7, SYSCALL_JUMP_TO_SUPERVISOR_MODE
   ecall
@@ -133,7 +133,7 @@ stvec_trap_handler:
   csrr a0, scause
   # returns the address of the trap handler if the user
   # has registered one, else 0.
-  jal get_trap_handler_override
+  call get_trap_handler_override
 
   beqz a0, 1f
 
@@ -152,7 +152,7 @@ handle_env_call_from_umode:
   li t0, SYSCALL_JUMP_TO_SUPERVISOR_MODE
   beq a7, t0, env_call_jump_to_supervisor_mode
 
-  j jumpstart_fail
+  j jumpstart_supervisor_fail
 
 env_call_jump_to_supervisor_mode:
   # SEPC will be pointing to the ECALL and we need to return to the
@@ -160,3 +160,7 @@ env_call_jump_to_supervisor_mode:
   csrr ra, sepc
   addi ra, ra, 4
   ret
+
+jumpstart_supervisor_fail:
+  # TODO: This is a temporary fail handler. We need to figure out
+  wfi
