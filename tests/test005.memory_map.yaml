@@ -4,7 +4,7 @@
 
 satp_mode: "sv39"
 
-max_num_pages_for_PT_allocation: 6
+max_num_pages_for_PT_allocation: 5
 
 mappings:
   -
@@ -12,7 +12,7 @@ mappings:
     pa: 0x80000000
     xwr: "0b101"
     page_size: 0x1000
-    num_pages: 1
+    num_pages: 2
     pmarr_memory_type: "wb"
     linker_script_section: ".text"
   -
