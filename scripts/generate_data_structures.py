@@ -177,9 +177,10 @@ def generate_data_structures(attributes_yaml, defines_file,
         total_size_of_c_structs += current_offset
 
     if total_size_of_c_structs * attributes_data['max_num_cpus_supported'] > (
-            attributes_data['page_counts']['num_pages_for_c_structs'] * 4096):
+            attributes_data['data_page_counts']['num_pages_for_c_structs'] *
+            4096):
         log.error(
-            f"Total size of C structs ({total_size_of_c_structs}) exceeds maximum size allocated for C structs {attributes_data['page_counts']['num_pages_for_c_structs'] * 4096}"
+            f"Total size of C structs ({total_size_of_c_structs}) exceeds maximum size allocated for C structs {attributes_data['data_page_counts']['num_pages_for_c_structs'] * 4096}"
         )
         sys.exit(1)
 
@@ -188,7 +189,7 @@ def generate_data_structures(attributes_yaml, defines_file,
     assembly_file_fd.write(f'.global stack_top\n')
     assembly_file_fd.write(f'stack_top:\n')
     assembly_file_fd.write(
-        f".rep {attributes_data['page_counts']['num_pages_for_stack'] * 4096}\n"
+        f".rep {attributes_data['data_page_counts']['num_pages_for_stack'] * 4096}\n"
     )
     assembly_file_fd.write(f'.byte 0x00\n')
     assembly_file_fd.write(f'  .endr\n')

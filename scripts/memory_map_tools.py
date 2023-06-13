@@ -249,19 +249,29 @@ class MemoryMap:
 
         with open(attributes_yaml, "r") as f:
             jumpstart_attributes = yaml.safe_load(f)
+        self.num_jumpstart_text_pages = 0
         self.num_jumpstart_data_pages = 0
-        for page_count in jumpstart_attributes['page_counts']:
+        for page_count in jumpstart_attributes['text_page_counts']:
+            self.num_jumpstart_text_pages += jumpstart_attributes[
+                'text_page_counts'][page_count]
+        for page_count in jumpstart_attributes['data_page_counts']:
             self.num_jumpstart_data_pages += jumpstart_attributes[
-                'page_counts'][page_count]
+                'data_page_counts'][page_count]
 
+        self.memory_map[
+            'mappings'] = self.add_bss_and_rodata_sections_to_mappings(
+                self.memory_map['mappings'])
         # Add a guard page between the user sections and the jumpstart data section
-        self.memory_map['mappings'] = self.add_guard_page_to_mappings(
-            self.memory_map['mappings'])
+        # self.memory_map['mappings'] = self.add_guard_page_to_mappings(
+        #     self.memory_map['mappings'])
+        self.memory_map[
+            'mappings'] = self.add_jumpstart_text_section_to_mappings(
+                self.memory_map['mappings'])
         self.memory_map[
             'mappings'] = self.add_jumpstart_data_section_to_mappings(
                 self.memory_map['mappings'])
-        self.memory_map['mappings'] = self.add_guard_page_to_mappings(
-            self.memory_map['mappings'])
+        # self.memory_map['mappings'] = self.add_guard_page_to_mappings(
+        #     self.memory_map['mappings'])
 
         self.create_pagetables()
         self.create_pmarr_regions()
@@ -332,6 +342,26 @@ class MemoryMap:
 
         return updated_mappings
 
+    def add_jumpstart_text_section_to_mappings(self, mappings):
+        updated_mappings = mappings.copy()
+        last_mapping = updated_mappings[-1]
+        jumpstart_text_section_mapping = {}
+        jumpstart_text_section_mapping['va'] = last_mapping['va'] + (
+            last_mapping['page_size'] * last_mapping['num_pages'])
+        jumpstart_text_section_mapping['pa'] = last_mapping['pa'] + (
+            last_mapping['page_size'] * last_mapping['num_pages'])
+        jumpstart_text_section_mapping['xwr'] = "0b101"
+        jumpstart_text_section_mapping['page_size'] = 1 << self.get_attribute(
+            'page_offset')
+        jumpstart_text_section_mapping[
+            'num_pages'] = self.num_jumpstart_text_pages
+        jumpstart_text_section_mapping['pmarr_memory_type'] = 'wb'
+        jumpstart_text_section_mapping[
+            'linker_script_section'] = '.jumpstart.text'
+        updated_mappings.append(jumpstart_text_section_mapping)
+
+        return updated_mappings
+
     def add_jumpstart_data_section_to_mappings(self, mappings):
         updated_mappings = mappings.copy()
         last_mapping = updated_mappings[-1]
@@ -348,6 +378,38 @@ class MemoryMap:
         jumpstart_data_section_mapping['pmarr_memory_type'] = 'wb'
         jumpstart_data_section_mapping[
             'linker_script_section'] = '.jumpstart.data'
+        updated_mappings.append(jumpstart_data_section_mapping)
+
+        return updated_mappings
+
+    def add_bss_and_rodata_sections_to_mappings(self, mappings):
+        updated_mappings = mappings.copy()
+        last_mapping = updated_mappings[-1]
+        jumpstart_data_section_mapping = {}
+        jumpstart_data_section_mapping['va'] = last_mapping['va'] + (
+            last_mapping['page_size'] * last_mapping['num_pages'])
+        jumpstart_data_section_mapping['pa'] = last_mapping['pa'] + (
+            last_mapping['page_size'] * last_mapping['num_pages'])
+        jumpstart_data_section_mapping['xwr'] = "0b011"
+        jumpstart_data_section_mapping['page_size'] = 1 << self.get_attribute(
+            'page_offset')
+        jumpstart_data_section_mapping['num_pages'] = 1
+        jumpstart_data_section_mapping['pmarr_memory_type'] = 'wb'
+        jumpstart_data_section_mapping['linker_script_section'] = '.bss'
+        updated_mappings.append(jumpstart_data_section_mapping)
+
+        last_mapping = updated_mappings[-1]
+        jumpstart_data_section_mapping = {}
+        jumpstart_data_section_mapping['va'] = last_mapping['va'] + (
+            last_mapping['page_size'] * last_mapping['num_pages'])
+        jumpstart_data_section_mapping['pa'] = last_mapping['pa'] + (
+            last_mapping['page_size'] * last_mapping['num_pages'])
+        jumpstart_data_section_mapping['xwr'] = "0b001"
+        jumpstart_data_section_mapping['page_size'] = 1 << self.get_attribute(
+            'page_offset')
+        jumpstart_data_section_mapping['num_pages'] = 1
+        jumpstart_data_section_mapping['pmarr_memory_type'] = 'wb'
+        jumpstart_data_section_mapping['linker_script_section'] = '.rodata'
         updated_mappings.append(jumpstart_data_section_mapping)
 
         return updated_mappings
@@ -617,7 +679,6 @@ class MemoryMap:
                     file.write(f"      *(.jumpstart.text.machine.init)\n")
                     file.write(f"      *(.jumpstart.text.machine)\n")
                     file.write(f"      *(.jumpstart.text.supervisor.init)\n")
-                    file.write(f"      *(.jumpstart.text)\n")
                 file.write(f"      *({entry['linker_script_section']})\n")
                 file.write(f"   }}\n\n")
 

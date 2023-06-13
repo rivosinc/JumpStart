@@ -4,7 +4,9 @@
 
 max_num_cpus_supported: 3
 
-page_counts:
+text_page_counts:
+  num_pages_for_all_text: 2
+data_page_counts:
   num_pages_for_stack: 2
   num_pages_for_c_structs: 1
 
