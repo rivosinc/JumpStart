@@ -147,12 +147,14 @@ def generate_data_structures(attributes_yaml, defines_file,
             # Take care of the padding that the compiler will add.
             while (current_offset % field_size_in_bytes) != 0:
                 current_offset += 1
-            assembly_file_fd.write(
-                f"#define {c_struct.upper()}_{field_name.upper()}_OFFSET {current_offset}\n\n"
-            )
 
-            generate_getter_and_setter_methods_for_field(
-                assembly_file_fd, c_struct, field_name, field_size_in_bytes)
+            if c_struct == "thread_attributes":
+                assembly_file_fd.write(
+                    f"#define {c_struct.upper()}_{field_name.upper()}_OFFSET {current_offset}\n\n"
+                )
+                generate_getter_and_setter_methods_for_field(
+                    assembly_file_fd, c_struct, field_name,
+                    field_size_in_bytes)
 
             current_offset += field_size_in_bytes * num_field_elements
 
