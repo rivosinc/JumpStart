@@ -44,4 +44,5 @@ uint8_t get_thread_attributes_hart_id(void)
 uint64_t get_diag_satp_ppn(void) __attribute__((section(".jumpstart.text")));
 uint8_t get_diag_satp_mode(void) __attribute__((section(".jumpstart.text")));
 
-void jumpstart_fail(void) __attribute__((section(".jumpstart.text")));
+void jumpstart_supervisor_fail(void)
+    __attribute__((section(".jumpstart.text")));

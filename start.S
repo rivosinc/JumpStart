@@ -91,7 +91,6 @@ machine_mode_return_point:
   li s1, 1
   j 1f
 
-.global jumpstart_fail
 jumpstart_fail:
   # exit code of 0 indicates FAIL.
   li s1, 0

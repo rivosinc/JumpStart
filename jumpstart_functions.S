@@ -27,7 +27,7 @@ supervisor_entry_point:
   li  a7, SYSCALL_JUMP_TO_MACHINE_MODE_AND_EXIT
   ecall
 
-  wfi
+  call jumpstart_supervisor_fail
 
 .section .jumpstart.text, "ax"
 
@@ -144,7 +144,7 @@ stvec_trap_handler:
   li t0, SCAUSE_EC_ENV_CALL_FROM_UMODE
   beq a0, t0, handle_env_call_from_umode
 
-  wfi
+  j jumpstart_supervisor_fail
 
 handle_env_call_from_umode:
   # a7 will contain the syscall number
@@ -161,6 +161,7 @@ env_call_jump_to_supervisor_mode:
   addi ra, ra, 4
   ret
 
+.global jumpstart_supervisor_fail
 jumpstart_supervisor_fail:
   # TODO: This is a temporary fail handler. We need to figure out
   wfi
