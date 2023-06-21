@@ -248,15 +248,7 @@ class MemoryMap:
         self.sanity_check_memory_map()
 
         with open(attributes_yaml, "r") as f:
-            jumpstart_attributes = yaml.safe_load(f)
-        self.num_jumpstart_text_pages = 0
-        self.num_jumpstart_data_pages = 0
-        for page_count in jumpstart_attributes['text_page_counts']:
-            self.num_jumpstart_text_pages += jumpstart_attributes[
-                'text_page_counts'][page_count]
-        for page_count in jumpstart_attributes['data_page_counts']:
-            self.num_jumpstart_data_pages += jumpstart_attributes[
-                'data_page_counts'][page_count]
+            self.jumpstart_attributes = yaml.safe_load(f)
 
         self.memory_map[
             'mappings'] = self.add_bss_and_rodata_sections_to_mappings(
@@ -348,15 +340,24 @@ class MemoryMap:
         return updated_mappings
 
     def add_jumpstart_text_section_to_mappings(self, mappings):
+        num_jumpstart_text_pages = 0
+        for page_count in self.jumpstart_attributes['text_page_counts']:
+            num_jumpstart_text_pages += self.jumpstart_attributes[
+                'text_page_counts'][page_count]
         updated_mappings = self.add_to_mappings(mappings, "0b101",
-                                                self.num_jumpstart_text_pages,
-                                                'wb', '.jumpstart.text')
+                                                num_jumpstart_text_pages, 'wb',
+                                                '.jumpstart.text')
         return updated_mappings
 
     def add_jumpstart_data_section_to_mappings(self, mappings):
+        num_jumpstart_data_pages = 0
+        for page_count in self.jumpstart_attributes['data_page_counts']:
+            num_jumpstart_data_pages += self.jumpstart_attributes[
+                'data_page_counts'][page_count]
+
         updated_mappings = self.add_to_mappings(mappings, "0b011",
-                                                self.num_jumpstart_data_pages,
-                                                'wb', '.jumpstart.data')
+                                                num_jumpstart_data_pages, 'wb',
+                                                '.jumpstart.data')
         return updated_mappings
 
     def add_bss_and_rodata_sections_to_mappings(self, mappings):
@@ -599,6 +600,13 @@ class MemoryMap:
             file.write('ENTRY(_start)\n\n')
 
             file.write('SECTIONS\n{\n')
+
+            file.write(
+                f"   . = {hex(self.jumpstart_attributes['rcode_start_address'])};\n"
+            )
+            file.write(f"   .jumpstart.text.rcode : {{\n")
+            file.write(f"      *(.jumpstart.text.rcode)\n")
+            file.write(f"   }}\n\n")
 
             # The entries are already sorted by VA
             # we also expect that the pages for the same section

@@ -4,6 +4,20 @@
 
 #include "jumpstart_defines.h"
 
+.section .jumpstart.text.rcode, "ax"
+.global _rcode_start
+_rcode_start:
+  la t0, _rtvec
+  csrw rtvec, t0
+
+  la    t0, _start
+  csrw repc, t0
+  rret
+
+.org 512
+_rtvec:
+  wfi
+
 .section .jumpstart.text.machine.init, "ax"
 
 .global _start

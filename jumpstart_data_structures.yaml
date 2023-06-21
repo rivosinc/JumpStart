@@ -10,6 +10,8 @@ data_page_counts:
   num_pages_for_stack: 2
   num_pages_for_c_structs: 1
 
+rcode_start_address: 0x06000000
+
 c_structs:
   thread_attributes:
     fields:
