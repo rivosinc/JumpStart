@@ -63,6 +63,7 @@ if directed_diag_memory_map_yaml != '' and directed_diag_sources.length() > 0
   directed_diag_exe = executable('directed_diag',
                         sources: [jumpstart_sources, directed_diag_sources],
                         include_directories: jumpstart_includes,
+                        c_args: ['-march=' + get_option('gcc_march_string')],
                         link_args: ['-T' + linker_script, '-nostdlib'])
 endif
 

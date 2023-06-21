@@ -56,6 +56,7 @@ foreach jumpstart_test : jumpstart_tests
   test_exe = executable(test_name,
                         sources: [jumpstart_sources, test_sources],
                         include_directories: jumpstart_includes,
+                        c_args: ['-march=' + get_option('gcc_march_string')],
                         link_args: ['-T' + linker_script, '-nostdlib'])
 
   spike_args = ['--pass-fail', '--isa=' + get_option('spike_default_isa_string') ]
