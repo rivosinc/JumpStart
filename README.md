@@ -10,16 +10,14 @@ Provides bare-metal kernel and build infrastructure for users to build directed 
 
 ## Enviornment setup
 
-JumpStart requires at least meson 1.0.1. The toolchain & spike must be updated with rivos-sdk.
-
 ```
 module load rivos/init
 module load rivos-sdk/riscv-isa-sim
-module load rivos-sdk/riscv-gnu-toolchain/
+module load rivos-sdk/riscv-gnu-toolchain
 
 Note: If the latest toolchain is not available for your distro, pick the specific toolchain package available for your installed distro.
 
-```  
+```
 
 ## Building a directed diag
 
@@ -42,7 +40,7 @@ This will build `builddir/directed_diag`
 
 Tests are in the [`tests/`](tests) directory.
 
-JumpStart tests have a `main.c` and a memory map YAML file.
+JumpStart tests have source (C and Assembly) and a memory map YAML file.
 
 ```
 meson setup builddir --cross-file cross-file.txt --buildtype release
@@ -58,13 +56,15 @@ Example memory layout YAML: [`tests/test000.memory_map.yaml`](tests/test000.memo
 
 ```
 ❯ ./scripts/memory_map_tools.py --help
-usage: memory_map_tools.py [-h] --memory_map_file MEMORY_MAP_FILE [--output_assembly_file OUTPUT_ASSEMBLY_FILE]
-                           [--output_linker_script OUTPUT_LINKER_SCRIPT] [--translate_VA TRANSLATE_VA] [-v]
+usage: memory_map_tools.py [-h] --memory_map_file MEMORY_MAP_FILE --attributes_yaml ATTRIBUTES_YAML [--output_assembly_file OUTPUT_ASSEMBLY_FILE] [--output_linker_script OUTPUT_LINKER_SCRIPT]
+                           [--translate_VA TRANSLATE_VA] [-v]
 
 options:
   -h, --help            show this help message and exit
   --memory_map_file MEMORY_MAP_FILE
                         Memory Map YAML file
+  --attributes_yaml ATTRIBUTES_YAML
+                        YAML containing the jumpstart attributes.
   --output_assembly_file OUTPUT_ASSEMBLY_FILE
                         Assembly file to generate with page table mappings
   --output_linker_script OUTPUT_LINKER_SCRIPT
