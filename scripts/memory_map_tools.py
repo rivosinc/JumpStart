@@ -341,9 +341,10 @@ class MemoryMap:
 
     def add_jumpstart_text_section_to_mappings(self, mappings):
         num_jumpstart_text_pages = 0
-        for page_count in self.jumpstart_attributes['text_page_counts']:
+        for page_count in self.jumpstart_attributes[
+                'jumpstart_text_page_counts']:
             num_jumpstart_text_pages += self.jumpstart_attributes[
-                'text_page_counts'][page_count]
+                'jumpstart_text_page_counts'][page_count]
         updated_mappings = self.add_to_mappings(mappings, "0b101",
                                                 num_jumpstart_text_pages, 'wb',
                                                 '.jumpstart.text')
@@ -351,9 +352,10 @@ class MemoryMap:
 
     def add_jumpstart_data_section_to_mappings(self, mappings):
         num_jumpstart_data_pages = 0
-        for page_count in self.jumpstart_attributes['data_page_counts']:
+        for page_count in self.jumpstart_attributes[
+                'jumpstart_data_page_counts']:
             num_jumpstart_data_pages += self.jumpstart_attributes[
-                'data_page_counts'][page_count]
+                'jumpstart_data_page_counts'][page_count]
 
         updated_mappings = self.add_to_mappings(mappings, "0b011",
                                                 num_jumpstart_data_pages, 'wb',
