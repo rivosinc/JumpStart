@@ -68,6 +68,6 @@ foreach jumpstart_test : jumpstart_tests
     spike_args += spike_additional_arguments.split()
   endif
 
-  test(test_description, spike, args : [spike_args, test_exe])
+  test(test_name, spike, args : [spike_args, test_exe], suite:'basic')
 
 endforeach
