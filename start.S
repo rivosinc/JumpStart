@@ -28,8 +28,6 @@ _start:
   la  sp, stack_bottom
   mv  fp, sp
 
-  jal is_Xrivospagewalk_supported
-  beqz a0, 1f
   jal setup_mcrr
   jal setup_pmarr
 
@@ -68,21 +66,6 @@ setup_mcrr:
   ori t0, t0, 0x1
   csrw mcrr_0_mask, t0
 
-  ret
-
-.global is_Xrivospagewalk_supported
-is_Xrivospagewalk_supported:
-  # HACK: detect whether we're running with the Xrivospagewalk extension
-  # enabled by checking our _start address. Tests that boot at 0x80000000
-  # don't have the extension enabled.
-  la t0, _start
-  li t1, SOC_TB_BOOT_ADDRESS
-
-  li a0, 1
-  bne t0, t1, 1f
-  li a0, 0
-
-1:
   ret
 
 .section .jumpstart.text.machine, "ax"
