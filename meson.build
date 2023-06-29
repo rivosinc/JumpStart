@@ -33,7 +33,7 @@ data_structures_generator_output = custom_target(
                                               '--attributes_yaml', '@INPUT1@',
                                               ])
 
-jumpstart_sources = files('jumpstart_functions.c', 'start.S', 'jumpstart_functions.S', 'jumpstart_uart.c', 'string.c')
+jumpstart_sources = files('jumpstart_functions.c', 'start.S', 'end.S', 'jumpstart_functions.S', 'jumpstart_uart.c', 'string.c')
 jumpstart_sources += data_structures_generator_output
 jumpstart_includes = include_directories('.')
 
