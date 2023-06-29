@@ -602,6 +602,7 @@ class MemoryMap:
             file.write('ENTRY(_start)\n\n')
 
             file.write('SECTIONS\n{\n')
+            defined_sections = []
 
             file.write(
                 f"   . = {hex(self.jumpstart_attributes['rcode_start_address'])};\n"
@@ -609,11 +610,21 @@ class MemoryMap:
             file.write(f"   .jumpstart.text.rcode : {{\n")
             file.write(f"      *(.jumpstart.text.rcode)\n")
             file.write(f"   }}\n\n")
+            defined_sections.append(".jumpstart.text.rcode")
+
+            file.write(
+                f"   . = {hex(self.jumpstart_attributes['machine_mode_start_address'])};\n"
+            )
+            file.write(f"   .jumpstart.text.machine : {{\n")
+            file.write(f"      *(.jumpstart.text.machine.init)\n")
+            file.write(f"      *(.jumpstart.text.machine)\n")
+            file.write(f"      *(.jumpstart.text.machine.end)\n")
+            file.write(f"   }}\n\n")
+            defined_sections.append(".jumpstart.text.machine")
 
             # The entries are already sorted by VA
             # we also expect that the pages for the same section
             # are in consecutive order when the VAs are sorted.
-            defined_sections = []
             for entry in self.memory_map['mappings']:
                 if 'linker_script_section' not in entry:
                     # We don't generate linker script sections for entries
@@ -629,15 +640,6 @@ class MemoryMap:
                 file.write(f"   */\n")
                 file.write(f"   . = {hex(entry['va'])};\n")
                 file.write(f"   {entry['linker_script_section']} : {{\n")
-                if entry['linker_script_section'] == ".text":
-                    # The machine mode code has to be the start of the
-                    # text section as it has to fall into the default range
-                    # specified in MCRR_0.
-                    # The rest of the jumpstart code is placed in it's own
-                    # section .jumpstart.text.
-                    file.write(f"      *(.jumpstart.text.machine.init)\n")
-                    file.write(f"      *(.jumpstart.text.machine)\n")
-                    file.write(f"      *(.jumpstart.text.supervisor.init)\n")
                 file.write(f"      *({entry['linker_script_section']})\n")
                 file.write(f"   }}\n\n")
 

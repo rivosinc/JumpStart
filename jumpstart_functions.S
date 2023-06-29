@@ -4,13 +4,8 @@
 
 #include "jumpstart_defines.h"
 
-# This section is placed immediately after the machine mode section
-# start it on a new page. We'll use the supervisor_entry_point label to
-# determine the end of the machine mode code area so that we can set
-# up MCRR_0 correctly.
-.section .jumpstart.text.supervisor.init, "ax"
+.section .jumpstart.text, "ax"
 
-.align 12
 .global supervisor_entry_point
 supervisor_entry_point:
 	la t0, stvec_trap_handler
@@ -19,7 +14,7 @@ supervisor_entry_point:
   li  a0, SUPERVISOR_MODE_ENCODING
   call set_thread_attributes_current_mode
 
-  jal main
+  call main
 
   # TODO: Make sure we're in supervisor mode at this point.
 
@@ -28,8 +23,6 @@ supervisor_entry_point:
   ecall
 
   call jumpstart_supervisor_fail
-
-.section .jumpstart.text, "ax"
 
 .global setup_mmu_for_supervisor_mode
 setup_mmu_for_supervisor_mode:

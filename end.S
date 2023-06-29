@@ -4,7 +4,7 @@
 
 #include "jumpstart_defines.h"
 
-.section .jumpstart.text.machine, "ax"
+.section .jumpstart.text.machine.end, "ax"
 
 .global machine_mode_return_point
 machine_mode_return_point:
@@ -54,3 +54,7 @@ loop_magic_store:
 
   # 3. In WFI
   wfi
+
+.align 12
+.global machine_mode_end_point
+machine_mode_end_point:

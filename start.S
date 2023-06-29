@@ -49,10 +49,11 @@ setup_mcrr:
   # Update the mask based on the number of machine mode code pages that this
   # diag actually has.
 
-  # Determine the size of the machine mode code region.
-  # The supervisor_entry_point immediately follows the machine mode code.
+  # Determine the size of the jumpstart machine mode code region.
+  # We expect it to start at _start (from the .jumpstart.machine.init) section
+  # and extend to machine_mode_end_point (from the .jumpstart.machine.end) section.
   la t0, _start
-  la t1, supervisor_entry_point
+  la t1, machine_mode_end_point
   sub t0, t1, t0
   # The machine mode region size should always be a multiple of 4K.
   li t1, 0xfff
