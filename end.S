@@ -56,5 +56,5 @@ loop_magic_store:
   wfi
 
 .align 12
-.global machine_mode_end_point
-machine_mode_end_point:
+.global jumpstart_machine_mode_end_point
+jumpstart_machine_mode_end_point:

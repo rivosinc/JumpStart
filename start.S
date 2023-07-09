@@ -18,6 +18,7 @@ _rcode_start:
 _rtvec:
   wfi
 
+# This section should fall into the initial 4K page set up in MCRR_0
 .section .jumpstart.text.machine.init, "ax"
 
 .global _start
@@ -28,7 +29,7 @@ _start:
   la  sp, stack_bottom
   mv  fp, sp
 
-  jal setup_mcrr
+  jal update_mcrr_0
   jal setup_pmarr
 
 1:
@@ -40,20 +41,19 @@ _start:
 
   j jump_to_supervisor_mode_and_main
 
-# This function should fall into the initial 4K page set up in MCRR_0
-.global setup_mcrr
-setup_mcrr:
-  # The reset default of the MCRR_0 is to be the LLC-as-SRAM
-  # range base address (0x7F800000) and the mask of MCRR_0 to be
-  # 4 KiB and marked valid.
-  # Update the mask based on the number of machine mode code pages that this
-  # diag actually has.
+.global update_mcrr_0
+update_mcrr_0:
+  # The reset default of the MCRR_0 is the 4K page starting at the LLC-as-SRAM
+  # range base address. We expect _start to be at the beginning of this page.
+  # Update the MCRR_0 to include all the machine mode code pages for the
+  # jumpstart framework.
 
   # Determine the size of the jumpstart machine mode code region.
   # We expect it to start at _start (from the .jumpstart.machine.init) section
-  # and extend to machine_mode_end_point (from the .jumpstart.machine.end) section.
+  # and extend to jumpstart_machine_mode_end_point (from the
+  # .jumpstart.machine.end) section.
   la t0, _start
-  la t1, machine_mode_end_point
+  la t1, jumpstart_machine_mode_end_point
   sub t0, t1, t0
   # The machine mode region size should always be a multiple of 4K.
   li t1, 0xfff
