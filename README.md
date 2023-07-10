@@ -6,25 +6,40 @@ SPDX-License-Identifier: LicenseRef-Rivos-Internal-Only
 
 # JumpStart
 
-Provides bare-metal kernel and build infrastructure for users to build directed diags.
+Provides bare-metal kernel and build infrastructure for test writers to build directed diags.
 
-## Enviornment setup
+## Setup Environment
 
 ```
 module load rivos/init
 module load rivos-sdk/riscv-isa-sim
 module load rivos-sdk/riscv-gnu-toolchain
-
-Note: If the latest toolchain is not available for your distro, pick the specific toolchain package available for your installed distro.
-
 ```
 
-## Building a directed diag
+**Note**: If the latest toolchain is not available for your distro, pick the specific toolchain package available for your installed distro.
+
+### Testing Environment
+
+```
+meson setup builddir --cross-file cross-file.txt --buildtype release
+meson compile -C builddir
+meson test -C builddir
+```
+
+## Build a directed diag
+
+Diags are expected to provide sources (C and assembly files) and a map of it's memory layout.
+
+Jumpstart will initialize the system and jump to the diag `main()`.
+
+The Jumpstart API functions are listed in [jumpstart_functions.h](jumpstart_functions.h).
+
+The Jumpstart [`tests/`](tests) are a good reference on writing diags. This [file](tests/meson.build) has the list of tests and a description of each of them.
 
 To build a directed diag using user provided source files (C and assembly) and a memory map indicating the diag memory layout:
 
 ```
-meson setup builddir --cross-file cross-file.txt --buildtype release -Ddirected_diag_memory_map_yaml=<PATH_TO_MEMORY_MAP_YAML> -Ddirected_diag_sources=<COMMA SEPARATED LIST OF SOURCE FILES>
+meson setup builddir --cross-file cross-file.txt --buildtype release -Ddirected_diag_memory_map_yaml=<PATH_TO_MEMORY_MAP_YAML> -Ddirected_diag_sources=<COMMA SEPARATED LIST OF SOURCE FILES> -Ddirected_diag_start_in_machine_mode=true
 meson compile -C builddir
 ```
 
@@ -36,40 +51,10 @@ meson compile -C builddir
 
 This will build `builddir/directed_diag`
 
-## Testing JumpStart
+By default, the test `main()` will start in Supervisor Mode. To start `main()` in Machine Mode, pass `-Ddirected_diag_start_in_machine_mode=true` to `meson setup`
 
-Tests are in the [`tests/`](tests) directory.
-
-JumpStart tests have source (C and Assembly) and a memory map YAML file.
+Example:
 
 ```
-meson setup builddir --cross-file cross-file.txt --buildtype release
-meson compile -C builddir
-meson test -C builddir
-```
-
-## Page Table Generator
-
-[`scripts/memory_map_tools.py`](scripts/memory_map_tools.py) takes a YAML file that has the program layout in memory and generates an assembly file with the page tables and a linker script that is used to build the directed diag ELF.
-
-Example memory layout YAML: [`tests/test000.memory_map.yaml`](tests/test000.memory_map.yaml)
-
-```
-❯ ./scripts/memory_map_tools.py --help
-usage: memory_map_tools.py [-h] --memory_map_file MEMORY_MAP_FILE --attributes_yaml ATTRIBUTES_YAML [--output_assembly_file OUTPUT_ASSEMBLY_FILE] [--output_linker_script OUTPUT_LINKER_SCRIPT]
-                           [--translate_VA TRANSLATE_VA] [-v]
-
-options:
-  -h, --help            show this help message and exit
-  --memory_map_file MEMORY_MAP_FILE
-                        Memory Map YAML file
-  --attributes_yaml ATTRIBUTES_YAML
-                        YAML containing the jumpstart attributes.
-  --output_assembly_file OUTPUT_ASSEMBLY_FILE
-                        Assembly file to generate with page table mappings
-  --output_linker_script OUTPUT_LINKER_SCRIPT
-                        Linker script to generate
-  --translate_VA TRANSLATE_VA
-                        Translate the given VA to PA
-  -v, --verbose         Verbose output.
+meson setup builddir --cross-file cross-file.txt --buildtype release -Ddirected_diag_sources=(pwd)/tests/test008.c  -Ddirected_diag_memory_map_yaml=(pwd)/tests/test008.memory_map.yaml -Ddirected_diag_start_in_machine_mode=true
 ```
