@@ -654,7 +654,7 @@ class MemoryMap:
         file_descriptor.write(
             f"# SATP.Mode is {self.memory_map['satp_mode']}\n\n")
         file_descriptor.write(
-            f"#define SATP_MODE {self.get_attribute('satp_mode')}\n")
+            f"#define DIAG_SATP_MODE {self.get_attribute('satp_mode')}\n")
         file_descriptor.write(".global get_diag_satp_ppn\n")
         file_descriptor.write("get_diag_satp_ppn:\n\n")
         file_descriptor.write(
@@ -669,7 +669,7 @@ class MemoryMap:
 
         file_descriptor.write(".global get_diag_satp_mode\n")
         file_descriptor.write("get_diag_satp_mode:\n\n")
-        file_descriptor.write(f"   li   a0, SATP_MODE\n")
+        file_descriptor.write(f"   li   a0, DIAG_SATP_MODE\n")
         file_descriptor.write(f"   ret\n\n\n")
 
     def generate_pmarr_functions(self, file_descriptor):
