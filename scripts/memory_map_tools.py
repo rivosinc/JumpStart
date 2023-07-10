@@ -73,7 +73,6 @@ class PageTableAttributes:
         "global_bit": (5, 5),
         "a_bit": (6, 6),
         "d_bit": (7, 7),
-        "satp_mode_lsb": 60,
         "pbmt_bits": (62, 61),
     }
 
@@ -656,8 +655,6 @@ class MemoryMap:
             f"# SATP.Mode is {self.memory_map['satp_mode']}\n\n")
         file_descriptor.write(
             f"#define SATP_MODE {self.get_attribute('satp_mode')}\n")
-        file_descriptor.write(
-            f"#define SATP_MODE_LSB {self.get_attribute('satp_mode_lsb')}\n\n")
         file_descriptor.write(".global get_diag_satp_ppn\n")
         file_descriptor.write("get_diag_satp_ppn:\n\n")
         file_descriptor.write(
@@ -668,11 +665,6 @@ class MemoryMap:
         file_descriptor.write(".global get_page_offset\n")
         file_descriptor.write("get_page_offset:\n\n")
         file_descriptor.write(f"   li   a0, PAGE_OFFSET\n")
-        file_descriptor.write(f"   ret\n\n\n")
-
-        file_descriptor.write(".global get_diag_satp_mode_lsb\n")
-        file_descriptor.write("get_diag_satp_mode_lsb:\n\n")
-        file_descriptor.write(f"   li   a0, SATP_MODE_LSB\n")
         file_descriptor.write(f"   ret\n\n\n")
 
         file_descriptor.write(".global get_diag_satp_mode\n")

@@ -65,8 +65,7 @@ setup_mmu_for_supervisor_mode:
   jal get_diag_satp_mode
   mv s2, a0
 
-  jal get_diag_satp_mode_lsb
-  sll  s2, s2, a0
+  slli  s2, s2, SATP_MODE_LSB
 
   jal get_diag_satp_ppn
 
