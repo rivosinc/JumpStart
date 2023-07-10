@@ -15,6 +15,7 @@ jumpstart_tests = [
   ['16K data block move from WB to UC (PBMT) region.', 'test005'],
   ['Read and Write CSRs.', 'test006'],
   ['UART test.', 'test007'],
+  ['IMSIC test.', 'test008'],
 ]
 
 spike = find_program('spike', required : true)
