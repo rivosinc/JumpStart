@@ -18,6 +18,29 @@
 
 #define write_csr(reg, val) ({ asm volatile("csrw " #reg ", %0" ::"rK"(val)); })
 
+#define set_csr(reg, val)   ({ asm volatile("csrs " #reg ", %0" ::"rK"(val)); })
+#define clear_csr(reg, val) ({ asm volatile("csrc " #reg ", %0" ::"rK"(val)); })
+
+#define read_set_csr(reg, val)                                                 \
+  ({                                                                           \
+    unsigned long __v = (unsigned long)(val);                                  \
+    __asm__ __volatile__("csrrs %0, " #reg ", %1"                              \
+                         : "=r"(__v)                                           \
+                         : "rK"(__v)                                           \
+                         : "memory");                                          \
+    __v;                                                                       \
+  })
+
+#define read_clear_csr(reg, val)                                               \
+  ({                                                                           \
+    unsigned long __v = (unsigned long)(val);                                  \
+    __asm__ __volatile__("csrrc %0, " #reg ", %1"                              \
+                         : "=r"(__v)                                           \
+                         : "rK"(__v)                                           \
+                         : "memory");                                          \
+    __v;                                                                       \
+  })
+
 void jump_to_user_mode(void) __attribute__((section(".jumpstart.text")));
 void jump_to_supervisor_mode(void) __attribute__((section(".jumpstart.text")));
 
