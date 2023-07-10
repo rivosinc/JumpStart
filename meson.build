@@ -60,10 +60,17 @@ if directed_diag_memory_map_yaml != '' and directed_diag_sources.length() > 0
 
   directed_diag_sources = [pagetable_s, directed_diag_sources]
 
+  directed_diag_start_in_machine_mode = get_option('directed_diag_start_in_machine_mode')
+
+  c_args_list = ['-march=' + get_option('gcc_march_string')]
+  if directed_diag_start_in_machine_mode == true
+    c_args_list += ['-DSTART_TEST_IN_MACHINE_MODE']
+  endif
+
   directed_diag_exe = executable('directed_diag',
                         sources: [jumpstart_sources, directed_diag_sources],
                         include_directories: jumpstart_includes,
-                        c_args: ['-march=' + get_option('gcc_march_string')],
+                        c_args: c_args_list,
                         link_args: ['-T' + linker_script, '-nostdlib'])
 endif
 
