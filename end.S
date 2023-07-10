@@ -55,6 +55,6 @@ loop_magic_store:
   # 3. In WFI
   wfi
 
-.align 12
+.align PAGE_OFFSET
 .global jumpstart_machine_mode_end_point
 jumpstart_machine_mode_end_point:

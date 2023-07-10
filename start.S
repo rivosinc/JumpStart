@@ -152,7 +152,7 @@ jump_to_main:
 
   csrw mcrr_1_base, t0
 
-  li t0, (1 << 12)
+  li t0, (1 << PAGE_OFFSET)
   not t0, t0
   ori t0, t0, 0x1 # set the valid bit
   csrw mcrr_1_mask, t0
