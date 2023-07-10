@@ -8,8 +8,8 @@
 
 .global supervisor_entry_point
 supervisor_entry_point:
-	la t0, stvec_trap_handler
-	csrw stvec, t0
+  la t0, stvec_trap_handler
+  csrw stvec, t0
 
   li  a0, SUPERVISOR_MODE_ENCODING
   call set_thread_attributes_current_mode
