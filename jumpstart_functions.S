@@ -14,6 +14,12 @@ supervisor_entry_point:
   li  a0, SUPERVISOR_MODE_ENCODING
   call set_thread_attributes_current_mode
 
+  li a0, (1 << SIE_EXT_INTERRUPT)
+  csrw sie, a0
+
+  li a0, (1 << SSTATUS_SIE_SHIFT)
+  csrs sstatus, a0
+
   call main
 
   # TODO: Make sure we're in supervisor mode at this point.

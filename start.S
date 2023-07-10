@@ -76,6 +76,8 @@ enable_trap_delegation_to_supervisor_mode:
   li t0, (1 << SCAUSE_EC_ENV_CALL_FROM_UMODE) | (1 << SCAUSE_EC_ILLEGAL_INSTRUCTION)
   csrw medeleg, t0
 
+  li t0, (1 << MIDELEG_S_SOFT_INTERRUPT) | (1 << MIDELEG_S_TIMER_INTERRUPT) | (1 << MIDELEG_S_EXT_INTERRUPT)
+  csrw mideleg, t0
   ret
 
 .global setup_thread_attributes
