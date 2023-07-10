@@ -39,7 +39,7 @@ _start:
 
   jal enable_trap_delegation_to_supervisor_mode
 
-  j jump_to_supervisor_mode_and_main
+  j jump_to_main
 
 .global update_mcrr_0
 update_mcrr_0:
@@ -136,9 +136,34 @@ enable_svpbmt_for_supervisor_mode:
 
   ret
 
-.global jump_to_supervisor_mode_and_main
-jump_to_supervisor_mode_and_main:
-  la  t0, supervisor_entry_point
+.global jump_to_main
+jump_to_main:
+
+#ifdef START_TEST_IN_MACHINE_MODE
+
+  # Add the page containing main to the MCRR_1.
+  la t0, main
+  # Check that main is at the beginning of a 4K page as we expect this
+  # page to be the start of MCRR_1. The test writer can expand MCRR_1 to
+  # the adjoining pages following this page.
+  li t1, 0xfff
+  and t2, t0, t1
+  bnez t2, jumpstart_fail
+
+  csrw mcrr_1_base, t0
+
+  li t0, (1 << 12)
+  not t0, t0
+  ori t0, t0, 0x1 # set the valid bit
+  csrw mcrr_1_mask, t0
+
+  call main
+
+  j machine_mode_return_point
+
+#else
+
+  la  t0, supervisor_jump_to_main
   csrw  mepc, t0
   csrr  t0, mstatus
   li  t1, (SUPERVISOR_MODE_ENCODING << MSTATUS_MPP_SHIFT)
@@ -146,6 +171,8 @@ jump_to_supervisor_mode_and_main:
   csrw  mstatus, t0
 
   mret
+
+#endif
 
 # syscall handlers
 

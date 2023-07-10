@@ -31,8 +31,8 @@ exception_reg_region:
 
 .section .jumpstart.text, "ax"
 
-.global supervisor_entry_point
-supervisor_entry_point:
+.global supervisor_jump_to_main
+supervisor_jump_to_main:
   la t0, stvec_trap_handler
   csrw stvec, t0
 

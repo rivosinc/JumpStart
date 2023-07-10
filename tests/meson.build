@@ -5,26 +5,27 @@
 fs = import('fs')
 
 jumpstart_tests = [
-  # Specify --isa=rv64gc to the diags that will boot at 0x80000000
-  # The default Sentinel behavior is to start at 0x7f800000.
-  ['Enable MMU (SATP.mode = sv39), switch to supervisor mode and exit.', 'test000'],
-  ['Enable MMU (SATP.mode = sv48), switch to supervisor mode and exit.', 'test001'],
-  ['Ping pong between Supervisor and User mode.', 'test002'],
-  ['Register and run Supervisor mode illegal instruction exception handler.', 'test003'],
-  ['HWP AMPM perf diag.', 'test004'],
-  ['16K data block move from WB to UC (PBMT) region.', 'test005'],
-  ['Read and Write CSRs.', 'test006'],
-  ['UART test.', 'test007'],
-  ['IMSIC test.', 'test008'],
+  ['test000', 'Enable MMU (SATP.mode = sv39), switch to supervisor mode and exit.'],
+  ['test001', 'Enable MMU (SATP.mode = sv48), switch to supervisor mode and exit.'],
+  ['test002', 'Ping pong between Supervisor and User mode.'],
+  ['test003', 'Register and run Supervisor mode illegal instruction exception handler.'],
+  ['test004', 'HWP AMPM perf diag.'],
+  ['test005', '16K data block move from WB to UC (PBMT) region.'],
+  ['test006', 'Read and Write CSRs.'],
+  ['test007', 'UART test.'],
+  ['test008', 'IMSIC test.'],
+  ['test009', 'Jump to main() in machine mode and exit.', true],
 ]
 
 spike = find_program('spike', required : true)
 
 foreach jumpstart_test : jumpstart_tests
-  test_description = jumpstart_test[0]
-  test_name = jumpstart_test[1]
+  test_name = jumpstart_test.get(0)
+  test_description = jumpstart_test.get(1)
 
-  spike_additional_arguments = jumpstart_test.get(2, '')
+  start_test_in_machine_mode = jumpstart_test.get(2, false)
+
+  spike_additional_arguments = jumpstart_test.get(3, '')
 
   memory_map_file = meson.current_source_dir() + '/' + test_name +'.memory_map.yaml'
 
@@ -54,10 +55,15 @@ foreach jumpstart_test : jumpstart_tests
     test_sources += [test_name + '.S']
   endif
 
+  c_args_list = ['-march=' + get_option('gcc_march_string')]
+  if start_test_in_machine_mode == true
+    c_args_list += ['-DSTART_TEST_IN_MACHINE_MODE']
+  endif
+
   test_exe = executable(test_name,
                         sources: [jumpstart_sources, test_sources],
                         include_directories: jumpstart_includes,
-                        c_args: ['-march=' + get_option('gcc_march_string')],
+                        c_args: c_args_list,
                         link_args: ['-T' + linker_script, '-nostdlib'])
 
   spike_args = ['--pass-fail', '--isa=' + get_option('spike_default_isa_string') ]

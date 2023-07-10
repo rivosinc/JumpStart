@@ -64,6 +64,16 @@ uint8_t get_thread_attributes_current_mode(void)
 uint8_t get_thread_attributes_hart_id(void)
     __attribute__((section(".jumpstart.text")));
 
+uint64_t get_thread_attributes_bookend_magic_number_in_machine_mode(void)
+    __attribute__((section(".jumpstart.text.machine")));
+uint64_t
+get_thread_attributes_trap_override_struct_address_in_machine_mode(void)
+    __attribute__((section(".jumpstart.text.machine")));
+uint8_t get_thread_attributes_current_mode_in_machine_mode(void)
+    __attribute__((section(".jumpstart.text.machine")));
+uint8_t get_thread_attributes_hart_id_in_machine_mode(void)
+    __attribute__((section(".jumpstart.text.machine")));
+
 uint64_t get_diag_satp_ppn(void) __attribute__((section(".jumpstart.text")));
 uint8_t get_diag_satp_mode(void) __attribute__((section(".jumpstart.text")));
 
