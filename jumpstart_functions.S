@@ -105,10 +105,8 @@ jump_to_user_mode:
 
   la  t0, 1f
   csrw  sepc, t0
-  csrr  t0, sstatus
-  li  t1, (USER_MODE_ENCODING << MSTATUS_SPP_SHIFT)
-  or  t0, t0, t1
-  csrw  sstatus, t0
+  li t0, (SUPERVISOR_MODE_ENCODING << MSTATUS_SPP_SHIFT)
+  csrc sstatus, t0
   sret
 
 1:
