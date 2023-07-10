@@ -4,6 +4,31 @@
 
 #include "jumpstart_defines.h"
 
+#define T0_OFFSET  (0 * 8)
+#define T1_OFFSET  (1 * 8)
+#define T2_OFFSET  (2 * 8)
+#define T3_OFFSET  (3 * 8)
+#define T4_OFFSET  (4 * 8)
+#define T5_OFFSET  (5 * 8)
+#define T6_OFFSET  (6 * 8)
+#define A0_OFFSET  (7 * 8)
+#define A1_OFFSET  (8 * 8)
+#define A2_OFFSET  (9 * 8)
+#define A3_OFFSET  (10 * 8)
+#define A4_OFFSET  (11 * 8)
+#define A5_OFFSET  (12 * 8)
+#define A6_OFFSET  (13 * 8)
+#define A7_OFFSET  (14 * 8)
+#define RA_OFFSET  (15 * 8)
+
+.section .jumpstart.data, "aw"
+
+.global exception_reg_region
+exception_reg_region:
+.rep 16
+  .8byte 0x0000000000000000
+.endr
+
 .section .jumpstart.text, "ax"
 
 .global supervisor_entry_point
@@ -126,6 +151,29 @@ jump_to_supervisor_mode:
 .align 2
 .global stvec_trap_handler
 stvec_trap_handler:
+  csrw sscratch, a0
+  la a0, exception_reg_region
+
+  sd t0, T0_OFFSET(a0)
+  sd t1, T1_OFFSET(a0)
+  sd t2, T2_OFFSET(a0)
+  sd t3, T3_OFFSET(a0)
+  sd t4, T4_OFFSET(a0)
+  sd t5, T5_OFFSET(a0)
+  sd t6, T6_OFFSET(a0)
+  sd a1, A1_OFFSET(a0)
+  sd a2, A2_OFFSET(a0)
+  sd a3, A3_OFFSET(a0)
+  sd a4, A4_OFFSET(a0)
+  sd a5, A5_OFFSET(a0)
+  sd a6, A6_OFFSET(a0)
+  sd a7, A7_OFFSET(a0)
+  sd ra, RA_OFFSET(a0)
+
+  mv t0, a0
+  csrr a0, sscratch
+  sd a0, A0_OFFSET(t0)
+
   li  a0, SUPERVISOR_MODE_ENCODING
   jal set_thread_attributes_current_mode
 
@@ -136,7 +184,8 @@ stvec_trap_handler:
 
   beqz a0, 1f
 
-  jalr x0, a0
+  jalr ra, a0
+  j jumpstart_supervisor_return
 
 1:
   csrr a0, scause
@@ -156,11 +205,41 @@ handle_env_call_from_umode:
 env_call_jump_to_supervisor_mode:
   # SEPC will be pointing to the ECALL and we need to return to the
   # instruction following it.
-  csrr ra, sepc
-  addi ra, ra, 4
-  ret
+  csrr a0, sepc
+  addi a0, a0, 4
+  csrw sepc, a0
+
+  csrr  t0, sstatus
+  li  t1, (SUPERVISOR_MODE_ENCODING << MSTATUS_SPP_SHIFT)
+  or  t0, t0, t1
+  csrw  sstatus, t0
+
+  j jumpstart_supervisor_return
 
 .global jumpstart_supervisor_fail
 jumpstart_supervisor_fail:
   # TODO: This is a temporary fail handler. We need to figure out
   wfi
+
+.global jumpstart_supervisor_return
+jumpstart_supervisor_return:
+  la a0, exception_reg_region
+
+  ld t0, T0_OFFSET(a0)
+  ld t1, T1_OFFSET(a0)
+  ld t2, T2_OFFSET(a0)
+  ld t3, T3_OFFSET(a0)
+  ld t4, T4_OFFSET(a0)
+  ld t5, T5_OFFSET(a0)
+  ld t6, T6_OFFSET(a0)
+  ld a1, A1_OFFSET(a0)
+  ld a2, A2_OFFSET(a0)
+  ld a3, A3_OFFSET(a0)
+  ld a4, A4_OFFSET(a0)
+  ld a5, A5_OFFSET(a0)
+  ld a6, A6_OFFSET(a0)
+  ld a7, A7_OFFSET(a0)
+  ld ra, RA_OFFSET(a0)
+  ld a0, A0_OFFSET(a0)
+
+  sret
