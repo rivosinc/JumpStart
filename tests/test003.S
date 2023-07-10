@@ -26,7 +26,8 @@ test003_illegal_instruction_function:
 .global test003_illegal_instruction_handler
 test003_illegal_instruction_handler:
   # skip over the illegal instruction
-  csrr ra, sepc
-  addi ra, ra, 4
+  csrr a0, sepc
+  addi a0, a0, 4
+  csrw sepc, a0
 
   ret
