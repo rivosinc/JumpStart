@@ -13,15 +13,23 @@ int islower(int c) __attribute__((section(".jumpstart.text")));
 int isupper(int c) __attribute__((section(".jumpstart.text")));
 int tolower(int c) __attribute__((section(".jumpstart.text")));
 
-inline int islower(int c) { return c >= 'a' && c <= 'z'; }
+inline int islower(int c) {
+  return c >= 'a' && c <= 'z';
+}
 
-inline int isupper(int c) { return c >= 'A' && c <= 'Z'; }
+inline int isupper(int c) {
+  return c >= 'A' && c <= 'Z';
+}
 
-inline int tolower(int c) { return isupper(c) ? c - ('A' - 'a') : c; }
+inline int tolower(int c) {
+  return isupper(c) ? c - ('A' - 'a') : c;
+}
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsuggest-attribute=const"
-int toupper(int c) { return islower(c) ? c + ('A' - 'a') : c; }
+int toupper(int c) {
+  return islower(c) ? c + ('A' - 'a') : c;
+}
 #pragma GCC diagnostic pop
 
 size_t strlen(const char *str) {
