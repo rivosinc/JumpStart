@@ -11,10 +11,7 @@ AllowShortIfStatementsOnASingleLine: false
 AllowShortFunctionsOnASingleLine: None
 AlignOperands: Align
 AlignEscapedNewlines: Right
-AlignConsecutiveMacros:
-  Enabled: true
-  AcrossEmptyLines: true
-  AcrossComments: true
+AlignConsecutiveMacros: AcrossEmptyLinesAndComments
 IndentCaseLabels: false
 Standard: Latest
 ...
