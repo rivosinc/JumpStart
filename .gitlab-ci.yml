@@ -41,7 +41,7 @@ build-and-test:
     - meson compile -C builddir
     - echo "Testing jumpstart release build"
     - meson test -C builddir
-    - meson setup --reconfigure builddir --buildtype release
+    - meson setup --reconfigure builddir --buildtype debug
     - echo "Building jumpstart debug build"
     - meson compile -C builddir
     - echo "Testing jumpstart debug build"
