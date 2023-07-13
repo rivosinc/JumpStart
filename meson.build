@@ -38,13 +38,13 @@ jumpstart_sources += data_structures_generator_output
 jumpstart_includes = include_directories('.')
 
 memory_map_tools_script = meson.current_source_dir() + '/scripts/memory_map_tools.py'
-directed_diag_sources = get_option('directed_diag_sources')
-directed_diag_memory_map_yaml = get_option('directed_diag_memory_map_yaml')
+diag_sources = get_option('diag_sources')
+diag_memory_map_yaml = get_option('diag_memory_map_yaml')
 
-if directed_diag_memory_map_yaml != '' and directed_diag_sources.length() > 0
+if diag_memory_map_yaml != '' and diag_sources.length() > 0
   memory_map_tools_output = custom_target(
                                 'Generate memory map related source files for build',
-                                input : [memory_map_tools_script, directed_diag_memory_map_yaml, data_strucutures_yaml],
+                                input : [memory_map_tools_script, diag_memory_map_yaml, data_strucutures_yaml],
                                 output : ['memory_attributes.S',
                                           'linker_script.ld'],
                                 command : [prog_python,
@@ -58,17 +58,17 @@ if directed_diag_memory_map_yaml != '' and directed_diag_sources.length() > 0
   pagetable_s = memory_map_tools_output[0]
   linker_script = memory_map_tools_output[1].full_path()
 
-  directed_diag_sources = [pagetable_s, directed_diag_sources]
+  diag_sources = [pagetable_s, diag_sources]
 
-  directed_diag_start_in_machine_mode = get_option('directed_diag_start_in_machine_mode')
+  start_diag_in_machine_mode = get_option('start_diag_in_machine_mode')
 
   c_args_list = ['-march=' + get_option('gcc_march_string')]
-  if directed_diag_start_in_machine_mode == true
+  if start_diag_in_machine_mode == true
     c_args_list += ['-DSTART_TEST_IN_MACHINE_MODE']
   endif
 
-  directed_diag_exe = executable('directed_diag',
-                        sources: [jumpstart_sources, directed_diag_sources],
+  diag_exe = executable('diag',
+                        sources: [jumpstart_sources, diag_sources],
                         include_directories: jumpstart_includes,
                         c_args: c_args_list,
                         link_args: ['-T' + linker_script, '-nostdlib'])

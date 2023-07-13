@@ -2,17 +2,17 @@
 #
 # SPDX-License-Identifier: LicenseRef-Rivos-Internal-Only
 
-option('directed_diag_sources',
+option('diag_sources',
        type : 'array',
        description : 'C and assembly sources for the directed diag.')
 
 
-option('directed_diag_memory_map_yaml',
+option('diag_memory_map_yaml',
        type : 'string',
        value : '',
        description : 'Memory map of the directed diag.')
 
-option('directed_diag_start_in_machine_mode',
+option('start_diag_in_machine_mode',
        type : 'boolean',
        value : 'false',
        description : 'Start the test main in M-mode or S-mode (default).')
