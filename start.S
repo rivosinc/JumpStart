@@ -4,11 +4,15 @@
 
 #include "jumpstart_defines.h"
 
-.section .jumpstart.text.rcode, "ax"
+.section .jumpstart.text.rcode.init, "ax"
 .global _rcode_start
 _rcode_start:
   la t0, _rtvec
   csrw rtvec, t0
+
+  # Update the MCRR_0 and PMARR_0 registers to point to
+  # the Machine Mode code region.
+  jal update_mcrr_0_and_pmarr_0
 
   la    t0, _start
   csrw repc, t0
@@ -29,7 +33,6 @@ _start:
   la  sp, stack_bottom
   mv  fp, sp
 
-  jal update_mcrr_0
   jal setup_pmarr
 
 1:
@@ -40,34 +43,6 @@ _start:
   jal enable_trap_delegation_to_supervisor_mode
 
   j jump_to_main
-
-.global update_mcrr_0
-update_mcrr_0:
-  # The reset default of the MCRR_0 is the 4K page starting at the LLC-as-SRAM
-  # range base address. We expect _start to be at the beginning of this page.
-  # Update the MCRR_0 to include all the machine mode code pages for the
-  # jumpstart framework.
-
-  # Determine the size of the jumpstart machine mode code region.
-  # We expect it to start at _start (from the .jumpstart.machine.init) section
-  # and extend to jumpstart_machine_mode_end_point (from the
-  # .jumpstart.machine.end) section.
-  la t0, _start
-  la t1, jumpstart_machine_mode_end_point
-  sub t0, t1, t0
-  # The machine mode region size should always be a multiple of 4K.
-  li t1, 0xfff
-  and t2, t0, t1
-  bnez t2, jumpstart_fail
-
-  # Compute the mask for the number of machine mode code pages.
-  addi t0, t0, -1
-  not t0, t0
-  # Set the valid bit.
-  ori t0, t0, 0x1
-  csrw mcrr_0_mask, t0
-
-  ret
 
 .section .jumpstart.text.machine, "ax"
 
