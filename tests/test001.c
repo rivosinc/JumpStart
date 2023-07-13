@@ -5,6 +5,11 @@
 #include "jumpstart_functions.h"
 
 int main(void) {
+  uint64_t main_function_address = (uint64_t)&main;
+  if (main_function_address != 0x80000000) {
+    return 1;
+  }
+
   if (get_thread_attributes_hart_id() != 0) {
     return 1;
   }
