@@ -121,7 +121,7 @@ class PageTableAttributes:
 class PmarrRegionMemoryType(enum.IntEnum):
     PMA_UC = 0
     PMA_WC = 1
-    PMA_WB = 2
+    PMA_WB = 3
 
 
 class PmarrAttributes:
