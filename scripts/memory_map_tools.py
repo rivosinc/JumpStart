@@ -131,6 +131,9 @@ class PmarrAttributes:
     # Minimum size os 1M
     minimum_size = 1024 * 1024
 
+    # The number of PMARR register pairs
+    num_registers = 10
+
     def __init__(self) -> None:
         pass
 
@@ -292,6 +295,16 @@ class MemoryMap:
 
     def create_pmarr_regions(self):
         self.pmarr_regions = []
+
+        # Use PMARR_0 to handle the jumpstart M-mode region. This region
+        # doesn't show up in the memory_map['mappings'] so explicitly add it
+        # to the pmarr_regions.
+        pmarr_0_region = PmarrRegion(
+            self.jumpstart_attributes['machine_mode_start_address'],
+            self.jumpstart_attributes['machine_mode_start_address'] +
+            PmarrAttributes.minimum_size, "wb")
+        self.pmarr_regions.append(pmarr_0_region)
+
         for mapping in self.memory_map['mappings']:
             if 'pmarr_memory_type' not in mapping:
                 log.error("pmarr_memory_type is not specified in the mapping")
@@ -671,18 +684,17 @@ class MemoryMap:
         file_descriptor.write(f"   li   a0, DIAG_SATP_MODE\n")
         file_descriptor.write(f"   ret\n\n\n")
 
-    def generate_update_mcrr_0_and_pmarr_0_function(self, file_descriptor):
+    def generate_update_mcrr_0_function(self, file_descriptor):
         # The reset default of the MCRR_0 is the 4K page starting at the LLC-as-SRAM
         # range base address. We expect _start to be at the beginning of this page.
         # Update the MCRR_0 to include all the machine mode code pages for the
         # jumpstart framework.
         file_descriptor.write('.section .jumpstart.text.rcode, "ax"\n\n')
         file_descriptor.write("\n")
-        file_descriptor.write(".global update_mcrr_0_and_pmarr_0\n")
-        file_descriptor.write("update_mcrr_0_and_pmarr_0:\n\n")
+        file_descriptor.write(".global update_mcrr_0\n")
+        file_descriptor.write("update_mcrr_0:\n\n")
         file_descriptor.write(f"   la t0, _start\n")
         file_descriptor.write(f"   csrw mcrr_0_base, t0\n")
-        file_descriptor.write(f"   csrw pmarr_base_0, t0\n")
 
         # Determine the size of the jumpstart machine mode code region.
         # We expect it to start at _start (from the .jumpstart.machine.init) section
@@ -703,22 +715,22 @@ class MemoryMap:
         # Set the valid bit.
         file_descriptor.write(f"   ori t0, t0, 0x1\n")
         file_descriptor.write(f"   csrw mcrr_0_mask, t0\n")
-        # The PMARR_0 mask register cover 1MB which should be sufficient to
-        # cover the jumpstart machine mode code region.
 
         file_descriptor.write(f"   ret\n\n\n")
         file_descriptor.write("\n")
 
     def generate_pmarr_functions(self, file_descriptor):
-        file_descriptor.write('.section .jumpstart.text.machine, "ax"\n\n')
+        file_descriptor.write('.section .jumpstart.text.rcode, "ax"\n\n')
         file_descriptor.write("\n")
         file_descriptor.write(".global setup_pmarr\n")
         file_descriptor.write("setup_pmarr:\n\n")
+
         pmarr_reg_id = 0
         for region in self.pmarr_regions:
             region.generate_pmarr_region_setup_code(file_descriptor,
                                                     pmarr_reg_id)
             pmarr_reg_id += 1
+            assert (pmarr_reg_id < PmarrAttributes.num_registers)
         file_descriptor.write(f"   ret\n\n\n")
         file_descriptor.write("\n")
 
@@ -767,7 +779,7 @@ class MemoryMap:
 
             self.generate_page_table_functions(file)
             self.generate_pmarr_functions(file)
-            self.generate_update_mcrr_0_and_pmarr_0_function(file)
+            self.generate_update_mcrr_0_function(file)
 
             self.generate_page_table_data(file)
 

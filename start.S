@@ -10,9 +10,10 @@ _rcode_start:
   la t0, _rtvec
   csrw rtvec, t0
 
-  # Update the MCRR_0 and PMARR_0 registers to point to
-  # the Machine Mode code region.
-  jal update_mcrr_0_and_pmarr_0
+  # Update the MCRR_0 registers to point to the Machine Mode code region.
+  jal update_mcrr_0
+
+  jal setup_pmarr
 
   la    t0, _start
   csrw repc, t0
@@ -33,7 +34,6 @@ _start:
   la  sp, stack_bottom
   mv  fp, sp
 
-  jal setup_pmarr
 
 1:
   jal setup_thread_attributes
