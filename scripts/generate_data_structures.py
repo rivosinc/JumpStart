@@ -208,6 +208,7 @@ def generate_data_structures(attributes_yaml, defines_file,
     for syscall_name in attributes_data['syscall_numbers']:
         defines_file_fd.write(
             f"#define {syscall_name} {current_syscall_number}\n")
+        current_syscall_number += 1
 
     defines_file_fd.close()
     data_structures_file_fd.close()
