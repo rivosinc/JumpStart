@@ -41,9 +41,6 @@
     __v;                                                                       \
   })
 
-void jump_to_user_mode(void) __attribute__((section(".jumpstart.text")));
-void jump_to_supervisor_mode(void) __attribute__((section(".jumpstart.text")));
-
 void setup_mmu_for_supervisor_mode(void)
     __attribute__((section(".jumpstart.text")));
 void disable_mmu_for_supervisor_mode(void)

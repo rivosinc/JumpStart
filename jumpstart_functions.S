@@ -85,65 +85,6 @@ disable_mmu_for_supervisor_mode:
   sfence.vma
   ret
 
-.global jump_to_user_mode
-jump_to_user_mode:
-
-  addi  sp, sp, -16
-  sd  ra, 8(sp)
-  sd  fp, 0(sp)
-  addi    fp, sp, 16
-
-  jal get_thread_attributes_current_mode
-
-  # Already in user mode
-  li  t1, USER_MODE_ENCODING
-  beq a0, t1, 2f
-
-  li  t1, SUPERVISOR_MODE_ENCODING
-  bne a0, t1, jumpstart_supervisor_fail
-
-  la  t0, 1f
-  csrw  sepc, t0
-  li t0, (SUPERVISOR_MODE_ENCODING << MSTATUS_SPP_SHIFT)
-  csrc sstatus, t0
-  sret
-
-1:
-  li  a0, USER_MODE_ENCODING
-  jal set_thread_attributes_current_mode
-
-2:
-  ld  ra, 8(sp)
-  ld  fp, 0(sp)
-  addi  sp, sp, 16
-
-  ret
-
-.global jump_to_supervisor_mode
-jump_to_supervisor_mode:
-  addi  sp, sp, -16
-  sd  ra, 8(sp)
-  sd  fp, 0(sp)
-  addi    fp, sp, 16
-
-  jal get_thread_attributes_current_mode
-
-  # Already in machine mode
-  li  t1, SUPERVISOR_MODE_ENCODING
-  beq a0, t1, 1f
-
-  li  t1, USER_MODE_ENCODING
-  bne a0, t1, jumpstart_supervisor_fail
-
-  li  a7, SYSCALL_JUMP_TO_SUPERVISOR_MODE
-  ecall
-
-1:
-  ld  ra, 8(sp)
-  ld  fp, 0(sp)
-  addi  sp, sp, 16
-  ret
-
 # The stvec.base must always be 4 byte aligned.
 .align 2
 .global stvec_trap_handler
@@ -194,24 +135,7 @@ stvec_trap_handler:
 handle_env_call_from_umode:
   # a7 will contain the syscall number
 
-  li t0, SYSCALL_JUMP_TO_SUPERVISOR_MODE
-  beq a7, t0, env_call_jump_to_supervisor_mode
-
   j jumpstart_supervisor_fail
-
-env_call_jump_to_supervisor_mode:
-  # SEPC will be pointing to the ECALL and we need to return to the
-  # instruction following it.
-  csrr a0, sepc
-  addi a0, a0, 4
-  csrw sepc, a0
-
-  csrr  t0, sstatus
-  li  t1, (SUPERVISOR_MODE_ENCODING << MSTATUS_SPP_SHIFT)
-  or  t0, t0, t1
-  csrw  sstatus, t0
-
-  j jumpstart_supervisor_return
 
 .global jumpstart_supervisor_fail
 jumpstart_supervisor_fail:

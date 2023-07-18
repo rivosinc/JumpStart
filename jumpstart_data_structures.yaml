@@ -86,5 +86,4 @@ defines:
   IMSIC_IPI_ID:       1
 
 syscall_numbers:
-  - SYSCALL_JUMP_TO_SUPERVISOR_MODE
   - SYSCALL_JUMP_TO_MACHINE_MODE_AND_EXIT

@@ -7,7 +7,6 @@ fs = import('fs')
 jumpstart_tests = [
   ['test000', 'Enable MMU (SATP.mode = sv39), switch to supervisor mode and exit.'],
   ['test001', 'Enable MMU (SATP.mode = sv48), switch to supervisor mode and exit.'],
-  ['test002', 'Ping pong between Supervisor and User mode.'],
   ['test003', 'Register and run Supervisor mode illegal instruction exception handler.'],
   ['test004', 'HWP AMPM perf diag.'],
   ['test005', '16K data block move from WB to UC (PBMT) region.'],
