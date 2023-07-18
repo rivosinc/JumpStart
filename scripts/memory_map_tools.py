@@ -257,12 +257,12 @@ class MemoryMap:
             if key in self.jumpstart_attributes:
                 self.jumpstart_attributes[key] = self.memory_map[key]
 
-        self.memory_map[
-            'mappings'] = self.add_bss_and_rodata_sections_to_mappings(
-                self.memory_map['mappings'])
         # Add a guard page between the user sections and the jumpstart data section
         self.memory_map['mappings'] = self.add_guard_page_to_mappings(
             self.memory_map['mappings'])
+        self.memory_map[
+            'mappings'] = self.add_bss_and_rodata_sections_to_mappings(
+                self.memory_map['mappings'])
         self.memory_map[
             'mappings'] = self.add_jumpstart_text_section_to_mappings(
                 self.memory_map['mappings'])
