@@ -69,7 +69,7 @@ setup_mmu_for_supervisor_mode:
 
   jal get_diag_satp_ppn
 
-  add  a0, a0, a2
+  add  a0, a0, s2
   csrw  satp, a0
   sfence.vma
 

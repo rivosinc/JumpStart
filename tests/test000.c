@@ -29,6 +29,10 @@ int main(void) {
 
   setup_mmu_for_supervisor_mode();
 
+  if ((read_csr(satp) >> SATP_MODE_LSB) != SATP_MODE_SV39) {
+    return 1;
+  }
+
   disable_mmu_for_supervisor_mode();
 
   return 0;
