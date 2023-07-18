@@ -19,6 +19,6 @@ mappings:
     pa: 0x80002000
     xwr: "0b011"
     page_size: 0x1000
-    num_pages: 8
+    num_pages: 10
     pmarr_memory_type: "wb"
     linker_script_section: ".data"
