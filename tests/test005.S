@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: LicenseRef-Rivos-Internal-Only
 
-.section .data.dms
+.section .data.dms.wb
 
 // 4 4K pages of source data area
 .global source_area
@@ -29,7 +29,7 @@ source_area:
 .global source_area_end
 source_area_end:
 
-.section .data.uc
+.section .data.dms.uc
 
 // 4 4K pages of dest area to overrwrite
 .global dest_area

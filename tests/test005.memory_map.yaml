@@ -5,11 +5,12 @@
 satp_mode: "sv39"
 
 max_num_pages_for_PT_allocation: 5
+machine_mode_start_address: 0x80000000
 
 mappings:
   -
-    va: 0x80000000
-    pa: 0x80000000
+    va: 0x81000000
+    pa: 0x81000000
     xwr: "0b101"
     page_size: 0x1000
     num_pages: 2
@@ -22,9 +23,8 @@ mappings:
     page_size: 0x1000
     num_pages: 4
     pbmt_mode: "io"
-    # Setting up the PMARR is redundant as the PMBT overrides this.
     pmarr_memory_type: "uc"
-    linker_script_section: ".data.uc"
+    linker_script_section: ".data.dms.uc"
   -
     va: 0x89000000
     pa: 0x89000000
@@ -32,4 +32,4 @@ mappings:
     page_size: 0x1000
     num_pages: 4
     pmarr_memory_type: "wb"
-    linker_script_section: ".data.dms"
+    linker_script_section: ".data.dms.wb"
