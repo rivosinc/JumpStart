@@ -21,7 +21,7 @@
 #define A7_OFFSET  (14 * 8)
 #define RA_OFFSET  (15 * 8)
 
-.section .jumpstart.data, "aw"
+.section .jumpstart.data.privileged, "aw"
 
 .global exception_reg_region
 exception_reg_region:

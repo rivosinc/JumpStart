@@ -267,7 +267,7 @@ class MemoryMap:
             'mappings'] = self.add_jumpstart_supervisor_text_section_to_mappings(
                 self.memory_map['mappings'])
         self.memory_map[
-            'mappings'] = self.add_jumpstart_data_section_to_mappings(
+            'mappings'] = self.add_jumpstart_privileged_data_section_to_mappings(
                 self.memory_map['mappings'])
         self.memory_map['mappings'] = self.add_guard_page_to_mappings(
             self.memory_map['mappings'])
@@ -367,7 +367,7 @@ class MemoryMap:
                                                 '.jumpstart.text.supervisor')
         return updated_mappings
 
-    def add_jumpstart_data_section_to_mappings(self, mappings):
+    def add_jumpstart_privileged_data_section_to_mappings(self, mappings):
         num_jumpstart_data_pages = 0
         for page_count in self.jumpstart_attributes[
                 'jumpstart_data_page_counts']:
@@ -376,7 +376,7 @@ class MemoryMap:
 
         updated_mappings = self.add_to_mappings(mappings, "0b011",
                                                 num_jumpstart_data_pages, 'wb',
-                                                '.jumpstart.data')
+                                                '.jumpstart.data.privileged')
         return updated_mappings
 
     def add_bss_and_rodata_sections_to_mappings(self, mappings):
