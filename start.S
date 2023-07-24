@@ -31,9 +31,9 @@ _start:
   la t0, mtvec_trap_handler
   csrw mtvec, t0
 
-  la  sp, stack_bottom
+  # Set up the stack for M-mode and S-mode.
+  la  sp, privileged_stack_bottom
   mv  fp, sp
-
 
 1:
   jal setup_thread_attributes

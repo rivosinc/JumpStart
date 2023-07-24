@@ -188,15 +188,15 @@ def generate_data_structures(attributes_yaml, defines_file,
 
     assembly_file_fd.write(f'.section .jumpstart.data, "aw"\n')
     assembly_file_fd.write(f'.align 12\n')
-    assembly_file_fd.write(f'.global stack_top\n')
-    assembly_file_fd.write(f'stack_top:\n')
+    assembly_file_fd.write(f'.global privileged_stack_top\n')
+    assembly_file_fd.write(f'privileged_stack_top:\n')
     assembly_file_fd.write(
-        f".rep {attributes_data['jumpstart_data_page_counts']['num_pages_for_stack'] * 4096}\n"
+        f".rep {attributes_data['jumpstart_data_page_counts']['num_pages_for_privileged_stack'] * 4096}\n"
     )
     assembly_file_fd.write(f'.byte 0x00\n')
     assembly_file_fd.write(f'  .endr\n')
-    assembly_file_fd.write(f'.global stack_bottom\n')
-    assembly_file_fd.write(f'stack_bottom:\n')
+    assembly_file_fd.write(f'.global privileged_stack_bottom\n')
+    assembly_file_fd.write(f'privileged_stack_bottom:\n\n')
 
     for define_name in attributes_data['defines']:
         defines_file_fd.write(

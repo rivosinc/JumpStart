@@ -11,7 +11,7 @@ max_num_cpus_supported: 3
 jumpstart_text_page_counts:
   num_pages_for_all_text: 2
 jumpstart_data_page_counts:
-  num_pages_for_stack: 2
+  num_pages_for_privileged_stack: 2
   num_pages_for_c_structs: 1
   num_pages_for_data_section: 1
 
