@@ -70,6 +70,7 @@ class PageTableAttributes:
         "page_offset": 12,
         "valid_bit": (0, 0),
         "xwr_bits": (3, 1),
+        "umode_bit": (4, 4),
         "global_bit": (5, 5),
         "a_bit": (6, 6),
         "d_bit": (7, 7),
@@ -330,8 +331,8 @@ class MemoryMap:
                 matching_pmarr_region.add_to_region(
                     mapping['pa'], mapping['pa'] + mapping_size)
 
-    def add_to_mappings(self, mappings, xwr, num_pages, pmarr_memory_type,
-                        linker_script_section):
+    def add_to_mappings(self, mappings, xwr, umode, num_pages,
+                        pmarr_memory_type, linker_script_section):
         # Adds the mapping to the end of the list of mappings
         updated_mappings = mappings.copy()
         last_mapping = updated_mappings[-1]
@@ -341,6 +342,7 @@ class MemoryMap:
         new_mapping['pa'] = last_mapping['pa'] + (last_mapping['page_size'] *
                                                   last_mapping['num_pages'])
         new_mapping['xwr'] = xwr
+        new_mapping['umode'] = umode
         new_mapping['page_size'] = 1 << self.get_attribute('page_offset')
         new_mapping['num_pages'] = num_pages
         new_mapping['pmarr_memory_type'] = pmarr_memory_type
@@ -351,8 +353,9 @@ class MemoryMap:
     def add_pagetable_section_to_mappings(self, mappings):
         # Add an additional mapping after the last mapping for the pagetables
         updated_mappings = self.add_to_mappings(
-            mappings, "0b001", self.num_pages_available_for_PT_allocation,
-            'wb', '.jumpstart.rodata.pagetables')
+            mappings, "0b001", "0b0",
+            self.num_pages_available_for_PT_allocation, 'wb',
+            '.jumpstart.rodata.pagetables')
         self.PT_section_start_address = updated_mappings[-1]['va']
         return updated_mappings
 
@@ -362,7 +365,7 @@ class MemoryMap:
                 'jumpstart_text_page_counts']:
             num_jumpstart_text_pages += self.jumpstart_attributes[
                 'jumpstart_text_page_counts'][page_count]
-        updated_mappings = self.add_to_mappings(mappings, "0b101",
+        updated_mappings = self.add_to_mappings(mappings, "0b101", "0b0",
                                                 num_jumpstart_text_pages, 'wb',
                                                 '.jumpstart.text.supervisor')
         return updated_mappings
@@ -374,23 +377,23 @@ class MemoryMap:
             num_jumpstart_data_pages += self.jumpstart_attributes[
                 'jumpstart_data_page_counts'][page_count]
 
-        updated_mappings = self.add_to_mappings(mappings, "0b011",
+        updated_mappings = self.add_to_mappings(mappings, "0b011", "0b0",
                                                 num_jumpstart_data_pages, 'wb',
                                                 '.jumpstart.data.privileged')
         return updated_mappings
 
     def add_bss_and_rodata_sections_to_mappings(self, mappings):
-        updated_mappings = self.add_to_mappings(mappings, "0b011", 1, 'wb',
-                                                '.bss')
-        updated_mappings = self.add_to_mappings(updated_mappings, "0b001", 1,
-                                                'wb', '.rodata')
+        updated_mappings = self.add_to_mappings(mappings, "0b011", "0b0", 1,
+                                                'wb', '.bss')
+        updated_mappings = self.add_to_mappings(updated_mappings, "0b001",
+                                                "0b0", 1, 'wb', '.rodata')
         return updated_mappings
 
     def add_guard_page_to_mappings(self, mappings):
         # Guard pages have no RWX permissions and are used to detect
         # overflows or underflows in the jumpstart data section
         updated_mappings = self.add_to_mappings(
-            mappings, "0b000", 1, 'wb',
+            mappings, "0b000", "0b0", 1, 'wb',
             f'.jumpstart.guard_page.{self.num_guard_pages_generated}')
         self.num_guard_pages_generated += 1
         return updated_mappings
@@ -523,6 +526,12 @@ class MemoryMap:
                     pte_value = place_bits(
                         pte_value, xwr_bits,
                         self.pt_attributes.common_attributes["xwr_bits"])
+
+                    if 'umode' in entry:
+                        umode_bit = int(entry['umode'], 2)
+                        pte_value = place_bits(
+                            pte_value, umode_bit,
+                            self.pt_attributes.common_attributes["umode_bit"])
 
                     pte_value = place_bits(
                         pte_value, 1,
