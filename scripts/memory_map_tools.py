@@ -257,7 +257,7 @@ class MemoryMap:
             if key in self.jumpstart_attributes:
                 self.jumpstart_attributes[key] = self.memory_map[key]
 
-        # Add a guard page between the user sections and the jumpstart data section
+        # Add a guard page between the test sections and the jumpstart data section
         self.memory_map['mappings'] = self.add_guard_page_to_mappings(
             self.memory_map['mappings'])
         self.memory_map[

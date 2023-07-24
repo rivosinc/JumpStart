@@ -36,7 +36,7 @@ The Jumpstart API functions are listed in [jumpstart_functions.h](jumpstart_func
 
 The Jumpstart [`tests/`](tests) are a good reference on writing diags. This [file](tests/meson.build) has the list of tests and a description of each of them.
 
-To build a directed diag using user provided source files (C and assembly) and a memory map indicating the diag memory layout:
+To build a directed diag using diag writer provided source files (C and assembly) and a memory map indicating the diag memory layout:
 
 ```
 meson setup builddir --cross-file cross-file.txt --buildtype release -Ddiag_memory_map_yaml=<PATH_TO_MEMORY_MAP_YAML> -Ddiag_sources=<COMMA SEPARATED LIST OF SOURCE FILES>

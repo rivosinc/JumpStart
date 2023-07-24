@@ -116,7 +116,7 @@ stvec_trap_handler:
   jal set_thread_attributes_current_mode
 
   csrr a0, scause
-  # returns the address of the trap handler if the user
+  # returns the address of the trap handler if the test writer
   # has registered one, else 0.
   call get_trap_handler_override
 

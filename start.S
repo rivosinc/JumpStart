@@ -177,7 +177,7 @@ mtvec_trap_handler:
 
   # csrr a0, mcause
 
-  # # returns the address of the trap handler if the user
+  # # returns the address of the trap handler if the test writer
   # # has registered one, else 0.
   # jal get_trap_handler_override
 

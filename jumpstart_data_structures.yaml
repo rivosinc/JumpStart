@@ -6,7 +6,7 @@ max_num_cpus_supported: 3
 
 # Hard limits on how many pages the jumsptart infrastructure itself will oocupy.
 # Allows us to keep track of infrastructure code size.
-# The user pages are not limited by these counts and are dependent on the
+# The test pages are not limited by these counts and are dependent on the
 # number of pages allocated in the test memory map.
 jumpstart_text_page_counts:
   num_pages_for_all_text: 2
