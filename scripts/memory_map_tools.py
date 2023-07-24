@@ -264,7 +264,7 @@ class MemoryMap:
             'mappings'] = self.add_bss_and_rodata_sections_to_mappings(
                 self.memory_map['mappings'])
         self.memory_map[
-            'mappings'] = self.add_jumpstart_text_section_to_mappings(
+            'mappings'] = self.add_jumpstart_supervisor_text_section_to_mappings(
                 self.memory_map['mappings'])
         self.memory_map[
             'mappings'] = self.add_jumpstart_data_section_to_mappings(
@@ -356,7 +356,7 @@ class MemoryMap:
         self.PT_section_start_address = updated_mappings[-1]['va']
         return updated_mappings
 
-    def add_jumpstart_text_section_to_mappings(self, mappings):
+    def add_jumpstart_supervisor_text_section_to_mappings(self, mappings):
         num_jumpstart_text_pages = 0
         for page_count in self.jumpstart_attributes[
                 'jumpstart_text_page_counts']:
@@ -364,7 +364,7 @@ class MemoryMap:
                 'jumpstart_text_page_counts'][page_count]
         updated_mappings = self.add_to_mappings(mappings, "0b101",
                                                 num_jumpstart_text_pages, 'wb',
-                                                '.jumpstart.text')
+                                                '.jumpstart.text.supervisor')
         return updated_mappings
 
     def add_jumpstart_data_section_to_mappings(self, mappings):
@@ -680,7 +680,7 @@ class MemoryMap:
         file_descriptor.write(f"   ret\n\n\n")
 
     def generate_page_table_functions(self, file_descriptor):
-        file_descriptor.write('.section .jumpstart.text, "ax"\n\n')
+        file_descriptor.write('.section .jumpstart.text.supervisor, "ax"\n\n')
         file_descriptor.write(
             f"# SATP.Mode is {self.memory_map['satp_mode']}\n\n")
         file_descriptor.write(

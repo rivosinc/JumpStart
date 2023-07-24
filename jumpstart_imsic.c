@@ -41,7 +41,7 @@
   } while (0)
 
 static void __imsic_eix_update(unsigned long id, int pend, int val)
-    __attribute__((section(".jumpstart.text")));
+    __attribute__((section(".jumpstart.text.supervisor")));
 
 static void __imsic_eix_update(unsigned long id, int pend, int val) {
   unsigned long isel, ireg, status;

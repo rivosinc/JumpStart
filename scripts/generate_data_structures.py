@@ -49,7 +49,7 @@ field_type_to_size_in_bytes = {
 def generate_getter_and_setter_methods_for_field(assembly_file_fd, c_struct,
                                                  field_name,
                                                  field_size_in_bytes):
-    assembly_file_fd.write(f'.section .jumpstart.text, "ax"\n')
+    assembly_file_fd.write(f'.section .jumpstart.text.supervisor, "ax"\n')
     getter_method = f'get_{c_struct}_{field_name}'
     assembly_file_fd.write(f'.global {getter_method}\n')
     assembly_file_fd.write(f'{getter_method}:\n')
@@ -118,7 +118,7 @@ def generate_data_structures(attributes_yaml, defines_file,
     total_size_of_c_structs = 0
 
     for c_struct in attributes_data['c_structs']:
-        assembly_file_fd.write('.section .jumpstart.text, "ax"\n\n')
+        assembly_file_fd.write('.section .jumpstart.text.supervisor, "ax"\n\n')
 
         c_struct_fields = attributes_data['c_structs'][c_struct]['fields']
         current_offset = 0

@@ -7,11 +7,11 @@
 #include "string.h"
 
 static char *ksprintn(char *nbuf, uintmax_t num, int base, int *lenp, int upper)
-    __attribute__((section(".jumpstart.text")));
+    __attribute__((section(".jumpstart.text.supervisor")));
 
-int islower(int c) __attribute__((section(".jumpstart.text")));
-int isupper(int c) __attribute__((section(".jumpstart.text")));
-int tolower(int c) __attribute__((section(".jumpstart.text")));
+int islower(int c) __attribute__((section(".jumpstart.text.supervisor")));
+int isupper(int c) __attribute__((section(".jumpstart.text.supervisor")));
+int tolower(int c) __attribute__((section(".jumpstart.text.supervisor")));
 
 inline int islower(int c) {
   return c >= 'a' && c <= 'z';

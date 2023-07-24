@@ -29,7 +29,7 @@ exception_reg_region:
   .8byte 0x0000000000000000
 .endr
 
-.section .jumpstart.text, "ax"
+.section .jumpstart.text.supervisor, "ax"
 
 .global supervisor_jump_to_main
 supervisor_jump_to_main:

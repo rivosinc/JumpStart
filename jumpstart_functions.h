@@ -42,24 +42,24 @@
   })
 
 void setup_mmu_for_supervisor_mode(void)
-    __attribute__((section(".jumpstart.text")));
+    __attribute__((section(".jumpstart.text.supervisor")));
 void disable_mmu_for_supervisor_mode(void)
-    __attribute__((section(".jumpstart.text")));
+    __attribute__((section(".jumpstart.text.supervisor")));
 
 uint64_t get_trap_handler_override(uint64_t mcause)
-    __attribute__((section(".jumpstart.text")));
+    __attribute__((section(".jumpstart.text.supervisor")));
 void register_trap_handler_override(uint8_t mode, uint64_t mcause,
                                     uint64_t handler_address)
-    __attribute__((section(".jumpstart.text")));
+    __attribute__((section(".jumpstart.text.supervisor")));
 
 uint64_t get_thread_attributes_bookend_magic_number(void)
-    __attribute__((section(".jumpstart.text")));
+    __attribute__((section(".jumpstart.text.supervisor")));
 uint64_t get_thread_attributes_trap_override_struct_address(void)
-    __attribute__((section(".jumpstart.text")));
+    __attribute__((section(".jumpstart.text.supervisor")));
 uint8_t get_thread_attributes_current_mode(void)
-    __attribute__((section(".jumpstart.text")));
+    __attribute__((section(".jumpstart.text.supervisor")));
 uint8_t get_thread_attributes_hart_id(void)
-    __attribute__((section(".jumpstart.text")));
+    __attribute__((section(".jumpstart.text.supervisor")));
 
 uint64_t get_thread_attributes_bookend_magic_number_in_machine_mode(void)
     __attribute__((section(".jumpstart.text.machine")));
@@ -71,8 +71,10 @@ uint8_t get_thread_attributes_current_mode_in_machine_mode(void)
 uint8_t get_thread_attributes_hart_id_in_machine_mode(void)
     __attribute__((section(".jumpstart.text.machine")));
 
-uint64_t get_diag_satp_ppn(void) __attribute__((section(".jumpstart.text")));
-uint8_t get_diag_satp_mode(void) __attribute__((section(".jumpstart.text")));
+uint64_t get_diag_satp_ppn(void)
+    __attribute__((section(".jumpstart.text.supervisor")));
+uint8_t get_diag_satp_mode(void)
+    __attribute__((section(".jumpstart.text.supervisor")));
 
 void jumpstart_supervisor_fail(void)
-    __attribute__((section(".jumpstart.text")));
+    __attribute__((section(".jumpstart.text.supervisor")));
