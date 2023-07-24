@@ -41,6 +41,8 @@ memory_map_tools_script = meson.current_source_dir() + '/scripts/memory_map_tool
 diag_sources = get_option('diag_sources')
 diag_memory_map_yaml = get_option('diag_memory_map_yaml')
 
+default_c_args_list = ['-march=' + get_option('gcc_march_string')]
+
 if diag_memory_map_yaml != '' and diag_sources.length() > 0
   memory_map_tools_output = custom_target(
                                 'Generate memory map related source files for build',
@@ -60,17 +62,10 @@ if diag_memory_map_yaml != '' and diag_sources.length() > 0
 
   diag_sources = [pagetable_s, diag_sources]
 
-  start_diag_in_machine_mode = get_option('start_diag_in_machine_mode')
-
-  c_args_list = ['-march=' + get_option('gcc_march_string')]
-  if start_diag_in_machine_mode == true
-    c_args_list += ['-DSTART_TEST_IN_MACHINE_MODE']
-  endif
-
   diag_exe = executable('diag',
                         sources: [jumpstart_sources, diag_sources],
                         include_directories: jumpstart_includes,
-                        c_args: c_args_list,
+                        c_args: default_c_args_list,
                         link_args: ['-T' + linker_script, '-nostdlib'])
 endif
 

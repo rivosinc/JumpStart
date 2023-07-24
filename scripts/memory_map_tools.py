@@ -666,6 +666,19 @@ class MemoryMap:
 
             file.close()
 
+    def generate_start_test_in_machine_mode_function(self, file_descriptor):
+        file_descriptor.write('.section .jumpstart.text.machine, "ax"\n\n')
+        file_descriptor.write(".global start_test_in_machine_mode\n")
+        file_descriptor.write("start_test_in_machine_mode:\n\n")
+
+        start_test_in_machine_mode = 0
+        if 'start_test_in_machine_mode' in self.memory_map and self.memory_map[
+                'start_test_in_machine_mode'] == True:
+            start_test_in_machine_mode = 1
+
+        file_descriptor.write(f"   li a0, {start_test_in_machine_mode}\n")
+        file_descriptor.write(f"   ret\n\n\n")
+
     def generate_page_table_functions(self, file_descriptor):
         file_descriptor.write('.section .jumpstart.text, "ax"\n\n')
         file_descriptor.write(
@@ -777,6 +790,7 @@ class MemoryMap:
 
             file.write("#include \"jumpstart_defines.h\"\n\n")
 
+            self.generate_start_test_in_machine_mode_function(file)
             self.generate_page_table_functions(file)
             self.generate_pmarr_functions(file)
             self.generate_update_mcrr_0_function(file)

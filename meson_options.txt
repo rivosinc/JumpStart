@@ -12,11 +12,6 @@ option('diag_memory_map_yaml',
        value : '',
        description : 'Memory map of the directed diag.')
 
-option('start_diag_in_machine_mode',
-       type : 'boolean',
-       value : 'false',
-       description : 'Start the test main in M-mode or S-mode (default).')
-
 option('spike_default_isa_string',
        type : 'string',
        value : 'rv64gchv_zba_zbb_zbc_zbs_zbkb_sstc_svpbmt_svinval_sscofpmf_zicbom_zicbop_zicboz_zfh_zfhmin_zfbfmin_zkt_zkr_zicsr_zifencei_zawrs_zicond_zvkned_zvbb_zvkg_zvknha_zvknhb_zvksh_zvksed_xrivostime_xrivospagewalk_xrivoscode_smaia_ssaia',

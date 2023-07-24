@@ -13,7 +13,7 @@ jumpstart_tests = [
   ['test006', 'Read and Write CSRs.'],
   ['test007', 'UART test.'],
   ['test008', 'IMSIC test.'],
-  ['test009', 'Jump to main() in machine mode and exit.', true],
+  ['test009', 'Jump to main() in machine mode and exit.'],
   ['test010', 'Override default M-mode start address.'],
 ]
 
@@ -23,9 +23,7 @@ foreach jumpstart_test : jumpstart_tests
   test_name = jumpstart_test.get(0)
   test_description = jumpstart_test.get(1)
 
-  start_test_in_machine_mode = jumpstart_test.get(2, false)
-
-  spike_additional_arguments = jumpstart_test.get(3, '')
+  spike_additional_arguments = jumpstart_test.get(2, '')
 
   memory_map_file = meson.current_source_dir() + '/' + test_name +'.memory_map.yaml'
 
@@ -55,15 +53,10 @@ foreach jumpstart_test : jumpstart_tests
     test_sources += [test_name + '.S']
   endif
 
-  c_args_list = ['-march=' + get_option('gcc_march_string')]
-  if start_test_in_machine_mode == true
-    c_args_list += ['-DSTART_TEST_IN_MACHINE_MODE']
-  endif
-
   test_exe = executable(test_name,
                         sources: [jumpstart_sources, test_sources],
                         include_directories: jumpstart_includes,
-                        c_args: c_args_list,
+                        c_args: default_c_args_list,
                         link_args: ['-T' + linker_script, '-nostdlib'])
 
   spike_args = ['--pass-fail', '--isa=' + get_option('spike_default_isa_string') ]

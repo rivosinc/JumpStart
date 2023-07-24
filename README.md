@@ -39,7 +39,7 @@ The Jumpstart [`tests/`](tests) are a good reference on writing diags. This [fil
 To build a directed diag using user provided source files (C and assembly) and a memory map indicating the diag memory layout:
 
 ```
-meson setup builddir --cross-file cross-file.txt --buildtype release -Ddiag_memory_map_yaml=<PATH_TO_MEMORY_MAP_YAML> -Ddiag_sources=<COMMA SEPARATED LIST OF SOURCE FILES> -Dstart_diag_in_machine_mode=true
+meson setup builddir --cross-file cross-file.txt --buildtype release -Ddiag_memory_map_yaml=<PATH_TO_MEMORY_MAP_YAML> -Ddiag_sources=<COMMA SEPARATED LIST OF SOURCE FILES>
 meson compile -C builddir
 ```
 
@@ -50,11 +50,3 @@ meson compile -C builddir
 ```
 
 This will build `builddir/diag`
-
-By default, the test `main()` will start in Supervisor Mode. To start `main()` in Machine Mode, pass `-Dstart_diag_in_machine_mode=true` to `meson setup`
-
-Example:
-
-```
-meson setup builddir --cross-file cross-file.txt --buildtype release -Ddiag_sources=(pwd)/tests/test008.c  -Ddiag_memory_map_yaml=(pwd)/tests/test008.memory_map.yaml -Dstart_diag_in_machine_mode=true
-```

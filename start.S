@@ -114,7 +114,10 @@ enable_svpbmt_for_supervisor_mode:
 .global jump_to_main
 jump_to_main:
 
-#ifdef START_TEST_IN_MACHINE_MODE
+  jal start_test_in_machine_mode
+  beqz a0, jump_to_main_in_supervisor_mode
+
+jump_to_main_in_machine_mode:
 
   # Add the page containing main to the MCRR_1.
   la t0, main
@@ -136,7 +139,7 @@ jump_to_main:
 
   j machine_mode_return_point
 
-#else
+jump_to_main_in_supervisor_mode:
 
   la  t0, supervisor_jump_to_main
   csrw  mepc, t0
@@ -146,8 +149,6 @@ jump_to_main:
   csrw  mstatus, t0
 
   mret
-
-#endif
 
 # syscall handlers
 

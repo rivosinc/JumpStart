@@ -2,6 +2,8 @@
 #
 # SPDX-License-Identifier: LicenseRef-Rivos-Internal-Only
 
+start_test_in_machine_mode: True
+
 satp_mode: "sv39"
 
 mappings:
