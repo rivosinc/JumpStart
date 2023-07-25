@@ -103,9 +103,8 @@ enable_svpbmt_for_supervisor_mode:
   # The PBMTE bit controls whether the Svpbmt extension is
   # available for use in S-mode and G-stage address translation
   # (i.e., for page tables pointed to by satp or hgatp).
-  #define MENVCFG_PBMTE_ENABLE (1 << 62)
   csrr  t0, menvcfg
-  li  t1, MENVCFG_PBMTE_ENABLE
+  li  t1, (1 << MENVCFG_PBMTE_BIT_LSB)
   or  t0, t0, t1
   csrw  menvcfg, t0
 
