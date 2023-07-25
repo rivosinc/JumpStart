@@ -4,7 +4,7 @@
 
 max_num_cpus_supported: 3
 
-# Hard limits on how many pages the jumsptart infrastructure itself will oocupy.
+# Hard limits on how many pages the jumsptart infrastructure itself will occupy.
 # Allows us to keep track of infrastructure code size.
 # The test pages are not limited by these counts and are dependent on the
 # number of pages allocated in the test memory map.
