@@ -8,10 +8,10 @@ max_num_cpus_supported: 3
 # Allows us to keep track of infrastructure code size.
 # The test pages are not limited by these counts and are dependent on the
 # number of pages allocated in the test memory map.
-jumpstart_text_page_counts:
+jumpstart_supervisor_text_page_counts:
   num_pages_for_all_text: 2
-jumpstart_data_page_counts:
-  num_pages_for_privileged_stack: 2
+jumpstart_privileged_data_page_counts:
+  num_pages_for_stack: 2
   num_pages_for_c_structs: 1
   num_pages_for_data_section: 1
 
