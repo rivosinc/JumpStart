@@ -42,7 +42,7 @@ supervisor_jump_to_main:
   li a0, (1 << SIE_EXT_INTERRUPT)
   csrw sie, a0
 
-  li a0, (1 << SSTATUS_SIE_SHIFT)
+  li a0, (1 << SSTATUS_SIE_SHIFT) | (SUPERVISOR_MODE_ENCODING << MSTATUS_SPP_SHIFT)
   csrs sstatus, a0
 
   call main
