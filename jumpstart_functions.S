@@ -218,8 +218,21 @@ save_context:
   beqz a0, handle_umode_ecalls
   jalr ra, a0
 
-  # Restore smode context
+  # Restore last context
+  csrr a0, sstatus
+  andi a0, a0, (SUPERVISOR_MODE_ENCODING << MSTATUS_SPP_SHIFT)
+  beq x0, a0, switch_to_umode_stack_and_thread_pointer
   la a0, smode_reg_region
+  j restore_context
+
+switch_to_umode_stack_and_thread_pointer:
+  li  a0, USER_MODE_ENCODING
+  jal set_thread_attributes_current_mode
+  la a0, umode_reg_region
+  ld tp, TP_OFFSET(a0)
+  ld sp, SP_OFFSET(a0)
+
+restore_context:
   RESTORE_CALLER_SAVED
   ld a0, A0_OFFSET(a0)
 

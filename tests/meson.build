@@ -16,6 +16,7 @@ jumpstart_tests = [
   ['test008', 'IMSIC test.'],
   ['test009', 'Jump to main() in machine mode and exit.'],
   ['test010', 'Override default M-mode start address.'],
+  ['test011', 'Handle user mode exceptions in supervisor mode.'],
 ]
 
 spike = find_program('spike', required : true)
