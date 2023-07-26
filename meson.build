@@ -11,7 +11,6 @@ project('JumpStart', 'c',
 
 add_project_arguments('-Wno-c++-compat',
                       '-Wno-padded',
-                      '-Wno-main',
                       '-Wno-pedantic',
                       '-mcmodel=medany',
                       language: 'c')
