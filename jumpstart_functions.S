@@ -182,19 +182,24 @@ disable_mmu_for_supervisor_mode:
 .align 2
 .global stvec_trap_handler
 stvec_trap_handler:
+  # Hold the a0 passed to us in a temporary till we're ready to save it away.
   csrw sscratch, a0
 
   csrr a0, sstatus
   andi a0, a0, (SUPERVISOR_MODE_ENCODING << MSTATUS_SPP_SHIFT)
-  beq x0, a0, switch_to_smode_stack
+  beqz a0, switch_to_smode_stack_and_thread_pointer
   la a0, smode_reg_region
   j save_context
 
-switch_to_smode_stack:
-  # Switch stack and tp, we use smode stack in exception handler.
+switch_to_smode_stack_and_thread_pointer:
+  # We are in S-mode handling a trap from U-mode so switch to the
+  # S-mode stack and thread pointer.
+
+  # Save away the U-mode stack and thread pointer.
   la a0, umode_reg_region
   sd sp, SP_OFFSET(a0)
   sd tp, TP_OFFSET(a0)
+
   la sp, smode_reg_region
   ld tp, TP_OFFSET(sp)
   ld sp, SP_OFFSET(sp)
@@ -202,6 +207,7 @@ switch_to_smode_stack:
 save_context:
   SAVE_CALLER_SAVED
 
+  # Save away the a0 passed to us when entering the trap handler.
   csrr t0, sscratch
   sd t0, A0_OFFSET(a0)
 
@@ -211,17 +217,17 @@ save_context:
 
   # Get the address of the trap handler if the test has registered one, else 0.
   csrr a0, scause
-  # returns the address of the trap handler if the test writer
-  # has registered one, else 0.
   call get_trap_handler_override
 
-  beqz a0, handle_umode_ecalls
+  beqz a0, check_for_env_call_requests
+
+  # Jump to the registered trap handler.
   jalr ra, a0
 
-  # Restore last context
+  # Restore the context from before the trap.
   csrr a0, sstatus
   andi a0, a0, (SUPERVISOR_MODE_ENCODING << MSTATUS_SPP_SHIFT)
-  beq x0, a0, switch_to_umode_stack_and_thread_pointer
+  beqz a0, switch_to_umode_stack_and_thread_pointer
   la a0, smode_reg_region
   j restore_context
 
@@ -238,8 +244,7 @@ restore_context:
 
   sret
 
-handle_umode_ecalls:
-  # Check for ECALLs from U mode.
+check_for_env_call_requests:
   csrr a0, scause
   li t0, SCAUSE_EC_ENV_CALL_FROM_UMODE
   beq a0, t0, handle_env_call_from_umode
@@ -248,6 +253,7 @@ handle_umode_ecalls:
 
 handle_env_call_from_umode:
   # a7 will contain the syscall number
+
   li t0, SYSCALL_RETURN_TO_SUPERVISOR_MODE
   beq a7, t0, env_call_return_to_supervisor_mode
 
@@ -259,6 +265,8 @@ jumpstart_supervisor_fail:
   wfi
 
 env_call_return_to_supervisor_mode:
+  # This is the return to supervisor path for run_function_in_user_mode().
+
   # Restore S mode context and return status in a0
   la a0, smode_reg_region
   ld a1, SEPC_OFFSET(a0)
