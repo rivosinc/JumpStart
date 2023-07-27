@@ -25,6 +25,12 @@ jumpstart_fail:
 1:
   # We expect to be in machine mode at this point.
 
+  li     t0, UC_END_OF_SIM_MAGIC_ADDRESS
+  csrw   pmarr_base_0, t0
+  li     t0, PMARR_0_MAGIC_STORE_MASK_VAL
+  csrw   pmarr_mask_0, t0
+  fence.i
+
   # Three end of sim steps:
   # 1. Disable interrupts
   li t0, 0x0
@@ -33,6 +39,8 @@ jumpstart_fail:
   # 2. Store PASS/FAIL to magic address
   li t0, END_OF_SIM_MAGIC_ADDRESS
   sw s1, 0(t0)
+  fence.i
+  cbo.flush  (t0)
 
   # Need to push the line out of the cache so
   # that the memory transactor can pick up a fail.
@@ -46,6 +54,10 @@ loop_magic_store:
   sw     s1, 0(t0)
   addi   t2, t2, -1
   bne    t2, x0, loop_magic_store
+
+  # UC Magic Store
+  li t0, UC_END_OF_SIM_MAGIC_ADDRESS
+  sw s1, 0(t0)
 
   # Spike run with --pass-fail will exit with non-zero error
   # code if t0 is not 1
