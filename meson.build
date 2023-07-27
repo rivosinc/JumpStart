@@ -66,6 +66,9 @@ if diag_memory_map_yaml != '' and diag_sources.length() > 0
                         include_directories: jumpstart_includes,
                         c_args: default_c_args_list,
                         link_args: ['-T' + linker_script, '-nostdlib'])
-endif
+else
 
-subdir('tests')
+  # Don't build the tests if we're building a directed diag.
+  subdir('tests')
+
+endif
