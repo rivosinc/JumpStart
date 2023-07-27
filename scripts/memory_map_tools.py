@@ -739,18 +739,18 @@ class MemoryMap:
 
     def generate_update_mcrr_0_function(self, file_descriptor):
         # The reset default of the MCRR_0 is the 4K page starting at the LLC-as-SRAM
-        # range base address. We expect _start to be at the beginning of this page.
+        # range base address. We expect _machine_start to be at the beginning of this page.
         # Update the MCRR_0 to include all the machine mode code pages for the
         # jumpstart framework.
         file_descriptor.write('.section .jumpstart.text.rcode, "ax"\n\n')
         file_descriptor.write("\n")
         file_descriptor.write(".global update_mcrr_0\n")
         file_descriptor.write("update_mcrr_0:\n\n")
-        file_descriptor.write(f"   la t0, _start\n")
+        file_descriptor.write(f"   la t0, _machine_start\n")
         file_descriptor.write(f"   csrw mcrr_0_base, t0\n")
 
         # Determine the size of the jumpstart machine mode code region.
-        # We expect it to start at _start (from the .jumpstart.machine.init) section
+        # We expect it to start at _machine_start (from the .jumpstart.machine.init) section
         # and extend to jumpstart_machine_mode_end_point (from the
         # from the .jumpstart.machine.end
         file_descriptor.write(f"   la t1, jumpstart_machine_mode_end_point\n")

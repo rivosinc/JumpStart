@@ -15,7 +15,7 @@ _rcode_start:
 
   jal setup_pmarr
 
-  la    t0, _start
+  la    t0, _machine_start
   csrw repc, t0
   rret
 
@@ -26,8 +26,8 @@ _rtvec:
 # This section should fall into the initial 4K page set up in MCRR_0
 .section .jumpstart.text.machine.init, "ax"
 
-.global _start
-_start:
+.global _machine_start
+_machine_start:
   la t0, mtvec_trap_handler
   csrw mtvec, t0
 
