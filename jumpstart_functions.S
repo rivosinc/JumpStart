@@ -138,6 +138,8 @@ jump_to_main_in_supervisor_mode:
   li a0, (1 << SSTATUS_SIE_SHIFT) | (SUPERVISOR_MODE_ENCODING << MSTATUS_SPP_SHIFT)
   csrs sstatus, a0
 
+  jal enable_mmu_in_supervisor_mode
+
   call main
 
   # TODO: Make sure we're in supervisor mode at this point.
@@ -148,8 +150,8 @@ jump_to_main_in_supervisor_mode:
 
   call jumpstart_supervisor_fail
 
-.global setup_mmu_for_supervisor_mode
-setup_mmu_for_supervisor_mode:
+.global enable_mmu_in_supervisor_mode
+enable_mmu_in_supervisor_mode:
   addi  sp, sp, -16
   sd  ra, 8(sp)
   sd  fp, 0(sp)
@@ -171,8 +173,8 @@ setup_mmu_for_supervisor_mode:
   addi  sp, sp, 16
   ret
 
-.global disable_mmu_for_supervisor_mode
-disable_mmu_for_supervisor_mode:
+.global disable_mmu_in_supervisor_mode
+disable_mmu_in_supervisor_mode:
   li  t0, 0
   csrw  satp, t0
   sfence.vma

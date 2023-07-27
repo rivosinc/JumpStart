@@ -27,13 +27,11 @@ int main(void) {
     return 1;
   }
 
-  setup_mmu_for_supervisor_mode();
-
   if ((read_csr(satp) >> SATP_MODE_LSB) != SATP_MODE_SV48) {
     return 1;
   }
 
-  disable_mmu_for_supervisor_mode();
+  disable_mmu_in_supervisor_mode();
 
   return 0;
 }

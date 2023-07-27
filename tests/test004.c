@@ -7,11 +7,7 @@
 void hwp_ampm_diag(void);
 
 int main(void) {
-  setup_mmu_for_supervisor_mode();
-
   hwp_ampm_diag();
-
-  disable_mmu_for_supervisor_mode();
 
   return 0;
 }

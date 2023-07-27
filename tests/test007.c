@@ -23,13 +23,9 @@ int main(void) {
     return 1;
   }
 
-  setup_mmu_for_supervisor_mode();
-
   setup_uart();
   puts("Hello World\n");
   printk("Checking format specifier int %d, char %c \n", 0xc001, 'A');
-
-  disable_mmu_for_supervisor_mode();
 
   return 0;
 }

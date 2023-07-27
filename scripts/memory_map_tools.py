@@ -725,7 +725,7 @@ class MemoryMap:
         file_descriptor.write(
             f"#define DIAG_SATP_MODE {self.get_attribute('satp_mode')}\n")
 
-        modes = ['supervisor', 'machine']
+        modes = ['supervisor']
         for mode in modes:
             file_descriptor.write(f'.section .jumpstart.text.{mode}, "ax"\n\n')
             file_descriptor.write(

@@ -36,8 +36,6 @@ int main(void) {
                                  SCAUSE_EC_ILLEGAL_INSTRUCTION,
                                  (uint64_t)(&test011_exception_handler));
 
-  setup_mmu_for_supervisor_mode();
-
   if (run_function_in_user_mode(test_illegal_instruction_in_umode) != 0) {
     return 1;
   }
@@ -45,8 +43,6 @@ int main(void) {
   if (excep_rcvd != 0xabcdabcd) {
     return 1;
   }
-
-  disable_mmu_for_supervisor_mode();
 
   return 0;
 }

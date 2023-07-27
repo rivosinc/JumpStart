@@ -44,9 +44,7 @@
 int run_function_in_user_mode(int (*umode_function)(void))
     __attribute__((section(".jumpstart.text.supervisor")));
 
-void setup_mmu_for_supervisor_mode(void)
-    __attribute__((section(".jumpstart.text.supervisor")));
-void disable_mmu_for_supervisor_mode(void)
+void disable_mmu_in_supervisor_mode(void)
     __attribute__((section(".jumpstart.text.supervisor")));
 
 uint64_t get_trap_handler_override(uint64_t mcause)

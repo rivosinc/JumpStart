@@ -20,8 +20,6 @@ int main(void) {
     return 1;
   }
 
-  setup_mmu_for_supervisor_mode();
-
   if (run_function_in_user_mode(test_umode) != 0) {
     return 1;
   }
@@ -29,8 +27,6 @@ int main(void) {
   if (get_thread_attributes_current_mode() != SUPERVISOR_MODE_ENCODING) {
     return 1;
   }
-
-  disable_mmu_for_supervisor_mode();
 
   return 0;
 }

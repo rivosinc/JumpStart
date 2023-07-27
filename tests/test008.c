@@ -20,7 +20,6 @@ int main(void) {
                                      (1ULL << SCAUSE_INTERRUPT_BIT_LSB),
                                  (uint64_t)(&test008_exception_handler));
 
-  setup_mmu_for_supervisor_mode();
   imsic_init();
   imsic_id_enable(IMSIC_IPI_ID);
 
@@ -31,7 +30,6 @@ int main(void) {
   if (irq_var != 1)
     return 1;
 
-  disable_mmu_for_supervisor_mode();
   imsic_id_disable(IMSIC_IPI_ID);
   imsic_fini();
   return 0;
