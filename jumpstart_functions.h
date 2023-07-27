@@ -74,10 +74,15 @@ uint8_t get_thread_attributes_current_mode_in_machine_mode(void)
 uint8_t get_thread_attributes_hart_id_in_machine_mode(void)
     __attribute__((section(".jumpstart.text.machine")));
 
-uint64_t get_diag_satp_ppn(void)
+uint64_t get_diag_satp_ppn_in_supervisor_mode(void)
     __attribute__((section(".jumpstart.text.supervisor")));
-uint8_t get_diag_satp_mode(void)
+uint8_t get_diag_satp_mode_in_supervisor_mode(void)
     __attribute__((section(".jumpstart.text.supervisor")));
+
+uint64_t get_diag_satp_ppn_in_machine_mode(void)
+    __attribute__((section(".jumpstart.text.machine")));
+uint8_t get_diag_satp_mode_in_machine_mode(void)
+    __attribute__((section(".jumpstart.text.machine")));
 
 void jumpstart_supervisor_fail(void)
     __attribute__((section(".jumpstart.text.supervisor")));

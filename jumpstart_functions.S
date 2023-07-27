@@ -155,12 +155,12 @@ setup_mmu_for_supervisor_mode:
   sd  fp, 0(sp)
   addi    fp, sp, 16
 
-  jal get_diag_satp_mode
+  jal get_diag_satp_mode_in_supervisor_mode
   mv s2, a0
 
   slli  s2, s2, SATP_MODE_LSB
 
-  jal get_diag_satp_ppn
+  jal get_diag_satp_ppn_in_supervisor_mode
 
   add  a0, a0, s2
   csrw  satp, a0

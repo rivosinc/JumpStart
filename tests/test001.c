@@ -19,7 +19,7 @@ int main(void) {
     return 1;
   }
 
-  if (get_diag_satp_mode() != SATP_MODE_SV48) {
+  if (get_diag_satp_mode_in_supervisor_mode() != SATP_MODE_SV48) {
     return 1;
   }
 

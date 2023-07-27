@@ -720,22 +720,27 @@ class MemoryMap:
         file_descriptor.write(f"   ret\n\n\n")
 
     def generate_page_table_functions(self, file_descriptor):
-        file_descriptor.write('.section .jumpstart.text.supervisor, "ax"\n\n')
         file_descriptor.write(
             f"# SATP.Mode is {self.memory_map['satp_mode']}\n\n")
         file_descriptor.write(
             f"#define DIAG_SATP_MODE {self.get_attribute('satp_mode')}\n")
-        file_descriptor.write(".global get_diag_satp_ppn\n")
-        file_descriptor.write("get_diag_satp_ppn:\n\n")
-        file_descriptor.write(
-            f"   la a0, {self.pt_attributes.pt_start_label}\n")
-        file_descriptor.write(f"   srai a0, a0, PAGE_OFFSET\n")
-        file_descriptor.write(f"   ret\n\n\n")
 
-        file_descriptor.write(".global get_diag_satp_mode\n")
-        file_descriptor.write("get_diag_satp_mode:\n\n")
-        file_descriptor.write(f"   li   a0, DIAG_SATP_MODE\n")
-        file_descriptor.write(f"   ret\n\n\n")
+        modes = ['supervisor', 'machine']
+        for mode in modes:
+            file_descriptor.write(f'.section .jumpstart.text.{mode}, "ax"\n\n')
+            file_descriptor.write(
+                f".global get_diag_satp_ppn_in_{mode}_mode\n")
+            file_descriptor.write(f"get_diag_satp_ppn_in_{mode}_mode:\n\n")
+            file_descriptor.write(
+                f"   la a0, {self.pt_attributes.pt_start_label}\n")
+            file_descriptor.write(f"   srai a0, a0, PAGE_OFFSET\n")
+            file_descriptor.write(f"   ret\n\n\n")
+
+            file_descriptor.write(
+                f".global get_diag_satp_mode_in_{mode}_mode\n")
+            file_descriptor.write(f"get_diag_satp_mode_in_{mode}_mode:\n\n")
+            file_descriptor.write(f"   li   a0, DIAG_SATP_MODE\n")
+            file_descriptor.write(f"   ret\n\n\n")
 
     def generate_pmarr_functions(self, file_descriptor):
         file_descriptor.write('.section .jumpstart.text.rcode, "ax"\n\n')
