@@ -110,14 +110,14 @@
 
 .section .jumpstart.data.privileged, "aw"
 
-.global smode_reg_region
-smode_reg_region:
+.global smode_reg_context_save_region
+smode_reg_context_save_region:
 .rep 33
   .8byte 0x0000000000000000
 .endr
 
-.global umode_reg_region
-umode_reg_region:
+.global umode_reg_context_save_region
+umode_reg_context_save_region:
 .rep 33
   .8byte 0x0000000000000000
 .endr
@@ -188,7 +188,7 @@ stvec_trap_handler:
   csrr a0, sstatus
   andi a0, a0, (SUPERVISOR_MODE_ENCODING << MSTATUS_SPP_SHIFT)
   beqz a0, switch_to_smode_stack_and_thread_pointer
-  la a0, smode_reg_region
+  la a0, smode_reg_context_save_region
   j save_context
 
 switch_to_smode_stack_and_thread_pointer:
@@ -196,11 +196,11 @@ switch_to_smode_stack_and_thread_pointer:
   # S-mode stack and thread pointer.
 
   # Save away the U-mode stack and thread pointer.
-  la a0, umode_reg_region
+  la a0, umode_reg_context_save_region
   sd sp, SP_OFFSET(a0)
   sd tp, TP_OFFSET(a0)
 
-  la sp, smode_reg_region
+  la sp, smode_reg_context_save_region
   ld tp, TP_OFFSET(sp)
   ld sp, SP_OFFSET(sp)
 
@@ -228,13 +228,13 @@ save_context:
   csrr a0, sstatus
   andi a0, a0, (SUPERVISOR_MODE_ENCODING << MSTATUS_SPP_SHIFT)
   beqz a0, switch_to_umode_stack_and_thread_pointer
-  la a0, smode_reg_region
+  la a0, smode_reg_context_save_region
   j restore_context
 
 switch_to_umode_stack_and_thread_pointer:
   li  a0, USER_MODE_ENCODING
   jal set_thread_attributes_current_mode
-  la a0, umode_reg_region
+  la a0, umode_reg_context_save_region
   ld tp, TP_OFFSET(a0)
   ld sp, SP_OFFSET(a0)
 
@@ -268,7 +268,7 @@ env_call_return_to_supervisor_mode:
   # This is the return to supervisor path for run_function_in_user_mode().
 
   # Restore S mode context and return status in a0
-  la a0, smode_reg_region
+  la a0, smode_reg_context_save_region
   ld a1, SEPC_OFFSET(a0)
   csrw sepc, a1
 
@@ -292,7 +292,7 @@ run_function_in_user_mode:
   addi  fp, sp, 16
 
   # Pass a0 to usermode as argument.
-  la a1, umode_reg_region
+  la a1, umode_reg_context_save_region
   sd a0, A0_OFFSET(a1)
 
   jal get_thread_attributes_current_mode
@@ -301,7 +301,7 @@ run_function_in_user_mode:
   bne a0, t1, jumpstart_supervisor_fail
 
   # Save S-mode context
-  la a0, smode_reg_region
+  la a0, smode_reg_context_save_region
   SAVE_CALLEE_SAVED
   SAVE_CALLER_SAVED
 
@@ -321,16 +321,16 @@ run_function_in_user_mode:
   li  a0, USER_MODE_ENCODING
   jal set_thread_attributes_current_mode
 
-  la a0, umode_reg_region
+  la a0, umode_reg_context_save_region
   ld a0, A0_OFFSET(a0)
 
   sret
 
 smode_return:
   # Usermode return status using a0. Given umode returns through ecall, we save
-  # a0 to umode_reg_region in ecall handler and return to this point to continue
+  # a0 to umode_reg_context_save_region in ecall handler and return to this point to continue
   # s-mode execution from the place we left it.
-  la a0, umode_reg_region
+  la a0, umode_reg_context_save_region
   ld a0, A0_OFFSET(a0)
 
   ld  ra, 8(sp)
