@@ -7,6 +7,7 @@ fs = import('fs')
 jumpstart_tests = [
   ['test000', 'Enable MMU (SATP.mode = sv39), switch to supervisor mode and exit.'],
   ['test001', 'Enable MMU (SATP.mode = sv48), switch to supervisor mode and exit.'],
+  ['test002', 'Run C/Assembly functions in user mode and return to supervisor mode.'],
   ['test003', 'Register and run Supervisor mode illegal instruction exception handler.'],
   ['test004', 'HWP AMPM perf diag.'],
   ['test005', '16K data block move from WB to UC (PBMT) region.'],
@@ -51,6 +52,14 @@ foreach jumpstart_test : jumpstart_tests
 
   if fs.is_file(meson.current_source_dir() + '/' + test_name +'.S')
     test_sources += [test_name + '.S']
+  endif
+
+  if fs.is_file(meson.current_source_dir() + '/' + test_name +'_umode.c')
+    test_sources += [test_name + '_umode.c']
+  endif
+
+  if fs.is_file(meson.current_source_dir() + '/' + test_name +'_umode.S')
+    test_sources += [test_name + '_umode.S']
   endif
 
   test_exe = executable(test_name,
