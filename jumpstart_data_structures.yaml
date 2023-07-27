@@ -14,6 +14,11 @@ jumpstart_privileged_data_page_counts:
   num_pages_for_stack: 2
   num_pages_for_c_structs: 1
   num_pages_for_data_section: 1
+jumpstart_umode_text_page_counts:
+  num_pages_for_all_text: 1
+jumpstart_umode_data_page_counts:
+  num_pages_for_stack: 1
+  num_pages_for_data_section: 1
 
 rcode_start_address: 0x06000000
 machine_mode_start_address: 0x7f800000
@@ -87,4 +92,5 @@ defines:
   IMSIC_IPI_ID:       1
 
 syscall_numbers:
+  - SYSCALL_RETURN_TO_SUPERVISOR_MODE
   - SYSCALL_JUMP_TO_MACHINE_MODE_AND_EXIT

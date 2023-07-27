@@ -41,6 +41,9 @@
     __v;                                                                       \
   })
 
+int run_function_in_user_mode(int (*umode_function)(void))
+    __attribute__((section(".jumpstart.text.supervisor")));
+
 void setup_mmu_for_supervisor_mode(void)
     __attribute__((section(".jumpstart.text.supervisor")));
 void disable_mmu_for_supervisor_mode(void)

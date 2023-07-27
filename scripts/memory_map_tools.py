@@ -258,9 +258,17 @@ class MemoryMap:
             if key in self.jumpstart_attributes:
                 self.jumpstart_attributes[key] = self.memory_map[key]
 
-        # Add a guard page between the test sections and the jumpstart data section
+        # Add a guard page between the test sections and the jumpstart infrastructure sections.
         self.memory_map['mappings'] = self.add_guard_page_to_mappings(
             self.memory_map['mappings'])
+
+        self.memory_map[
+            'mappings'] = self.add_jumpstart_umode_text_section_to_mappings(
+                self.memory_map['mappings'])
+        self.memory_map[
+            'mappings'] = self.add_jumpstart_umode_data_section_to_mappings(
+                self.memory_map['mappings'])
+
         self.memory_map[
             'mappings'] = self.add_bss_and_rodata_sections_to_mappings(
                 self.memory_map['mappings'])
@@ -387,6 +395,29 @@ class MemoryMap:
                                                 'wb', '.bss')
         updated_mappings = self.add_to_mappings(updated_mappings, "0b001",
                                                 "0b0", 1, 'wb', '.rodata')
+        return updated_mappings
+
+    def add_jumpstart_umode_text_section_to_mappings(self, mappings):
+        num_jumpstart_text_pages = 0
+        for page_count in self.jumpstart_attributes[
+                'jumpstart_umode_text_page_counts']:
+            num_jumpstart_text_pages += self.jumpstart_attributes[
+                'jumpstart_umode_text_page_counts'][page_count]
+        updated_mappings = self.add_to_mappings(mappings, "0b101", "0b1",
+                                                num_jumpstart_text_pages, 'wb',
+                                                '.jumpstart.text.umode')
+        return updated_mappings
+
+    def add_jumpstart_umode_data_section_to_mappings(self, mappings):
+        num_jumpstart_data_pages = 0
+        for page_count in self.jumpstart_attributes[
+                'jumpstart_umode_data_page_counts']:
+            num_jumpstart_data_pages += self.jumpstart_attributes[
+                'jumpstart_umode_data_page_counts'][page_count]
+
+        updated_mappings = self.add_to_mappings(mappings, "0b011", "0b1",
+                                                num_jumpstart_data_pages, 'wb',
+                                                '.jumpstart.data.umode')
         return updated_mappings
 
     def add_guard_page_to_mappings(self, mappings):
