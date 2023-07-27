@@ -26,6 +26,10 @@ int main(void) {
     return 1;
   }
 
+  if (get_thread_attributes_current_mode() != SUPERVISOR_MODE_ENCODING) {
+    return 1;
+  }
+
   disable_mmu_for_supervisor_mode();
 
   return 0;
