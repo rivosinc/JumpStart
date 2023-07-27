@@ -656,7 +656,7 @@ class MemoryMap:
             file.write(
                 f"/* SATP.Mode is {self.memory_map['satp_mode']} */\n\n")
             file.write('OUTPUT_ARCH( "riscv" )\n')
-            file.write('ENTRY(_start)\n\n')
+            file.write('ENTRY(_rcode_start)\n\n')
 
             file.write('SECTIONS\n{\n')
             defined_sections = []
