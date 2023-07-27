@@ -114,7 +114,16 @@ enable_svpbmt_for_supervisor_mode:
 jump_to_main:
 
   jal start_test_in_machine_mode
-  beqz a0, jump_to_main_in_supervisor_mode
+  bnez a0, jump_to_main_in_machine_mode
+
+  la  t0, jump_to_main_in_supervisor_mode
+  csrw  mepc, t0
+  csrr  t0, mstatus
+  li  t1, (SUPERVISOR_MODE_ENCODING << MSTATUS_MPP_SHIFT)
+  or  t0, t0, t1
+  csrw  mstatus, t0
+
+  mret
 
 jump_to_main_in_machine_mode:
 
@@ -137,17 +146,6 @@ jump_to_main_in_machine_mode:
   call main
 
   j machine_mode_return_point
-
-jump_to_main_in_supervisor_mode:
-
-  la  t0, supervisor_jump_to_main
-  csrw  mepc, t0
-  csrr  t0, mstatus
-  li  t1, (SUPERVISOR_MODE_ENCODING << MSTATUS_MPP_SHIFT)
-  or  t0, t0, t1
-  csrw  mstatus, t0
-
-  mret
 
 # syscall handlers
 

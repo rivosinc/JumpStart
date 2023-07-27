@@ -124,8 +124,8 @@ umode_reg_context_save_region:
 
 .section .jumpstart.text.supervisor, "ax"
 
-.global supervisor_jump_to_main
-supervisor_jump_to_main:
+.global jump_to_main_in_supervisor_mode
+jump_to_main_in_supervisor_mode:
   la t0, stvec_trap_handler
   csrw stvec, t0
 
