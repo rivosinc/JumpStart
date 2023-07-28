@@ -70,6 +70,36 @@ def generate_getter_and_setter_methods_for_field(assembly_file_fd, c_struct,
         assembly_file_fd.write(f'    ret\n\n')
 
 
+def generate_reg_context_save_restore_code(attributes_data, defines_file_fd,
+                                           assembly_file_fd):
+    defines_file_fd.write("\n")
+
+    num_registers = 0
+    for reg_type in attributes_data[
+            'reg_context_to_save_across_umode_and_smode']['registers']:
+        reg_names = attributes_data[
+            'reg_context_to_save_across_umode_and_smode']['registers'][
+                reg_type]
+        for reg_name in reg_names:
+            defines_file_fd.write(
+                f"#define {reg_name.upper()}_OFFSET_IN_SAVE_REGION ({num_registers} * 8)\n"
+            )
+            num_registers += 1
+
+    assembly_file_fd.write(f'.section .jumpstart.data.privileged, "aw"\n\n')
+    modes = ['smode', 'umode']
+    for mode in modes:
+        assembly_file_fd.write(f'.global {mode}_reg_context_save_region\n')
+        assembly_file_fd.write(f'{mode}_reg_context_save_region:\n')
+        for i in range(attributes_data['max_num_cpus_supported']):
+            assembly_file_fd.write(
+                f"# Save area for hart {i}'s {num_registers} registers:\n")
+            assembly_file_fd.write(
+                f"#  {attributes_data['reg_context_to_save_across_umode_and_smode']['registers']}\n"
+            )
+            assembly_file_fd.write(f'.zero {num_registers * 8}\n\n')
+
+
 def generate_data_structures(attributes_yaml, defines_file,
                              data_structures_file, assembly_file):
     log.debug(f'Generating data structures files from {attributes_yaml}')
@@ -202,6 +232,9 @@ def generate_data_structures(attributes_yaml, defines_file,
         defines_file_fd.write(
             f"#define {define_name} {attributes_data['defines'][define_name]}\n"
         )
+
+    generate_reg_context_save_restore_code(attributes_data, defines_file_fd,
+                                           assembly_file_fd)
 
     defines_file_fd.write("\n")
     current_syscall_number = 0

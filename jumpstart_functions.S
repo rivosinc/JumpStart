@@ -4,116 +4,69 @@
 
 #include "jumpstart_defines.h"
 
-#define RA_OFFSET  (0 * 8)
-#define SP_OFFSET  (1 * 8)
-#define GP_OFFSET  (2 * 8)
-#define T0_OFFSET  (4 * 8)
-#define T1_OFFSET  (5 * 8)
-#define T2_OFFSET  (6 * 8)
-#define S0_OFFSET  (7 * 8)
-#define S1_OFFSET  (8 * 8)
-#define A0_OFFSET  (9 * 8)
-#define A1_OFFSET  (10 * 8)
-#define A2_OFFSET  (11 * 8)
-#define A3_OFFSET  (12 * 8)
-#define A4_OFFSET  (13 * 8)
-#define A5_OFFSET  (14 * 8)
-#define A6_OFFSET  (15 * 8)
-#define A7_OFFSET  (16 * 8)
-#define S2_OFFSET  (17 * 8)
-#define S3_OFFSET  (18 * 8)
-#define S4_OFFSET  (19 * 8)
-#define S5_OFFSET  (20 * 8)
-#define S6_OFFSET  (21 * 8)
-#define S7_OFFSET  (22 * 8)
-#define S8_OFFSET  (23 * 8)
-#define S9_OFFSET  (24 * 8)
-#define S10_OFFSET  (25 * 8)
-#define S11_OFFSET  (26 * 8)
-#define T3_OFFSET  (27 * 8)
-#define T4_OFFSET  (28 * 8)
-#define T5_OFFSET  (29 * 8)
-#define T6_OFFSET  (30 * 8)
-#define SEPC_OFFSET  (31 * 8)
-#define SSTATUS_OFFSET  (32 * 8)
-
-# NOTE: This macro doesnot save a0. It must be handled by macro user.
+# NOTE: This macro does not save a0. It must be handled by macro user.
 #define SAVE_ALL_GPRS     ;\
-  sd sp, SP_OFFSET(a0)    ;\
-  sd gp, GP_OFFSET(a0)    ;\
-  sd s0, S0_OFFSET(a0)    ;\
-  sd s1, S1_OFFSET(a0)    ;\
-  sd s2, S2_OFFSET(a0)    ;\
-  sd s3, S3_OFFSET(a0)    ;\
-  sd s4, S4_OFFSET(a0)    ;\
-  sd s5, S5_OFFSET(a0)    ;\
-  sd s6, S6_OFFSET(a0)    ;\
-  sd s7, S7_OFFSET(a0)    ;\
-  sd s8, S8_OFFSET(a0)    ;\
-  sd s9, S9_OFFSET(a0)    ;\
-  sd s10, S10_OFFSET(a0)  ;\
-  sd s11, S11_OFFSET(a0)  ;\
-  sd t0, T0_OFFSET(a0)    ;\
-  sd t1, T1_OFFSET(a0)    ;\
-  sd t2, T2_OFFSET(a0)    ;\
-  sd t3, T3_OFFSET(a0)    ;\
-  sd t4, T4_OFFSET(a0)    ;\
-  sd t5, T5_OFFSET(a0)    ;\
-  sd t6, T6_OFFSET(a0)    ;\
-  sd a1, A1_OFFSET(a0)    ;\
-  sd a2, A2_OFFSET(a0)    ;\
-  sd a3, A3_OFFSET(a0)    ;\
-  sd a4, A4_OFFSET(a0)    ;\
-  sd a5, A5_OFFSET(a0)    ;\
-  sd a6, A6_OFFSET(a0)    ;\
-  sd a7, A7_OFFSET(a0)    ;\
-  sd ra, RA_OFFSET(a0)
+  sd sp, SP_OFFSET_IN_SAVE_REGION(a0)    ;\
+  sd gp, GP_OFFSET_IN_SAVE_REGION(a0)    ;\
+  sd s0, S0_OFFSET_IN_SAVE_REGION(a0)    ;\
+  sd s1, S1_OFFSET_IN_SAVE_REGION(a0)    ;\
+  sd s2, S2_OFFSET_IN_SAVE_REGION(a0)    ;\
+  sd s3, S3_OFFSET_IN_SAVE_REGION(a0)    ;\
+  sd s4, S4_OFFSET_IN_SAVE_REGION(a0)    ;\
+  sd s5, S5_OFFSET_IN_SAVE_REGION(a0)    ;\
+  sd s6, S6_OFFSET_IN_SAVE_REGION(a0)    ;\
+  sd s7, S7_OFFSET_IN_SAVE_REGION(a0)    ;\
+  sd s8, S8_OFFSET_IN_SAVE_REGION(a0)    ;\
+  sd s9, S9_OFFSET_IN_SAVE_REGION(a0)    ;\
+  sd s10, S10_OFFSET_IN_SAVE_REGION(a0)  ;\
+  sd s11, S11_OFFSET_IN_SAVE_REGION(a0)  ;\
+  sd t0, T0_OFFSET_IN_SAVE_REGION(a0)    ;\
+  sd t1, T1_OFFSET_IN_SAVE_REGION(a0)    ;\
+  sd t2, T2_OFFSET_IN_SAVE_REGION(a0)    ;\
+  sd t3, T3_OFFSET_IN_SAVE_REGION(a0)    ;\
+  sd t4, T4_OFFSET_IN_SAVE_REGION(a0)    ;\
+  sd t5, T5_OFFSET_IN_SAVE_REGION(a0)    ;\
+  sd t6, T6_OFFSET_IN_SAVE_REGION(a0)    ;\
+  sd a1, A1_OFFSET_IN_SAVE_REGION(a0)    ;\
+  sd a2, A2_OFFSET_IN_SAVE_REGION(a0)    ;\
+  sd a3, A3_OFFSET_IN_SAVE_REGION(a0)    ;\
+  sd a4, A4_OFFSET_IN_SAVE_REGION(a0)    ;\
+  sd a5, A5_OFFSET_IN_SAVE_REGION(a0)    ;\
+  sd a6, A6_OFFSET_IN_SAVE_REGION(a0)    ;\
+  sd a7, A7_OFFSET_IN_SAVE_REGION(a0)    ;\
+  sd ra, RA_OFFSET_IN_SAVE_REGION(a0)
 
 #define RESTORE_ALL_GPRS  ;\
-  ld sp, SP_OFFSET(a0)    ;\
-  ld gp, GP_OFFSET(a0)    ;\
-  ld s0, S0_OFFSET(a0)    ;\
-  ld s1, S1_OFFSET(a0)    ;\
-  ld s2, S2_OFFSET(a0)    ;\
-  ld s3, S3_OFFSET(a0)    ;\
-  ld s4, S4_OFFSET(a0)    ;\
-  ld s5, S5_OFFSET(a0)    ;\
-  ld s6, S6_OFFSET(a0)    ;\
-  ld s7, S7_OFFSET(a0)    ;\
-  ld s8, S8_OFFSET(a0)    ;\
-  ld s9, S9_OFFSET(a0)    ;\
-  ld s10, S10_OFFSET(a0)  ;\
-  ld s11, S11_OFFSET(a0)  ;\
-  ld t0, T0_OFFSET(a0)    ;\
-  ld t1, T1_OFFSET(a0)    ;\
-  ld t2, T2_OFFSET(a0)    ;\
-  ld t3, T3_OFFSET(a0)    ;\
-  ld t4, T4_OFFSET(a0)    ;\
-  ld t5, T5_OFFSET(a0)    ;\
-  ld t6, T6_OFFSET(a0)    ;\
-  ld a1, A1_OFFSET(a0)    ;\
-  ld a2, A2_OFFSET(a0)    ;\
-  ld a3, A3_OFFSET(a0)    ;\
-  ld a4, A4_OFFSET(a0)    ;\
-  ld a5, A5_OFFSET(a0)    ;\
-  ld a6, A6_OFFSET(a0)    ;\
-  ld a7, A7_OFFSET(a0)    ;\
-  ld ra, RA_OFFSET(a0)    ;\
-  ld a0, A0_OFFSET(a0)
-
-.section .jumpstart.data.privileged, "aw"
-
-.global smode_reg_context_save_region
-smode_reg_context_save_region:
-.rep 33
-  .8byte 0x0000000000000000
-.endr
-
-.global umode_reg_context_save_region
-umode_reg_context_save_region:
-.rep 33
-  .8byte 0x0000000000000000
-.endr
+  ld sp, SP_OFFSET_IN_SAVE_REGION(a0)    ;\
+  ld gp, GP_OFFSET_IN_SAVE_REGION(a0)    ;\
+  ld s0, S0_OFFSET_IN_SAVE_REGION(a0)    ;\
+  ld s1, S1_OFFSET_IN_SAVE_REGION(a0)    ;\
+  ld s2, S2_OFFSET_IN_SAVE_REGION(a0)    ;\
+  ld s3, S3_OFFSET_IN_SAVE_REGION(a0)    ;\
+  ld s4, S4_OFFSET_IN_SAVE_REGION(a0)    ;\
+  ld s5, S5_OFFSET_IN_SAVE_REGION(a0)    ;\
+  ld s6, S6_OFFSET_IN_SAVE_REGION(a0)    ;\
+  ld s7, S7_OFFSET_IN_SAVE_REGION(a0)    ;\
+  ld s8, S8_OFFSET_IN_SAVE_REGION(a0)    ;\
+  ld s9, S9_OFFSET_IN_SAVE_REGION(a0)    ;\
+  ld s10, S10_OFFSET_IN_SAVE_REGION(a0)  ;\
+  ld s11, S11_OFFSET_IN_SAVE_REGION(a0)  ;\
+  ld t0, T0_OFFSET_IN_SAVE_REGION(a0)    ;\
+  ld t1, T1_OFFSET_IN_SAVE_REGION(a0)    ;\
+  ld t2, T2_OFFSET_IN_SAVE_REGION(a0)    ;\
+  ld t3, T3_OFFSET_IN_SAVE_REGION(a0)    ;\
+  ld t4, T4_OFFSET_IN_SAVE_REGION(a0)    ;\
+  ld t5, T5_OFFSET_IN_SAVE_REGION(a0)    ;\
+  ld t6, T6_OFFSET_IN_SAVE_REGION(a0)    ;\
+  ld a1, A1_OFFSET_IN_SAVE_REGION(a0)    ;\
+  ld a2, A2_OFFSET_IN_SAVE_REGION(a0)    ;\
+  ld a3, A3_OFFSET_IN_SAVE_REGION(a0)    ;\
+  ld a4, A4_OFFSET_IN_SAVE_REGION(a0)    ;\
+  ld a5, A5_OFFSET_IN_SAVE_REGION(a0)    ;\
+  ld a6, A6_OFFSET_IN_SAVE_REGION(a0)    ;\
+  ld a7, A7_OFFSET_IN_SAVE_REGION(a0)    ;\
+  ld ra, RA_OFFSET_IN_SAVE_REGION(a0)    ;\
+  ld a0, A0_OFFSET_IN_SAVE_REGION(a0)
 
 .section .jumpstart.text.supervisor, "ax"
 
@@ -195,10 +148,10 @@ stvec_trap_handler:
 
   # Save away the U-mode stack.
   la a0, umode_reg_context_save_region
-  sd sp, SP_OFFSET(a0)
+  sd sp, SP_OFFSET_IN_SAVE_REGION(a0)
   # and switch to the S-mode stack as we can't use the Umode stack.
   la sp, smode_reg_context_save_region
-  ld sp, SP_OFFSET(sp)
+  ld sp, SP_OFFSET_IN_SAVE_REGION(sp)
 
 save_context:
   SAVE_ALL_GPRS
@@ -206,7 +159,7 @@ save_context:
   # Save away the a0 passed to us when entering the trap handler to the
   # appropriate reg context save region we've chosen above.
   csrr t0, sscratch
-  sd t0, A0_OFFSET(a0)
+  sd t0, A0_OFFSET_IN_SAVE_REGION(a0)
 
   # Change current mode to S.
   li  a0, SUPERVISOR_MODE_ENCODING
@@ -232,7 +185,7 @@ switch_to_umode_stack:
   li  a0, USER_MODE_ENCODING
   jal set_thread_attributes_current_mode_from_supervisor_mode
   la a0, umode_reg_context_save_region
-  ld sp, SP_OFFSET(a0)
+  ld sp, SP_OFFSET_IN_SAVE_REGION(a0)
 
 restore_context:
   RESTORE_ALL_GPRS
@@ -264,10 +217,10 @@ env_call_return_to_supervisor_mode:
 
   # Restore S mode context and return status in a0
   la a0, smode_reg_context_save_region
-  ld a1, SEPC_OFFSET(a0)
+  ld a1, SEPC_OFFSET_IN_SAVE_REGION(a0)
   csrw sepc, a1
 
-  ld a1, SSTATUS_OFFSET(a0)
+  ld a1, SSTATUS_OFFSET_IN_SAVE_REGION(a0)
   li a2, (SUPERVISOR_MODE_ENCODING << MSTATUS_SPP_SHIFT)
   or a1, a1, a2
   csrw sstatus, a1
@@ -286,7 +239,7 @@ run_function_in_user_mode:
 
   # Pass a0 to usermode as argument.
   la a1, umode_reg_context_save_region
-  sd a0, A0_OFFSET(a1)
+  sd a0, A0_OFFSET_IN_SAVE_REGION(a1)
 
   jal get_thread_attributes_current_mode_from_supervisor_mode
 
@@ -298,10 +251,10 @@ run_function_in_user_mode:
   SAVE_ALL_GPRS
 
   csrr t0, sstatus
-  sd t0, SSTATUS_OFFSET(a0)
+  sd t0, SSTATUS_OFFSET_IN_SAVE_REGION(a0)
 
   la  t0, smode_return
-  sd t0, SEPC_OFFSET(a0)
+  sd t0, SEPC_OFFSET_IN_SAVE_REGION(a0)
 
   # Load U-mode context. We just need to set sepc, sstatus and a0 register.
   la a1, jump_to_function_in_umode
@@ -314,7 +267,7 @@ run_function_in_user_mode:
   jal set_thread_attributes_current_mode_from_supervisor_mode
 
   la a0, umode_reg_context_save_region
-  ld a0, A0_OFFSET(a0)
+  ld a0, A0_OFFSET_IN_SAVE_REGION(a0)
 
   sret
 
@@ -323,7 +276,7 @@ smode_return:
   # a0 to umode_reg_context_save_region in ecall handler and return to this point to continue
   # s-mode execution from the place we left it.
   la a0, umode_reg_context_save_region
-  ld a0, A0_OFFSET(a0)
+  ld a0, A0_OFFSET_IN_SAVE_REGION(a0)
 
   ld  ra, 8(sp)
   ld  fp, 0(sp)
