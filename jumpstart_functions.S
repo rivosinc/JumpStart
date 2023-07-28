@@ -7,7 +7,6 @@
 # NOTE: This macro does not save a0. It must be handled by macro user.
 #define SAVE_ALL_GPRS     ;\
   sd sp, SP_OFFSET_IN_SAVE_REGION(a0)    ;\
-  sd gp, GP_OFFSET_IN_SAVE_REGION(a0)    ;\
   sd s0, S0_OFFSET_IN_SAVE_REGION(a0)    ;\
   sd s1, S1_OFFSET_IN_SAVE_REGION(a0)    ;\
   sd s2, S2_OFFSET_IN_SAVE_REGION(a0)    ;\
@@ -38,7 +37,6 @@
 
 #define RESTORE_ALL_GPRS  ;\
   ld sp, SP_OFFSET_IN_SAVE_REGION(a0)    ;\
-  ld gp, GP_OFFSET_IN_SAVE_REGION(a0)    ;\
   ld s0, S0_OFFSET_IN_SAVE_REGION(a0)    ;\
   ld s1, S1_OFFSET_IN_SAVE_REGION(a0)    ;\
   ld s2, S2_OFFSET_IN_SAVE_REGION(a0)    ;\

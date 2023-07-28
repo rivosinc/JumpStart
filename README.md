@@ -32,10 +32,11 @@ The Jumpstart [`tests/`](tests) are a good reference on writing diags. This [fil
 
 Jumpstart provides a set of basic API functions that help with writing diags. These are listed in [jumpstart_functions.h](jumpstart_functions.h).
 
+**Diags are expected to follow the [RISC-V ABI Calling Convention](https://github.com/riscv-non-isa/riscv-elf-psabi-doc/blob/master/riscv-cc.adoc).**
+
+**The Thread Pointer (x4) and Global Pointer (x3) registers are reserved for jumpstart purposes and should not be used in diags.** TP is used to point to a per hart attributes structure and GP is used as a temporary in jumpstart routines.
+
 Diags are expected to provide sources (C and assembly files) and it's attributes in a YAML file.
-
-**Diags are expected to follow the [RISC-V ABI Calling Convention](https://riscv.org/wp-content/uploads/2015/01/riscv-calling.pdf).** For example, a diag cannot use the Thread Pointer register (x4) for it's own purposes.
-
 
 For example, `test003` has:
 * Sources
