@@ -31,7 +31,7 @@ jumpstart_fail:
   csrw   pmarr_mask_0, t0
   fence.i
 
-  # Three end of sim steps:
+  # End of sim steps:
   # 1. Disable interrupts
   li t0, 0x0
   csrw   mie, t0 # Disable all interrupt types
@@ -55,7 +55,7 @@ loop_magic_store:
   addi   t2, t2, -1
   bne    t2, x0, loop_magic_store
 
-  # UC Magic Store
+  # 3. Store PASS/FAIL to the UC magic address
   li t0, UC_END_OF_SIM_MAGIC_ADDRESS
   sw s1, 0(t0)
 
@@ -64,9 +64,9 @@ loop_magic_store:
   mv t0, s1
   lui x0, 0xdeadb
 
-  # 3. In WFI
+  # 4. In WFI
   wfi
 
-.align PAGE_OFFSET
+.align PAGE_OFFSET, 0x0
 .global jumpstart_machine_mode_end_point
 jumpstart_machine_mode_end_point:
