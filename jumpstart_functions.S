@@ -7,7 +7,6 @@
 #define RA_OFFSET  (0 * 8)
 #define SP_OFFSET  (1 * 8)
 #define GP_OFFSET  (2 * 8)
-#define TP_OFFSET  (3 * 8)
 #define T0_OFFSET  (4 * 8)
 #define T1_OFFSET  (5 * 8)
 #define T2_OFFSET  (6 * 8)
@@ -43,7 +42,6 @@
 #define SAVE_CALLEE_SAVED ;\
   sd sp, SP_OFFSET(a0)    ;\
   sd gp, GP_OFFSET(a0)    ;\
-  sd tp, TP_OFFSET(a0)    ;\
   sd s0, S0_OFFSET(a0)    ;\
   sd s1, S1_OFFSET(a0)    ;\
   sd s2, S2_OFFSET(a0)    ;\
@@ -77,7 +75,6 @@
 #define RESTORE_CALLEE_SAVED ;\
   ld sp, SP_OFFSET(a0)    ;\
   ld gp, GP_OFFSET(a0)    ;\
-  ld tp, TP_OFFSET(a0)    ;\
   ld s0, S0_OFFSET(a0)    ;\
   ld s1, S1_OFFSET(a0)    ;\
   ld s2, S2_OFFSET(a0)    ;\
@@ -189,21 +186,19 @@ stvec_trap_handler:
 
   csrr a0, sstatus
   andi a0, a0, (SUPERVISOR_MODE_ENCODING << MSTATUS_SPP_SHIFT)
-  beqz a0, switch_to_smode_stack_and_thread_pointer
+  beqz a0, switch_to_smode_stack
   la a0, smode_reg_context_save_region
   j save_context
 
-switch_to_smode_stack_and_thread_pointer:
+switch_to_smode_stack:
   # We are in S-mode handling a trap from U-mode so switch to the
-  # S-mode stack and thread pointer.
+  # S-mode stack.
 
-  # Save away the U-mode stack and thread pointer.
+  # Save away the U-mode stack.
   la a0, umode_reg_context_save_region
   sd sp, SP_OFFSET(a0)
-  sd tp, TP_OFFSET(a0)
 
   la sp, smode_reg_context_save_region
-  ld tp, TP_OFFSET(sp)
   ld sp, SP_OFFSET(sp)
 
 save_context:
@@ -229,15 +224,14 @@ save_context:
   # Restore the context from before the trap.
   csrr a0, sstatus
   andi a0, a0, (SUPERVISOR_MODE_ENCODING << MSTATUS_SPP_SHIFT)
-  beqz a0, switch_to_umode_stack_and_thread_pointer
+  beqz a0, switch_to_umode_stack
   la a0, smode_reg_context_save_region
   j restore_context
 
-switch_to_umode_stack_and_thread_pointer:
+switch_to_umode_stack:
   li  a0, USER_MODE_ENCODING
   jal set_thread_attributes_current_mode_from_supervisor_mode
   la a0, umode_reg_context_save_region
-  ld tp, TP_OFFSET(a0)
   ld sp, SP_OFFSET(a0)
 
 restore_context:

@@ -34,6 +34,9 @@ Jumpstart provides a set of basic API functions that help with writing diags. Th
 
 Diags are expected to provide sources (C and assembly files) and it's attributes in a YAML file.
 
+**Diags are expected to follow the [RISC-V ABI Calling Convention](https://riscv.org/wp-content/uploads/2015/01/riscv-calling.pdf).** For example, a diag cannot use the Thread Pointer register (x4) for it's own purposes.
+
+
 For example, `test003` has:
 * Sources
   * [test003.c](tests/test003.c)
