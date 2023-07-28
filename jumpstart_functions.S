@@ -182,25 +182,29 @@ stvec_trap_handler:
 
   csrr a0, sstatus
   andi a0, a0, (SUPERVISOR_MODE_ENCODING << MSTATUS_SPP_SHIFT)
-  beqz a0, switch_to_smode_stack
+  beqz a0, 1f
+
+  # We are in S-mode handling a trap from S-mode.
+  # Point a0 to the S-mode reg context save region.
   la a0, smode_reg_context_save_region
   j save_context
 
-switch_to_smode_stack:
-  # We are in S-mode handling a trap from U-mode so switch to the
-  # S-mode stack.
+1:
+  # We are in S-mode handling a trap from U-mode.
+  # Point a0 to the U-mode reg context save region.
 
   # Save away the U-mode stack.
   la a0, umode_reg_context_save_region
   sd sp, SP_OFFSET(a0)
-
+  # and switch to the S-mode stack as we can't use the Umode stack.
   la sp, smode_reg_context_save_region
   ld sp, SP_OFFSET(sp)
 
 save_context:
   SAVE_ALL_GPRS
 
-  # Save away the a0 passed to us when entering the trap handler.
+  # Save away the a0 passed to us when entering the trap handler to the
+  # appropriate reg context save region we've chosen above.
   csrr t0, sscratch
   sd t0, A0_OFFSET(a0)
 
