@@ -72,7 +72,11 @@ def generate_getter_and_setter_methods_for_field(assembly_file_fd, c_struct,
 
 def generate_reg_context_save_restore_code(attributes_data, defines_file_fd,
                                            assembly_file_fd):
-    defines_file_fd.write("\n")
+    assert (
+        attributes_data['reg_context_to_save_across_umode_and_smode']
+        ['temp_register']
+        not in attributes_data['reg_context_to_save_across_umode_and_smode']
+        ['registers']['gprs'])
 
     num_registers = 0
     for reg_type in attributes_data[
