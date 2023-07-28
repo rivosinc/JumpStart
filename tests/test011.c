@@ -19,16 +19,17 @@ static void test011_exception_handler(void) {
 }
 
 int main(void) {
-  if (get_thread_attributes_hart_id() != 0) {
+  if (get_thread_attributes_hart_id_from_supervisor_mode() != 0) {
     return 1;
   }
 
-  if (get_thread_attributes_bookend_magic_number() !=
+  if (get_thread_attributes_bookend_magic_number_from_supervisor_mode() !=
       THREAD_ATTRIBUTES_BOOKEND_MAGIC_NUMBER_VALUE) {
     return 1;
   }
 
-  if (get_thread_attributes_current_mode() != SUPERVISOR_MODE_ENCODING) {
+  if (get_thread_attributes_current_mode_from_supervisor_mode() !=
+      SUPERVISOR_MODE_ENCODING) {
     return 1;
   }
 

@@ -49,38 +49,25 @@ field_type_to_size_in_bytes = {
 def generate_getter_and_setter_methods_for_field(assembly_file_fd, c_struct,
                                                  field_name,
                                                  field_size_in_bytes):
-    assembly_file_fd.write(f'.section .jumpstart.text.supervisor, "ax"\n')
-    getter_method = f'get_{c_struct}_{field_name}'
-    assembly_file_fd.write(f'.global {getter_method}\n')
-    assembly_file_fd.write(f'{getter_method}:\n')
-    assembly_file_fd.write(
-        f'    {get_memop_of_size(MemoryOp.LOAD, field_size_in_bytes)}   a0, {c_struct.upper()}_{field_name.upper()}_OFFSET(tp)\n'
-    )
-    assembly_file_fd.write(f'    ret\n\n')
+    modes = ['supervisor', 'machine']
+    for mode in modes:
+        assembly_file_fd.write(f'.section .jumpstart.text.{mode}, "ax"\n')
+        getter_method = f'get_{c_struct}_{field_name}_from_{mode}_mode'
+        assembly_file_fd.write(f'.global {getter_method}\n')
+        assembly_file_fd.write(f'{getter_method}:\n')
+        assembly_file_fd.write(
+            f'    {get_memop_of_size(MemoryOp.LOAD, field_size_in_bytes)}   a0, {c_struct.upper()}_{field_name.upper()}_OFFSET(tp)\n'
+        )
+        assembly_file_fd.write(f'    ret\n\n')
 
-    assembly_file_fd.write(f'.global set_{c_struct}_{field_name}\n')
-    assembly_file_fd.write(f'set_{c_struct}_{field_name}:\n')
-    assembly_file_fd.write(
-        f'    {get_memop_of_size(MemoryOp.STORE, field_size_in_bytes)}   a0, {c_struct.upper()}_{field_name.upper()}_OFFSET(tp)\n'
-    )
-    assembly_file_fd.write(f'    ret\n\n')
-
-    assembly_file_fd.write(f'.section .jumpstart.text.machine, "ax"\n')
-    getter_method = f'get_{c_struct}_{field_name}_in_machine_mode'
-    assembly_file_fd.write(f'.global {getter_method}\n')
-    assembly_file_fd.write(f'{getter_method}:\n')
-    assembly_file_fd.write(
-        f'    {get_memop_of_size(MemoryOp.LOAD, field_size_in_bytes)}   a0, {c_struct.upper()}_{field_name.upper()}_OFFSET(tp)\n'
-    )
-    assembly_file_fd.write(f'    ret\n\n')
-
-    assembly_file_fd.write(
-        f'.global set_{c_struct}_{field_name}_in_machine_mode\n')
-    assembly_file_fd.write(f'set_{c_struct}_{field_name}_in_machine_mode:\n')
-    assembly_file_fd.write(
-        f'    {get_memop_of_size(MemoryOp.STORE, field_size_in_bytes)}   a0, {c_struct.upper()}_{field_name.upper()}_OFFSET(tp)\n'
-    )
-    assembly_file_fd.write(f'    ret\n\n')
+        assembly_file_fd.write(
+            f'.global set_{c_struct}_{field_name}_from_{mode}_mode\n')
+        assembly_file_fd.write(
+            f'set_{c_struct}_{field_name}_from_{mode}_mode:\n')
+        assembly_file_fd.write(
+            f'    {get_memop_of_size(MemoryOp.STORE, field_size_in_bytes)}   a0, {c_struct.upper()}_{field_name.upper()}_OFFSET(tp)\n'
+        )
+        assembly_file_fd.write(f'    ret\n\n')
 
 
 def generate_data_structures(attributes_yaml, defines_file,

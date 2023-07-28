@@ -7,7 +7,7 @@
 void register_trap_handler_override(uint8_t mode, uint64_t mcause,
                                     uint64_t handler_address) {
   uint64_t trap_override_struct_address =
-      get_thread_attributes_trap_override_struct_address();
+      get_thread_attributes_trap_override_struct_address_from_supervisor_mode();
 
   struct trap_override_attributes *trap_overrides =
       (struct trap_override_attributes *)trap_override_struct_address;
@@ -56,12 +56,12 @@ void register_trap_handler_override(uint8_t mode, uint64_t mcause,
 
 uint64_t get_trap_handler_override(uint64_t mcause) {
   uint64_t trap_override_struct_address =
-      get_thread_attributes_trap_override_struct_address();
+      get_thread_attributes_trap_override_struct_address_from_supervisor_mode();
 
   struct trap_override_attributes *trap_overrides =
       (struct trap_override_attributes *)trap_override_struct_address;
 
-  uint8_t mode = get_thread_attributes_current_mode();
+  uint8_t mode = get_thread_attributes_current_mode_from_supervisor_mode();
   uint64_t exception_code = mcause & MCAUSE_EC_MASK;
   uint64_t interrupt = mcause >> MCAUSE_INTERRUPT_BIT_LSB;
 

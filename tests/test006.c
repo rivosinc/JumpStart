@@ -5,7 +5,8 @@
 #include "jumpstart_functions.h"
 
 int main(void) {
-  if (get_thread_attributes_current_mode() != SUPERVISOR_MODE_ENCODING) {
+  if (get_thread_attributes_current_mode_from_supervisor_mode() !=
+      SUPERVISOR_MODE_ENCODING) {
     return 1;
   }
 

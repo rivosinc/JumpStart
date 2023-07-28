@@ -130,7 +130,7 @@ jump_to_main_in_supervisor_mode:
   csrw stvec, t0
 
   li  a0, SUPERVISOR_MODE_ENCODING
-  call set_thread_attributes_current_mode
+  call set_thread_attributes_current_mode_from_supervisor_mode
 
   li a0, (1 << SIE_EXT_INTERRUPT)
   csrw sie, a0
@@ -138,7 +138,7 @@ jump_to_main_in_supervisor_mode:
   li a0, (1 << SSTATUS_SIE_SHIFT) | (SUPERVISOR_MODE_ENCODING << MSTATUS_SPP_SHIFT)
   csrs sstatus, a0
 
-  jal enable_mmu_in_supervisor_mode
+  jal enable_mmu_from_supervisor_mode
 
   call main
 
@@ -150,19 +150,19 @@ jump_to_main_in_supervisor_mode:
 
   call jumpstart_supervisor_fail
 
-.global enable_mmu_in_supervisor_mode
-enable_mmu_in_supervisor_mode:
+.global enable_mmu_from_supervisor_mode
+enable_mmu_from_supervisor_mode:
   addi  sp, sp, -16
   sd  ra, 8(sp)
   sd  fp, 0(sp)
   addi    fp, sp, 16
 
-  jal get_diag_satp_mode_in_supervisor_mode
+  jal get_diag_satp_mode_from_supervisor_mode
   mv s2, a0
 
   slli  s2, s2, SATP_MODE_LSB
 
-  jal get_diag_satp_ppn_in_supervisor_mode
+  jal get_diag_satp_ppn_from_supervisor_mode
 
   add  a0, a0, s2
   csrw  satp, a0
@@ -173,8 +173,8 @@ enable_mmu_in_supervisor_mode:
   addi  sp, sp, 16
   ret
 
-.global disable_mmu_in_supervisor_mode
-disable_mmu_in_supervisor_mode:
+.global disable_mmu_from_supervisor_mode
+disable_mmu_from_supervisor_mode:
   li  t0, 0
   csrw  satp, t0
   sfence.vma
@@ -215,7 +215,7 @@ save_context:
 
   # Change current mode to S.
   li  a0, SUPERVISOR_MODE_ENCODING
-  jal set_thread_attributes_current_mode
+  jal set_thread_attributes_current_mode_from_supervisor_mode
 
   # Get the address of the trap handler if the test has registered one, else 0.
   csrr a0, scause
@@ -235,7 +235,7 @@ save_context:
 
 switch_to_umode_stack_and_thread_pointer:
   li  a0, USER_MODE_ENCODING
-  jal set_thread_attributes_current_mode
+  jal set_thread_attributes_current_mode_from_supervisor_mode
   la a0, umode_reg_context_save_region
   ld tp, TP_OFFSET(a0)
   ld sp, SP_OFFSET(a0)
@@ -297,7 +297,7 @@ run_function_in_user_mode:
   la a1, umode_reg_context_save_region
   sd a0, A0_OFFSET(a1)
 
-  jal get_thread_attributes_current_mode
+  jal get_thread_attributes_current_mode_from_supervisor_mode
 
   li  t1, SUPERVISOR_MODE_ENCODING
   bne a0, t1, jumpstart_supervisor_fail
@@ -321,7 +321,7 @@ run_function_in_user_mode:
   csrc sstatus, t0
 
   li  a0, USER_MODE_ENCODING
-  jal set_thread_attributes_current_mode
+  jal set_thread_attributes_current_mode_from_supervisor_mode
 
   la a0, umode_reg_context_save_region
   ld a0, A0_OFFSET(a0)

@@ -44,7 +44,7 @@
 int run_function_in_user_mode(int (*umode_function)(void))
     __attribute__((section(".jumpstart.text.supervisor")));
 
-void disable_mmu_in_supervisor_mode(void)
+void disable_mmu_from_supervisor_mode(void)
     __attribute__((section(".jumpstart.text.supervisor")));
 
 uint64_t get_trap_handler_override(uint64_t mcause)
@@ -53,33 +53,34 @@ void register_trap_handler_override(uint8_t mode, uint64_t mcause,
                                     uint64_t handler_address)
     __attribute__((section(".jumpstart.text.supervisor")));
 
-uint64_t get_thread_attributes_bookend_magic_number(void)
+uint64_t get_thread_attributes_bookend_magic_number_from_supervisor_mode(void)
     __attribute__((section(".jumpstart.text.supervisor")));
-uint64_t get_thread_attributes_trap_override_struct_address(void)
+uint64_t
+get_thread_attributes_trap_override_struct_address_from_supervisor_mode(void)
     __attribute__((section(".jumpstart.text.supervisor")));
-uint8_t get_thread_attributes_current_mode(void)
+uint8_t get_thread_attributes_current_mode_from_supervisor_mode(void)
     __attribute__((section(".jumpstart.text.supervisor")));
-uint8_t get_thread_attributes_hart_id(void)
+uint8_t get_thread_attributes_hart_id_from_supervisor_mode(void)
     __attribute__((section(".jumpstart.text.supervisor")));
 
-uint64_t get_thread_attributes_bookend_magic_number_in_machine_mode(void)
+uint64_t get_thread_attributes_bookend_magic_number_from_machine_mode(void)
     __attribute__((section(".jumpstart.text.machine")));
 uint64_t
-get_thread_attributes_trap_override_struct_address_in_machine_mode(void)
+get_thread_attributes_trap_override_struct_address_from_machine_mode(void)
     __attribute__((section(".jumpstart.text.machine")));
-uint8_t get_thread_attributes_current_mode_in_machine_mode(void)
+uint8_t get_thread_attributes_current_mode_from_machine_mode(void)
     __attribute__((section(".jumpstart.text.machine")));
-uint8_t get_thread_attributes_hart_id_in_machine_mode(void)
+uint8_t get_thread_attributes_hart_id_from_machine_mode(void)
     __attribute__((section(".jumpstart.text.machine")));
 
-uint64_t get_diag_satp_ppn_in_supervisor_mode(void)
+uint64_t get_diag_satp_ppn_from_supervisor_mode(void)
     __attribute__((section(".jumpstart.text.supervisor")));
-uint8_t get_diag_satp_mode_in_supervisor_mode(void)
+uint8_t get_diag_satp_mode_from_supervisor_mode(void)
     __attribute__((section(".jumpstart.text.supervisor")));
 
-uint64_t get_diag_satp_ppn_in_machine_mode(void)
+uint64_t get_diag_satp_ppn_from_machine_mode(void)
     __attribute__((section(".jumpstart.text.machine")));
-uint8_t get_diag_satp_mode_in_machine_mode(void)
+uint8_t get_diag_satp_mode_from_machine_mode(void)
     __attribute__((section(".jumpstart.text.machine")));
 
 void jumpstart_supervisor_fail(void)

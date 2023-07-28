@@ -729,16 +729,16 @@ class MemoryMap:
         for mode in modes:
             file_descriptor.write(f'.section .jumpstart.text.{mode}, "ax"\n\n')
             file_descriptor.write(
-                f".global get_diag_satp_ppn_in_{mode}_mode\n")
-            file_descriptor.write(f"get_diag_satp_ppn_in_{mode}_mode:\n\n")
+                f".global get_diag_satp_ppn_from_{mode}_mode\n")
+            file_descriptor.write(f"get_diag_satp_ppn_from_{mode}_mode:\n\n")
             file_descriptor.write(
                 f"   la a0, {self.pt_attributes.pt_start_label}\n")
             file_descriptor.write(f"   srai a0, a0, PAGE_OFFSET\n")
             file_descriptor.write(f"   ret\n\n\n")
 
             file_descriptor.write(
-                f".global get_diag_satp_mode_in_{mode}_mode\n")
-            file_descriptor.write(f"get_diag_satp_mode_in_{mode}_mode:\n\n")
+                f".global get_diag_satp_mode_from_{mode}_mode\n")
+            file_descriptor.write(f"get_diag_satp_mode_from_{mode}_mode:\n\n")
             file_descriptor.write(f"   li   a0, DIAG_SATP_MODE\n")
             file_descriptor.write(f"   ret\n\n\n")
 
