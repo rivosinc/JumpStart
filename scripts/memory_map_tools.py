@@ -816,11 +816,15 @@ class MemoryMap:
 
     def generate_guard_pages(self, file_descriptor):
         for guard_page_id in range(self.num_guard_pages_generated):
+            # @nobits reference:
+            #   section does not contain data (i.e., section only occupies space)
+            # https://ftp.gnu.org/old-gnu/Manuals/gas-2.9.1/html_node/as_117.html?cmdf=.section+nobits
             file_descriptor.write(
-                f'\n\n.section .jumpstart.guard_page.{guard_page_id}, "a"\n')
+                f'\n\n.section .jumpstart.guard_page.{guard_page_id}, "a",@nobits\n'
+            )
             file_descriptor.write(f".global guard_page_{guard_page_id}\n")
             file_descriptor.write(f"guard_page_{guard_page_id}:\n")
-            file_descriptor.write(f".zero 4096, 0x10\n\n")
+            file_descriptor.write(f".zero 4096\n\n")
 
     def generate_assembly_file(self, output_assembly_file):
         with open(output_assembly_file, 'w') as file:
