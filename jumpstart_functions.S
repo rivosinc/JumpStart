@@ -4,68 +4,6 @@
 
 #include "jumpstart_defines.h"
 
-#define SAVE_ALL_GPRS     ;\
-  sd sp, SP_OFFSET_IN_SAVE_REGION(gp)    ;\
-  sd s0, S0_OFFSET_IN_SAVE_REGION(gp)    ;\
-  sd s1, S1_OFFSET_IN_SAVE_REGION(gp)    ;\
-  sd s2, S2_OFFSET_IN_SAVE_REGION(gp)    ;\
-  sd s3, S3_OFFSET_IN_SAVE_REGION(gp)    ;\
-  sd s4, S4_OFFSET_IN_SAVE_REGION(gp)    ;\
-  sd s5, S5_OFFSET_IN_SAVE_REGION(gp)    ;\
-  sd s6, S6_OFFSET_IN_SAVE_REGION(gp)    ;\
-  sd s7, S7_OFFSET_IN_SAVE_REGION(gp)    ;\
-  sd s8, S8_OFFSET_IN_SAVE_REGION(gp)    ;\
-  sd s9, S9_OFFSET_IN_SAVE_REGION(gp)    ;\
-  sd s10, S10_OFFSET_IN_SAVE_REGION(gp)  ;\
-  sd s11, S11_OFFSET_IN_SAVE_REGION(gp)  ;\
-  sd t0, T0_OFFSET_IN_SAVE_REGION(gp)    ;\
-  sd t1, T1_OFFSET_IN_SAVE_REGION(gp)    ;\
-  sd t2, T2_OFFSET_IN_SAVE_REGION(gp)    ;\
-  sd t3, T3_OFFSET_IN_SAVE_REGION(gp)    ;\
-  sd t4, T4_OFFSET_IN_SAVE_REGION(gp)    ;\
-  sd t5, T5_OFFSET_IN_SAVE_REGION(gp)    ;\
-  sd t6, T6_OFFSET_IN_SAVE_REGION(gp)    ;\
-  sd a1, A1_OFFSET_IN_SAVE_REGION(gp)    ;\
-  sd a2, A2_OFFSET_IN_SAVE_REGION(gp)    ;\
-  sd a3, A3_OFFSET_IN_SAVE_REGION(gp)    ;\
-  sd a4, A4_OFFSET_IN_SAVE_REGION(gp)    ;\
-  sd a5, A5_OFFSET_IN_SAVE_REGION(gp)    ;\
-  sd a6, A6_OFFSET_IN_SAVE_REGION(gp)    ;\
-  sd a7, A7_OFFSET_IN_SAVE_REGION(gp)    ;\
-  sd ra, RA_OFFSET_IN_SAVE_REGION(gp)    ;\
-  sd a0, A0_OFFSET_IN_SAVE_REGION(gp)
-
-#define RESTORE_ALL_GPRS  ;\
-  ld sp, SP_OFFSET_IN_SAVE_REGION(gp)    ;\
-  ld s0, S0_OFFSET_IN_SAVE_REGION(gp)    ;\
-  ld s1, S1_OFFSET_IN_SAVE_REGION(gp)    ;\
-  ld s2, S2_OFFSET_IN_SAVE_REGION(gp)    ;\
-  ld s3, S3_OFFSET_IN_SAVE_REGION(gp)    ;\
-  ld s4, S4_OFFSET_IN_SAVE_REGION(gp)    ;\
-  ld s5, S5_OFFSET_IN_SAVE_REGION(gp)    ;\
-  ld s6, S6_OFFSET_IN_SAVE_REGION(gp)    ;\
-  ld s7, S7_OFFSET_IN_SAVE_REGION(gp)    ;\
-  ld s8, S8_OFFSET_IN_SAVE_REGION(gp)    ;\
-  ld s9, S9_OFFSET_IN_SAVE_REGION(gp)    ;\
-  ld s10, S10_OFFSET_IN_SAVE_REGION(gp)  ;\
-  ld s11, S11_OFFSET_IN_SAVE_REGION(gp)  ;\
-  ld t0, T0_OFFSET_IN_SAVE_REGION(gp)    ;\
-  ld t1, T1_OFFSET_IN_SAVE_REGION(gp)    ;\
-  ld t2, T2_OFFSET_IN_SAVE_REGION(gp)    ;\
-  ld t3, T3_OFFSET_IN_SAVE_REGION(gp)    ;\
-  ld t4, T4_OFFSET_IN_SAVE_REGION(gp)    ;\
-  ld t5, T5_OFFSET_IN_SAVE_REGION(gp)    ;\
-  ld t6, T6_OFFSET_IN_SAVE_REGION(gp)    ;\
-  ld a1, A1_OFFSET_IN_SAVE_REGION(gp)    ;\
-  ld a2, A2_OFFSET_IN_SAVE_REGION(gp)    ;\
-  ld a3, A3_OFFSET_IN_SAVE_REGION(gp)    ;\
-  ld a4, A4_OFFSET_IN_SAVE_REGION(gp)    ;\
-  ld a5, A5_OFFSET_IN_SAVE_REGION(gp)    ;\
-  ld a6, A6_OFFSET_IN_SAVE_REGION(gp)    ;\
-  ld a7, A7_OFFSET_IN_SAVE_REGION(gp)    ;\
-  ld ra, RA_OFFSET_IN_SAVE_REGION(gp)    ;\
-  ld a0, A0_OFFSET_IN_SAVE_REGION(gp)
-
 .section .jumpstart.text.supervisor, "ax"
 
 .global jump_to_main_in_supervisor_mode

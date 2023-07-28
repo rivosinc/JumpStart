@@ -90,6 +90,25 @@ def generate_reg_context_save_restore_code(attributes_data, defines_file_fd,
             )
             num_registers += 1
 
+    temp_reg_name = attributes_data[
+        'reg_context_to_save_across_umode_and_smode']['temp_register']
+
+    defines_file_fd.write(f'\n#define SAVE_ALL_GPRS   ;')
+    for gpr_name in attributes_data[
+            'reg_context_to_save_across_umode_and_smode']['registers']['gprs']:
+        defines_file_fd.write(
+            f'\\\n  sd {gpr_name}, {gpr_name.upper()}_OFFSET_IN_SAVE_REGION({temp_reg_name})   ;'
+        )
+    defines_file_fd.write(f'\n\n')
+
+    defines_file_fd.write(f'\n#define RESTORE_ALL_GPRS   ;')
+    for gpr_name in attributes_data[
+            'reg_context_to_save_across_umode_and_smode']['registers']['gprs']:
+        defines_file_fd.write(
+            f'\\\n  ld {gpr_name}, {gpr_name.upper()}_OFFSET_IN_SAVE_REGION({temp_reg_name})   ;'
+        )
+    defines_file_fd.write(f'\n\n')
+
     assembly_file_fd.write(f'.section .jumpstart.data.privileged, "aw"\n\n')
     modes = ['smode', 'umode']
     for mode in modes:
