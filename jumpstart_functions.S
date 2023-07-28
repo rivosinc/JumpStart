@@ -37,9 +37,8 @@
 #define SEPC_OFFSET  (31 * 8)
 #define SSTATUS_OFFSET  (32 * 8)
 
-# Note: These macros don't touch a0, it must be handled by macro user.
-
-#define SAVE_CALLEE_SAVED ;\
+# NOTE: This macro doesnot save a0. It must be handled by macro user.
+#define SAVE_ALL_GPRS     ;\
   sd sp, SP_OFFSET(a0)    ;\
   sd gp, GP_OFFSET(a0)    ;\
   sd s0, S0_OFFSET(a0)    ;\
@@ -52,10 +51,8 @@
   sd s7, S7_OFFSET(a0)    ;\
   sd s8, S8_OFFSET(a0)    ;\
   sd s9, S9_OFFSET(a0)    ;\
-  sd s10, S10_OFFSET(a0)    ;\
-  sd s11, S11_OFFSET(a0)
-
-#define SAVE_CALLER_SAVED ;\
+  sd s10, S10_OFFSET(a0)  ;\
+  sd s11, S11_OFFSET(a0)  ;\
   sd t0, T0_OFFSET(a0)    ;\
   sd t1, T1_OFFSET(a0)    ;\
   sd t2, T2_OFFSET(a0)    ;\
@@ -72,7 +69,7 @@
   sd a7, A7_OFFSET(a0)    ;\
   sd ra, RA_OFFSET(a0)
 
-#define RESTORE_CALLEE_SAVED ;\
+#define RESTORE_ALL_GPRS  ;\
   ld sp, SP_OFFSET(a0)    ;\
   ld gp, GP_OFFSET(a0)    ;\
   ld s0, S0_OFFSET(a0)    ;\
@@ -85,25 +82,24 @@
   ld s7, S7_OFFSET(a0)    ;\
   ld s8, S8_OFFSET(a0)    ;\
   ld s9, S9_OFFSET(a0)    ;\
-  ld s10, S10_OFFSET(a0)    ;\
-  ld s11, S11_OFFSET(a0)
-
-#define RESTORE_CALLER_SAVED ;\
-  ld t0, T0_OFFSET(a0)       ;\
-  ld t1, T1_OFFSET(a0)       ;\
-  ld t2, T2_OFFSET(a0)       ;\
-  ld t3, T3_OFFSET(a0)       ;\
-  ld t4, T4_OFFSET(a0)       ;\
-  ld t5, T5_OFFSET(a0)       ;\
-  ld t6, T6_OFFSET(a0)       ;\
-  ld a1, A1_OFFSET(a0)       ;\
-  ld a2, A2_OFFSET(a0)       ;\
-  ld a3, A3_OFFSET(a0)       ;\
-  ld a4, A4_OFFSET(a0)       ;\
-  ld a5, A5_OFFSET(a0)       ;\
-  ld a6, A6_OFFSET(a0)       ;\
-  ld a7, A7_OFFSET(a0)       ;\
-  ld ra, RA_OFFSET(a0)
+  ld s10, S10_OFFSET(a0)  ;\
+  ld s11, S11_OFFSET(a0)  ;\
+  ld t0, T0_OFFSET(a0)    ;\
+  ld t1, T1_OFFSET(a0)    ;\
+  ld t2, T2_OFFSET(a0)    ;\
+  ld t3, T3_OFFSET(a0)    ;\
+  ld t4, T4_OFFSET(a0)    ;\
+  ld t5, T5_OFFSET(a0)    ;\
+  ld t6, T6_OFFSET(a0)    ;\
+  ld a1, A1_OFFSET(a0)    ;\
+  ld a2, A2_OFFSET(a0)    ;\
+  ld a3, A3_OFFSET(a0)    ;\
+  ld a4, A4_OFFSET(a0)    ;\
+  ld a5, A5_OFFSET(a0)    ;\
+  ld a6, A6_OFFSET(a0)    ;\
+  ld a7, A7_OFFSET(a0)    ;\
+  ld ra, RA_OFFSET(a0)    ;\
+  ld a0, A0_OFFSET(a0)
 
 .section .jumpstart.data.privileged, "aw"
 
@@ -202,7 +198,7 @@ switch_to_smode_stack:
   ld sp, SP_OFFSET(sp)
 
 save_context:
-  SAVE_CALLER_SAVED
+  SAVE_ALL_GPRS
 
   # Save away the a0 passed to us when entering the trap handler.
   csrr t0, sscratch
@@ -235,8 +231,7 @@ switch_to_umode_stack:
   ld sp, SP_OFFSET(a0)
 
 restore_context:
-  RESTORE_CALLER_SAVED
-  ld a0, A0_OFFSET(a0)
+  RESTORE_ALL_GPRS
 
   sret
 
@@ -273,10 +268,8 @@ env_call_return_to_supervisor_mode:
   or a1, a1, a2
   csrw sstatus, a1
 
-  RESTORE_CALLEE_SAVED
-  RESTORE_CALLER_SAVED
+  RESTORE_ALL_GPRS
 
-  ld a0, A0_OFFSET(a0)
   sret
 
 # A0 contains the address of the function to run in usermode.
@@ -298,8 +291,7 @@ run_function_in_user_mode:
 
   # Save S-mode context
   la a0, smode_reg_context_save_region
-  SAVE_CALLEE_SAVED
-  SAVE_CALLER_SAVED
+  SAVE_ALL_GPRS
 
   csrr t0, sstatus
   sd t0, SSTATUS_OFFSET(a0)
