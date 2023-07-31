@@ -11,8 +11,8 @@ jump_to_main_in_supervisor_mode:
   la t0, stvec_trap_handler
   csrw stvec, t0
 
-  li  a0, SUPERVISOR_MODE_ENCODING
-  call set_thread_attributes_current_mode_from_supervisor_mode
+  li  t0, SUPERVISOR_MODE_ENCODING
+  SET_THREAD_ATTRIBUTES_CURRENT_MODE(t0)
 
   li a0, (1 << SIE_EXT_INTERRUPT)
   csrw sie, a0
@@ -97,8 +97,8 @@ save_context:
 
 
   # Change current mode to S.
-  li  a0, SUPERVISOR_MODE_ENCODING
-  jal set_thread_attributes_current_mode_from_supervisor_mode
+  li  t0, SUPERVISOR_MODE_ENCODING
+  SET_THREAD_ATTRIBUTES_CURRENT_MODE(t0)
 
   # Get the address of the trap handler if the test has registered one, else 0.
   csrr a0, scause
@@ -117,8 +117,9 @@ save_context:
   j restore_context
 
 switch_to_umode_stack:
-  li  a0, USER_MODE_ENCODING
-  jal set_thread_attributes_current_mode_from_supervisor_mode
+  li  t0, USER_MODE_ENCODING
+  SET_THREAD_ATTRIBUTES_CURRENT_MODE(t0)
+
   la gp, umode_reg_context_save_region
 
 restore_context:
@@ -175,10 +176,10 @@ run_function_in_user_mode:
   la gp, umode_reg_context_save_region
   sd a0, A0_OFFSET_IN_SAVE_REGION(gp)
 
-  jal get_thread_attributes_current_mode_from_supervisor_mode
+  GET_THREAD_ATTRIBUTES_CURRENT_MODE(t0)
 
   li  t1, SUPERVISOR_MODE_ENCODING
-  bne a0, t1, jumpstart_supervisor_fail
+  bne t0, t1, jumpstart_supervisor_fail
 
   # Save S-mode context
   la gp, smode_reg_context_save_region
@@ -197,8 +198,8 @@ run_function_in_user_mode:
   li t0, (SUPERVISOR_MODE_ENCODING << MSTATUS_SPP_SHIFT)
   csrc sstatus, t0
 
-  li  a0, USER_MODE_ENCODING
-  jal set_thread_attributes_current_mode_from_supervisor_mode
+  li  t0, USER_MODE_ENCODING
+  SET_THREAD_ATTRIBUTES_CURRENT_MODE(t0)
 
   la gp, umode_reg_context_save_region
   ld a0, A0_OFFSET_IN_SAVE_REGION(gp)

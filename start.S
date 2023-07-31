@@ -99,20 +99,18 @@ setup_thread_attributes:
   la  t1, thread_attributes_region
   add tp, t1, t2
 
-  csrr a0, mhartid
-  jal set_thread_attributes_hart_id_from_machine_mode
+  SET_THREAD_ATTRIBUTES_HART_ID(a0)
 
   li t0, TRAP_OVERRIDE_ATTRIBUTES_STRUCT_SIZE_IN_BYTES
   mul t0, a0, t0
   la t1, trap_override_attributes_region
-  add a0, t1, t0
+  add t0, t1, t0
   la t1, trap_override_attributes_region_end
   # Make sure that we've allocated enough space for this core's trap handler
   # overrides.
-  bgeu a0, t1, jumpstart_fail
-  jal set_thread_attributes_trap_override_struct_address_from_machine_mode
+  bgeu t0, t1, jumpstart_fail
+  SET_THREAD_ATTRIBUTES_TRAP_OVERRIDE_STRUCT_ADDRESS(t0)
 
-  csrr a0, mhartid
   li t0, REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES
   mul t0, a0, t0
 
@@ -128,11 +126,11 @@ setup_thread_attributes:
   bgeu t1, t2, jumpstart_fail
   SET_THREAD_ATTRIBUTES_UMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(t1)
 
-  li  a0, THREAD_ATTRIBUTES_BOOKEND_MAGIC_NUMBER_VALUE
-  jal set_thread_attributes_bookend_magic_number_from_machine_mode
+  li  t0, THREAD_ATTRIBUTES_BOOKEND_MAGIC_NUMBER_VALUE
+  SET_THREAD_ATTRIBUTES_BOOKEND_MAGIC_NUMBER(t0)
 
-  li  a0, MACHINE_MODE_ENCODING
-  jal set_thread_attributes_current_mode_from_machine_mode
+  li  t0, MACHINE_MODE_ENCODING
+  SET_THREAD_ATTRIBUTES_CURRENT_MODE(t0)
 
   ld  ra, 8(sp)
   ld  fp, 0(sp)
@@ -211,8 +209,8 @@ mtvec_trap_handler:
   # TODO: save aware more of these as required.
   mv s1, a0
 
-  li  a0, MACHINE_MODE_ENCODING
-  jal set_thread_attributes_current_mode_from_machine_mode
+  li  t0, MACHINE_MODE_ENCODING
+  SET_THREAD_ATTRIBUTES_CURRENT_MODE(t0)
 
   mv a0, s1
 
