@@ -112,6 +112,22 @@ setup_thread_attributes:
   bgeu a0, t1, jumpstart_fail
   jal set_thread_attributes_trap_override_struct_address_from_machine_mode
 
+  csrr a0, mhartid
+  li t0, REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES
+  mul t0, a0, t0
+
+  la t1, smode_reg_context_save_region
+  add t1, t1, t0
+  la t2, smode_reg_context_save_region_end
+  bgeu t1, t2, jumpstart_fail
+  SET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(t1)
+
+  la t1, umode_reg_context_save_region
+  add t1, t1, t0
+  la t2, umode_reg_context_save_region_end
+  bgeu t1, t2, jumpstart_fail
+  SET_THREAD_ATTRIBUTES_UMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(t1)
+
   li  a0, THREAD_ATTRIBUTES_BOOKEND_MAGIC_NUMBER_VALUE
   jal set_thread_attributes_bookend_magic_number_from_machine_mode
 

@@ -104,6 +104,10 @@ def generate_reg_context_save_restore_code(attributes_data, defines_file_fd,
     temp_reg_name = attributes_data[
         'reg_context_to_save_across_umode_and_smode']['temp_register']
 
+    defines_file_fd.write(
+        f'\n#define REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES ({num_registers} * 8)\n'
+    )
+
     defines_file_fd.write(f'\n#define SAVE_ALL_GPRS   ;')
     for gpr_name in attributes_data[
             'reg_context_to_save_across_umode_and_smode']['registers']['gprs']:
@@ -120,19 +124,20 @@ def generate_reg_context_save_restore_code(attributes_data, defines_file_fd,
         )
     defines_file_fd.write(f'\n\n')
 
-    assembly_file_fd.write(
-        f'\n\n.section .jumpstart.data.privileged, "aw"\n\n')
+    assembly_file_fd.write(f'\n\n.section .jumpstart.data.privileged, "aw"\n')
     modes = ['smode', 'umode']
+    assembly_file_fd.write(
+        f"\n# {modes} context saved registers: \n# {attributes_data['reg_context_to_save_across_umode_and_smode']['registers']}\n"
+    )
     for mode in modes:
         assembly_file_fd.write(f'.global {mode}_reg_context_save_region\n')
         assembly_file_fd.write(f'{mode}_reg_context_save_region:\n')
         for i in range(attributes_data['max_num_cpus_supported']):
             assembly_file_fd.write(
-                f"# Save area for hart {i}'s {num_registers} registers:\n")
-            assembly_file_fd.write(
-                f"#  {attributes_data['reg_context_to_save_across_umode_and_smode']['registers']}\n"
-            )
-            assembly_file_fd.write(f'.zero {num_registers * 8}\n\n')
+                f"  # save area for hart {i}'s {num_registers} registers\n")
+            assembly_file_fd.write(f'  .zero {num_registers * 8}\n\n')
+        assembly_file_fd.write(f'.global {mode}_reg_context_save_region_end\n')
+        assembly_file_fd.write(f'{mode}_reg_context_save_region_end:\n\n')
 
 
 def generate_data_structures(attributes_yaml, defines_file,
