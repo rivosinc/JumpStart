@@ -22,18 +22,18 @@ jumpstart_tests = [
 spike = find_program('spike', required : true)
 
 foreach jumpstart_test : jumpstart_tests
-  test_name = jumpstart_test.get(0)
+  test_prefix = jumpstart_test.get(0)
   test_description = jumpstart_test.get(1)
 
   spike_additional_arguments = jumpstart_test.get(2, '')
 
-  memory_map_file = meson.current_source_dir() + '/' + test_name +'.memory_map.yaml'
+  memory_map_file = meson.current_source_dir() + '/' + test_prefix +'.memory_map.yaml'
 
   memory_map_tools_output = custom_target(
-                                'Generate memory map build files for ' + test_name,
+                                'Generate memory map build files for ' + test_prefix,
                                 input : [memory_map_tools_script, memory_map_file, data_strucutures_yaml],
-                                output : [test_name + '.memory_attributes.S',
-                                          test_name + '.linker_script.ld'],
+                                output : [test_prefix + '.memory_attributes.S',
+                                          test_prefix + '.linker_script.ld'],
                                 command : [prog_python,
                                           '@INPUT0@',
                                           '--memory_map', '@INPUT1@',
@@ -47,23 +47,23 @@ foreach jumpstart_test : jumpstart_tests
 
   test_sources = [pagetable_s]
 
-  if fs.is_file(meson.current_source_dir() + '/' + test_name +'.c')
-    test_sources += [test_name + '.c']
+  if fs.is_file(meson.current_source_dir() + '/' + test_prefix +'.c')
+    test_sources += [test_prefix + '.c']
   endif
 
-  if fs.is_file(meson.current_source_dir() + '/' + test_name +'.S')
-    test_sources += [test_name + '.S']
+  if fs.is_file(meson.current_source_dir() + '/' + test_prefix +'.S')
+    test_sources += [test_prefix + '.S']
   endif
 
-  if fs.is_file(meson.current_source_dir() + '/' + test_name +'_umode.c')
-    test_sources += [test_name + '_umode.c']
+  if fs.is_file(meson.current_source_dir() + '/' + test_prefix +'_umode.c')
+    test_sources += [test_prefix + '_umode.c']
   endif
 
-  if fs.is_file(meson.current_source_dir() + '/' + test_name +'_umode.S')
-    test_sources += [test_name + '_umode.S']
+  if fs.is_file(meson.current_source_dir() + '/' + test_prefix +'_umode.S')
+    test_sources += [test_prefix + '_umode.S']
   endif
 
-  test_exe = executable(test_name,
+  test_exe = executable(test_prefix,
                         sources: [jumpstart_sources, test_sources],
                         include_directories: jumpstart_includes,
                         c_args: default_c_args_list,
@@ -78,6 +78,6 @@ foreach jumpstart_test : jumpstart_tests
     spike_args += spike_additional_arguments.split()
   endif
 
-  test(test_name, spike, args : [spike_args, test_exe], suite:'basic')
+  test(test_prefix + ' 🧪 ' + test_description, spike, args : [spike_args, test_exe], suite:'basic')
 
 endforeach
