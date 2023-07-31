@@ -75,7 +75,7 @@ stvec_trap_handler:
 
   # We are in S-mode handling a trap from S-mode, use the
   # smode reg context save region.
-  la gp, smode_reg_context_save_region
+  GET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
   j save_context
 
 1:
@@ -83,10 +83,10 @@ stvec_trap_handler:
   # umode reg context save region.
 
   # Save away the U-mode stack.
-  la gp, umode_reg_context_save_region
+  GET_THREAD_ATTRIBUTES_UMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
   sd sp, SP_OFFSET_IN_SAVE_REGION(gp)
   # and switch to the S-mode stack as we can't use the Umode stack.
-  la sp, smode_reg_context_save_region
+  GET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(sp)
   ld sp, SP_OFFSET_IN_SAVE_REGION(sp)
 
 save_context:
@@ -113,14 +113,14 @@ save_context:
   csrr a0, sstatus
   andi a0, a0, (SUPERVISOR_MODE_ENCODING << MSTATUS_SPP_SHIFT)
   beqz a0, switch_to_umode_stack
-  la gp, smode_reg_context_save_region
+  GET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
   j restore_context
 
 switch_to_umode_stack:
   li  t0, USER_MODE_ENCODING
   SET_THREAD_ATTRIBUTES_CURRENT_MODE(t0)
 
-  la gp, umode_reg_context_save_region
+  GET_THREAD_ATTRIBUTES_UMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
 
 restore_context:
   RESTORE_ALL_GPRS
@@ -151,7 +151,7 @@ env_call_return_to_supervisor_mode:
   # This is the return to supervisor path for run_function_in_user_mode().
 
   # Restore S mode context and return status in a0
-  la gp, smode_reg_context_save_region
+  GET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
   ld a1, SEPC_OFFSET_IN_SAVE_REGION(gp)
   csrw sepc, a1
 
@@ -173,7 +173,7 @@ run_function_in_user_mode:
   addi  fp, sp, 16
 
   # Pass a0 to usermode as argument.
-  la gp, umode_reg_context_save_region
+  GET_THREAD_ATTRIBUTES_UMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
   sd a0, A0_OFFSET_IN_SAVE_REGION(gp)
 
   GET_THREAD_ATTRIBUTES_CURRENT_MODE(t0)
@@ -182,7 +182,7 @@ run_function_in_user_mode:
   bne t0, t1, jumpstart_supervisor_fail
 
   # Save S-mode context
-  la gp, smode_reg_context_save_region
+  GET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
   SAVE_ALL_GPRS
 
   csrr t0, sstatus
@@ -201,7 +201,7 @@ run_function_in_user_mode:
   li  t0, USER_MODE_ENCODING
   SET_THREAD_ATTRIBUTES_CURRENT_MODE(t0)
 
-  la gp, umode_reg_context_save_region
+  GET_THREAD_ATTRIBUTES_UMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
   ld a0, A0_OFFSET_IN_SAVE_REGION(gp)
 
   sret
@@ -210,7 +210,7 @@ smode_return:
   # Usermode return status using a0. Given umode returns through ecall, we save
   # a0 to umode_reg_context_save_region in ecall handler and return to this point to continue
   # s-mode execution from the place we left it.
-  la gp, umode_reg_context_save_region
+  GET_THREAD_ATTRIBUTES_UMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
   ld a0, A0_OFFSET_IN_SAVE_REGION(gp)
 
   ld  ra, 8(sp)
