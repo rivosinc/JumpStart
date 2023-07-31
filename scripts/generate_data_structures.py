@@ -109,7 +109,8 @@ def generate_reg_context_save_restore_code(attributes_data, defines_file_fd,
         )
     defines_file_fd.write(f'\n\n')
 
-    assembly_file_fd.write(f'.section .jumpstart.data.privileged, "aw"\n\n')
+    assembly_file_fd.write(
+        f'\n\n.section .jumpstart.data.privileged, "aw"\n\n')
     modes = ['smode', 'umode']
     for mode in modes:
         assembly_file_fd.write(f'.global {mode}_reg_context_save_region\n')
@@ -158,8 +159,6 @@ def generate_data_structures(attributes_yaml, defines_file,
     total_size_of_c_structs = 0
 
     for c_struct in attributes_data['c_structs']:
-        assembly_file_fd.write('.section .jumpstart.text.supervisor, "ax"\n\n')
-
         c_struct_fields = attributes_data['c_structs'][c_struct]['fields']
         current_offset = 0
 
@@ -227,29 +226,20 @@ def generate_data_structures(attributes_yaml, defines_file,
         )
         sys.exit(1)
 
-    assembly_file_fd.write(f'.section .jumpstart.data.privileged, "aw"\n')
-    assembly_file_fd.write(f'.align 12\n')
-    assembly_file_fd.write(f'.global privileged_stack_top\n')
-    assembly_file_fd.write(f'privileged_stack_top:\n')
-    assembly_file_fd.write(
-        f".rep {attributes_data['jumpstart_privileged_data_page_counts']['num_pages_for_stack'] * 4096}\n"
-    )
-    assembly_file_fd.write(f'.byte 0x00\n')
-    assembly_file_fd.write(f'  .endr\n')
-    assembly_file_fd.write(f'.global privileged_stack_bottom\n')
-    assembly_file_fd.write(f'privileged_stack_bottom:\n\n')
-
-    assembly_file_fd.write(f'.section .jumpstart.data.umode, "aw"\n')
-    assembly_file_fd.write(f'.align 12\n')
-    assembly_file_fd.write(f'.global umode_stack_top\n')
-    assembly_file_fd.write(f'umode_stack_top:\n')
-    assembly_file_fd.write(
-        f".rep {attributes_data['jumpstart_umode_data_page_counts']['num_pages_for_stack'] * 4096}\n"
-    )
-    assembly_file_fd.write(f'.byte 0x00\n')
-    assembly_file_fd.write(f'  .endr\n')
-    assembly_file_fd.write(f'.global umode_stack_bottom\n')
-    assembly_file_fd.write(f'umode_stack_bottom:\n')
+    stack_types = ['privileged', 'umode']
+    for stack_type in stack_types:
+        assembly_file_fd.write(
+            f'.section .jumpstart.data.{stack_type}, "aw"\n')
+        assembly_file_fd.write(f'.align 12\n')
+        assembly_file_fd.write(f'.global {stack_type}_stack_top\n')
+        assembly_file_fd.write(f'{stack_type}_stack_top:\n')
+        assembly_file_fd.write(
+            f".rep {attributes_data[f'jumpstart_{stack_type}_data_page_counts']['num_pages_for_stack'] * 4096}\n"
+        )
+        assembly_file_fd.write(f'.byte 0x00\n')
+        assembly_file_fd.write(f'  .endr\n')
+        assembly_file_fd.write(f'.global {stack_type}_stack_bottom\n')
+        assembly_file_fd.write(f'{stack_type}_stack_bottom:\n\n')
 
     for define_name in attributes_data['defines']:
         defines_file_fd.write(
