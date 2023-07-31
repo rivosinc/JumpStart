@@ -5,8 +5,9 @@
 project('JumpStart', 'c',
         default_options : [
           'warning_level=everything',
-          'werror=true'
-          ]
+          'werror=true',
+          ],
+        meson_version: '>=1.1.0'
 )
 
 add_project_arguments('-Wno-c++-compat',
