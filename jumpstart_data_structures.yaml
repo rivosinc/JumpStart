@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: LicenseRef-Rivos-Internal-Only
 
-max_num_cpus_supported: 3
+max_num_cpus_supported: 4
 
 # Hard limits on how many pages the jumsptart infrastructure itself will occupy.
 # Allows us to keep track of infrastructure code size.
@@ -11,13 +11,13 @@ max_num_cpus_supported: 3
 jumpstart_supervisor_text_page_counts:
   num_pages_for_all_text: 2
 jumpstart_privileged_data_page_counts:
-  num_pages_for_stack: 2
+  num_pages_for_stack: 4
   num_pages_for_c_structs: 1
   num_pages_for_data_section: 1
 jumpstart_umode_text_page_counts:
   num_pages_for_all_text: 1
 jumpstart_umode_data_page_counts:
-  num_pages_for_stack: 1
+  num_pages_for_stack: 4
   num_pages_for_data_section: 1
 
 rcode_start_address: 0x06000000

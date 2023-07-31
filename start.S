@@ -60,7 +60,13 @@ _machine_start:
   csrw mtvec, t0
 
   # Set up the stack for M-mode and S-mode.
-  la  sp, privileged_stack_bottom
+  csrr  t0, mhartid
+  li  t1, (NUM_PAGES_PER_HART_FOR_PRIVILEGED_STACK * 4096)
+  mul t0, t0, t1
+  la  t2, privileged_stack_top
+  add sp, t2, t0
+  add sp, sp, t1 # We want the stack bottom.
+
   mv  fp, sp
 
 1:

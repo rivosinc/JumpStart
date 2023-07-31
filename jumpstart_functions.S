@@ -198,6 +198,14 @@ run_function_in_user_mode:
   li t0, (SUPERVISOR_MODE_ENCODING << MSTATUS_SPP_SHIFT)
   csrc sstatus, t0
 
+  # Switch to the U-mode stack.
+  GET_THREAD_ATTRIBUTES_HART_ID(t0)
+  li  t1, (NUM_PAGES_PER_HART_FOR_UMODE_STACK * 4096)
+  mul t0, t0, t1
+  la  t2, umode_stack_top
+  add sp, t2, t0
+  add sp, sp, t1 # We want the stack bottom.
+
   li  t0, USER_MODE_ENCODING
   SET_THREAD_ATTRIBUTES_CURRENT_MODE(t0)
 
@@ -224,7 +232,6 @@ smode_return:
 # A0 contains the address of the function to jump to.
 .global jump_to_function_in_umode
 jump_to_function_in_umode:
-  la sp, umode_stack_bottom
 
   # A0 contains arg value passed by S mode.
   jalr ra, a0

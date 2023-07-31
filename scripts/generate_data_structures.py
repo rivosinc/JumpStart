@@ -242,16 +242,31 @@ def generate_data_structures(attributes_yaml, defines_file,
 
     stack_types = ['privileged', 'umode']
     for stack_type in stack_types:
+        # Make sure we can equally distribute the number of total stack pages
+        # among the harts.
+        assert (attributes_data[f'jumpstart_{stack_type}_data_page_counts']
+                ['num_pages_for_stack'] %
+                attributes_data['max_num_cpus_supported'] == 0)
+        num_pages_per_hart_for_stack = int(
+            attributes_data[f'jumpstart_{stack_type}_data_page_counts']
+            ['num_pages_for_stack'] /
+            attributes_data['max_num_cpus_supported'])
+
+        defines_file_fd.write(
+            f'#define NUM_PAGES_PER_HART_FOR_{stack_type.upper()}_STACK {num_pages_per_hart_for_stack}\n\n'
+        )
+
         assembly_file_fd.write(
             f'.section .jumpstart.data.{stack_type}, "aw"\n')
         assembly_file_fd.write(f'.align 12\n')
         assembly_file_fd.write(f'.global {stack_type}_stack_top\n')
         assembly_file_fd.write(f'{stack_type}_stack_top:\n')
-        assembly_file_fd.write(
-            f".rep {attributes_data[f'jumpstart_{stack_type}_data_page_counts']['num_pages_for_stack'] * 4096}\n"
-        )
-        assembly_file_fd.write(f'.byte 0x00\n')
-        assembly_file_fd.write(f'  .endr\n')
+        for i in range(attributes_data['max_num_cpus_supported']):
+            assembly_file_fd.write(
+                f'.global {stack_type}_stack_top_hart_{i}\n')
+            assembly_file_fd.write(f'{stack_type}_stack_top_hart_{i}:\n')
+            assembly_file_fd.write(
+                f"  .zero {num_pages_per_hart_for_stack * 4096}\n")
         assembly_file_fd.write(f'.global {stack_type}_stack_bottom\n')
         assembly_file_fd.write(f'{stack_type}_stack_bottom:\n\n')
 
