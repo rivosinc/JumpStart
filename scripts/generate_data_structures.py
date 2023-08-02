@@ -225,9 +225,10 @@ def generate_data_structures(attributes_yaml, defines_file,
             f'.section .jumpstart.data.privileged, "aw"\n\n')
         assembly_file_fd.write(f'.global {c_struct}_region\n')
         assembly_file_fd.write(f'{c_struct}_region:\n')
-        assembly_file_fd.write(f".rep {current_offset}\n")
-        assembly_file_fd.write(f'  .byte 0x00\n')
-        assembly_file_fd.write(f'.endr\n')
+        for i in range(attributes_data['max_num_cpus_supported']):
+            assembly_file_fd.write(f'.global {c_struct}_region_hart_{i}\n')
+            assembly_file_fd.write(f'{c_struct}_region_hart_{i}:\n')
+            assembly_file_fd.write(f"  .zero {current_offset}\n")
         assembly_file_fd.write(f'.global {c_struct}_region_end\n')
         assembly_file_fd.write(f'{c_struct}_region_end:\n\n')
 

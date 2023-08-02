@@ -111,10 +111,6 @@ setup_thread_attributes:
   mul t0, a0, t0
   la t1, trap_override_attributes_region
   add t0, t1, t0
-  la t1, trap_override_attributes_region_end
-  # Make sure that we've allocated enough space for this core's trap handler
-  # overrides.
-  bgeu t0, t1, jumpstart_fail
   SET_THREAD_ATTRIBUTES_TRAP_OVERRIDE_STRUCT_ADDRESS(t0)
 
   li t0, REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES
