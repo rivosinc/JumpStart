@@ -31,7 +31,9 @@ foreach jumpstart_test : jumpstart_tests
 
   memory_map_tools_output = custom_target(
                                 'Generate memory map build files for ' + test_prefix,
-                                input : [memory_map_tools_script, memory_map_file, data_strucutures_yaml],
+                                input : [memory_map_tools_script,
+                                          memory_map_file,
+                                          data_structures_yaml],
                                 output : [test_prefix + '.memory_attributes.S',
                                           test_prefix + '.linker_script.ld'],
                                 command : [prog_python,
@@ -60,7 +62,8 @@ foreach jumpstart_test : jumpstart_tests
                         c_args: default_c_args_list,
                         link_args: ['-T' + linker_script, '-nostdlib'])
 
-  spike_args = ['--pass-fail', '--isa=' + get_option('spike_default_isa_string') ]
+  spike_args = ['--pass-fail',
+                '--isa=' + get_option('spike_default_isa_string') ]
   if get_option('generate_spike_trace') == true
     spike_args += ['-v1', '--log-commits']
   endif
@@ -69,6 +72,9 @@ foreach jumpstart_test : jumpstart_tests
     spike_args += spike_additional_arguments.split()
   endif
 
-  test(test_prefix + ' 🧪 ' + test_description, spike, args : [spike_args, test_exe], suite:'basic')
+  test(test_prefix + ' 🧪 ' + test_description,
+        spike,
+        args : [spike_args, test_exe],
+        suite:'basic')
 
 endforeach
