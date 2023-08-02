@@ -47,21 +47,12 @@ foreach jumpstart_test : jumpstart_tests
 
   test_sources = [pagetable_s]
 
-  if fs.is_file(meson.current_source_dir() + '/' + test_prefix +'.c')
-    test_sources += [test_prefix + '.c']
-  endif
-
-  if fs.is_file(meson.current_source_dir() + '/' + test_prefix +'.S')
-    test_sources += [test_prefix + '.S']
-  endif
-
-  if fs.is_file(meson.current_source_dir() + '/' + test_prefix +'_umode.c')
-    test_sources += [test_prefix + '_umode.c']
-  endif
-
-  if fs.is_file(meson.current_source_dir() + '/' + test_prefix +'_umode.S')
-    test_sources += [test_prefix + '_umode.S']
-  endif
+  possible_suffixes = ['_umode.S', '_umode.c', '.S', '.c']
+  foreach possible_suffix : possible_suffixes
+    if fs.is_file(meson.current_source_dir() + '/' + test_prefix + possible_suffix)
+      test_sources += [test_prefix + possible_suffix]
+    endif
+  endforeach
 
   test_exe = executable(test_prefix,
                         sources: [jumpstart_sources, test_sources],
