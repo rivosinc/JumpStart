@@ -5,8 +5,8 @@
 fs = import('fs')
 
 jumpstart_tests = [
-  ['test000', 'Enable MMU (SATP.mode = sv39), switch to supervisor mode and exit.'],
-  ['test001', 'Enable MMU (SATP.mode = sv48), switch to supervisor mode and exit.'],
+  ['test000', 'Enable MMU (SATP.mode = sv39), jump to main and exit.'],
+  ['test001', 'Enable MMU (SATP.mode = sv48), jump to main and exit.'],
   ['test002', 'Run C/Assembly functions in user mode and return to supervisor mode.'],
   ['test003', 'Register and run Supervisor mode illegal instruction exception handler.'],
   ['test004', 'HWP AMPM perf diag.'],
@@ -18,6 +18,8 @@ jumpstart_tests = [
   ['test010', 'Override default M-mode start address.'],
   ['test011', 'Handle user mode exceptions in supervisor mode.'],
   ['test012', 'Exit with DIAG_FAILED to test fail path.', '', true],
+  ['test013', 'test000 with 4 harts.', '-p4'],
+  ['test014', 'Hart 2 exits with DIAG_FAILED to test MP fail path.', '-p3', true],
 ]
 
 spike = find_program('spike', required : true)

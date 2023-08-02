@@ -133,7 +133,7 @@ def generate_reg_context_save_restore_code(attributes_data, defines_file_fd,
     for mode in modes:
         assembly_file_fd.write(f'.global {mode}_reg_context_save_region\n')
         assembly_file_fd.write(f'{mode}_reg_context_save_region:\n')
-        for i in range(attributes_data['max_num_cpus_supported']):
+        for i in range(attributes_data['max_num_harts_supported']):
             assembly_file_fd.write(
                 f"  # save area for hart {i}'s {num_registers} registers\n")
             assembly_file_fd.write(f'  .zero {num_registers * 8}\n\n')
@@ -169,7 +169,7 @@ def generate_data_structures(attributes_yaml, defines_file,
     assembly_file_fd.write('#include "jumpstart_defines.h"\n\n')
 
     defines_file_fd.write(
-        f"#define MAX_NUM_CPUS_SUPPORTED {attributes_data['max_num_cpus_supported']}\n\n"
+        f"#define MAX_NUM_HARTS_SUPPORTED {attributes_data['max_num_harts_supported']}\n\n"
     )
 
     data_structures_file_fd.write("#include <inttypes.h>\n\n")
@@ -225,7 +225,7 @@ def generate_data_structures(attributes_yaml, defines_file,
             f'.section .jumpstart.data.privileged, "aw"\n\n')
         assembly_file_fd.write(f'.global {c_struct}_region\n')
         assembly_file_fd.write(f'{c_struct}_region:\n')
-        for i in range(attributes_data['max_num_cpus_supported']):
+        for i in range(attributes_data['max_num_harts_supported']):
             assembly_file_fd.write(f'.global {c_struct}_region_hart_{i}\n')
             assembly_file_fd.write(f'{c_struct}_region_hart_{i}:\n')
             assembly_file_fd.write(f"  .zero {current_offset}\n")
@@ -234,7 +234,7 @@ def generate_data_structures(attributes_yaml, defines_file,
 
         total_size_of_c_structs += current_offset
 
-    if total_size_of_c_structs * attributes_data['max_num_cpus_supported'] > (
+    if total_size_of_c_structs * attributes_data['max_num_harts_supported'] > (
             attributes_data['jumpstart_privileged_data_page_counts']
         ['num_pages_for_c_structs'] * 4096):
         log.error(
@@ -248,11 +248,11 @@ def generate_data_structures(attributes_yaml, defines_file,
         # among the harts.
         assert (attributes_data[f'jumpstart_{stack_type}_data_page_counts']
                 ['num_pages_for_stack'] %
-                attributes_data['max_num_cpus_supported'] == 0)
+                attributes_data['max_num_harts_supported'] == 0)
         num_pages_per_hart_for_stack = int(
             attributes_data[f'jumpstart_{stack_type}_data_page_counts']
             ['num_pages_for_stack'] /
-            attributes_data['max_num_cpus_supported'])
+            attributes_data['max_num_harts_supported'])
 
         defines_file_fd.write(
             f'#define NUM_PAGES_PER_HART_FOR_{stack_type.upper()}_STACK {num_pages_per_hart_for_stack}\n\n'
@@ -263,7 +263,7 @@ def generate_data_structures(attributes_yaml, defines_file,
         assembly_file_fd.write(f'.align 12\n')
         assembly_file_fd.write(f'.global {stack_type}_stack_top\n')
         assembly_file_fd.write(f'{stack_type}_stack_top:\n')
-        for i in range(attributes_data['max_num_cpus_supported']):
+        for i in range(attributes_data['max_num_harts_supported']):
             assembly_file_fd.write(
                 f'.global {stack_type}_stack_top_hart_{i}\n')
             assembly_file_fd.write(f'{stack_type}_stack_top_hart_{i}:\n')

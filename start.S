@@ -25,27 +25,24 @@ _rtvec:
 .section .jumpstart.text.rcode, "ax"
 
 update_mcrr_0_to_cover_jumpstart_machine_code:
-# The reset default of the MCRR_0 is the 4K page starting at the LLC-as-SRAM
-# range base address. We expect _machine_start to be at the beginning of this page.
-# Update the MCRR_0 to include all the machine mode code pages for the
-# jumpstart framework.
+  # The reset default of the MCRR_0 is the 4K page starting at the LLC-as-SRAM
+  # range base address. We expect _machine_start to be at the beginning of this page.
+  # Update the MCRR_0 to include all the machine mode code pages for the
+  # jumpstart framework.
 
   la t0, _machine_start
   csrw mcrr_0_base, t0
 
-# Determine the size of the jumpstart machine mode code region.
-# We expect it to start at _machine_start (from the .jumpstart.machine.init) section
-# and extend to jumpstart_machine_mode_end_point (from the
-# from the .jumpstart.machine.end
+  # Determine the size of the jumpstart machine mode code region.
+  # We expect it to start at _machine_start (from the .jumpstart.machine.init) section
+  # and extend to jumpstart_machine_mode_end_point (from the
+  # from the .jumpstart.machine.end
   la t1, jumpstart_machine_mode_end_point
   sub t0, t1, t0
-# The machine mode region size should always be a multiple of 4K.
 
-# Compute the mask for the number of machine mode code pages.
-  1:
+  # Compute the mask for the number of machine mode code pages.
   addi t0, t0, -1
   not t0, t0
-
   ori t0, t0, 0x1
   csrw mcrr_0_mask, t0
 
@@ -59,8 +56,22 @@ _machine_start:
   la t0, mtvec_trap_handler
   csrw mtvec, t0
 
-  # Set up the stack for M-mode and S-mode.
   csrr  t0, mhartid
+
+  # Make sure that this hart should be active.
+  jal get_active_hart_mask
+  li t1, 1
+  sll t1, t1, t0
+  and a0, a0, t1
+  beqz a0, jumpstart_fail
+
+  # Have the hart mark itself as running.
+  la t1, hart_status_tracker
+  add t1, t1, t0
+  li t2, HART_RUNNING
+  sb t2, 0(t1)
+
+  # Set up the stack for M-mode and S-mode.
   li  t1, (NUM_PAGES_PER_HART_FOR_PRIVILEGED_STACK * 4096)
   mul t0, t0, t1
   la  t2, privileged_stack_top
@@ -69,7 +80,6 @@ _machine_start:
 
   mv  fp, sp
 
-1:
   jal setup_thread_attributes
 
   jal enable_svpbmt_for_supervisor_mode
@@ -97,7 +107,7 @@ setup_thread_attributes:
   addi    fp, sp, 16
 
   csrr a0, mhartid
-  li t1, MAX_NUM_CPUS_SUPPORTED
+  li t1, MAX_NUM_HARTS_SUPPORTED
   bgeu a0, t1, jumpstart_fail
 
   li  t2, THREAD_ATTRIBUTES_STRUCT_SIZE_IN_BYTES

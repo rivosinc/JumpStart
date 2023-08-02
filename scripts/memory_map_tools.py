@@ -719,6 +719,16 @@ class MemoryMap:
         file_descriptor.write(f"   li a0, {start_test_in_machine_mode}\n")
         file_descriptor.write(f"   ret\n\n\n")
 
+    def generate_get_active_hart_mask_function(self, file_descriptor):
+        file_descriptor.write('.section .jumpstart.text.machine, "ax"\n\n')
+        file_descriptor.write(".global get_active_hart_mask\n")
+        file_descriptor.write("get_active_hart_mask:\n\n")
+        active_hart_mask = 1  # hart 0 is active by default.
+        if 'active_hart_mask' in self.memory_map:
+            active_hart_mask = int(self.memory_map['active_hart_mask'], 2)
+        file_descriptor.write(f"   li a0, {active_hart_mask}\n")
+        file_descriptor.write(f"   ret\n\n\n")
+
     def generate_page_table_functions(self, file_descriptor):
         file_descriptor.write(
             f"# SATP.Mode is {self.memory_map['satp_mode']}\n\n")
@@ -805,6 +815,7 @@ class MemoryMap:
             file.write("#include \"jumpstart_defines.h\"\n\n")
 
             self.generate_start_test_in_machine_mode_function(file)
+            self.generate_get_active_hart_mask_function(file)
             self.generate_page_table_functions(file)
             self.generate_pmarr_functions(file)
 

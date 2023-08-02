@@ -242,3 +242,12 @@ jump_to_function_in_umode:
 
   # We shouldn't come back here.
   wfi
+
+
+.section .jumpstart.data.privileged, "aw"
+
+.global hart_status_tracker
+hart_status_tracker:
+  .rept MAX_NUM_HARTS_SUPPORTED
+      .byte HART_INACTIVE
+  .endr

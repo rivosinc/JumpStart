@@ -8,8 +8,53 @@
 
 .global machine_mode_return_point
 machine_mode_return_point:
-
   # a0 will contain diag pass/fail status.
+
+  # Store pass/fail status into the hart status tracker.
+  csrr t0, mhartid
+  la t1, hart_status_tracker
+  add t1, t1, t0
+  sb a0, 0(t1)
+
+  # Have all the secondary harts wait on the wfi.
+  # the primary hart will go through the exit routine.
+  li t1, PRIMARY_HART_ID
+  bne t0, t1, just_wfi
+
+  # Check the status of all the active harts.
+  # a0: Active hart mask. Gets shifted right as we check each hart.
+  # t0: hart_status_tracker address
+  # t1: Hart id of the current hart we're checking status of.
+  jal get_active_hart_mask
+  la t0, hart_status_tracker
+  li t1, 0x0
+
+check_hart_status_loop:
+  andi t6, a0, 0x1
+  beqz t6, done_with_current_hart
+
+  # Active core, check it's pass/fail status.
+  add t5, t0, t1 # pointer to the hart's status
+
+  li t6, HART_INACTIVE
+wait_for_inactive_hart_loop:
+  lb t4, 0(t5)
+  beq t4, t6, wait_for_inactive_hart_loop
+
+  li t6, HART_RUNNING
+wait_for_running_hart_loop:
+  lb t4, 0(t5)
+  beq t4, t6, wait_for_running_hart_loop
+
+  li t6, DIAG_PASSED
+  bne t4, t6, jumpstart_fail
+
+done_with_current_hart:
+  srli a0, a0, 1
+  addi t1, t1, 1
+  bnez a0, check_hart_status_loop
+
+  # All harts have passed, we're done.
   li t1, DIAG_PASSED
   bne a0, t1, jumpstart_fail
 
@@ -21,7 +66,6 @@ jumpstart_fail:
   li s1, SPIKE_RUN_FAILED
 
 1:
-  # We expect to be in machine mode at this point.
 
   li     t0, UC_END_OF_SIM_MAGIC_ADDRESS
   csrw   pmarr_base_0, t0
@@ -63,6 +107,7 @@ loop_magic_store:
   lui x0, 0xdeadb
 
   # 4. In WFI
+just_wfi:
   wfi
 
 .align PAGE_OFFSET, 0x0

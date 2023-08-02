@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: LicenseRef-Rivos-Internal-Only
 
-max_num_cpus_supported: 4
+max_num_harts_supported: 4
 
 # Hard limits on how many pages the jumsptart infrastructure itself will occupy.
 # Allows us to keep track of infrastructure code size.
@@ -94,10 +94,15 @@ defines:
   IMSIC_S_INTERLEAVE: IMSIC_M_INTERLEAVE
   IMSIC_S_SIZE:       (IMSIC_MMIO_PAGE_SIZE * (GEILEN + 1))
   IMSIC_IPI_ID:       1
-  DIAG_PASSED: 0
-  DIAG_FAILED: 1
+  # Spike unfortunately uses 1 for PASS and 0 for FAIL.
   SPIKE_RUN_PASSED: 1
   SPIKE_RUN_FAILED: 0
+  # These are the various states that a hart can be in.
+  DIAG_PASSED: 0
+  DIAG_FAILED: 1
+  HART_RUNNING: 2
+  HART_INACTIVE: 3
+  PRIMARY_HART_ID: 0
 
 syscall_numbers:
   - SYSCALL_RETURN_TO_SUPERVISOR_MODE

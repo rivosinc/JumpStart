@@ -102,6 +102,19 @@ By default, `main()` will be called in S-mode. To enter `main()` in M-mode, set 
 Diags can use the `run_function_in_user_mode()` API to run specific functions in user mode. The sections containing U-mode code have to be tagged with the `umode` attribute in the Memory Map in the Attributes file.
 Refer to `test002` and `test011` as examples for writing U-mode tests.
 
+### MP diags
+
+The active harts in a diag are indicated by setting the `active_hart_mask` bitmask in the Attributes file.
+
+```
+active_hart_mask: "0b1111"
+```
+
+By default, this is set to `0b1` to indicate that just 1 hart is active.
+
+**NOTE: Spike takes the number of active cores and not a bitmask so a diag built with non-consecutive harts enabled in the `active_hart_mask` mask cannot be run on Spike.**
+
+
 ### Building Diags
 
 Pass the sources and the attribute file to `meson setup` with the `-Ddiag_memory_map_yaml` and `-Ddiag_sources` build flags:
