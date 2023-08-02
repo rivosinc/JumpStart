@@ -11,8 +11,8 @@ int test_umode(void) __attribute__((section(".text.umode")));
 
 int test_umode(void) {
   if (copy_512_bytes_in_umode() != 0) {
-    return 1;
+    return DIAG_FAILED;
   }
 
-  return 0;
+  return DIAG_PASSED;
 }

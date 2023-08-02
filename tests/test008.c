@@ -28,9 +28,9 @@ int main(void) {
   asm volatile("wfi");
 
   if (irq_var != 1)
-    return 1;
+    return DIAG_FAILED;
 
   imsic_id_disable(IMSIC_IPI_ID);
   imsic_fini();
-  return 0;
+  return DIAG_PASSED;
 }

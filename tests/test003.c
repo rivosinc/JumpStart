@@ -15,5 +15,5 @@ int main(void) {
 
   test003_illegal_instruction_function();
 
-  return 0;
+  return DIAG_PASSED;
 }

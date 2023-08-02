@@ -17,6 +17,7 @@ jumpstart_tests = [
   ['test009', 'Jump to main() in machine mode and exit.'],
   ['test010', 'Override default M-mode start address.'],
   ['test011', 'Handle user mode exceptions in supervisor mode.'],
+  ['test012', 'Exit with DIAG_FAILED to test fail path.', '', true],
 ]
 
 spike = find_program('spike', required : true)
@@ -26,6 +27,8 @@ foreach jumpstart_test : jumpstart_tests
   test_description = jumpstart_test.get(1)
 
   spike_additional_arguments = jumpstart_test.get(2, '')
+
+  test_should_fail = jumpstart_test.get(3, false)
 
   memory_map_file = meson.current_source_dir() + '/' + test_prefix +'.memory_map.yaml'
 
@@ -75,6 +78,7 @@ foreach jumpstart_test : jumpstart_tests
   test(test_prefix + ' 🧪 ' + test_description,
         spike,
         args : [spike_args, test_exe],
-        suite:'basic')
+        suite:'basic',
+        should_fail: test_should_fail)
 
 endforeach

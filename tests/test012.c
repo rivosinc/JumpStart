@@ -4,10 +4,8 @@
 
 #include "jumpstart_functions.h"
 
-void hwp_ampm_diag(void);
+__attribute__((const)) int main(void);
 
 int main(void) {
-  hwp_ampm_diag();
-
-  return DIAG_PASSED;
+  return DIAG_FAILED;
 }

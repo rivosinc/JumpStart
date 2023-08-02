@@ -21,7 +21,7 @@ int main(void) {
       (uint64_t)dest_area_end_ptr - (uint64_t)dest_area_ptr;
 
   if (source_area_size != dest_area_size) {
-    return 1;
+    return DIAG_FAILED;
   }
 
   for (uint32_t i = 0; (&source_area_ptr[i]) < source_area_end_ptr; ++i) {
@@ -30,9 +30,9 @@ int main(void) {
 
   for (uint32_t i = 0; (&source_area_ptr[i]) < source_area_end_ptr; ++i) {
     if (dest_area_ptr[i] != source_area_ptr[i]) {
-      return 1;
+      return DIAG_FAILED;
     }
   }
 
-  return 0;
+  return DIAG_PASSED;
 }

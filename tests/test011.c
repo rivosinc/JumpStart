@@ -20,17 +20,17 @@ static void test011_exception_handler(void) {
 
 int main(void) {
   if (get_thread_attributes_hart_id_from_supervisor_mode() != 0) {
-    return 1;
+    return DIAG_FAILED;
   }
 
   if (get_thread_attributes_bookend_magic_number_from_supervisor_mode() !=
       THREAD_ATTRIBUTES_BOOKEND_MAGIC_NUMBER_VALUE) {
-    return 1;
+    return DIAG_FAILED;
   }
 
   if (get_thread_attributes_current_mode_from_supervisor_mode() !=
       SUPERVISOR_MODE_ENCODING) {
-    return 1;
+    return DIAG_FAILED;
   }
 
   register_trap_handler_override(SUPERVISOR_MODE_ENCODING,
@@ -38,12 +38,12 @@ int main(void) {
                                  (uint64_t)(&test011_exception_handler));
 
   if (run_function_in_user_mode(test_illegal_instruction_in_umode) != 0) {
-    return 1;
+    return DIAG_FAILED;
   }
 
   if (excep_rcvd != 0xabcdabcd) {
-    return 1;
+    return DIAG_FAILED;
   }
 
-  return 0;
+  return DIAG_PASSED;
 }

@@ -9,18 +9,16 @@
 .global machine_mode_return_point
 machine_mode_return_point:
 
-  # On the return from supervisor mode, a0 will contain 0 for PASS
-  # and non-zero for FAIL.
-  # This is the inverse of the Spike/RTL exit condition so flip this.
-  bnez a0, jumpstart_fail
+  # a0 will contain diag pass/fail status.
+  li t1, DIAG_PASSED
+  bne a0, t1, jumpstart_fail
 
-  li s1, 1
+  li s1, SPIKE_RUN_PASSED
   j 1f
 
 .global jumpstart_fail
 jumpstart_fail:
-  # exit code of 0 indicates FAIL.
-  li s1, 0
+  li s1, SPIKE_RUN_FAILED
 
 1:
   # We expect to be in machine mode at this point.
