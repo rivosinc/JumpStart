@@ -59,7 +59,7 @@ _machine_start:
   csrr  t0, mhartid
 
   # Make sure that this hart should be active.
-  jal get_active_hart_mask
+  jal get_active_hart_mask_from_machine_mode
   li t1, 1
   sll t1, t1, t0
   and a0, a0, t1

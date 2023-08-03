@@ -66,4 +66,7 @@ uint8_t get_thread_attributes_hart_id_from_machine_mode(void);
 uint64_t get_diag_satp_ppn_from_supervisor_mode(void);
 uint8_t get_diag_satp_mode_from_supervisor_mode(void);
 
+uint64_t get_active_hart_mask_from_supervisor_mode(void);
+uint64_t get_active_hart_mask_from_machine_mode(void);
+
 void jumpstart_supervisor_fail(void);

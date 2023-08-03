@@ -25,7 +25,7 @@ machine_mode_return_point:
   # a0: Active hart mask. Gets shifted right as we check each hart.
   # t0: hart_status_tracker address
   # t1: Hart id of the current hart we're checking status of.
-  jal get_active_hart_mask
+  jal get_active_hart_mask_from_machine_mode
   la t0, hart_status_tracker
   li t1, 0x0
 

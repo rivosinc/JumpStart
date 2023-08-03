@@ -720,14 +720,22 @@ class MemoryMap:
         file_descriptor.write(f"   ret\n\n\n")
 
     def generate_get_active_hart_mask_function(self, file_descriptor):
-        file_descriptor.write('.section .jumpstart.text.machine, "ax"\n\n')
-        file_descriptor.write(".global get_active_hart_mask\n")
-        file_descriptor.write("get_active_hart_mask:\n\n")
-        active_hart_mask = 1  # hart 0 is active by default.
-        if 'active_hart_mask' in self.memory_map:
-            active_hart_mask = int(self.memory_map['active_hart_mask'], 2)
-        file_descriptor.write(f"   li a0, {active_hart_mask}\n")
-        file_descriptor.write(f"   ret\n\n\n")
+        modes = ['machine', 'supervisor']
+        for mode in modes:
+            file_descriptor.write(f'.section .jumpstart.text.{mode}, "ax"\n\n')
+            file_descriptor.write(
+                f".global get_active_hart_mask_from_{mode}_mode\n")
+            file_descriptor.write(
+                f"get_active_hart_mask_from_{mode}_mode:\n\n")
+            active_hart_mask = 1  # hart 0 is active by default.
+            if 'active_hart_mask' in self.memory_map:
+                active_hart_mask = int(self.memory_map['active_hart_mask'], 2)
+
+            assert (active_hart_mask.bit_count() <=
+                    self.jumpstart_attributes['max_num_harts_supported'])
+
+            file_descriptor.write(f"   li a0, {active_hart_mask}\n")
+            file_descriptor.write(f"   ret\n\n\n")
 
     def generate_page_table_functions(self, file_descriptor):
         file_descriptor.write(
