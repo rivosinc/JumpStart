@@ -6,6 +6,8 @@ satp_mode: "sv39"
 
 max_num_pages_for_PT_allocation: 8
 
+active_hart_mask: "0b1111"
+
 mappings:
   -
     va: 0x80000000
@@ -28,6 +30,6 @@ mappings:
     pa: 0x40000000
     xwr: "0b011"
     page_size: 0x1000
-    num_pages: 8
+    num_pages: 32
     pbmt_mode: "io"
     pmarr_memory_type: "uc"
