@@ -2,10 +2,14 @@
 #
 # SPDX-License-Identifier: LicenseRef-Rivos-Internal-Only
 
+option('diag_name',
+       type : 'string',
+       value : 'jumpstart_diag.elf',
+       description : 'Name of the diag binary.')
+
 option('diag_sources',
        type : 'array',
        description : 'C and assembly sources for the directed diag.')
-
 
 option('diag_memory_map_yaml',
        type : 'string',

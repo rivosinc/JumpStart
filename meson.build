@@ -38,6 +38,7 @@ jumpstart_sources += data_structures_generator_output
 jumpstart_includes = include_directories('.')
 
 memory_map_tools_script = meson.current_source_dir() + '/scripts/memory_map_tools.py'
+
 diag_sources = get_option('diag_sources')
 diag_memory_map_yaml = get_option('diag_memory_map_yaml')
 
@@ -62,7 +63,9 @@ if diag_memory_map_yaml != '' and diag_sources.length() > 0
 
   diag_sources = [pagetable_s, diag_sources]
 
-  diag_exe = executable('diag',
+  diag_name = get_option('diag_name')
+
+  diag_exe = executable(diag_name,
                         sources: [jumpstart_sources, diag_sources],
                         include_directories: jumpstart_includes,
                         c_args: default_c_args_list,
