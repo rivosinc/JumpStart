@@ -108,13 +108,13 @@ Pass the sources and the attribute file to `meson setup` with the `-Ddiag_memory
 
 
 ```
-meson setup builddir --cross-file cross-file.txt --buildtype release -Ddiag_memory_map_yaml=<PATH_TO_MEMORY_MAP_YAML> -Ddiag_sources=<COMMA SEPARATED LIST OF SOURCE FILES>
+meson setup builddir --cross-file cross-file.txt --buildtype release -Ddiag_memory_map_yaml=<PATH_TO_MEMORY_MAP_YAML> -Ddiag_sources=<COMMA SEPARATED LIST OF SOURCE FILES> -Ddiag_name=<DIAG NAME>
 meson compile -C builddir
 ```
 
 Example:
 ```
-meson setup builddir --cross-file cross-file.txt --buildtype release -Ddiag_memory_map_yaml=(pwd)/tests/test000.memory_map.yaml -Ddiag_sources=(pwd)/tests/test000.c
+meson setup builddir --cross-file cross-file.txt --buildtype release -Ddiag_memory_map_yaml=(pwd)/tests/test000.memory_map.yaml -Ddiag_sources=(pwd)/tests/test000.c -Ddiag_name=my_jumpstart_diag
 meson compile -C builddir
 ```
 
