@@ -45,18 +45,29 @@ diag_memory_map_yaml = get_option('diag_memory_map_yaml')
 default_c_args_list = ['-march=' + get_option('gcc_march_string')]
 
 if diag_memory_map_yaml != '' and diag_sources.length() > 0
+  memory_map_tools_command = [prog_python,
+                              '@INPUT0@',
+                              '--memory_map', '@INPUT1@',
+                              '--attributes_yaml', '@INPUT2@',
+                              '--output_assembly_file', '@OUTPUT0@',
+                              '--output_linker_script', '@OUTPUT1@',
+                              ]
+
+  diag_attribute_overrides = get_option('diag_attribute_overrides')
+  if diag_attribute_overrides.length() > 0
+    memory_map_tools_command += ['--override_test_attributes']
+
+    foreach override : diag_attribute_overrides
+      memory_map_tools_command += [override]
+    endforeach
+  endif
+
   memory_map_tools_output = custom_target(
                                 'Generate memory map related source files for build',
                                 input : [memory_map_tools_script, diag_memory_map_yaml, data_structures_yaml],
                                 output : ['memory_attributes.S',
                                           'linker_script.ld'],
-                                command : [prog_python,
-                                          '@INPUT0@',
-                                          '--memory_map', '@INPUT1@',
-                                          '--attributes_yaml', '@INPUT2@',
-                                          '--output_assembly_file', '@OUTPUT0@',
-                                          '--output_linker_script', '@OUTPUT1@',
-                                          ])
+                                command : memory_map_tools_command)
 
   pagetable_s = memory_map_tools_output[0]
   linker_script = memory_map_tools_output[1].full_path()

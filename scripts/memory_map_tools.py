@@ -230,7 +230,8 @@ class MemoryMap:
     pt_attributes = PageTableAttributes()
     num_guard_pages_generated = 0
 
-    def __init__(self, memory_map_file, attributes_yaml):
+    def __init__(self, memory_map_file, attributes_yaml,
+                 override_test_attributes):
         if os.path.exists(memory_map_file) is False:
             raise Exception(
                 f"Memory map file {memory_map_file} does not exist")
@@ -239,6 +240,16 @@ class MemoryMap:
 
         with open(memory_map_file, "r") as f:
             self.memory_map = yaml.safe_load(f)
+
+        # Check if the command line is overriding any of the test attributes.
+        if override_test_attributes is not None:
+            for override in override_test_attributes:
+                attribute_name = override.split("=")[0]
+                attribute_value = override.split("=")[1]
+                self.memory_map[attribute_name] = attribute_value
+                log.warning(
+                    f"Command line overriding {attribute_name} with {attribute_value}."
+                )
 
         if 'max_num_pages_for_PT_allocation' in self.memory_map:
             self.pt_attributes.max_num_pages_for_PT_allocation = self.memory_map[
@@ -929,6 +940,11 @@ def main():
                         help='Linker script to generate',
                         required=False,
                         type=str)
+    parser.add_argument('--override_test_attributes',
+                        help='Overrides the specified test attributes.',
+                        required=False,
+                        nargs='+',
+                        default=None)
     parser.add_argument('--translate_VA',
                         help='Translate the given VA to PA',
                         required=False,
@@ -947,7 +963,8 @@ def main():
         log.basicConfig(format="%(levelname)s: [%(threadName)s]: %(message)s",
                         level=log.INFO)
 
-    pagetables = MemoryMap(args.memory_map_file, args.attributes_yaml)
+    pagetables = MemoryMap(args.memory_map_file, args.attributes_yaml,
+                           args.override_test_attributes)
 
     if args.output_assembly_file is not None:
         pagetables.generate_assembly_file(args.output_assembly_file)
