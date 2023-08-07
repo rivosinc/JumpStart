@@ -20,8 +20,17 @@ jumpstart_umode_data_page_counts:
   num_pages_for_stack: 4
   num_pages_for_data_section: 1
 
-rcode_start_address: 0x06000000
-machine_mode_start_address: 0x7f800000
+
+# These attributes can be overriden by the test attributes file or
+# at build time.
+test_attributes:
+  start_test_in_machine_mode: false
+  max_num_pages_for_PT_allocation: 3
+  machine_mode_start_address: 0x7f800000
+  rcode_start_address: 0x06000000
+  active_hart_mask: '0b1'
+  satp_mode: 'sv39'
+  mappings: null
 
 c_structs:
   thread_attributes:
