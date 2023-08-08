@@ -28,7 +28,7 @@ meson test -C builddir
 
 ## Writing and Building Diags
 
-The Jumpstart [`tests/`](tests) are a good reference on writing diags. This [file](tests/meson.build) has the list of tests and a description of each of them.
+The Jumpstart [`Unit Tests`](tests) are a good reference on writing diags. This [file](tests/meson.build) has the list of unit tests and a description of each of them.
 
 Jumpstart provides a set of basic API functions that help with writing diags. These are listed in [jumpstart_functions.h](jumpstart_functions.h).
 
@@ -43,7 +43,7 @@ For example, `test003` has:
   * [test003.c](tests/test003.c)
   * [test003.S](tests/test003.S)
 * Test Attribute File:
-  * [test003.memory_map.yaml](tests/test003.memory_map.yaml)
+  * [test003.test_attributes.yaml](tests/test003.test_attributes.yaml)
 
 ### Test Attributes File
 
@@ -99,7 +99,7 @@ specifies the 4 sections of a diag as well as their VA, page protection attribut
 
 Jumpstart will initialize the system and jump to the diag `main()`.
 
-By default, `main()` will be called in S-mode. To enter `main()` in M-mode, set the `start_test_in_machine_mode` attribute to `True` in the Attribute file (See [test009's Attribute File](tests/test009.memory_map.yaml) for an example).
+By default, `main()` will be called in S-mode. To enter `main()` in M-mode, set the `start_test_in_machine_mode` attribute to `True` in the Attribute file (See [test009's Attribute File](tests/test009.test_attributes.yaml) for an example).
 
 Diags can use the `run_function_in_user_mode()` API to run specific functions in user mode. The sections containing U-mode code have to be tagged with the `umode` attribute in the Memory Map in the Attributes file.
 Refer to `test002` and `test011` as examples for writing U-mode tests.
@@ -119,17 +119,17 @@ active_hart_mask: "0b1111"
 
 ### Building Diags
 
-Pass the sources and the attribute file to `meson setup` with the `-Ddiag_memory_map_yaml`, `-Ddiag_name` and `-Ddiag_sources` build flags:
+Pass the sources and the attribute file to `meson setup` with the `-Ddiag_attributes_yaml`, `-Ddiag_name` and `-Ddiag_sources` build flags:
 
 
 ```
-meson setup builddir --cross-file cross-file.txt --buildtype release -Ddiag_memory_map_yaml=<PATH_TO_MEMORY_MAP_YAML> -Ddiag_sources=<COMMA SEPARATED LIST OF SOURCE FILES> -Ddiag_name=<DIAG NAME>
+meson setup builddir --cross-file cross-file.txt --buildtype release -Ddiag_attributes_yaml=<PATH_TO_TEST_ATTRIBUTES_YAML> -Ddiag_sources=<COMMA SEPARATED LIST OF SOURCE FILES> -Ddiag_name=<DIAG NAME>
 meson compile -C builddir
 ```
 
 Example:
 ```
-meson setup builddir --cross-file cross-file.txt --buildtype release -Ddiag_memory_map_yaml=(pwd)/tests/test000.memory_map.yaml -Ddiag_sources=(pwd)/tests/test000.c -Ddiag_name=my_jumpstart_diag
+meson setup builddir --cross-file cross-file.txt --buildtype release -Ddiag_attributes_yaml=(pwd)/tests/test000.test_attributes.yaml -Ddiag_sources=(pwd)/tests/test000.c -Ddiag_name=my_jumpstart_diag
 meson compile -C builddir
 ```
 

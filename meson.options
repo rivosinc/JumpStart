@@ -11,10 +11,10 @@ option('diag_sources',
        type : 'array',
        description : 'C and assembly sources for the directed diag.')
 
-option('diag_memory_map_yaml',
+option('diag_attributes_yaml',
        type : 'string',
        value : '',
-       description : 'Memory map of the directed diag.')
+       description : 'Attributes of the directed diag.')
 
 option('diag_attribute_overrides',
        type : 'array',

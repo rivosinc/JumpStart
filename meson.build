@@ -18,61 +18,60 @@ add_project_arguments('-Wno-c++-compat',
 
 prog_python = find_program('python3')
 
-data_structures_generation_script = meson.current_source_dir() + '/scripts/generate_data_structures.py'
-data_structures_yaml = meson.current_source_dir() + '/jumpstart_data_structures.yaml'
+jumpstart_includes = include_directories('.')
 
-data_structures_generator_output = custom_target(
-                                    'Generate the data structures for build',
-                                    input : [data_structures_generation_script, data_structures_yaml],
-                                    output: ['jumpstart_defines.h', 'jumpstart_data_structures.h', 'thread_attributes.S'],
+jumpstart_source_generator = meson.current_source_dir() + '/scripts/generate_jumpstart_sources.py'
+jumpstart_source_attributes_yaml = meson.current_source_dir() + '/jumpstart_source_attributes.yaml'
+
+jumpstart_source_generator_output = custom_target(
+                                    'Generate jumpstart sources for build',
+                                    input : [jumpstart_source_generator, jumpstart_source_attributes_yaml],
+                                    output: ['jumpstart_defines.h', 'jumpstart_data_structures.h', 'jumpstart_data_structures.S'],
                                     command: [prog_python,
                                               '@INPUT0@',
-                                              '--assembly_file', '@OUTPUT2@',
-                                              '--data_structures_file', '@OUTPUT1@',
                                               '--defines_file', '@OUTPUT0@',
-                                              '--attributes_yaml', '@INPUT1@',
+                                              '--data_structures_file', '@OUTPUT1@',
+                                              '--assembly_file', '@OUTPUT2@',
+                                              '--jumpstart_source_attributes_yaml', '@INPUT1@',
                                               ])
 
 jumpstart_sources = files('jumpstart_functions.c', 'start.S', 'end.S', 'jumpstart_functions.S', 'jumpstart_uart.c', 'jumpstart_imsic.c', 'string.c')
-jumpstart_sources += data_structures_generator_output
-jumpstart_includes = include_directories('.')
+jumpstart_sources += jumpstart_source_generator_output
 
-memory_map_tools_script = meson.current_source_dir() + '/scripts/memory_map_tools.py'
+diag_source_generator = meson.current_source_dir() + '/scripts/generate_diag_sources.py'
 
 diag_sources = get_option('diag_sources')
-diag_memory_map_yaml = get_option('diag_memory_map_yaml')
+diag_attributes_yaml = get_option('diag_attributes_yaml')
 
 default_c_args_list = ['-march=' + get_option('gcc_march_string')]
 
-if diag_memory_map_yaml != '' and diag_sources.length() > 0
-  memory_map_tools_command = [prog_python,
-                              '@INPUT0@',
-                              '--memory_map', '@INPUT1@',
-                              '--attributes_yaml', '@INPUT2@',
-                              '--output_assembly_file', '@OUTPUT0@',
-                              '--output_linker_script', '@OUTPUT1@',
-                              ]
+if diag_attributes_yaml != '' and diag_sources.length() > 0
+  diag_source_generator_command = [prog_python,
+                                      '@INPUT0@',
+                                      '--diag_attributes_yaml', '@INPUT1@',
+                                      '--jumpstart_source_attributes_yaml', '@INPUT2@',
+                                      '--output_assembly_file', '@OUTPUT0@',
+                                      '--output_linker_script', '@OUTPUT1@',
+                                      ]
 
   diag_attribute_overrides = get_option('diag_attribute_overrides')
   if diag_attribute_overrides.length() > 0
-    memory_map_tools_command += ['--override_test_attributes']
+    diag_source_generator_command += ['--override_diag_attributes']
 
     foreach override : diag_attribute_overrides
-      memory_map_tools_command += [override]
+      diag_source_generator_command += [override]
     endforeach
   endif
 
-  memory_map_tools_output = custom_target(
-                                'Generate memory map related source files for build',
-                                input : [memory_map_tools_script, diag_memory_map_yaml, data_structures_yaml],
-                                output : ['memory_attributes.S',
+  diag_source_generator_output = custom_target(
+                                'Generate diag attributes related source files for build',
+                                input : [diag_source_generator, diag_attributes_yaml, jumpstart_source_attributes_yaml],
+                                output : ['generated_diag_source.S',
                                           'linker_script.ld'],
-                                command : memory_map_tools_command)
+                                command : diag_source_generator_command)
 
-  pagetable_s = memory_map_tools_output[0]
-  linker_script = memory_map_tools_output[1].full_path()
-
-  diag_sources = [pagetable_s, diag_sources]
+  diag_sources += diag_source_generator_output[0]
+  linker_script = diag_source_generator_output[1].full_path()
 
   diag_name = get_option('diag_name')
 
@@ -83,7 +82,7 @@ if diag_memory_map_yaml != '' and diag_sources.length() > 0
                         link_args: ['-T' + linker_script, '-nostdlib'])
 else
 
-  # Don't build the tests if we're building a directed diag.
+  # Don't build the tests if we're building a diag.
   subdir('tests')
 
 endif

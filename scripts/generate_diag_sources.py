@@ -4,6 +4,8 @@
 #
 # SPDX-License-Identifier: LicenseRef-Rivos-Internal-Only
 
+# Generates the diag source files based on the diag attributes file.
+
 import argparse
 import enum
 import logging as log
@@ -225,85 +227,96 @@ class PmarrRegion:
         file_descriptor.write(f"   csrw pmarr_mask_{reg_id}, t0\n\n")
 
 
-class MemoryMap:
+class DiagAttributes:
     pt_attributes = PageTableAttributes()
     num_guard_pages_generated = 0
 
-    def __init__(self, test_attributes_file, attributes_yaml,
-                 override_test_attributes):
-        self.test_attributes_file = test_attributes_file
+    def __init__(self, jumpstart_source_attributes_yaml, diag_attributes_yaml,
+                 override_diag_attributes):
+        self.diag_attributes_yaml = diag_attributes_yaml
 
-        with open(test_attributes_file, "r") as f:
-            test_attributes = yaml.safe_load(f)
+        with open(diag_attributes_yaml, "r") as f:
+            diag_attributes = yaml.safe_load(f)
 
-        with open(attributes_yaml, "r") as f:
-            self.jumpstart_attributes = yaml.safe_load(f)
+        with open(jumpstart_source_attributes_yaml, "r") as f:
+            self.jumpstart_source_attributes = yaml.safe_load(f)
 
-        # Override the default test attribute values with the values
-        # specified by the test.
-        for key in test_attributes.keys():
-            if key not in self.jumpstart_attributes['test_attributes']:
-                log.error(f"Unknown test attribute {key}")
+        # Override the default diag attribute values with the values
+        # specified by the diag.
+        for key in diag_attributes.keys():
+            if key not in self.jumpstart_source_attributes['diag_attributes']:
+                log.error(f"Unknown diag attribute {key}")
                 sys.exit(1)
-            self.jumpstart_attributes['test_attributes'][
-                key] = test_attributes[key]
+            self.jumpstart_source_attributes['diag_attributes'][
+                key] = diag_attributes[key]
 
-        # Override the test attributes with the values specified on the
+        # Override the diag attributes with the values specified on the
         # command line.
-        if override_test_attributes is not None:
-            for override in override_test_attributes:
+        if override_diag_attributes is not None:
+            for override in override_diag_attributes:
                 attribute_name = override.split("=")[0]
                 attribute_value = override.split("=")[1]
-                self.jumpstart_attributes['test_attributes'][
+                self.jumpstart_source_attributes['diag_attributes'][
                     attribute_name] = attribute_value
                 log.warning(
                     f"Command line overriding {attribute_name} with {attribute_value}."
                 )
 
-        self.jumpstart_attributes['test_attributes']['mappings'] = sorted(
-            self.jumpstart_attributes['test_attributes']['mappings'],
-            key=lambda x: x['va'],
-            reverse=False)
+        self.jumpstart_source_attributes['diag_attributes'][
+            'mappings'] = sorted(
+                self.jumpstart_source_attributes['diag_attributes']
+                ['mappings'],
+                key=lambda x: x['va'],
+                reverse=False)
 
-        self.sanity_check_test_attributes()
+        self.sanity_check_diag_attributes()
 
-        # Add a guard page between the test sections and the jumpstart infrastructure sections.
-        self.jumpstart_attributes['test_attributes'][
+        # Add a guard page between the diag sections and the jumpstart infrastructure sections.
+        self.jumpstart_source_attributes['diag_attributes'][
             'mappings'] = self.add_guard_page_to_mappings(
-                self.jumpstart_attributes['test_attributes']['mappings'])
+                self.jumpstart_source_attributes['diag_attributes']
+                ['mappings'])
 
-        self.jumpstart_attributes['test_attributes'][
+        self.jumpstart_source_attributes['diag_attributes'][
             'mappings'] = self.add_jumpstart_umode_text_section_to_mappings(
-                self.jumpstart_attributes['test_attributes']['mappings'])
-        self.jumpstart_attributes['test_attributes'][
+                self.jumpstart_source_attributes['diag_attributes']
+                ['mappings'])
+        self.jumpstart_source_attributes['diag_attributes'][
             'mappings'] = self.add_jumpstart_umode_data_section_to_mappings(
-                self.jumpstart_attributes['test_attributes']['mappings'])
+                self.jumpstart_source_attributes['diag_attributes']
+                ['mappings'])
 
-        self.jumpstart_attributes['test_attributes'][
+        self.jumpstart_source_attributes['diag_attributes'][
             'mappings'] = self.add_bss_and_rodata_sections_to_mappings(
-                self.jumpstart_attributes['test_attributes']['mappings'])
-        self.jumpstart_attributes['test_attributes'][
+                self.jumpstart_source_attributes['diag_attributes']
+                ['mappings'])
+        self.jumpstart_source_attributes['diag_attributes'][
             'mappings'] = self.add_jumpstart_supervisor_text_section_to_mappings(
-                self.jumpstart_attributes['test_attributes']['mappings'])
-        self.jumpstart_attributes['test_attributes'][
+                self.jumpstart_source_attributes['diag_attributes']
+                ['mappings'])
+        self.jumpstart_source_attributes['diag_attributes'][
             'mappings'] = self.add_jumpstart_privileged_data_section_to_mappings(
-                self.jumpstart_attributes['test_attributes']['mappings'])
-        self.jumpstart_attributes['test_attributes'][
+                self.jumpstart_source_attributes['diag_attributes']
+                ['mappings'])
+        self.jumpstart_source_attributes['diag_attributes'][
             'mappings'] = self.add_guard_page_to_mappings(
-                self.jumpstart_attributes['test_attributes']['mappings'])
+                self.jumpstart_source_attributes['diag_attributes']
+                ['mappings'])
 
         self.create_pagetables()
         self.create_pmarr_regions()
 
-    def sanity_check_test_attributes(self):
-        assert ('satp_mode' in self.jumpstart_attributes['test_attributes'])
-        assert (self.jumpstart_attributes['test_attributes']['satp_mode']
-                in self.pt_attributes.mode_attributes)
+    def sanity_check_diag_attributes(self):
+        assert ('satp_mode'
+                in self.jumpstart_source_attributes['diag_attributes'])
+        assert (
+            self.jumpstart_source_attributes['diag_attributes']['satp_mode']
+            in self.pt_attributes.mode_attributes)
 
         # check that the memory mappings don't overlap
         # the mappings are sorted by the virtual address at this point.
         last_region_end_address = 0
-        for mapping in self.jumpstart_attributes['test_attributes'][
+        for mapping in self.jumpstart_source_attributes['diag_attributes'][
                 'mappings']:
             if mapping['va'] < last_region_end_address:
                 log.error(
@@ -318,17 +331,17 @@ class MemoryMap:
         self.pmarr_regions = []
 
         # Use PMARR_0 to handle the jumpstart M-mode region. This region
-        # doesn't show up in the test_attribute['mappings'] so explicitly add it
+        # doesn't show up in the diag_attribute['mappings'] so explicitly add it
         # to the pmarr_regions.
         pmarr_0_region = PmarrRegion(
-            self.jumpstart_attributes['test_attributes']
+            self.jumpstart_source_attributes['diag_attributes']
             ['machine_mode_start_address'],
-            self.jumpstart_attributes['test_attributes']
+            self.jumpstart_source_attributes['diag_attributes']
             ['machine_mode_start_address'] + PmarrAttributes.minimum_size,
             "wb")
         self.pmarr_regions.append(pmarr_0_region)
 
-        for mapping in self.jumpstart_attributes['test_attributes'][
+        for mapping in self.jumpstart_source_attributes['diag_attributes'][
                 'mappings']:
             if 'pmarr_memory_type' not in mapping:
                 log.error("pmarr_memory_type is not specified in the mapping")
@@ -384,9 +397,9 @@ class MemoryMap:
 
     def add_jumpstart_supervisor_text_section_to_mappings(self, mappings):
         num_jumpstart_text_pages = 0
-        for page_count in self.jumpstart_attributes[
+        for page_count in self.jumpstart_source_attributes[
                 'jumpstart_supervisor_text_page_counts']:
-            num_jumpstart_text_pages += self.jumpstart_attributes[
+            num_jumpstart_text_pages += self.jumpstart_source_attributes[
                 'jumpstart_supervisor_text_page_counts'][page_count]
         updated_mappings = self.add_to_mappings(mappings, "0b101", "0b0",
                                                 num_jumpstart_text_pages, 'wb',
@@ -395,9 +408,9 @@ class MemoryMap:
 
     def add_jumpstart_privileged_data_section_to_mappings(self, mappings):
         num_jumpstart_data_pages = 0
-        for page_count in self.jumpstart_attributes[
+        for page_count in self.jumpstart_source_attributes[
                 'jumpstart_privileged_data_page_counts']:
-            num_jumpstart_data_pages += self.jumpstart_attributes[
+            num_jumpstart_data_pages += self.jumpstart_source_attributes[
                 'jumpstart_privileged_data_page_counts'][page_count]
 
         updated_mappings = self.add_to_mappings(mappings, "0b011", "0b0",
@@ -414,9 +427,9 @@ class MemoryMap:
 
     def add_jumpstart_umode_text_section_to_mappings(self, mappings):
         num_jumpstart_text_pages = 0
-        for page_count in self.jumpstart_attributes[
+        for page_count in self.jumpstart_source_attributes[
                 'jumpstart_umode_text_page_counts']:
-            num_jumpstart_text_pages += self.jumpstart_attributes[
+            num_jumpstart_text_pages += self.jumpstart_source_attributes[
                 'jumpstart_umode_text_page_counts'][page_count]
         updated_mappings = self.add_to_mappings(mappings, "0b101", "0b1",
                                                 num_jumpstart_text_pages, 'wb',
@@ -425,9 +438,9 @@ class MemoryMap:
 
     def add_jumpstart_umode_data_section_to_mappings(self, mappings):
         num_jumpstart_data_pages = 0
-        for page_count in self.jumpstart_attributes[
+        for page_count in self.jumpstart_source_attributes[
                 'jumpstart_umode_data_page_counts']:
-            num_jumpstart_data_pages += self.jumpstart_attributes[
+            num_jumpstart_data_pages += self.jumpstart_source_attributes[
                 'jumpstart_umode_data_page_counts'][page_count]
 
         updated_mappings = self.add_to_mappings(mappings, "0b011", "0b1",
@@ -465,9 +478,10 @@ class MemoryMap:
         if attribute in self.pt_attributes.common_attributes:
             return self.pt_attributes.common_attributes[attribute]
         assert (attribute in self.pt_attributes.mode_attributes[
-            self.jumpstart_attributes['test_attributes']['satp_mode']])
-        return self.pt_attributes.mode_attributes[self.jumpstart_attributes[
-            'test_attributes']['satp_mode']][attribute]
+            self.jumpstart_source_attributes['diag_attributes']['satp_mode']])
+        return self.pt_attributes.mode_attributes[
+            self.jumpstart_source_attributes['diag_attributes']
+            ['satp_mode']][attribute]
 
     def update_pte_region_sparse_memory(self, address, value):
         if address in self.pte_region_sparse_memory:
@@ -519,7 +533,7 @@ class MemoryMap:
     # to allocate from.
     def allocate_PT_mappings(self):
         updated_mappings = self.add_pagetable_section_to_mappings(
-            self.jumpstart_attributes['test_attributes']['mappings'])
+            self.jumpstart_source_attributes['diag_attributes']['mappings'])
 
         for entry in self.split_mappings_at_page_granularity(updated_mappings):
             # TODO: support superpages
@@ -627,10 +641,10 @@ class MemoryMap:
 
             updated_mappings = self.allocate_PT_mappings()
             if updated_mappings == None:
-                if self.num_pages_available_for_PT_allocation >= self.jumpstart_attributes[
-                        'test_attributes']['max_num_pages_for_PT_allocation']:
+                if self.num_pages_available_for_PT_allocation >= self.jumpstart_source_attributes[
+                        'diag_attributes']['max_num_pages_for_PT_allocation']:
                     log.error(
-                        f"Hit max number of PT pages ({self.jumpstart_attributes['test_attributes']['max_num_pages_for_PT_allocation']}) available to create pagetables"
+                        f"Hit max number of PT pages ({self.jumpstart_source_attributes['diag_attributes']['max_num_pages_for_PT_allocation']}) available to create pagetables"
                     )
                     sys.exit(1)
 
@@ -644,7 +658,7 @@ class MemoryMap:
 
         # Update the existing mappings as we've added new mappings
         # for the page table region.
-        self.jumpstart_attributes['test_attributes'][
+        self.jumpstart_source_attributes['diag_attributes'][
             'mappings'] = updated_mappings
 
         # Make sure that we have the first and last addresses set so that we
@@ -668,10 +682,10 @@ class MemoryMap:
     def generate_linker_script(self, output_linker_script):
         with open(output_linker_script, 'w') as file:
             file.write(
-                f"/* This file is auto-generated by {sys.argv[0]} from {self.test_attributes_file} */\n"
+                f"/* This file is auto-generated by {sys.argv[0]} from {self.diag_attributes_yaml} */\n"
             )
             file.write(
-                f"/* SATP.Mode is {self.jumpstart_attributes['test_attributes']['satp_mode']} */\n\n"
+                f"/* SATP.Mode is {self.jumpstart_source_attributes['diag_attributes']['satp_mode']} */\n\n"
             )
             file.write('OUTPUT_ARCH( "riscv" )\n')
             file.write('ENTRY(_rcode_start)\n\n')
@@ -680,7 +694,7 @@ class MemoryMap:
             defined_sections = []
 
             file.write(
-                f"   . = {hex(self.jumpstart_attributes['test_attributes']['rcode_start_address'])};\n"
+                f"   . = {hex(self.jumpstart_source_attributes['diag_attributes']['rcode_start_address'])};\n"
             )
             file.write(f"   .jumpstart.text.rcode : {{\n")
             file.write(f"      *(.jumpstart.text.rcode.init)\n")
@@ -689,7 +703,7 @@ class MemoryMap:
             defined_sections.append(".jumpstart.text.rcode")
 
             file.write(
-                f"   . = {hex(self.jumpstart_attributes['test_attributes']['machine_mode_start_address'])};\n"
+                f"   . = {hex(self.jumpstart_source_attributes['diag_attributes']['machine_mode_start_address'])};\n"
             )
             file.write(f"   .jumpstart.text.machine : {{\n")
             file.write(f"      *(.jumpstart.text.machine.init)\n")
@@ -701,7 +715,7 @@ class MemoryMap:
             # The entries are already sorted by VA
             # we also expect that the pages for the same section
             # are in consecutive order when the VAs are sorted.
-            for entry in self.jumpstart_attributes['test_attributes'][
+            for entry in self.jumpstart_source_attributes['diag_attributes'][
                     'mappings']:
                 if 'linker_script_section' not in entry:
                     # We don't generate linker script sections for entries
@@ -731,7 +745,7 @@ class MemoryMap:
         file_descriptor.write("start_test_in_machine_mode:\n\n")
 
         start_test_in_machine_mode = int(
-            self.jumpstart_attributes['test_attributes']
+            self.jumpstart_source_attributes['diag_attributes']
             ['start_test_in_machine_mode'])
 
         file_descriptor.write(f"   li a0, {start_test_in_machine_mode}\n")
@@ -746,21 +760,22 @@ class MemoryMap:
             file_descriptor.write(
                 f"get_active_hart_mask_from_{mode}_mode:\n\n")
             active_hart_mask = 1  # hart 0 is active by default.
-            if 'active_hart_mask' in self.jumpstart_attributes[
-                    'test_attributes']:
+            if 'active_hart_mask' in self.jumpstart_source_attributes[
+                    'diag_attributes']:
                 active_hart_mask = int(
-                    self.jumpstart_attributes['test_attributes']
+                    self.jumpstart_source_attributes['diag_attributes']
                     ['active_hart_mask'], 2)
 
-            assert (active_hart_mask.bit_count() <=
-                    self.jumpstart_attributes['max_num_harts_supported'])
+            assert (
+                active_hart_mask.bit_count() <=
+                self.jumpstart_source_attributes['max_num_harts_supported'])
 
             file_descriptor.write(f"   li a0, {active_hart_mask}\n")
             file_descriptor.write(f"   ret\n\n\n")
 
     def generate_page_table_functions(self, file_descriptor):
         file_descriptor.write(
-            f"# SATP.Mode is {self.jumpstart_attributes['test_attributes']['satp_mode']}\n\n"
+            f"# SATP.Mode is {self.jumpstart_source_attributes['diag_attributes']['satp_mode']}\n\n"
         )
         file_descriptor.write(
             f"#define DIAG_SATP_MODE {self.get_attribute('satp_mode')}\n")
@@ -806,7 +821,7 @@ class MemoryMap:
             sorted(self.pte_region_sparse_memory.keys()))
 
         pte_size_in_bytes = self.pt_attributes.mode_attributes[
-            self.jumpstart_attributes['test_attributes']
+            self.jumpstart_source_attributes['diag_attributes']
             ['satp_mode']]['pte_size_in_bytes']
         last_filled_address = None
         for address in pagetable_filled_memory_addresses:
@@ -840,7 +855,7 @@ class MemoryMap:
     def generate_assembly_file(self, output_assembly_file):
         with open(output_assembly_file, 'w') as file:
             file.write(
-                f"# This file is auto-generated by {sys.argv[0]} from {self.test_attributes_file}\n"
+                f"# This file is auto-generated by {sys.argv[0]} from {self.diag_attributes_yaml}\n"
             )
 
             file.write("#include \"jumpstart_defines.h\"\n\n")
@@ -858,7 +873,7 @@ class MemoryMap:
 
     def translate_VA(self, va):
         log.info(
-            f"Translating VA {hex(va)}. SATP.Mode = {self.jumpstart_attributes['test_attributes']['satp_mode']}"
+            f"Translating VA {hex(va)}. SATP.Mode = {self.jumpstart_source_attributes['diag_attributes']['satp_mode']}"
         )
 
         # Step 1
@@ -935,11 +950,11 @@ class MemoryMap:
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--memory_map_file',
-                        help='Memory Map YAML file',
+    parser.add_argument('--diag_attributes_yaml',
+                        help='Diag Attributes YAML file',
                         required=True,
                         type=str)
-    parser.add_argument('--attributes_yaml',
+    parser.add_argument('--jumpstart_source_attributes_yaml',
                         help=f'YAML containing the jumpstart attributes.',
                         required=True,
                         type=str)
@@ -952,8 +967,8 @@ def main():
                         help='Linker script to generate',
                         required=False,
                         type=str)
-    parser.add_argument('--override_test_attributes',
-                        help='Overrides the specified test attributes.',
+    parser.add_argument('--override_diag_attributes',
+                        help='Overrides the specified diag attributes.',
                         required=False,
                         nargs='+',
                         default=None)
@@ -975,16 +990,18 @@ def main():
         log.basicConfig(format="%(levelname)s: [%(threadName)s]: %(message)s",
                         level=log.INFO)
 
-    if os.path.exists(args.memory_map_file) is False:
+    if os.path.exists(args.diag_attributes_yaml) is False:
         raise Exception(
-            f"Test Attributes file {args.memory_map_file} not found")
+            f"Diag Attributes file {args.diag_attributes_yaml} not found")
 
-    if os.path.exists(args.attributes_yaml) is False:
+    if os.path.exists(args.jumpstart_source_attributes_yaml) is False:
         raise Exception(
-            f"Jumpstart Attributes file {args.attributes_yaml} not found")
+            f"Jumpstart Attributes file {args.jumpstart_source_attributes_yaml} not found"
+        )
 
-    pagetables = MemoryMap(args.memory_map_file, args.attributes_yaml,
-                           args.override_test_attributes)
+    pagetables = DiagAttributes(args.jumpstart_source_attributes_yaml,
+                                args.diag_attributes_yaml,
+                                args.override_diag_attributes)
 
     if args.output_assembly_file is not None:
         pagetables.generate_assembly_file(args.output_assembly_file)

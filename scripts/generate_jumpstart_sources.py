@@ -5,6 +5,8 @@
 #
 # SPDX-License-Identifier: LicenseRef-Rivos-Internal-Only
 
+# Generates the jumpstart source files from the jumpstart attributes YAML file.
+
 import argparse
 from enum import Enum
 import logging as log
@@ -141,12 +143,14 @@ def generate_reg_context_save_restore_code(attributes_data, defines_file_fd,
         assembly_file_fd.write(f'{mode}_reg_context_save_region_end:\n\n')
 
 
-def generate_data_structures(attributes_yaml, defines_file,
-                             data_structures_file, assembly_file):
-    log.debug(f'Generating data structures files from {attributes_yaml}')
+def generate_jumpstart_sources(jumpstart_source_attributes_yaml, defines_file,
+                               data_structures_file, assembly_file):
+    log.debug(
+        f'Generating jumpstart source files from {jumpstart_source_attributes_yaml}'
+    )
 
     attributes_data = None
-    with open(attributes_yaml, "r") as f:
+    with open(jumpstart_source_attributes_yaml, "r") as f:
         attributes_data = yaml.safe_load(f)
         f.close()
 
@@ -294,11 +298,10 @@ def generate_data_structures(attributes_yaml, defines_file,
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        '--attributes_yaml',
-        help=f'YAML containing the attributes of the data structures.',
-        required=True,
-        type=str)
+    parser.add_argument('--jumpstart_source_attributes_yaml',
+                        help=f'YAML containing the jumpstart attributes.',
+                        required=True,
+                        type=str)
     parser.add_argument('--defines_file',
                         help=f'Header file containing the defines.',
                         required=True,
@@ -325,8 +328,9 @@ def main():
         log.basicConfig(format="%(levelname)s: [%(threadName)s]: %(message)s",
                         level=log.INFO)
 
-    generate_data_structures(args.attributes_yaml, args.defines_file,
-                             args.data_structures_file, args.assembly_file)
+    generate_jumpstart_sources(args.jumpstart_source_attributes_yaml,
+                               args.defines_file, args.data_structures_file,
+                               args.assembly_file)
 
 
 if __name__ == '__main__':

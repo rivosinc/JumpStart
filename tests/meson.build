@@ -33,27 +33,25 @@ foreach jumpstart_test : jumpstart_tests
 
   test_should_fail = jumpstart_test.get(3, false)
 
-  memory_map_file = meson.current_source_dir() + '/' + test_prefix +'.memory_map.yaml'
+  diag_attributes_yaml = meson.current_source_dir() + '/' + test_prefix +'.diag_attributes.yaml'
 
-  memory_map_tools_output = custom_target(
-                                'Generate memory map build files for ' + test_prefix,
-                                input : [memory_map_tools_script,
-                                          memory_map_file,
-                                          data_structures_yaml],
-                                output : [test_prefix + '.memory_attributes.S',
+  diag_source_generator_output = custom_target(
+                                'Generate diag attribute build files for ' + test_prefix,
+                                input : [diag_source_generator,
+                                          diag_attributes_yaml,
+                                          jumpstart_source_attributes_yaml],
+                                output : [test_prefix + '.generated.S',
                                           test_prefix + '.linker_script.ld'],
                                 command : [prog_python,
                                           '@INPUT0@',
-                                          '--memory_map', '@INPUT1@',
-                                          '--attributes_yaml', '@INPUT2@',
+                                          '--diag_attributes_yaml', '@INPUT1@',
+                                          '--jumpstart_source_attributes_yaml', '@INPUT2@',
                                           '--output_assembly_file', '@OUTPUT0@',
                                           '--output_linker_script', '@OUTPUT1@',
                                           ])
 
-  pagetable_s = memory_map_tools_output[0]
-  linker_script = memory_map_tools_output[1].full_path()
-
-  test_sources = [pagetable_s]
+  test_sources = [diag_source_generator_output[0]]
+  linker_script = diag_source_generator_output[1].full_path()
 
   possible_suffixes = ['_umode.S', '_umode.c', '.S', '.c']
   foreach possible_suffix : possible_suffixes
