@@ -6,7 +6,7 @@ SPDX-License-Identifier: LicenseRef-Rivos-Internal-Only
 
 # JumpStart
 
-Provides bare-metal kernel and build infrastructure for test writers to build directed diags.
+Provides bare-metal kernel and build infrastructure for writing and building directed diags.
 
 ## Setup Environment
 
@@ -45,9 +45,11 @@ For example, `test003` has:
 * Test Attribute File:
   * [test003.memory_map.yaml](tests/test003.memory_map.yaml)
 
-### Attributes File
+### Test Attributes File
 
-The Attributes File specifies the memory layout and attributes of the various memory regions of the test, the MMU mode, overrides for the default jumpstart attributes, etc.
+The Test Attributes File specifies the memory layout and various attributes of the test such as the MMU mode, number of active harts, etc.
+
+These test attributes can be overriden from the command line at setup time using the meson option `diag_attribute_overrides`.
 
 #### Memory Layout
 
@@ -104,20 +106,20 @@ Refer to `test002` and `test011` as examples for writing U-mode tests.
 
 ### MP diags
 
-The active harts in a diag are indicated by setting the `active_hart_mask` bitmask in the Attributes file.
+The active harts in a diag are indicated by setting the `active_hart_mask` test attribute.
 
 ```
 active_hart_mask: "0b1111"
 ```
 
-By default, this is set to `0b1` to indicate that just 1 hart is active.
-
 **NOTE: Spike takes the number of active cores and not a bitmask so a diag built with non-consecutive harts enabled in the `active_hart_mask` mask cannot be run on Spike.**
+
+**NOTE: The UART APIs have not been tested with MP diags.**
 
 
 ### Building Diags
 
-Pass the sources and the attribute file to `meson setup` with the `-Ddiag_memory_map_yaml` and `-Ddiag_sources` build flags:
+Pass the sources and the attribute file to `meson setup` with the `-Ddiag_memory_map_yaml`, `-Ddiag_name` and `-Ddiag_sources` build flags:
 
 
 ```
@@ -131,4 +133,8 @@ meson setup builddir --cross-file cross-file.txt --buildtype release -Ddiag_memo
 meson compile -C builddir
 ```
 
-This will build `builddir/diag`
+This will build `builddir/my_jumpstart_diag`
+
+## Support
+
+For help, please send a message on the Slack channel #jumpstart-directed-diags-framework.
