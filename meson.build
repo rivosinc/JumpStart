@@ -16,12 +16,12 @@ add_project_arguments('-Wno-c++-compat',
                       '-mcmodel=medany',
                       language: 'c')
 
+subdir('src')
+
+jumpstart_includes = include_directories('include')
+
 prog_python = find_program('python3')
-
-jumpstart_includes = include_directories('.')
-
-jumpstart_source_generator = meson.current_source_dir() + '/scripts/generate_jumpstart_sources.py'
-jumpstart_source_attributes_yaml = meson.current_source_dir() + '/jumpstart_source_attributes.yaml'
+jumpstart_source_generator = files('scripts/generate_jumpstart_sources.py')
 
 jumpstart_source_generator_output = custom_target(
                                     'Generate jumpstart sources for build',
@@ -35,10 +35,9 @@ jumpstart_source_generator_output = custom_target(
                                               '--jumpstart_source_attributes_yaml', '@INPUT1@',
                                               ])
 
-jumpstart_sources = files('jumpstart_functions.c', 'start.S', 'end.S', 'jumpstart_functions.S', 'jumpstart_uart.c', 'jumpstart_imsic.c', 'string.c')
 jumpstart_sources += jumpstart_source_generator_output
 
-diag_source_generator = meson.current_source_dir() + '/scripts/generate_diag_sources.py'
+diag_source_generator = files('scripts/generate_diag_sources.py')
 
 diag_sources = get_option('diag_sources')
 diag_attributes_yaml = get_option('diag_attributes_yaml')

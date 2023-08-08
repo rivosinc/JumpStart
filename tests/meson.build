@@ -33,7 +33,7 @@ foreach jumpstart_test : jumpstart_tests
 
   test_should_fail = jumpstart_test.get(3, false)
 
-  diag_attributes_yaml = meson.current_source_dir() + '/' + test_prefix +'.diag_attributes.yaml'
+  diag_attributes_yaml = files(test_prefix +'.diag_attributes.yaml')
 
   diag_source_generator_output = custom_target(
                                 'Generate diag attribute build files for ' + test_prefix,
