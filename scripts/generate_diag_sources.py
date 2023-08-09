@@ -697,20 +697,26 @@ class DiagAttributes:
                 f"   . = {hex(self.jumpstart_source_attributes['diag_attributes']['rcode_start_address'])};\n"
             )
             file.write(f"   .jumpstart.text.rcode : {{\n")
-            file.write(f"      *(.jumpstart.text.rcode.init)\n")
-            file.write(f"      *(.jumpstart.text.rcode)\n")
+            rcode_sections = [
+                '.jumpstart.text.rcode.init', '.jumpstart.text.rcode'
+            ]
+            for sections in rcode_sections:
+                file.write(f"      *({sections})\n")
             file.write(f"   }}\n\n")
-            defined_sections.append(".jumpstart.text.rcode")
+            defined_sections.append(rcode_sections)
 
             file.write(
                 f"   . = {hex(self.jumpstart_source_attributes['diag_attributes']['machine_mode_start_address'])};\n"
             )
             file.write(f"   .jumpstart.text.machine : {{\n")
-            file.write(f"      *(.jumpstart.text.machine.init)\n")
-            file.write(f"      *(.jumpstart.text.machine)\n")
-            file.write(f"      *(.jumpstart.text.machine.end)\n")
+            machine_sections = [
+                '.jumpstart.text.machine.init', '.jumpstart.text.machine',
+                '.jumpstart.text.machine.end'
+            ]
+            for section in machine_sections:
+                file.write(f"      *({section})\n")
             file.write(f"   }}\n\n")
-            defined_sections.append(".jumpstart.text.machine")
+            defined_sections.append(machine_sections)
 
             # The entries are already sorted by VA
             # we also expect that the pages for the same section
