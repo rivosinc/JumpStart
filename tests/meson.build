@@ -23,8 +23,6 @@ jumpstart_tests = [
   ['test015', 'MP IMSIC test.', '-p4'],
 ]
 
-spike = find_program('spike', required : true)
-
 foreach jumpstart_test : jumpstart_tests
   test_prefix = jumpstart_test.get(0)
   test_description = jumpstart_test.get(1)
@@ -66,11 +64,7 @@ foreach jumpstart_test : jumpstart_tests
                         c_args: default_c_args_list,
                         link_args: ['-T' + linker_script, '-nostdlib'])
 
-  spike_args = ['--pass-fail',
-                '--isa=' + get_option('spike_default_isa_string') ]
-  if get_option('generate_spike_trace') == true
-    spike_args += ['-v1', '--log-commits']
-  endif
+  spike_args = default_spike_args
 
   if spike_additional_arguments != ''
     spike_args += spike_additional_arguments.split()

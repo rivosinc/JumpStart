@@ -44,6 +44,17 @@ diag_attributes_yaml = get_option('diag_attributes_yaml')
 
 default_c_args_list = ['-march=' + get_option('gcc_march_string')]
 
+spike = find_program('spike')
+default_spike_args = ['--pass-fail',
+                      '--isa=' + get_option('spike_default_isa_string') ]
+if get_option('generate_spike_trace') == true
+  default_spike_args += ['-v1', '--log-commits']
+endif
+
+if get_option('spike_additional_arguments').length() > 0
+  default_spike_args += get_option('spike_additional_arguments')
+endif
+
 if diag_attributes_yaml != '' and diag_sources.length() > 0
   diag_source_generator_command = [prog_python,
                                       '@INPUT0@',
@@ -79,6 +90,11 @@ if diag_attributes_yaml != '' and diag_sources.length() > 0
                         include_directories: jumpstart_includes,
                         c_args: default_c_args_list,
                         link_args: ['-T' + linker_script, '-nostdlib'])
+
+  test('🧪 ' + diag_name,
+        spike,
+        args : [default_spike_args, diag_exe])
+
 else
 
   # Don't build the tests if we're building a diag.

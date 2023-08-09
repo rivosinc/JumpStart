@@ -129,11 +129,26 @@ meson compile -C builddir
 
 Example:
 ```
-meson setup builddir --cross-file cross-file.txt --buildtype release -Ddiag_attributes_yaml=(pwd)/tests/test000.test_attributes.yaml -Ddiag_sources=(pwd)/tests/test000.c -Ddiag_name=my_jumpstart_diag
+meson setup builddir --cross-file cross-file.txt --buildtype release -Ddiag_attributes_yaml=`pwd`/tests/test000.test_attributes.yaml -Ddiag_sources=`pwd`/tests/test000.c -Ddiag_name=my_jumpstart_diag
 meson compile -C builddir
 ```
 
 This will build `builddir/my_jumpstart_diag`
+
+To run the generated diag on Spike, use the `meson test` option. If the diag requires additional arguments be passed to Spike, these can be specified at setup time with `-Dspike_additional_arguments`.
+
+For example, to pass the options:
+
+* `-p2`: Run 2 harts
+* `-v1 --log-commits`: Generate trace output
+
+to spike when running a generated diag:
+
+```
+meson setup builddir --cross-file cross-file.txt --buildtype release -Ddiag_attributes_yaml=`pwd`/tests/test013.diag_attributes.yaml -Ddiag_sources=`pwd`/tests/test013.c -Ddiag_attribute_overrides=active_hart_mask=0b11 -Dspike_additional_arguments=-p2,-v1,--log-commits
+meson compile -C builddir
+meson test -C builddir -v
+```
 
 ## Support
 
