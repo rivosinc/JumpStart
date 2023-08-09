@@ -47,7 +47,7 @@ default_c_args_list = ['-march=' + get_option('gcc_march_string')]
 spike = find_program('spike')
 default_spike_args = ['--pass-fail',
                       '--isa=' + get_option('spike_default_isa_string') ]
-if get_option('generate_spike_trace') == true
+if get_option('spike_generate_trace') == true
   default_spike_args += ['-v1', '--log-commits']
 endif
 

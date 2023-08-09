@@ -34,7 +34,7 @@ option('spike_additional_arguments',
        type : 'array',
        description : 'Additional arguments to pass to spike when running the diag.')
 
-option('generate_spike_trace',
+option('spike_generate_trace',
        type : 'boolean',
        value : false,
        description : 'Generate spike trace.')
