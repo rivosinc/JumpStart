@@ -22,19 +22,19 @@
 
 #define IMSIC_EIE0                0xc0
 
-#define imsic_csr_write(__c, __v)                                              \
+#define imsic_s_csr_write(__c, __v)                                            \
   do {                                                                         \
     write_csr(siselect, __c);                                                  \
     write_csr(sireg, __v);                                                     \
   } while (0)
 
-#define imsic_csr_set(__c, __v)                                                \
+#define imsic_s_csr_set(__c, __v)                                              \
   do {                                                                         \
     write_csr(siselect, __c);                                                  \
     set_csr(sireg, __v);                                                       \
   } while (0)
 
-#define imsic_csr_clear(__c, __v)                                              \
+#define imsic_s_csr_clear(__c, __v)                                            \
   do {                                                                         \
     write_csr(siselect, __c);                                                  \
     clear_csr(sireg, __v);                                                     \
@@ -61,9 +61,9 @@ static void __imsic_eix_update(unsigned long id, int pend, int val) {
   status = read_clear_csr(sstatus, SSTATUS_SIE_SHIFT);
 
   if (val)
-    imsic_csr_set(isel, ireg);
+    imsic_s_csr_set(isel, ireg);
   else
-    imsic_csr_clear(isel, ireg);
+    imsic_s_csr_clear(isel, ireg);
 
   set_csr(sstatus, status & SSTATUS_SIE_SHIFT);
 }
@@ -77,13 +77,13 @@ void imsic_id_disable(unsigned long id) {
 }
 
 void imsic_init(void) {
-  imsic_csr_write(IMSIC_EITHRESHOLD, IMSIC_ENABLE_EITHRESHOLD);
-  imsic_csr_write(IMSIC_EIDELIVERY, IMSIC_ENABLE_EIDELIVERY);
+  imsic_s_csr_write(IMSIC_EITHRESHOLD, IMSIC_ENABLE_EITHRESHOLD);
+  imsic_s_csr_write(IMSIC_EIDELIVERY, IMSIC_ENABLE_EIDELIVERY);
 }
 
 void imsic_fini(void) {
-  imsic_csr_write(IMSIC_EIDELIVERY, IMSIC_DISABLE_EIDELIVERY);
-  imsic_csr_write(IMSIC_EITHRESHOLD, IMSIC_DISABLE_EITHRESHOLD);
+  imsic_s_csr_write(IMSIC_EIDELIVERY, IMSIC_DISABLE_EIDELIVERY);
+  imsic_s_csr_write(IMSIC_EITHRESHOLD, IMSIC_DISABLE_EITHRESHOLD);
 }
 
 void send_ipi_to_supervisor_mode(unsigned long hart_id) {
