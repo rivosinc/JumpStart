@@ -145,7 +145,7 @@ meson compile -C builddir
 
 Example:
 ```
-meson setup builddir --cross-file cross-file.txt --buildtype release -Ddiag_attributes_yaml=`pwd`/tests/test000.test_attributes.yaml -Ddiag_sources=`pwd`/tests/test000.c -Ddiag_name=my_jumpstart_diag
+meson setup builddir --cross-file cross-file.txt --buildtype release -Ddiag_attributes_yaml=`pwd`/tests/test000.diag_attributes.yaml -Ddiag_sources=`pwd`/tests/test000.c -Ddiag_name=my_jumpstart_diag
 meson compile -C builddir
 ```
 
