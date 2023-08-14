@@ -24,8 +24,8 @@ mappings:
     pmarr_memory_type: "wb"
     linker_script_section: ".data"
   -
-    va: 0x11000000 # UART base
-    pa: 0x11000000
+    va: 0x20408000 # UART base
+    pa: 0x20408000
     xwr: "0b011"
     page_size: 0x1000
     num_pages: 1
