@@ -8,17 +8,8 @@
 
 .global jump_to_main_in_supervisor_mode
 jump_to_main_in_supervisor_mode:
-  la t0, stvec_trap_handler
-  csrw stvec, t0
-
   li  t0, SUPERVISOR_MODE_ENCODING
   SET_THREAD_ATTRIBUTES_CURRENT_MODE(t0)
-
-  li a0, (1 << SIE_EXT_INTERRUPT)
-  csrw sie, a0
-
-  li a0, (1 << SSTATUS_SIE_SHIFT) | (SUPERVISOR_MODE_ENCODING << MSTATUS_SPP_SHIFT)
-  csrs sstatus, a0
 
   jal enable_mmu_from_supervisor_mode
 

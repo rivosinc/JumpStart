@@ -84,19 +84,32 @@ _machine_start:
 
   jal enable_svpbmt_for_supervisor_mode
 
-  jal enable_trap_delegation_to_supervisor_mode
+  jal setup_supervisor_mode_trap_related_csrs
 
   j jump_to_main
 
 .section .jumpstart.text.machine, "ax"
 
-.global enable_trap_delegation_to_supervisor_mode
-enable_trap_delegation_to_supervisor_mode:
+.global setup_supervisor_mode_trap_related_csrs
+setup_supervisor_mode_trap_related_csrs:
+  la t0, stvec_trap_handler
+  csrw stvec, t0
+
+  # Enable trap delegation to supervisor mode.
   li t0, (1 << SCAUSE_EC_ENV_CALL_FROM_UMODE) | (1 << SCAUSE_EC_ILLEGAL_INSTRUCTION)
   csrw medeleg, t0
-
   li t0, (1 << MIDELEG_S_SOFT_INTERRUPT) | (1 << MIDELEG_S_TIMER_INTERRUPT) | (1 << MIDELEG_S_EXT_INTERRUPT)
   csrw mideleg, t0
+
+  # Enable interrupts in supervisor mode. Indicate that we're executing
+  # in a privileged mode before entering Supervisor mode.
+  li t0, (1 << SSTATUS_SIE_SHIFT) | (SUPERVISOR_MODE_ENCODING << MSTATUS_SPP_SHIFT)
+  csrs sstatus, t0
+
+  # Enable external interrupts in supervisor mode.
+  li t0, (1 << SIE_EXT_INTERRUPT)
+  csrw sie, t0
+
   ret
 
 .global setup_thread_attributes
