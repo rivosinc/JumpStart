@@ -139,14 +139,13 @@ run_function_in_user_mode:
   sd    fp, 0(sp)
   addi  fp, sp, 16
 
+  GET_THREAD_ATTRIBUTES_CURRENT_MODE(t0)
+  li  t1, SUPERVISOR_MODE_ENCODING
+  bne t0, t1, jumpstart_supervisor_fail
+
   # Pass a0 to usermode as argument.
   GET_THREAD_ATTRIBUTES_UMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
   sd a0, A0_OFFSET_IN_SAVE_REGION(gp)
-
-  GET_THREAD_ATTRIBUTES_CURRENT_MODE(t0)
-
-  li  t1, SUPERVISOR_MODE_ENCODING
-  bne t0, t1, jumpstart_supervisor_fail
 
   # Save S-mode context
   GET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
