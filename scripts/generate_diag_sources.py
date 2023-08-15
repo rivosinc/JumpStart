@@ -797,29 +797,34 @@ class DiagAttributes:
             file_descriptor.write(f"   li a0, {active_hart_mask}\n")
             file_descriptor.write(f"   ret\n\n\n")
 
-    def generate_page_table_functions(self, file_descriptor):
+    def generate_mmu_functions(self, file_descriptor):
         file_descriptor.write(
             f"# SATP.Mode is {self.jumpstart_source_attributes['diag_attributes']['satp_mode']}\n\n"
         )
         file_descriptor.write(
             f"#define DIAG_SATP_MODE {self.get_attribute('satp_mode')}\n")
 
-        modes = ['supervisor']
+        modes = ['machine', 'supervisor']
         for mode in modes:
             file_descriptor.write(f'.section .jumpstart.text.{mode}, "ax"\n\n')
-            file_descriptor.write(
-                f".global get_diag_satp_ppn_from_{mode}_mode\n")
-            file_descriptor.write(f"get_diag_satp_ppn_from_{mode}_mode:\n\n")
-            file_descriptor.write(
-                f"   la a0, {self.pt_attributes.pt_start_label}\n")
-            file_descriptor.write(f"   srai a0, a0, PAGE_OFFSET\n")
-            file_descriptor.write(f"   ret\n\n\n")
 
             file_descriptor.write(
                 f".global get_diag_satp_mode_from_{mode}_mode\n")
             file_descriptor.write(f"get_diag_satp_mode_from_{mode}_mode:\n\n")
-            file_descriptor.write(f"   li   a0, DIAG_SATP_MODE\n")
-            file_descriptor.write(f"   ret\n\n\n")
+            file_descriptor.write(f"    li   a0, DIAG_SATP_MODE\n")
+            file_descriptor.write(f"    ret\n\n\n")
+
+            file_descriptor.write(f".global enable_mmu_from_{mode}_mode\n")
+            file_descriptor.write(f"enable_mmu_from_{mode}_mode:\n\n")
+            file_descriptor.write(f"    li   t0, DIAG_SATP_MODE\n")
+            file_descriptor.write(f"    slli  t0, t0, SATP_MODE_LSB\n")
+            file_descriptor.write(
+                f"    la t1, {self.pt_attributes.pt_start_label}\n")
+            file_descriptor.write(f"    srai t1, t1, PAGE_OFFSET\n")
+            file_descriptor.write(f"    add  t1, t1, t0\n")
+            file_descriptor.write(f"    csrw  satp, t1\n")
+            file_descriptor.write(f"    sfence.vma\n")
+            file_descriptor.write(f"    ret\n")
 
     def generate_pmarr_functions(self, file_descriptor):
         file_descriptor.write('.section .jumpstart.text.rcode, "ax"\n\n')
@@ -885,7 +890,8 @@ class DiagAttributes:
             file.write("#include \"jumpstart_defines.h\"\n\n")
 
             self.generate_diag_attribute_functions(file)
-            self.generate_page_table_functions(file)
+
+            self.generate_mmu_functions(file)
             self.generate_pmarr_functions(file)
 
             self.generate_page_table_data(file)

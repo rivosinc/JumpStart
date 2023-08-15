@@ -11,7 +11,6 @@ jump_to_main_in_supervisor_mode:
   li  t0, SUPERVISOR_MODE_ENCODING
   SET_THREAD_ATTRIBUTES_CURRENT_MODE(t0)
 
-  jal enable_mmu_from_supervisor_mode
 
   call main
 
@@ -22,29 +21,6 @@ jump_to_main_in_supervisor_mode:
   ecall
 
   call jumpstart_supervisor_fail
-
-.global enable_mmu_from_supervisor_mode
-enable_mmu_from_supervisor_mode:
-  addi  sp, sp, -16
-  sd  ra, 8(sp)
-  sd  fp, 0(sp)
-  addi    fp, sp, 16
-
-  jal get_diag_satp_mode_from_supervisor_mode
-  mv s2, a0
-
-  slli  s2, s2, SATP_MODE_LSB
-
-  jal get_diag_satp_ppn_from_supervisor_mode
-
-  add  a0, a0, s2
-  csrw  satp, a0
-  sfence.vma
-
-  ld  ra, 8(sp)
-  ld  fp, 0(sp)
-  addi  sp, sp, 16
-  ret
 
 .global disable_mmu_from_supervisor_mode
 disable_mmu_from_supervisor_mode:

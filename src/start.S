@@ -86,6 +86,8 @@ _machine_start:
 
   jal setup_supervisor_mode_trap_related_csrs
 
+  jal enable_mmu_from_machine_mode
+
   j jump_to_main
 
 .section .jumpstart.text.machine, "ax"
