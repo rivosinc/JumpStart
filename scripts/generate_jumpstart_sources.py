@@ -87,50 +87,48 @@ def generate_getter_and_setter_methods_for_field(defines_file_fd,
 def generate_reg_context_save_restore_code(attributes_data, defines_file_fd,
                                            assembly_file_fd):
     assert (
-        attributes_data['reg_context_to_save_across_umode_and_smode']
-        ['temp_register']
-        not in attributes_data['reg_context_to_save_across_umode_and_smode']
-        ['registers']['gprs'])
+        attributes_data['reg_context_to_save_across_modes']['temp_register']
+        not in attributes_data['reg_context_to_save_across_modes']['registers']
+        ['gprs'])
 
     num_registers = 0
-    for reg_type in attributes_data[
-            'reg_context_to_save_across_umode_and_smode']['registers']:
-        reg_names = attributes_data[
-            'reg_context_to_save_across_umode_and_smode']['registers'][
-                reg_type]
+    for reg_type in attributes_data['reg_context_to_save_across_modes'][
+            'registers']:
+        reg_names = attributes_data['reg_context_to_save_across_modes'][
+            'registers'][reg_type]
         for reg_name in reg_names:
             defines_file_fd.write(
                 f"#define {reg_name.upper()}_OFFSET_IN_SAVE_REGION ({num_registers} * 8)\n"
             )
             num_registers += 1
 
-    temp_reg_name = attributes_data[
-        'reg_context_to_save_across_umode_and_smode']['temp_register']
+    temp_reg_name = attributes_data['reg_context_to_save_across_modes'][
+        'temp_register']
 
     defines_file_fd.write(
         f'\n#define REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES ({num_registers} * 8)\n'
     )
 
     defines_file_fd.write(f'\n#define SAVE_ALL_GPRS   ;')
-    for gpr_name in attributes_data[
-            'reg_context_to_save_across_umode_and_smode']['registers']['gprs']:
+    for gpr_name in attributes_data['reg_context_to_save_across_modes'][
+            'registers']['gprs']:
         defines_file_fd.write(
             f'\\\n  sd {gpr_name}, {gpr_name.upper()}_OFFSET_IN_SAVE_REGION({temp_reg_name})   ;'
         )
     defines_file_fd.write(f'\n\n')
 
     defines_file_fd.write(f'\n#define RESTORE_ALL_GPRS   ;')
-    for gpr_name in attributes_data[
-            'reg_context_to_save_across_umode_and_smode']['registers']['gprs']:
+    for gpr_name in attributes_data['reg_context_to_save_across_modes'][
+            'registers']['gprs']:
         defines_file_fd.write(
             f'\\\n  ld {gpr_name}, {gpr_name.upper()}_OFFSET_IN_SAVE_REGION({temp_reg_name})   ;'
         )
     defines_file_fd.write(f'\n\n')
 
     assembly_file_fd.write(f'\n\n.section .jumpstart.data.privileged, "aw"\n')
-    modes = ['smode', 'umode']
+    modes = ['mmode', 'smode', 'umode']
     assembly_file_fd.write(
-        f"\n# {modes} context saved registers: \n# {attributes_data['reg_context_to_save_across_umode_and_smode']['registers']}\n"
+        f"\n# {modes} context saved registers: \n# {attributes_data['reg_context_to_save_across_modes']['registers']}\n"
     )
     for mode in modes:
         assembly_file_fd.write(f'.global {mode}_reg_context_save_region\n')
