@@ -503,13 +503,19 @@ class DiagAttributes:
         return updated_mappings
 
     def add_bss_and_rodata_sections_to_mappings(self, mappings):
+        bss_pages = self.jumpstart_source_attributes['diag_attributes'][
+            'num_pages_for_bss_section']
+        rodata_pages = self.jumpstart_source_attributes['diag_attributes'][
+            'num_pages_for_rodata_section']
+
         updated_mappings = self.add_after_mapping(mappings,
                                                   len(mappings) - 1, "0b011",
-                                                  "0b0", 1, 'wb', '.bss')
+                                                  "0b0", bss_pages, 'wb',
+                                                  '.bss')
         updated_mappings = self.add_after_mapping(updated_mappings,
                                                   len(updated_mappings) - 1,
-                                                  "0b001", "0b0", 1, 'wb',
-                                                  '.rodata')
+                                                  "0b001", "0b0", rodata_pages,
+                                                  'wb', '.rodata')
         return updated_mappings
 
     def add_jumpstart_umode_text_section_to_mappings(self, mappings):
