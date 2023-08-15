@@ -40,15 +40,29 @@
     clear_csr(sireg, __v);                                                     \
   } while (0)
 
-static void __imsic_eix_update(unsigned long id, int pend, int val)
+typedef enum EIX_REG_TYPE {
+  EIX_REG_PENDING,
+  EIX_REG_ENABLED,
+} eix_reg_type_t;
+
+typedef enum REG_BIT_ACTION {
+  REG_BIT_SET,
+  REG_BIT_CLEAR,
+} reg_bit_action_t;
+
+static void __imsic_eix_update(unsigned long id,
+                               eix_reg_type_t reg_type,
+                               reg_bit_action_t action)
     __attribute__((section(".jumpstart.text.supervisor")));
 
-static void __imsic_eix_update(unsigned long id, int pend, int val) {
+static void __imsic_eix_update(unsigned long id,
+                               eix_reg_type_t reg_type,
+                               reg_bit_action_t action) {
   unsigned long isel, ireg, status;
 
   isel = id / __riscv_xlen;
   isel *= __riscv_xlen / IMSIC_EIPx_BITS;
-  isel += (pend) ? IMSIC_EIP0 : IMSIC_EIE0;
+  isel += (reg_type == EIX_REG_PENDING) ? IMSIC_EIP0 : IMSIC_EIE0;
 
   ireg = 1ULL << (id & (__riscv_xlen - 1));
 
@@ -60,7 +74,7 @@ static void __imsic_eix_update(unsigned long id, int pend, int val) {
 
   status = read_clear_csr(sstatus, SSTATUS_SIE_SHIFT);
 
-  if (val)
+  if (action == REG_BIT_SET)
     imsic_s_csr_set(isel, ireg);
   else
     imsic_s_csr_clear(isel, ireg);
@@ -69,11 +83,11 @@ static void __imsic_eix_update(unsigned long id, int pend, int val) {
 }
 
 void imsic_id_enable(unsigned long id) {
-  __imsic_eix_update(id, 0, 1);
+  __imsic_eix_update(id, EIX_REG_ENABLED, REG_BIT_SET);
 }
 
 void imsic_id_disable(unsigned long id) {
-  __imsic_eix_update(id, 0, 0);
+  __imsic_eix_update(id, EIX_REG_ENABLED, REG_BIT_CLEAR);
 }
 
 void imsic_init(void) {
