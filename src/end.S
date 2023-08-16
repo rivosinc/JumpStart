@@ -59,24 +59,37 @@ done_with_current_hart:
   bne a0, t1, jumpstart_fail
 
   li s1, SPIKE_RUN_PASSED
-  j 1f
+
+  jal in_qemu_mode
+  beqz a0, 1f
+
+  li s1, QEMU_RIVOS_AP_RUN_PASSED
+
+1:
+  j run_end_of_sim_sequence
 
 .global jumpstart_fail
 jumpstart_fail:
   li s1, SPIKE_RUN_FAILED
 
-1:
+  jal in_qemu_mode
+  beqz a0, run_end_of_sim_sequence
 
+  li s1, QEMU_RIVOS_AP_RUN_FAILED
+
+run_end_of_sim_sequence:
+  # 1. Disable interrupts
+  li t0, 0x0
+  csrw   mie, t0 # Disable all interrupt types
+
+  bnez a0, run_qemu_end_of_sim_sequence
+
+run_spike_and_rtl_end_of_sim_sequence:
   li     t0, UC_END_OF_SIM_MAGIC_ADDRESS
   csrw   pmarr_base_0, t0
   li     t0, PMARR_0_MAGIC_STORE_MASK_VAL
   csrw   pmarr_mask_0, t0
   fence.i
-
-  # End of sim steps:
-  # 1. Disable interrupts
-  li t0, 0x0
-  csrw   mie, t0 # Disable all interrupt types
 
   # 2. Store PASS/FAIL to magic address
   li t0, END_OF_SIM_MAGIC_ADDRESS
@@ -105,6 +118,11 @@ loop_magic_store:
   # code if t0 is not 1
   mv t0, s1
   lui x0, 0xdeadb
+
+run_qemu_end_of_sim_sequence:
+  # 2. Store PASS/FAIL to Qemu magic address
+  li t0, QEMU_RIVOS_AP_END_MAGIC_ADDRESS
+  sw s1, 0(t0)
 
   # 4. In WFI
 just_wfi:

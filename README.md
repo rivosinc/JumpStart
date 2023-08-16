@@ -45,11 +45,9 @@ For example, `test003` has:
 * Test Attribute File:
   * [test003.test_attributes.yaml](tests/test003.test_attributes.yaml)
 
-### Test Attributes File
+### Diag Attributes File
 
-The Test Attributes File specifies the memory layout and various attributes of the test such as the MMU mode, number of active harts, etc.
-
-These test attributes can be overriden from the command line at setup time using the meson option `diag_attribute_overrides`.
+The Diag Attributes File specifies the memory layout and various attributes of the diag such as the MMU mode, number of active harts, etc.
 
 #### Memory Layout
 
@@ -94,6 +92,24 @@ mappings:
 ```
 
 specifies the 4 sections of a diag as well as their VA, page protection attributes (xwr, umode), memory type (pmarr_memory_type) as well as the linker section that they will be placed in.
+
+#### Overriding Diag Attributes
+
+Certain diag attributes can be overriden from the command line at setup time using the meson option `diag_attribute_overrides` which takes a list of attributes that can be overriden.
+
+Examples:
+
+* Overriding the `active_hart_mask` (the default is `0b1` or 1 hart active):
+
+```
+meson setup builddir --cross-file cross-file.txt --buildtype release -Ddiag_attribute_overrides=active_hart_mask=0b11 -Ddiag_attributes_yaml=<ATTRIBUTES> -Ddiag_sources=<SOURCES> -Ddiag_name=<NAME>
+```
+
+* QEMU expects 4 harts to be active and a separate diag termination procedure which is enabled by setting `in_qemu_mode` to `True`:
+
+```
+meson setup builddir --cross-file cross-file.txt --buildtype release -Ddiag_attribute_overrides=active_hart_mask=0b11,in_qemu_mode=True -Ddiag_attributes_yaml=<ATTRIBUTES> -Ddiag_sources=<SOURCES> -Ddiag_name=<NAME>
+```
 
 ### Running diags in M/S/U modes
 

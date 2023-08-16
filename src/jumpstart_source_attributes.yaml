@@ -25,6 +25,7 @@ jumpstart_umode_data_page_counts:
 # at build time.
 diag_attributes:
   start_test_in_machine_mode: false
+  in_qemu_mode: false
   max_num_pages_for_PT_allocation: 3
   machine_mode_start_address: 0x7f800000
   rcode_start_address: 0x06000000
@@ -112,6 +113,10 @@ defines:
   HART_RUNNING: 2
   HART_INACTIVE: 3
   PRIMARY_HART_ID: 0
+
+  QEMU_RIVOS_AP_END_MAGIC_ADDRESS: 0x100000
+  QEMU_RIVOS_AP_RUN_FAILED   : ((1 << 16) | 0x3333)
+  QEMU_RIVOS_AP_RUN_PASSED   : 0x5555
 
 syscall_numbers:
   - SYSCALL_RETURN_TO_SUPERVISOR_MODE

@@ -749,6 +749,22 @@ class DiagAttributes:
 
             file.close()
 
+    def generate_diag_attribute_functions(self, file_descriptor):
+        self.generate_start_test_in_machine_mode_function(file_descriptor)
+        self.generate_in_qemu_mode_function(file_descriptor)
+        self.generate_get_active_hart_mask_function(file_descriptor)
+
+    def generate_in_qemu_mode_function(self, file_descriptor):
+        file_descriptor.write('.section .jumpstart.text.machine, "ax"\n\n')
+        file_descriptor.write(".global in_qemu_mode\n")
+        file_descriptor.write("in_qemu_mode:\n\n")
+
+        in_qemu_mode = int(self.jumpstart_source_attributes['diag_attributes']
+                           ['in_qemu_mode'])
+
+        file_descriptor.write(f"   li a0, {in_qemu_mode}\n")
+        file_descriptor.write(f"   ret\n\n\n")
+
     def generate_start_test_in_machine_mode_function(self, file_descriptor):
         file_descriptor.write('.section .jumpstart.text.machine, "ax"\n\n')
         file_descriptor.write(".global start_test_in_machine_mode\n")
@@ -870,8 +886,7 @@ class DiagAttributes:
 
             file.write("#include \"jumpstart_defines.h\"\n\n")
 
-            self.generate_start_test_in_machine_mode_function(file)
-            self.generate_get_active_hart_mask_function(file)
+            self.generate_diag_attribute_functions(file)
             self.generate_page_table_functions(file)
             self.generate_pmarr_functions(file)
 
