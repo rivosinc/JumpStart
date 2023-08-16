@@ -32,10 +32,9 @@ int main(void) {
       ++current_hart_id;
     }
   } else {
-    register_trap_handler_override(SUPERVISOR_MODE_ENCODING,
-                                   SCAUSE_INT_EXTERNAL |
-                                       (1ULL << SCAUSE_INTERRUPT_BIT_LSB),
-                                   (uint64_t)(&test008_exception_handler));
+    register_supervisor_mode_trap_handler_override(
+        SCAUSE_INT_EXTERNAL | (1ULL << SCAUSE_INTERRUPT_BIT_LSB),
+        (uint64_t)(&test008_exception_handler));
 
     imsic_init();
 

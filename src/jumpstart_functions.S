@@ -69,7 +69,7 @@ save_context:
 
   # Get the address of the trap handler if the test has registered one, else 0.
   csrr a0, scause
-  call get_trap_handler_override
+  call get_supervisor_mode_trap_handler_override
 
   beqz a0, check_for_env_call_requests
 

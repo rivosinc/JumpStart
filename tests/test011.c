@@ -33,9 +33,8 @@ int main(void) {
     return DIAG_FAILED;
   }
 
-  register_trap_handler_override(SUPERVISOR_MODE_ENCODING,
-                                 SCAUSE_EC_ILLEGAL_INSTRUCTION,
-                                 (uint64_t)(&test011_exception_handler));
+  register_supervisor_mode_trap_handler_override(
+      SCAUSE_EC_ILLEGAL_INSTRUCTION, (uint64_t)(&test011_exception_handler));
 
   if (run_function_in_user_mode(test_illegal_instruction_in_umode) != 0) {
     return DIAG_FAILED;

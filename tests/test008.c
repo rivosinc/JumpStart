@@ -15,10 +15,9 @@ static void test008_exception_handler(void) {
 int main(void) {
   uint64_t hart_id = get_thread_attributes_hart_id_from_supervisor_mode();
 
-  register_trap_handler_override(SUPERVISOR_MODE_ENCODING,
-                                 SCAUSE_INT_EXTERNAL |
-                                     (1ULL << SCAUSE_INTERRUPT_BIT_LSB),
-                                 (uint64_t)(&test008_exception_handler));
+  register_supervisor_mode_trap_handler_override(
+      SCAUSE_INT_EXTERNAL | (1ULL << SCAUSE_INTERRUPT_BIT_LSB),
+      (uint64_t)(&test008_exception_handler));
 
   imsic_init();
   imsic_id_enable(IMSIC_IPI_ID);

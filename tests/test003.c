@@ -9,8 +9,8 @@ void test003_illegal_instruction_function(void);
 
 int main(void) {
 
-  register_trap_handler_override(
-      SUPERVISOR_MODE_ENCODING, SCAUSE_EC_ILLEGAL_INSTRUCTION,
+  register_supervisor_mode_trap_handler_override(
+      SCAUSE_EC_ILLEGAL_INSTRUCTION,
       (uint64_t)(&test003_illegal_instruction_handler));
 
   test003_illegal_instruction_function();
