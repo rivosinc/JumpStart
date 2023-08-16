@@ -30,22 +30,21 @@ disable_mmu_from_supervisor_mode:
 .align 2
 .global stvec_trap_handler
 stvec_trap_handler:
-  # Hold the a0 passed to us in a temporary till we're ready to save it away.
-  csrw sscratch, a0
+  li  gp, SUPERVISOR_MODE_ENCODING
+  SET_THREAD_ATTRIBUTES_CURRENT_MODE(gp)
 
-  csrr a0, sstatus
-  andi a0, a0, (SUPERVISOR_MODE_ENCODING << MSTATUS_SPP_SHIFT)
-  beqz a0, 1f
+  csrr  gp, sstatus
+  srli  gp, gp, MSTATUS_SPP_SHIFT
+  andi  gp, gp, MSTATUS_SPP_MASK
+  addi  gp, gp, -SUPERVISOR_MODE_ENCODING
+  beqz  gp, handle_trap_from_supervisor_mode
+  j  handle_trap_from_user_mode
 
-  # We are in S-mode handling a trap from S-mode, use the
-  # smode reg context save region.
+handle_trap_from_supervisor_mode:
   GET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
   j save_context
 
-1:
-  # We are in S-mode handling a trap from U-mode, use the
-  # umode reg context save region.
-
+handle_trap_from_user_mode:
   # Save away the U-mode stack.
   GET_THREAD_ATTRIBUTES_UMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
   sd sp, SP_OFFSET_IN_SAVE_REGION(gp)
@@ -53,37 +52,35 @@ stvec_trap_handler:
   GET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(sp)
   ld sp, SP_OFFSET_IN_SAVE_REGION(sp)
 
-save_context:
-  # Restore the a0 passed to us when entering the trap handler.
-  csrr a0, sscratch
+  # We will save away the user mode context to the user mode region
+  # which GP currently points to.
 
+save_context:
   SAVE_ALL_GPRS
 
-
-  # Change current mode to S.
-  li  t0, SUPERVISOR_MODE_ENCODING
-  SET_THREAD_ATTRIBUTES_CURRENT_MODE(t0)
-
-  # Get the address of the trap handler if the test has registered one, else 0.
+  # Check if the test has registered a trap handler for this trap.
   csrr a0, scause
   call get_supervisor_mode_trap_handler_override
 
-  beqz a0, check_for_env_call_requests
+  beqz  a0, check_for_env_call_requests
 
   # Jump to the registered trap handler.
-  jalr ra, a0
+  # TODO: Do we need to pass any arguments to the trap handler?
+  #       If so, we need to restore them from the context save region.
+  jalr  ra, a0
 
-  # Restore the context from before the trap.
-  csrr a0, sstatus
-  andi a0, a0, (SUPERVISOR_MODE_ENCODING << MSTATUS_SPP_SHIFT)
-  beqz a0, switch_to_umode_stack
+  csrr  gp, sstatus
+  srli  gp, gp, MSTATUS_SPP_SHIFT
+  andi  gp, gp, MSTATUS_SPP_MASK
+  addi  gp, gp, -SUPERVISOR_MODE_ENCODING
+  bnez  gp, return_from_handling_user_mode_trap
+
   GET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
   j restore_context
 
-switch_to_umode_stack:
-  li  t0, USER_MODE_ENCODING
-  SET_THREAD_ATTRIBUTES_CURRENT_MODE(t0)
-
+return_from_handling_user_mode_trap:
+  li  gp, USER_MODE_ENCODING
+  SET_THREAD_ATTRIBUTES_CURRENT_MODE(gp)
   GET_THREAD_ATTRIBUTES_UMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
 
 restore_context:
@@ -92,9 +89,9 @@ restore_context:
   sret
 
 check_for_env_call_requests:
-  csrr a0, scause
-  li t0, SCAUSE_EC_ENV_CALL_FROM_UMODE
-  beq a0, t0, handle_env_call_from_umode
+  csrr t0, scause
+  li t1, SCAUSE_EC_ENV_CALL_FROM_UMODE
+  beq t0, t1, handle_env_call_from_umode
 
   j jumpstart_supervisor_fail
 
