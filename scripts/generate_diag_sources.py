@@ -256,6 +256,10 @@ class DiagAttributes:
             for override in override_diag_attributes:
                 attribute_name = override.split("=")[0]
                 attribute_value = override.split("=")[1]
+                if attribute_value in ["True", "true"]:
+                    attribute_value = True
+                elif attribute_value in ["False", "false"]:
+                    attribute_value = False
                 self.jumpstart_source_attributes['diag_attributes'][
                     attribute_name] = attribute_value
                 log.warning(
