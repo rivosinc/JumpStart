@@ -21,6 +21,7 @@ jumpstart_tests = [
   ['test013', 'test000 with 4 harts.', '-p4'],
   ['test014', 'Hart 2 exits with DIAG_FAILED to test MP fail path.', '-p3', true],
   ['test015', 'MP IMSIC test.', '-p4'],
+  ['test016', 'MP UART test.', '-p4'],
 ]
 
 foreach jumpstart_test : jumpstart_tests
