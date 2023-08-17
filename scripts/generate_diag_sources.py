@@ -750,32 +750,30 @@ class DiagAttributes:
             file.close()
 
     def generate_diag_attribute_functions(self, file_descriptor):
-        self.generate_start_test_in_machine_mode_function(file_descriptor)
-        self.generate_in_qemu_mode_function(file_descriptor)
+        self.generate_boolean_diag_attribute_functions(
+            file_descriptor, ['start_test_in_machine_mode', 'in_qemu_mode'])
         self.generate_get_active_hart_mask_function(file_descriptor)
 
-    def generate_in_qemu_mode_function(self, file_descriptor):
-        file_descriptor.write('.section .jumpstart.text.machine, "ax"\n\n')
-        file_descriptor.write(".global in_qemu_mode\n")
-        file_descriptor.write("in_qemu_mode:\n\n")
+        if self.jumpstart_source_attributes['diag_attributes'][
+                'in_qemu_mode'] == True and self.jumpstart_source_attributes[
+                    'diag_attributes']['active_hart_mask'] != '0b1111':
+            log.error(
+                f"Unsupported active_hart_mask {self.jumpstart_source_attributes['diag_attributes']['active_hart_mask']} for QEMU mode. active_hart_mask must be 0b1111."
+            )
+            sys.exit(1)
 
-        in_qemu_mode = int(self.jumpstart_source_attributes['diag_attributes']
-                           ['in_qemu_mode'])
+    def generate_boolean_diag_attribute_functions(self, file_descriptor,
+                                                  boolean_attributes):
+        for attribute in boolean_attributes:
+            file_descriptor.write('.section .jumpstart.text.machine, "ax"\n\n')
+            file_descriptor.write(f".global {attribute}\n")
+            file_descriptor.write(f"{attribute}:\n\n")
 
-        file_descriptor.write(f"   li a0, {in_qemu_mode}\n")
-        file_descriptor.write(f"   ret\n\n\n")
+            attribute_value = int(
+                self.jumpstart_source_attributes['diag_attributes'][attribute])
 
-    def generate_start_test_in_machine_mode_function(self, file_descriptor):
-        file_descriptor.write('.section .jumpstart.text.machine, "ax"\n\n')
-        file_descriptor.write(".global start_test_in_machine_mode\n")
-        file_descriptor.write("start_test_in_machine_mode:\n\n")
-
-        start_test_in_machine_mode = int(
-            self.jumpstart_source_attributes['diag_attributes']
-            ['start_test_in_machine_mode'])
-
-        file_descriptor.write(f"   li a0, {start_test_in_machine_mode}\n")
-        file_descriptor.write(f"   ret\n\n\n")
+            file_descriptor.write(f"   li a0, {attribute_value}\n")
+            file_descriptor.write(f"   ret\n\n\n")
 
     def generate_get_active_hart_mask_function(self, file_descriptor):
         modes = ['machine', 'supervisor']
