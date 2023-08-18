@@ -4,10 +4,10 @@
 
 #include "jumpstart_functions.h"
 
-extern uint64_t _machine_start;
+extern uint64_t _machine_mode_start;
 
 int main(void) {
-  uint64_t mmode_start_address = (uint64_t)&_machine_start;
+  uint64_t mmode_start_address = (uint64_t)&_machine_mode_start;
   if (mmode_start_address != 0x80000000) {
     return DIAG_FAILED;
   }

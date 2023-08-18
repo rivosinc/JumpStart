@@ -6,8 +6,8 @@
 
 .section .jumpstart.text.machine.end, "ax"
 
-.global machine_mode_return_point
-machine_mode_return_point:
+.global _machine_mode_end
+_machine_mode_end:
   # a0 will contain diag pass/fail status.
 
   # Store pass/fail status into the hart status tracker.

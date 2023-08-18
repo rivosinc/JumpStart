@@ -14,7 +14,7 @@ _rcode_start:
 
   jal setup_pmarr
 
-  la    t0, _machine_start
+  la    t0, _machine_mode_start
   csrw repc, t0
   rret
 
@@ -26,15 +26,15 @@ _rtvec:
 
 update_mcrr_0_to_cover_jumpstart_machine_code:
   # The reset default of the MCRR_0 is the 4K page starting at the LLC-as-SRAM
-  # range base address. We expect _machine_start to be at the beginning of this page.
+  # range base address. We expect _machine_mode_start to be at the beginning of this page.
   # Update the MCRR_0 to include all the machine mode code pages for the
   # jumpstart framework.
 
-  la t0, _machine_start
+  la t0, _machine_mode_start
   csrw mcrr_0_base, t0
 
   # Determine the size of the jumpstart machine mode code region.
-  # We expect it to start at _machine_start (from the .jumpstart.machine.init) section
+  # We expect it to start at _machine_mode_start (from the .jumpstart.machine.init) section
   # and extend to jumpstart_machine_mode_end_point (from the
   # from the .jumpstart.machine.end
   la t1, jumpstart_machine_mode_end_point
@@ -51,8 +51,8 @@ update_mcrr_0_to_cover_jumpstart_machine_code:
 # This section should fall into the initial 4K page set up in MCRR_0
 .section .jumpstart.text.machine.init, "ax"
 
-.global _machine_start
-_machine_start:
+.global _machine_mode_start
+_machine_mode_start:
   la t0, mtvec_trap_handler
   csrw mtvec, t0
 
@@ -194,7 +194,7 @@ jump_to_main:
   la a0, main
   jal run_function_in_supervisor_mode
 
-  j machine_mode_return_point
+  j _machine_mode_end
 
 jump_to_main_in_machine_mode:
 
@@ -216,7 +216,7 @@ jump_to_main_in_machine_mode:
 
   call main
 
-  j machine_mode_return_point
+  j _machine_mode_end
 
 # syscall handlers
 
