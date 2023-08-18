@@ -49,9 +49,7 @@ For example, `test003` has:
 
 The Diag Attributes File specifies the memory layout and various attributes of the diag such as the MMU mode, number of active harts, etc.
 
-#### Memory Layout
-
-The following memory map layout:
+#### Memory Layout Examples
 
 ```
 mappings:
@@ -92,6 +90,19 @@ mappings:
 ```
 
 specifies the 4 sections of a diag as well as their VA, page protection attributes (xwr, umode), memory type (pmarr_memory_type) as well as the linker section that they will be placed in.
+
+```
+mappings:
+  -
+    pa: 0x80000000
+    page_size: 0x1000
+    num_pages: 2
+    pmarr_memory_type: "wb"
+    no_pte_allocation: True
+    linker_script_section: ".text"
+```
+
+The specified section will be placed in the executable but no mapping will be created for it in the page table map. It doesn't have the attributes that an entry with a page table entry would have such as xwr, va, umode.
 
 #### Overriding Diag Attributes
 

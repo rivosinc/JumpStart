@@ -270,7 +270,7 @@ class DiagAttributes:
             'mappings'] = sorted(
                 self.jumpstart_source_attributes['diag_attributes']
                 ['mappings'],
-                key=lambda x: x['va'],
+                key=lambda x: x['pa'],
                 reverse=False)
 
         self.sanity_check_diag_attributes()
@@ -317,19 +317,28 @@ class DiagAttributes:
             self.jumpstart_source_attributes['diag_attributes']['satp_mode']
             in self.pt_attributes.mode_attributes)
 
+        for mapping in self.jumpstart_source_attributes['diag_attributes'][
+                'mappings']:
+            if 'no_pte_allocation' in mapping and mapping[
+                    'no_pte_allocation'] is True:
+                pte_attributes = ['xwr', 'umode', 'va']
+                # if the mapping has a no_pte_allocation attribute, then
+                # it should not have any xwr or umode bits set.
+                assert (not any(x in mapping for x in pte_attributes))
+
         # check that the memory mappings don't overlap
         # the mappings are sorted by the virtual address at this point.
         last_region_end_address = 0
         for mapping in self.jumpstart_source_attributes['diag_attributes'][
                 'mappings']:
-            if mapping['va'] < last_region_end_address:
+            if mapping['pa'] < last_region_end_address:
                 log.error(
                     f"Memory mapping {mapping} overlaps with another memory mapping"
                 )
                 sys.exit(1)
 
             last_region_end_address = mapping[
-                'va'] + mapping['num_pages'] * mapping['page_size']
+                'pa'] + mapping['num_pages'] * mapping['page_size']
 
     def create_pmarr_regions(self):
         self.pmarr_regions = []
@@ -377,8 +386,18 @@ class DiagAttributes:
         updated_mappings = mappings.copy()
         last_mapping = updated_mappings[-1]
         new_mapping = {}
-        new_mapping['va'] = last_mapping['va'] + (last_mapping['page_size'] *
-                                                  last_mapping['num_pages'])
+
+        # If the last mapping is a no_pte_allocation mapping, then it
+        # won't have a VA.
+        if 'va' not in last_mapping:
+            assert (last_mapping['no_pte_allocation'] is True)
+            last_mapping_va = last_mapping['pa']
+        else:
+            last_mapping_va = last_mapping['va']
+
+        new_mapping['va'] = last_mapping_va + (last_mapping['page_size'] *
+                                               last_mapping['num_pages'])
+
         new_mapping['pa'] = last_mapping['pa'] + (last_mapping['page_size'] *
                                                   last_mapping['num_pages'])
         new_mapping['xwr'] = xwr
@@ -396,7 +415,7 @@ class DiagAttributes:
             mappings, "0b001", "0b0",
             self.num_pages_available_for_PT_allocation, 'wb',
             '.jumpstart.rodata.pagetables')
-        self.PT_section_start_address = updated_mappings[-1]['va']
+        self.PT_section_start_address = updated_mappings[-1]['pa']
         return updated_mappings
 
     def add_jumpstart_supervisor_text_section_to_mappings(self, mappings):
@@ -464,6 +483,10 @@ class DiagAttributes:
     def split_mappings_at_page_granularity(self, mappings):
         split_mappings = []
         for entry in mappings:
+            if 'no_pte_allocation' in entry and entry[
+                    'no_pte_allocation'] is True:
+                continue
+
             va = entry['va']
             pa = entry['pa']
             for _ in range(entry['num_pages']):
@@ -736,10 +759,10 @@ class DiagAttributes:
 
                 file.write(f"   /* {entry['linker_script_section']}: \n")
                 file.write(
-                    f"       Range: {hex(entry['va'])} - {hex(entry['va'] + entry['num_pages'] * entry['page_size'])}\n"
+                    f"       PA Range: {hex(entry['pa'])} - {hex(entry['pa'] + entry['num_pages'] * entry['page_size'])}\n"
                 )
                 file.write(f"   */\n")
-                file.write(f"   . = {hex(entry['va'])};\n")
+                file.write(f"   . = {hex(entry['pa'])};\n")
                 file.write(f"   {entry['linker_script_section']} : {{\n")
                 file.write(f"      *({entry['linker_script_section']})\n")
                 file.write(f"   }}\n\n")
