@@ -191,14 +191,10 @@ jump_to_main:
   jal start_test_in_machine_mode
   bnez a0, jump_to_main_in_machine_mode
 
-  la  t0, jump_to_main_in_supervisor_mode
-  csrw  mepc, t0
-  csrr  t0, mstatus
-  li  t1, (SUPERVISOR_MODE_ENCODING << MSTATUS_MPP_SHIFT)
-  or  t0, t0, t1
-  csrw  mstatus, t0
+  la a0, main
+  jal run_function_in_supervisor_mode
 
-  mret
+  j machine_mode_return_point
 
 jump_to_main_in_machine_mode:
 
@@ -227,39 +223,124 @@ jump_to_main_in_machine_mode:
 handle_env_call_from_smode:
   # a7 will contain the syscall number
 
-  li t0, SYSCALL_JUMP_TO_MACHINE_MODE_AND_EXIT
-  beq a7, t0, machine_mode_return_point
+  li t0, SYSCALL_RETURN_TO_MACHINE_MODE
+  beq a7, t0, handle_syscall_return_to_machine_mode
 
   j jumpstart_fail
 
+handle_syscall_return_to_machine_mode:
+  # This is the return to machine path for run_function_in_supervisor_mode().
+  # a0 will contain the return status. save it away till we've restored
+  # all the mmode registers.
+  csrw  mscratch, a0
+
+  # Restore M mode context and return status in a0
+  GET_THREAD_ATTRIBUTES_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
+
+  ld  t0, MSTATUS_OFFSET_IN_SAVE_REGION(gp)
+  li  t1, (SUPERVISOR_MODE_ENCODING << MSTATUS_MPP_SHIFT)
+  or  t0, t0, t1
+  csrw  mstatus, t0
+
+  RESTORE_ALL_GPRS
+
+  csrr a0, mscratch
+
+  la  ra, run_function_in_supervisor_mode_return_point
+  ret
+
 # END syscall handlers
+
+# a0 contains the address of the function to run in supervisor mode.
+.global run_function_in_supervisor_mode
+run_function_in_supervisor_mode:
+  addi  sp, sp, -16
+  sd    ra, 8(sp)
+  sd    fp, 0(sp)
+  addi  fp, sp, 16
+
+  GET_THREAD_ATTRIBUTES_CURRENT_MODE(t0)
+  li  t1, MACHINE_MODE_ENCODING
+  bne t0, t1, jumpstart_fail
+
+  # Save machine mode context
+  GET_THREAD_ATTRIBUTES_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
+  SAVE_ALL_GPRS
+
+  csrr t0, mstatus
+  sd t0, MSTATUS_OFFSET_IN_SAVE_REGION(gp)
+
+  la t0, jump_to_function_in_smode
+  csrw mepc, t0
+
+  li  t0, (MSTATUS_MPP_MASK << MSTATUS_MPP_SHIFT)
+  csrc mstatus, t0
+  li  t0, (SUPERVISOR_MODE_ENCODING << MSTATUS_MPP_SHIFT)
+  csrs  mstatus, t0
+
+  mret
+
+run_function_in_supervisor_mode_return_point:
+  # return status is in a0.
+
+  ld  ra, 8(sp)
+  ld  fp, 0(sp)
+  addi  sp, sp, 16
+  ret
 
 # The mtvec.base must always be 4 byte aligned.
 .align 2
 .global mtvec_trap_handler
 mtvec_trap_handler:
-  # Save away the function arguments.
-  # TODO: save aware more of these as required.
-  mv s1, a0
+  li  gp, MACHINE_MODE_ENCODING
+  SET_THREAD_ATTRIBUTES_CURRENT_MODE(gp)
 
-  li  t0, MACHINE_MODE_ENCODING
-  SET_THREAD_ATTRIBUTES_CURRENT_MODE(t0)
+  # Save away t0 which we're going to use as a temporary register.
+  csrw  mscratch, t0
 
-  mv a0, s1
+  csrr  gp, mstatus
+  srli  gp, gp, MSTATUS_MPP_SHIFT
+  andi  gp, gp, MSTATUS_MPP_MASK
+  addi  t0, gp, -SUPERVISOR_MODE_ENCODING
+  beqz  t0, handle_trap_from_supervisor_mode
 
-  # csrr a0, mcause
+  addi  t0, gp, -MACHINE_MODE_ENCODING
+  beqz  t0, handle_trap_from_machine_mode
 
-  # # returns the address of the trap handler if the test writer
-  # # has registered one, else 0.
-  # jal get_trap_handler_override
+  # We don't expect to get an exception from any other modes.
+  j jumpstart_fail
 
-  # beqz a0, 1f
+handle_trap_from_machine_mode:
+  csrr  t0, mscratch
 
-  # jalr x0, a0
+  # Save away the M-mode reg context.
+  GET_THREAD_ATTRIBUTES_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
+  SAVE_ALL_GPRS
 
-# 1:
-  li t0, MCAUSE_EC_ENV_CALL_FROM_SMODE
-  csrr t1, mcause
-  beq t1, t0, handle_env_call_from_smode
+  # Check if the test has registered a trap handler for this trap.
+  csrr  a0, mcause
+  call  get_machine_mode_trap_handler_override
+
+  # We don't handle any other traps from M-mode at this point.
+  beqz  a0, jumpstart_fail
+
+  # Jump to the registered trap handler.
+  # TODO: Do we need to pass any arguments to the trap handler?
+  #       If so, we need to restore them from the context save region.
+  jalr  ra, a0
+
+  # Restore the context from before the trap.
+  GET_THREAD_ATTRIBUTES_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
+  RESTORE_ALL_GPRS
+
+  mret
+
+handle_trap_from_supervisor_mode:
+  csrr  t0, mscratch
+
+check_for_env_call_requests:
+  csrr  t0, mcause
+  li  t1, MCAUSE_EC_ENV_CALL_FROM_SMODE
+  beq t0, t1, handle_env_call_from_smode
 
   j jumpstart_fail

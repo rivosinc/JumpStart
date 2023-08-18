@@ -42,6 +42,7 @@
   })
 
 int run_function_in_user_mode(int (*umode_function)(void));
+int run_function_in_supervisor_mode(int (*smode_function)(void));
 
 void disable_mmu_from_supervisor_mode(void);
 

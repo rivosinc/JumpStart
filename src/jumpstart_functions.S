@@ -6,21 +6,18 @@
 
 .section .jumpstart.text.supervisor, "ax"
 
-.global jump_to_main_in_supervisor_mode
-jump_to_main_in_supervisor_mode:
+# a0 contains the address of the function to jump to.
+.global jump_to_function_in_smode
+jump_to_function_in_smode:
   li  t0, SUPERVISOR_MODE_ENCODING
   SET_THREAD_ATTRIBUTES_CURRENT_MODE(t0)
 
-
-  call main
-
-  # TODO: Make sure we're in supervisor mode at this point.
+  # A0 contains arg value passed by S mode.
+  jalr ra, a0
 
   # a0 contains the exit code.
-  li  a7, SYSCALL_JUMP_TO_MACHINE_MODE_AND_EXIT
+  li  a7, SYSCALL_RETURN_TO_MACHINE_MODE
   ecall
-
-  call jumpstart_supervisor_fail
 
 .global disable_mmu_from_supervisor_mode
 disable_mmu_from_supervisor_mode:

@@ -62,6 +62,7 @@ defines:
   HYPERVISOR_MODE_ENCODING: 2
   MACHINE_MODE_ENCODING: 3
   MSTATUS_MPP_SHIFT: 11
+  MSTATUS_MPP_MASK: 3
   MSTATUS_SPP_SHIFT: 8
   SSTATUS_SIE_SHIFT: 1
   SATP_MODE_LSB: 60
@@ -127,7 +128,6 @@ defines:
 syscall_numbers:
   - SYSCALL_RETURN_TO_SUPERVISOR_MODE
   - SYSCALL_RETURN_TO_MACHINE_MODE
-  - SYSCALL_JUMP_TO_MACHINE_MODE_AND_EXIT
 
 # These are the registers that need to be saved/restored when moving
 # between U-mode and S-mode. We will generate S and U mode regions to
