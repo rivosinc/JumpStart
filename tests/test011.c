@@ -36,7 +36,8 @@ int main(void) {
   register_supervisor_mode_trap_handler_override(
       SCAUSE_EC_ILLEGAL_INSTRUCTION, (uint64_t)(&test011_exception_handler));
 
-  if (run_function_in_user_mode(test_illegal_instruction_in_umode) != 0) {
+  if (run_function_in_user_mode((uint64_t)test_illegal_instruction_in_umode) !=
+      0) {
     return DIAG_FAILED;
   }
 

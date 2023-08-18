@@ -21,7 +21,7 @@ int main(void) {
     return DIAG_FAILED;
   }
 
-  if (run_function_in_user_mode(test_umode) != 0) {
+  if (run_function_in_user_mode((uint64_t)test_umode) != 0) {
     return DIAG_FAILED;
   }
 
