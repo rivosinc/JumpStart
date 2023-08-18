@@ -22,6 +22,7 @@ jumpstart_tests = [
   ['test014', 'Hart 2 exits with DIAG_FAILED to test MP fail path.', '-p3', true],
   ['test015', 'MP IMSIC test.', '-p4'],
   ['test016', 'MP UART test.', '-p4'],
+  ['test017', 'Register and run Machine mode illegal instruction exception handler.'],
 ]
 
 foreach jumpstart_test : jumpstart_tests
