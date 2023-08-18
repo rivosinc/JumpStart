@@ -16,7 +16,7 @@ jump_to_function_in_smode:
   jalr ra, a0
 
   # a0 contains the exit code.
-  li  a7, SYSCALL_RETURN_TO_MACHINE_MODE
+  li  a7, SYSCALL_RUN_FUNC_IN_SUPERVISOR_MODE_COMPLETE
   ecall
 
 .global disable_mmu_from_supervisor_mode
@@ -101,8 +101,8 @@ check_for_env_call_requests:
 handle_env_call_from_umode:
   # a7 will contain the syscall number
 
-  li t0, SYSCALL_RETURN_TO_SUPERVISOR_MODE
-  beq a7, t0, env_call_return_to_supervisor_mode
+  li t0, SYSCALL_RUN_FUNC_IN_USER_MODE_COMPLETE
+  beq a7, t0, handle_syscall_run_func_in_user_mode_complete
 
   j jumpstart_supervisor_fail
 
@@ -111,13 +111,11 @@ jumpstart_supervisor_fail:
   # TODO: This is a temporary fail handler. We need to figure out
   wfi
 
-env_call_return_to_supervisor_mode:
+handle_syscall_run_func_in_user_mode_complete:
   # This is the return to supervisor path for run_function_in_user_mode().
 
   # Restore S mode context and return status in a0
   GET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
-  ld a1, SEPC_OFFSET_IN_SAVE_REGION(gp)
-  csrw sepc, a1
 
   ld a1, SSTATUS_OFFSET_IN_SAVE_REGION(gp)
   li a2, (SUPERVISOR_MODE_ENCODING << MSTATUS_SPP_SHIFT)
@@ -126,7 +124,8 @@ env_call_return_to_supervisor_mode:
 
   RESTORE_ALL_GPRS
 
-  sret
+  la  ra, run_function_in_user_mode_return_point
+  ret
 
 # A0 contains the address of the function to run in usermode.
 .global run_function_in_user_mode
@@ -151,9 +150,6 @@ run_function_in_user_mode:
   csrr t0, sstatus
   sd t0, SSTATUS_OFFSET_IN_SAVE_REGION(gp)
 
-  la  t0, smode_return
-  sd t0, SEPC_OFFSET_IN_SAVE_REGION(gp)
-
   # Load U-mode context. We just need to set sepc, sstatus and a0 register.
   la a1, jump_to_function_in_umode
   csrw sepc, a1
@@ -177,7 +173,7 @@ run_function_in_user_mode:
 
   sret
 
-smode_return:
+run_function_in_user_mode_return_point:
   # Usermode return status using a0. Given umode returns through ecall, we save
   # a0 to umode_reg_context_save_region in ecall handler and return to this point to continue
   # s-mode execution from the place we left it.
@@ -200,7 +196,7 @@ jump_to_function_in_umode:
   jalr ra, a0
 
   # a0 contains the exit code.
-  li  a7, SYSCALL_RETURN_TO_SUPERVISOR_MODE
+  li  a7, SYSCALL_RUN_FUNC_IN_USER_MODE_COMPLETE
   ecall
 
   # We shouldn't come back here.

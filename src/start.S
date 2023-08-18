@@ -223,12 +223,12 @@ jump_to_main_in_machine_mode:
 handle_env_call_from_smode:
   # a7 will contain the syscall number
 
-  li t0, SYSCALL_RETURN_TO_MACHINE_MODE
-  beq a7, t0, handle_syscall_return_to_machine_mode
+  li t0, SYSCALL_RUN_FUNC_IN_SUPERVISOR_MODE_COMPLETE
+  beq a7, t0, handle_syscall_run_func_in_supervisor_mode_complete
 
   j jumpstart_fail
 
-handle_syscall_return_to_machine_mode:
+handle_syscall_run_func_in_supervisor_mode_complete:
   # This is the return to machine path for run_function_in_supervisor_mode().
   # a0 will contain the return status. save it away till we've restored
   # all the mmode registers.

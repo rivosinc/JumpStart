@@ -126,8 +126,8 @@ defines:
   QEMU_RIVOS_AP_RUN_PASSED   : 0x5555
 
 syscall_numbers:
-  - SYSCALL_RETURN_TO_SUPERVISOR_MODE
-  - SYSCALL_RETURN_TO_MACHINE_MODE
+  - SYSCALL_RUN_FUNC_IN_USER_MODE_COMPLETE
+  - SYSCALL_RUN_FUNC_IN_SUPERVISOR_MODE_COMPLETE
 
 # These are the registers that need to be saved/restored when moving
 # between U-mode and S-mode. We will generate S and U mode regions to
