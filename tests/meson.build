@@ -7,7 +7,7 @@ fs = import('fs')
 jumpstart_tests = [
   ['test000', 'Enable MMU (SATP.mode = sv39), jump to main and exit.'],
   ['test001', 'Enable MMU (SATP.mode = sv48), jump to main and exit.'],
-  ['test002', 'Run C/Assembly functions in user mode and return to supervisor mode.'],
+  ['test002', 'Run C/Assembly functions with run_function_in_user_mode() from supervisor mode.'],
   ['test003', 'Register and run Supervisor mode illegal instruction exception handler.'],
   ['test004', 'HWP AMPM perf diag.'],
   ['test005', '16K data block move from WB to UC (PBMT) region.'],
@@ -23,6 +23,7 @@ jumpstart_tests = [
   ['test015', 'MP IMSIC test.', '-p4'],
   ['test016', 'MP UART test.', '-p4'],
   ['test017', 'Register and run Machine mode illegal instruction exception handler.'],
+  ['test018', 'Run C/Assembly functions with run_function_in_supervisor_mode() from machine mode.'],
 ]
 
 foreach jumpstart_test : jumpstart_tests
@@ -53,7 +54,7 @@ foreach jumpstart_test : jumpstart_tests
   test_sources = [diag_source_generator_output[0]]
   linker_script = diag_source_generator_output[1].full_path()
 
-  possible_suffixes = ['_umode.S', '_umode.c', '.S', '.c']
+  possible_suffixes = ['.S', '.c']
   foreach possible_suffix : possible_suffixes
     if fs.is_file(meson.current_source_dir() + '/' + test_prefix + possible_suffix)
       test_sources += [test_prefix + possible_suffix]

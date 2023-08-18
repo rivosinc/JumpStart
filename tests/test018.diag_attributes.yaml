@@ -4,6 +4,8 @@
 
 satp_mode: "sv39"
 
+start_test_in_machine_mode: True
+
 mappings:
   -
     va: 0x80000000
@@ -12,7 +14,7 @@ mappings:
     page_size: 0x1000
     num_pages: 1
     pmarr_memory_type: "wb"
-    linker_script_section: ".text.supervisor"
+    linker_script_section: ".text.machine"
   -
     va: 0x80002000
     pa: 0x80002000
@@ -20,22 +22,20 @@ mappings:
     page_size: 0x1000
     num_pages: 1
     pmarr_memory_type: "wb"
-    linker_script_section: ".data.supervisor"
+    linker_script_section: ".data.machine"
   -
     va: 0x80003000
     pa: 0x80003000
     xwr: "0b101"
-    umode: "0b1"
     page_size: 0x1000
     num_pages: 2
     pmarr_memory_type: "wb"
-    linker_script_section: ".text.user"
+    linker_script_section: ".text.supervisor"
   -
     va: 0x80005000
     pa: 0x80005000
     xwr: "0b011"
-    umode: "0b1"
     page_size: 0x1000
     num_pages: 1
     pmarr_memory_type: "wb"
-    linker_script_section: ".data.user"
+    linker_script_section: ".data.supervisor"

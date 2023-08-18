@@ -128,8 +128,8 @@ Jumpstart will initialize the system and jump to the diag `main()`.
 
 By default, `main()` will be called in S-mode. To enter `main()` in M-mode, set the `start_test_in_machine_mode` attribute to `True` in the Attribute file (See [test009's Attribute File](tests/test009.test_attributes.yaml) for an example).
 
-Diags can use the `run_function_in_user_mode()` API to run specific functions in user mode. The sections containing U-mode code have to be tagged with the `umode` attribute in the Memory Map in the Attributes file.
-Refer to `test002` and `test011` as examples for writing U-mode tests.
+Diags can use the `run_function_in_supervisor_mode()` and `run_function_in_user_mode()` functions to run functions in supervisor and user mode respectively. Machine, Supervisor and User mode cannot share code sections so the code for different modes have to be separated using the `mappings` attribute and by tagging the functions with the names of the corresponding sections.
+Refer to the Unit Tests `test002`, `test011` (Run in User Mode) and `test018` (Run in Supervisor Mode) for examples of how these functions can be called and how the memory map can be set up.
 
 ### MP diags
 
