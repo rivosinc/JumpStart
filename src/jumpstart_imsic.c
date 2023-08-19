@@ -58,7 +58,7 @@ static void __imsic_eix_update(unsigned long id,
 static void __imsic_eix_update(unsigned long id,
                                eix_reg_type_t reg_type,
                                reg_bit_action_t action) {
-  unsigned long isel, ireg, status;
+  unsigned long isel, ireg;
 
   isel = id / __riscv_xlen;
   isel *= __riscv_xlen / IMSIC_EIPx_BITS;
@@ -66,20 +66,10 @@ static void __imsic_eix_update(unsigned long id,
 
   ireg = 1ULL << (id & (__riscv_xlen - 1));
 
-  /*
-   * The IMSIC EIEx and EIPx registers are indirectly
-   * accessed via using ISELECT and IREG CSRs so we
-   * need to access these CSRs without getting interrupted.
-   */
-
-  status = read_clear_csr(sstatus, SSTATUS_SIE_SHIFT);
-
   if (action == REG_BIT_SET)
     imsic_s_csr_set(isel, ireg);
   else
     imsic_s_csr_clear(isel, ireg);
-
-  set_csr(sstatus, status & SSTATUS_SIE_SHIFT);
 }
 
 void imsic_id_enable(unsigned long id) {
