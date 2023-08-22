@@ -151,21 +151,45 @@ meson compile -C builddir
 
 This will build `builddir/my_jumpstart_diag`
 
-To run the generated diag on Spike, use the `meson test` option. If the diag requires additional arguments be passed to Spike, these can be specified at setup time with `-Dspike_additional_arguments`.
+To run the generated diag on Spike, use the `meson test` option.
+
+### Miscellaneous debugging help
+
+If the diag requires additional arguments be passed to Spike, these can be specified at setup time with `-Dspike_additional_arguments`.
 
 For example, to pass the options:
 
 * `-p2`: Run 2 harts
-* `-v1 --log-commits`: Generate trace output
 
 to spike when running a generated diag:
 
 ```
-meson setup builddir --cross-file cross-file.txt --buildtype release -Ddiag_attributes_yaml=`pwd`/tests/test013.diag_attributes.yaml -Ddiag_sources=`pwd`/tests/test013.c -Ddiag_attribute_overrides=active_hart_mask=0b11 -Dspike_additional_arguments=-p2,-v1,--log-commits
+meson setup builddir --cross-file cross-file.txt --buildtype release -Ddiag_attributes_yaml=`pwd`/tests/test013.diag_attributes.yaml -Ddiag_sources=`pwd`/tests/test013.c -Ddiag_attribute_overrides=active_hart_mask=0b11 -Dspike_additional_arguments=-p2
 meson compile -C builddir
 meson test -C builddir -v
 ```
 
+#### Generating the trace
+
+The execution traces can be obtained in one of the following additional arguments during setup time:
+
+* -Dspike_additional_arguments=-v1 --log-commits
+* -Dspike_generate_trace=true
+
+#### Interactive debugging
+
+The meson test doesn't support spike's command line debugging facility for interactive debugging.
+However, the spike can be run manually with `-d` for interactive debugging.
+
+```
+meson setup builddir --cross-file cross-file.txt --buildtype release -Ddiag_attributes_yaml=`pwd`/tests/test006.diag_attributes.yaml -Ddiag_sources=`pwd`/tests/test006.c -Dspike_additional_arguments=-d
+meson compile -C builddir
+meson test -C builddir
+
+#Extract the spike command line from the log file and fix the diag path correctly
+spike --pass-fail --isa=rv64gchv_zba_zbb_zbc_zbs_zbkb_sstc_svpbmt_svinval_sscofpmf_zicbom_zicbop_zicboz_zfh_zfhmin_zfbfmin_zvfh_zvfhmin_zvfbfmin_\
+zvfbfwma_zkt_zkr_zicsr_zifencei_zihintpause_zawrs_zicond_zvkned_zvbb_zvkg_zvknha_zvknhb_zvksh_zvksed_xrivostime_xrivospagewalk_xrivoscode_smaia_ssaia -d builddir/jumpstart_diag.elf
+```
 ## Support
 
 For help, please send a message on the Slack channel #jumpstart-directed-diags-framework.
