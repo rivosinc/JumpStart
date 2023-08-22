@@ -52,26 +52,26 @@ typedef enum REG_BIT_ACTION {
 
 // Writes `__v` to the register `__c` of the guest IMSIC file selected by
 // `vgein`.
-#define imsic_vs_csr_write(__c, __v) \
-  do { \
-    write_csr(vsiselect, __c); \
-    write_csr(vsireg, __v); \
+#define imsic_vs_csr_write(__c, __v)                                           \
+  do {                                                                         \
+    write_csr(vsiselect, __c);                                                 \
+    write_csr(vsireg, __v);                                                    \
   } while (0)
 
 // Sets the bits specified by `__v` in the register `__c` of the guest IMSIC
 // file selected by `vgein`.
-#define imsic_vs_csr_set(__c, __v) \
-  do { \
-    write_csr(vsiselect, __c); \
-    set_csr(vsireg, __v); \
+#define imsic_vs_csr_set(__c, __v)                                             \
+  do {                                                                         \
+    write_csr(vsiselect, __c);                                                 \
+    set_csr(vsireg, __v);                                                      \
   } while (0)
 
 // Clears the bits specified by `__v` in the register `__c` of the guest IMSIC
 // file selected by `vgein`.
-#define imsic_vs_csr_clear(__c, __v) \
-  do { \
-    write_csr(vsiselect, __c); \
-    clear_csr(vsireg, __v); \
+#define imsic_vs_csr_clear(__c, __v)                                           \
+  do {                                                                         \
+    write_csr(vsiselect, __c);                                                 \
+    clear_csr(vsireg, __v);                                                    \
   } while (0)
 
 static void set_vgein(unsigned guest_id)
@@ -83,14 +83,13 @@ static void set_vgein(unsigned guest_id)
 static void set_vgein(unsigned guest_id) {
   uint64_t hstatus_val = read_csr(hstatus);
   hstatus_val &= ~((uint64_t)HSTATUS_VGEIN_MASK << HSTATUS_VGEIN_LSB);
-  hstatus_val |= ((guest_id & (uint64_t)HSTATUS_VGEIN_MASK) << HSTATUS_VGEIN_LSB);
+  hstatus_val |=
+      ((guest_id & (uint64_t)HSTATUS_VGEIN_MASK) << HSTATUS_VGEIN_LSB);
   write_csr(hstatus, hstatus_val);
 }
 
-static void __imsic_eix_update_bits(unsigned long reg_idx,
-                                    unsigned long mask,
-                                    reg_bit_action_t action,
-                                    unsigned guest_id)
+static void __imsic_eix_update_bits(unsigned long reg_idx, unsigned long mask,
+                                    reg_bit_action_t action, unsigned guest_id)
     __attribute__((section(".jumpstart.text.supervisor")));
 
 // Sets or clears the bits specified in the given IMSIC register.
@@ -99,8 +98,7 @@ static void __imsic_eix_update_bits(unsigned long reg_idx,
 // mask - the bits to set or clear.
 // set - if true set the bits given in mask, otherwise clear them.
 // guest_id - the guest interrupt file to modify. If 0, modify the host.
-static void __imsic_eix_update_bits(unsigned long reg_idx,
-                                    unsigned long mask,
+static void __imsic_eix_update_bits(unsigned long reg_idx, unsigned long mask,
                                     reg_bit_action_t action,
                                     unsigned guest_id) {
   if (guest_id == 0) { // host(s-mode)
@@ -118,14 +116,12 @@ static void __imsic_eix_update_bits(unsigned long reg_idx,
 }
 
 static void __imsic_eix_update(unsigned long interrupt_id,
-                               eix_reg_type_t reg_type,
-                               reg_bit_action_t action,
+                               eix_reg_type_t reg_type, reg_bit_action_t action,
                                unsigned guest_id)
     __attribute__((section(".jumpstart.text.supervisor")));
 
 static void __imsic_eix_update(unsigned long interrupt_id,
-                               eix_reg_type_t reg_type,
-                               reg_bit_action_t action,
+                               eix_reg_type_t reg_type, reg_bit_action_t action,
                                unsigned guest_id) {
   unsigned long isel, ireg;
 
@@ -182,9 +178,11 @@ void send_ipi_to_supervisor_mode(unsigned long hart_id) {
   *(uint32_t *)addr = IMSIC_IPI_ID;
 }
 
-void send_interrupt_to_guest(unsigned long hart_id, unsigned long guest_id, uint32_t interrupt_id) {
+void send_interrupt_to_guest(unsigned long hart_id, unsigned long guest_id,
+                             uint32_t interrupt_id) {
   uintptr_t hart_base = IMSIC_S_BASE + IMSIC_S_INTERLEAVE * hart_id;
-  uintptr_t addr = hart_base + IMSIC_GUEST_OFFSET + (guest_id - 1) * IMSIC_MMIO_PAGE_SIZE;
+  uintptr_t addr =
+      hart_base + IMSIC_GUEST_OFFSET + (guest_id - 1) * IMSIC_MMIO_PAGE_SIZE;
 
   *(uint32_t *)addr = interrupt_id;
 }
