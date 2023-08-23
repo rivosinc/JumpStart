@@ -387,6 +387,15 @@ class DiagAttributes:
         last_mapping = updated_mappings[-1]
         new_mapping = {}
 
+        last_mapping_size = last_mapping['page_size'] * last_mapping[
+            'num_pages']
+        if last_mapping[
+                'pmarr_memory_type'] != pmarr_memory_type and last_mapping_size < PmarrAttributes.minimum_size:
+            log.debug(
+                f"Placing new mapping {last_mapping_size} bytes after {last_mapping} to account for PMARR minimum size of {PmarrAttributes.minimum_size}"
+            )
+            last_mapping_size = PmarrAttributes.minimum_size
+
         # If the last mapping is a no_pte_allocation mapping, then it
         # won't have a VA.
         if 'va' not in last_mapping:
@@ -395,11 +404,9 @@ class DiagAttributes:
         else:
             last_mapping_va = last_mapping['va']
 
-        new_mapping['va'] = last_mapping_va + (last_mapping['page_size'] *
-                                               last_mapping['num_pages'])
+        new_mapping['va'] = last_mapping_va + last_mapping_size
+        new_mapping['pa'] = last_mapping['pa'] + last_mapping_size
 
-        new_mapping['pa'] = last_mapping['pa'] + (last_mapping['page_size'] *
-                                                  last_mapping['num_pages'])
         new_mapping['xwr'] = xwr
         new_mapping['umode'] = umode
         new_mapping['page_size'] = 1 << self.get_attribute('page_offset')
