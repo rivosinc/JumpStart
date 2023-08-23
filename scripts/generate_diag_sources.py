@@ -380,32 +380,32 @@ class DiagAttributes:
                 matching_pmarr_region.add_to_region(
                     mapping['pa'], mapping['pa'] + mapping_size)
 
-    def add_to_mappings(self, mappings, xwr, umode, num_pages,
-                        pmarr_memory_type, linker_script_section):
-        # Adds the mapping to the end of the list of mappings
+    def add_after_mapping(self, mappings, previous_mapping_id, xwr, umode,
+                          num_pages, pmarr_memory_type, linker_script_section):
+        # We expect that the mappings are sorted by the virtual address.
         updated_mappings = mappings.copy()
-        last_mapping = updated_mappings[-1]
+        previous_mapping = updated_mappings[previous_mapping_id]
         new_mapping = {}
 
-        last_mapping_size = last_mapping['page_size'] * last_mapping[
-            'num_pages']
-        if last_mapping[
-                'pmarr_memory_type'] != pmarr_memory_type and last_mapping_size < PmarrAttributes.minimum_size:
+        previous_mapping_size = previous_mapping[
+            'page_size'] * previous_mapping['num_pages']
+        if previous_mapping[
+                'pmarr_memory_type'] != pmarr_memory_type and previous_mapping_size < PmarrAttributes.minimum_size:
             log.debug(
-                f"Placing new mapping {last_mapping_size} bytes after {last_mapping} to account for PMARR minimum size of {PmarrAttributes.minimum_size}"
+                f"Placing new mapping {previous_mapping_size} bytes after {previous_mapping} to account for PMARR minimum size of {PmarrAttributes.minimum_size}"
             )
-            last_mapping_size = PmarrAttributes.minimum_size
+            previous_mapping_size = PmarrAttributes.minimum_size
 
         # If the last mapping is a no_pte_allocation mapping, then it
         # won't have a VA.
-        if 'va' not in last_mapping:
-            assert (last_mapping['no_pte_allocation'] is True)
-            last_mapping_va = last_mapping['pa']
+        if 'va' not in previous_mapping:
+            assert (previous_mapping['no_pte_allocation'] is True)
+            previous_mapping_va = previous_mapping['pa']
         else:
-            last_mapping_va = last_mapping['va']
+            previous_mapping_va = previous_mapping['va']
 
-        new_mapping['va'] = last_mapping_va + last_mapping_size
-        new_mapping['pa'] = last_mapping['pa'] + last_mapping_size
+        new_mapping['va'] = previous_mapping_va + previous_mapping_size
+        new_mapping['pa'] = previous_mapping['pa'] + previous_mapping_size
 
         new_mapping['xwr'] = xwr
         new_mapping['umode'] = umode
@@ -413,13 +413,23 @@ class DiagAttributes:
         new_mapping['num_pages'] = num_pages
         new_mapping['pmarr_memory_type'] = pmarr_memory_type
         new_mapping['linker_script_section'] = linker_script_section
-        updated_mappings.append(new_mapping)
+
+        # make sure that the new mapping doesn't overlap with the next
+        # one if it exists.
+        if (previous_mapping_id + 1) < len(updated_mappings):
+            next_mapping = updated_mappings[previous_mapping_id + 1]
+            assert ((new_mapping['pa'] +
+                     (new_mapping['page_size'] * new_mapping['num_pages'])) <=
+                    next_mapping['pa'])
+
+        updated_mappings.insert(previous_mapping_id + 1, new_mapping)
         return updated_mappings
 
     def add_pagetable_section_to_mappings(self, mappings):
         # Add an additional mapping after the last mapping for the pagetables
-        updated_mappings = self.add_to_mappings(
-            mappings, "0b001", "0b0",
+        updated_mappings = self.add_after_mapping(
+            mappings,
+            len(mappings) - 1, "0b001", "0b0",
             self.num_pages_available_for_PT_allocation, 'wb',
             '.jumpstart.rodata.pagetables')
         self.PT_section_start_address = updated_mappings[-1]['pa']
@@ -431,9 +441,10 @@ class DiagAttributes:
                 'jumpstart_supervisor_text_page_counts']:
             num_jumpstart_text_pages += self.jumpstart_source_attributes[
                 'jumpstart_supervisor_text_page_counts'][page_count]
-        updated_mappings = self.add_to_mappings(mappings, "0b101", "0b0",
-                                                num_jumpstart_text_pages, 'wb',
-                                                '.jumpstart.text.supervisor')
+        updated_mappings = self.add_after_mapping(
+            mappings,
+            len(mappings) - 1, "0b101", "0b0", num_jumpstart_text_pages, 'wb',
+            '.jumpstart.text.supervisor')
         return updated_mappings
 
     def add_jumpstart_privileged_data_section_to_mappings(self, mappings):
@@ -443,16 +454,20 @@ class DiagAttributes:
             num_jumpstart_data_pages += self.jumpstart_source_attributes[
                 'jumpstart_privileged_data_page_counts'][page_count]
 
-        updated_mappings = self.add_to_mappings(mappings, "0b011", "0b0",
-                                                num_jumpstart_data_pages, 'wb',
-                                                '.jumpstart.data.privileged')
+        updated_mappings = self.add_after_mapping(
+            mappings,
+            len(mappings) - 1, "0b011", "0b0", num_jumpstart_data_pages, 'wb',
+            '.jumpstart.data.privileged')
         return updated_mappings
 
     def add_bss_and_rodata_sections_to_mappings(self, mappings):
-        updated_mappings = self.add_to_mappings(mappings, "0b011", "0b0", 1,
-                                                'wb', '.bss')
-        updated_mappings = self.add_to_mappings(updated_mappings, "0b001",
-                                                "0b0", 1, 'wb', '.rodata')
+        updated_mappings = self.add_after_mapping(mappings,
+                                                  len(mappings) - 1, "0b011",
+                                                  "0b0", 1, 'wb', '.bss')
+        updated_mappings = self.add_after_mapping(updated_mappings,
+                                                  len(updated_mappings) - 1,
+                                                  "0b001", "0b0", 1, 'wb',
+                                                  '.rodata')
         return updated_mappings
 
     def add_jumpstart_umode_text_section_to_mappings(self, mappings):
@@ -461,9 +476,12 @@ class DiagAttributes:
                 'jumpstart_umode_text_page_counts']:
             num_jumpstart_text_pages += self.jumpstart_source_attributes[
                 'jumpstart_umode_text_page_counts'][page_count]
-        updated_mappings = self.add_to_mappings(mappings, "0b101", "0b1",
-                                                num_jumpstart_text_pages, 'wb',
-                                                '.jumpstart.text.umode')
+        updated_mappings = self.add_after_mapping(mappings,
+                                                  len(mappings) - 1, "0b101",
+                                                  "0b1",
+                                                  num_jumpstart_text_pages,
+                                                  'wb',
+                                                  '.jumpstart.text.umode')
         return updated_mappings
 
     def add_jumpstart_umode_data_section_to_mappings(self, mappings):
@@ -473,16 +491,20 @@ class DiagAttributes:
             num_jumpstart_data_pages += self.jumpstart_source_attributes[
                 'jumpstart_umode_data_page_counts'][page_count]
 
-        updated_mappings = self.add_to_mappings(mappings, "0b011", "0b1",
-                                                num_jumpstart_data_pages, 'wb',
-                                                '.jumpstart.data.umode')
+        updated_mappings = self.add_after_mapping(mappings,
+                                                  len(mappings) - 1, "0b011",
+                                                  "0b1",
+                                                  num_jumpstart_data_pages,
+                                                  'wb',
+                                                  '.jumpstart.data.umode')
         return updated_mappings
 
     def add_guard_page_to_mappings(self, mappings):
         # Guard pages have no RWX permissions and are used to detect
         # overflows or underflows in the jumpstart data section
-        updated_mappings = self.add_to_mappings(
-            mappings, "0b000", "0b0", 1, 'wb',
+        updated_mappings = self.add_after_mapping(
+            mappings,
+            len(mappings) - 1, "0b000", "0b0", 1, 'wb',
             f'.jumpstart.guard_page.{self.num_guard_pages_generated}')
         self.num_guard_pages_generated += 1
         return updated_mappings
