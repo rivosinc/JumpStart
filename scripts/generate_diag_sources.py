@@ -784,19 +784,20 @@ class DiagAttributes:
                     # that don't have a linker_script_section attribute.
                     continue
 
-                assert (entry['linker_script_section'] not in defined_sections)
-
                 file.write(f"   /* {entry['linker_script_section']}: \n")
                 file.write(
                     f"       PA Range: {hex(entry['pa'])} - {hex(entry['pa'] + entry['num_pages'] * entry['page_size'])}\n"
                 )
                 file.write(f"   */\n")
                 file.write(f"   . = {hex(entry['pa'])};\n")
-                file.write(f"   {entry['linker_script_section']} : {{\n")
-                file.write(f"      *({entry['linker_script_section']})\n")
-                file.write(f"   }}\n\n")
 
-                defined_sections.append(entry['linker_script_section'])
+                linker_script_sections = entry['linker_script_section']
+                file.write(f"   {linker_script_sections.split(',')[0]} : {{\n")
+                for section_name in linker_script_sections.split(','):
+                    assert (section_name not in defined_sections)
+                    file.write(f"      *({section_name})\n")
+                    defined_sections.append(section_name)
+                file.write(f"   }}\n\n")
             file.write('\n}\n')
 
             file.close()
