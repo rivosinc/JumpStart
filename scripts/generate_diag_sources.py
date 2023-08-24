@@ -380,8 +380,15 @@ class DiagAttributes:
                 matching_pmarr_region.add_to_region(
                     mapping['pa'], mapping['pa'] + mapping_size)
 
-    def add_after_mapping(self, mappings, previous_mapping_id, xwr, umode,
-                          num_pages, pmarr_memory_type, linker_script_section):
+    def add_after_mapping(self,
+                          mappings,
+                          previous_mapping_id,
+                          xwr,
+                          umode,
+                          num_pages,
+                          pmarr_memory_type,
+                          linker_script_section,
+                          no_pte_allocation=False):
         # We expect that the mappings are sorted by the virtual address.
         updated_mappings = mappings.copy()
         previous_mapping = updated_mappings[previous_mapping_id]
@@ -398,8 +405,10 @@ class DiagAttributes:
 
         # If the last mapping is a no_pte_allocation mapping, then it
         # won't have a VA.
+        assert ('va' in previous_mapping
+                or ('no_pte_allocation' in previous_mapping
+                    and previous_mapping['no_pte_allocation'] is True))
         if 'va' not in previous_mapping:
-            assert (previous_mapping['no_pte_allocation'] is True)
             previous_mapping_va = previous_mapping['pa']
         else:
             previous_mapping_va = previous_mapping['va']
@@ -413,6 +422,7 @@ class DiagAttributes:
         new_mapping['num_pages'] = num_pages
         new_mapping['pmarr_memory_type'] = pmarr_memory_type
         new_mapping['linker_script_section'] = linker_script_section
+        new_mapping['no_pte_allocation'] = no_pte_allocation
 
         # make sure that the new mapping doesn't overlap with the next
         # one if it exists.
