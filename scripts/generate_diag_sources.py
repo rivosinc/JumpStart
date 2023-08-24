@@ -287,24 +287,23 @@ class DiagAttributes:
                 ['mappings'])
 
         self.jumpstart_source_attributes['diag_attributes'][
-            'mappings'] = self.add_jumpstart_umode_text_section_to_mappings(
-                self.jumpstart_source_attributes['diag_attributes']
-                ['mappings'])
-        self.jumpstart_source_attributes['diag_attributes'][
-            'mappings'] = self.add_jumpstart_umode_data_section_to_mappings(
-                self.jumpstart_source_attributes['diag_attributes']
-                ['mappings'])
-
-        self.jumpstart_source_attributes['diag_attributes'][
-            'mappings'] = self.add_bss_and_rodata_sections_to_mappings(
-                self.jumpstart_source_attributes['diag_attributes']
-                ['mappings'])
-        self.jumpstart_source_attributes['diag_attributes'][
             'mappings'] = self.add_jumpstart_supervisor_text_section_to_mappings(
                 self.jumpstart_source_attributes['diag_attributes']
                 ['mappings'])
         self.jumpstart_source_attributes['diag_attributes'][
             'mappings'] = self.add_jumpstart_privileged_data_section_to_mappings(
+                self.jumpstart_source_attributes['diag_attributes']
+                ['mappings'])
+        self.jumpstart_source_attributes['diag_attributes'][
+            'mappings'] = self.add_bss_and_rodata_sections_to_mappings(
+                self.jumpstart_source_attributes['diag_attributes']
+                ['mappings'])
+        self.jumpstart_source_attributes['diag_attributes'][
+            'mappings'] = self.add_jumpstart_umode_text_section_to_mappings(
+                self.jumpstart_source_attributes['diag_attributes']
+                ['mappings'])
+        self.jumpstart_source_attributes['diag_attributes'][
+            'mappings'] = self.add_jumpstart_umode_data_section_to_mappings(
                 self.jumpstart_source_attributes['diag_attributes']
                 ['mappings'])
         self.jumpstart_source_attributes['diag_attributes'][
