@@ -347,8 +347,11 @@ class DiagAttributes:
 
             last_mapping_size = last_mapping['page_size'] * last_mapping[
                 'num_pages']
-            if mapping['pmarr_memory_type'] != last_mapping[
-                    'pmarr_memory_type'] and last_mapping_size < PmarrAttributes.minimum_size:
+            last_mapping_pmarr_memory_type = last_mapping[
+                'pmarr_memory_type'] if 'pmarr_memory_type' in last_mapping else None
+
+            if last_mapping_pmarr_memory_type is not None and 'pmarr_memory_type' in mapping and mapping[
+                    'pmarr_memory_type'] != last_mapping_pmarr_memory_type and last_mapping_size < PmarrAttributes.minimum_size:
                 #  These mappings will fall into different PMARR regions which have a minimum size of 1M.
                 last_mapping_size = PmarrAttributes.minimum_size
 
@@ -370,22 +373,17 @@ class DiagAttributes:
 
     def create_pmarr_regions(self):
         self.pmarr_regions = []
-
-        # Use PMARR_0 to handle the jumpstart M-mode region. This region
-        # doesn't show up in the diag_attribute['mappings'] so explicitly add it
-        # to the pmarr_regions.
-        pmarr_0_region = PmarrRegion(
-            self.jumpstart_source_attributes['diag_attributes']
-            ['machine_mode_start_address'],
-            self.jumpstart_source_attributes['diag_attributes']
-            ['machine_mode_start_address'] + PmarrAttributes.minimum_size,
-            "wb")
-        self.pmarr_regions.append(pmarr_0_region)
-
         for mapping in self.jumpstart_source_attributes['diag_attributes'][
                 'mappings']:
             if 'pmarr_memory_type' not in mapping:
-                log.error("pmarr_memory_type is not specified in the mapping")
+                # rcode region does not get a PMARR.
+                if mapping[
+                        'linker_script_section'] == '.jumpstart.text.rcode.init,.jumpstart.text.rcode':
+                    continue
+
+                log.error(
+                    f"pmarr_memory_type is not specified in the mapping: {mapping}"
+                )
                 sys.exit(1)
 
             mapping_size = mapping['page_size'] * mapping['num_pages']
@@ -424,8 +422,10 @@ class DiagAttributes:
 
         previous_mapping_size = previous_mapping[
             'page_size'] * previous_mapping['num_pages']
-        if previous_mapping[
-                'pmarr_memory_type'] != pmarr_memory_type and previous_mapping_size < PmarrAttributes.minimum_size:
+        previous_mapping_pmarr_memory_type = previous_mapping[
+            'pmarr_memory_type'] if 'pmarr_memory_type' in previous_mapping else None
+
+        if previous_mapping_pmarr_memory_type is not None and previous_mapping_pmarr_memory_type != pmarr_memory_type and previous_mapping_size < PmarrAttributes.minimum_size:
             log.debug(
                 f"Placing new mapping {previous_mapping_size} bytes after {previous_mapping} to account for PMARR minimum size of {PmarrAttributes.minimum_size}"
             )
@@ -551,12 +551,9 @@ class DiagAttributes:
             'jumpstart_rcode_text_page_counts']['num_pages_for_all_text']
         rcode_mapping[
             'linker_script_section'] = ".jumpstart.text.rcode.init,.jumpstart.text.rcode"
-        rcode_mapping['pmarr_memory_type'] = "wb"
+        # rcode region does not get a PMARR mapping.
         rcode_mapping['no_pte_allocation'] = True
         mappings.append(rcode_mapping)
-
-        # Add a guard page mapping to catch linker script overruns of rcode
-        mappings = self.add_pa_guard_page_after_last_mapping(mappings)
 
         # machine mode section
         machine_mode_mapping = {}
