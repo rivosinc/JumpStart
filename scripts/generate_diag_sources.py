@@ -282,7 +282,7 @@ class DiagAttributes:
 
         # Add a guard page between the diag sections and the jumpstart infrastructure sections.
         self.jumpstart_source_attributes['diag_attributes'][
-            'mappings'] = self.add_guard_page_to_mappings(
+            'mappings'] = self.add_pa_guard_page_after_last_mapping(
                 self.jumpstart_source_attributes['diag_attributes']
                 ['mappings'])
 
@@ -308,7 +308,7 @@ class DiagAttributes:
                 self.jumpstart_source_attributes['diag_attributes']
                 ['mappings'])
         self.jumpstart_source_attributes['diag_attributes'][
-            'mappings'] = self.add_guard_page_to_mappings(
+            'mappings'] = self.add_pa_guard_page_after_last_mapping(
                 self.jumpstart_source_attributes['diag_attributes']
                 ['mappings'])
 
@@ -433,16 +433,19 @@ class DiagAttributes:
         else:
             previous_mapping_va = previous_mapping['va']
 
-        new_mapping['va'] = previous_mapping_va + previous_mapping_size
         new_mapping['pa'] = previous_mapping['pa'] + previous_mapping_size
 
-        new_mapping['xwr'] = xwr
-        new_mapping['umode'] = umode
+        new_mapping['no_pte_allocation'] = no_pte_allocation
+
+        if no_pte_allocation is False:
+            new_mapping['xwr'] = xwr
+            new_mapping['umode'] = umode
+            new_mapping['va'] = previous_mapping_va + previous_mapping_size
+
         new_mapping['page_size'] = 1 << self.get_attribute('page_offset')
         new_mapping['num_pages'] = num_pages
         new_mapping['pmarr_memory_type'] = pmarr_memory_type
         new_mapping['linker_script_section'] = linker_script_section
-        new_mapping['no_pte_allocation'] = no_pte_allocation
 
         # make sure that the new mapping doesn't overlap with the next
         # one if it exists.
@@ -545,18 +548,7 @@ class DiagAttributes:
         mappings.append(rcode_mapping)
 
         # Add a guard page mapping to catch linker script overruns of rcode
-        rcode_guard_page_mapping = {}
-        rcode_guard_page_mapping['pa'] = rcode_mapping[
-            'pa'] + rcode_mapping['page_size'] * rcode_mapping['num_pages']
-        rcode_guard_page_mapping['page_size'] = 1 << self.get_attribute(
-            'page_offset')
-        rcode_guard_page_mapping['num_pages'] = 1
-        rcode_guard_page_mapping[
-            'linker_script_section'] = f".jumpstart.guard_page.{self.num_guard_pages_generated}"
-        self.num_guard_pages_generated += 1
-        rcode_guard_page_mapping['pmarr_memory_type'] = "wb"
-        rcode_guard_page_mapping['no_pte_allocation'] = True
-        mappings.append(rcode_guard_page_mapping)
+        mappings = self.add_pa_guard_page_after_last_mapping(mappings)
 
         # machine mode section
         machine_mode_mapping = {}
@@ -573,29 +565,17 @@ class DiagAttributes:
         mappings.append(machine_mode_mapping)
 
         # Add a guard page mapping to catch linker script overruns of machine_mode
-        machine_mode_guard_page_mapping = {}
-        machine_mode_guard_page_mapping[
-            'pa'] = machine_mode_mapping['pa'] + machine_mode_mapping[
-                'page_size'] * machine_mode_mapping['num_pages']
-        machine_mode_guard_page_mapping['page_size'] = 1 << self.get_attribute(
-            'page_offset')
-        machine_mode_guard_page_mapping['num_pages'] = 1
-        machine_mode_guard_page_mapping[
-            'linker_script_section'] = f".jumpstart.guard_page.{self.num_guard_pages_generated}"
-        self.num_guard_pages_generated += 1
-        machine_mode_guard_page_mapping['pmarr_memory_type'] = "wb"
-        machine_mode_guard_page_mapping['no_pte_allocation'] = True
-        mappings.append(machine_mode_guard_page_mapping)
+        mappings = self.add_pa_guard_page_after_last_mapping(mappings)
 
         return mappings
 
-    def add_guard_page_to_mappings(self, mappings):
-        # Guard pages have no RWX permissions and are used to detect
-        # overflows or underflows in the jumpstart data section
+    def add_pa_guard_page_after_last_mapping(self, mappings):
+        # Guard pages have no allocations in the page tables but
+        # occupy space in the memory map.
         updated_mappings = self.add_after_mapping(
             mappings,
-            len(mappings) - 1, "0b000", "0b0", 1, 'wb',
-            f'.jumpstart.guard_page.{self.num_guard_pages_generated}')
+            len(mappings) - 1, None, None, 1, 'wb',
+            f'.jumpstart.guard_page.{self.num_guard_pages_generated}', True)
         self.num_guard_pages_generated += 1
         return updated_mappings
 
