@@ -315,13 +315,9 @@ class DiagAttributes:
         self.create_pagetables()
         self.create_pmarr_regions()
 
-    def sanity_check_diag_attributes(self):
-        assert ('satp_mode'
-                in self.jumpstart_source_attributes['diag_attributes'])
-        assert (
-            self.jumpstart_source_attributes['diag_attributes']['satp_mode']
-            in self.pt_attributes.mode_attributes)
+        self.sanity_check_memory_map()
 
+    def sanity_check_memory_map(self):
         for mapping in self.jumpstart_source_attributes['diag_attributes'][
                 'mappings']:
             if 'no_pte_allocation' in mapping and mapping[
@@ -332,18 +328,37 @@ class DiagAttributes:
                 assert (not any(x in mapping for x in pte_attributes))
 
         # check that the memory mappings don't overlap
-        # the mappings are sorted by the virtual address at this point.
-        last_region_end_address = 0
+        # the mappings are sorted by the physical address at this point.
+        last_mapping = None
         for mapping in self.jumpstart_source_attributes['diag_attributes'][
                 'mappings']:
-            if mapping['pa'] < last_region_end_address:
+
+            if last_mapping is None:
+                last_mapping = mapping
+                continue
+
+            last_mapping_size = last_mapping['page_size'] * last_mapping[
+                'num_pages']
+            if mapping['pmarr_memory_type'] != last_mapping[
+                    'pmarr_memory_type'] and last_mapping_size < PmarrAttributes.minimum_size:
+                #  These mappings will fall into different PMARR regions which have a minimum size of 1M.
+                last_mapping_size = PmarrAttributes.minimum_size
+
+            last_mapping_end_address = last_mapping['pa'] + last_mapping_size
+
+            if mapping['pa'] < last_mapping_end_address:
                 log.error(
-                    f"Memory mapping {mapping} overlaps with another memory mapping"
-                )
+                    f"Memory mapping {mapping} overlaps with {last_mapping}")
                 sys.exit(1)
 
-            last_region_end_address = mapping[
-                'pa'] + mapping['num_pages'] * mapping['page_size']
+            last_mapping = mapping
+
+    def sanity_check_diag_attributes(self):
+        assert ('satp_mode'
+                in self.jumpstart_source_attributes['diag_attributes'])
+        assert (
+            self.jumpstart_source_attributes['diag_attributes']['satp_mode']
+            in self.pt_attributes.mode_attributes)
 
     def create_pmarr_regions(self):
         self.pmarr_regions = []
