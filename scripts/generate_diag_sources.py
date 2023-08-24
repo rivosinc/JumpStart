@@ -267,6 +267,11 @@ class DiagAttributes:
                 )
 
         self.jumpstart_source_attributes['diag_attributes'][
+            'mappings'] = self.add_jumpstart_rcode_and_machine_mode_text_section_to_mappings(
+                self.jumpstart_source_attributes['diag_attributes']
+                ['mappings'])
+
+        self.jumpstart_source_attributes['diag_attributes'][
             'mappings'] = sorted(
                 self.jumpstart_source_attributes['diag_attributes']
                 ['mappings'],
@@ -508,6 +513,66 @@ class DiagAttributes:
                                                   'wb',
                                                   '.jumpstart.data.umode')
         return updated_mappings
+
+    def add_jumpstart_rcode_and_machine_mode_text_section_to_mappings(
+            self, mappings):
+        # rcode section
+        rcode_mapping = {}
+        rcode_mapping['pa'] = self.jumpstart_source_attributes[
+            'diag_attributes']['rcode_start_address']
+        rcode_mapping['page_size'] = 1 << self.get_attribute('page_offset')
+        rcode_mapping['num_pages'] = self.jumpstart_source_attributes[
+            'jumpstart_rcode_text_page_counts']['num_pages_for_all_text']
+        rcode_mapping[
+            'linker_script_section'] = ".jumpstart.text.rcode.init,.jumpstart.text.rcode"
+        rcode_mapping['pmarr_memory_type'] = "wb"
+        rcode_mapping['no_pte_allocation'] = True
+        mappings.append(rcode_mapping)
+
+        # Add a guard page mapping to catch linker script overruns of rcode
+        rcode_guard_page_mapping = {}
+        rcode_guard_page_mapping['pa'] = rcode_mapping[
+            'pa'] + rcode_mapping['page_size'] * rcode_mapping['num_pages']
+        rcode_guard_page_mapping['page_size'] = 1 << self.get_attribute(
+            'page_offset')
+        rcode_guard_page_mapping['num_pages'] = 1
+        rcode_guard_page_mapping[
+            'linker_script_section'] = f".jumpstart.guard_page.{self.num_guard_pages_generated}"
+        self.num_guard_pages_generated += 1
+        rcode_guard_page_mapping['pmarr_memory_type'] = "wb"
+        rcode_guard_page_mapping['no_pte_allocation'] = True
+        mappings.append(rcode_guard_page_mapping)
+
+        # machine mode section
+        machine_mode_mapping = {}
+        machine_mode_mapping['pa'] = self.jumpstart_source_attributes[
+            'diag_attributes']['machine_mode_start_address']
+        machine_mode_mapping['page_size'] = 1 << self.get_attribute(
+            'page_offset')
+        machine_mode_mapping['num_pages'] = self.jumpstart_source_attributes[
+            'jumpstart_machine_text_page_counts']['num_pages_for_all_text']
+        machine_mode_mapping[
+            'linker_script_section'] = ".jumpstart.text.machine.init,.jumpstart.text.machine,.jumpstart.text.machine.end"
+        machine_mode_mapping['pmarr_memory_type'] = "wb"
+        machine_mode_mapping['no_pte_allocation'] = True
+        mappings.append(machine_mode_mapping)
+
+        # Add a guard page mapping to catch linker script overruns of machine_mode
+        machine_mode_guard_page_mapping = {}
+        machine_mode_guard_page_mapping[
+            'pa'] = machine_mode_mapping['pa'] + machine_mode_mapping[
+                'page_size'] * machine_mode_mapping['num_pages']
+        machine_mode_guard_page_mapping['page_size'] = 1 << self.get_attribute(
+            'page_offset')
+        machine_mode_guard_page_mapping['num_pages'] = 1
+        machine_mode_guard_page_mapping[
+            'linker_script_section'] = f".jumpstart.guard_page.{self.num_guard_pages_generated}"
+        self.num_guard_pages_generated += 1
+        machine_mode_guard_page_mapping['pmarr_memory_type'] = "wb"
+        machine_mode_guard_page_mapping['no_pte_allocation'] = True
+        mappings.append(machine_mode_guard_page_mapping)
+
+        return mappings
 
     def add_guard_page_to_mappings(self, mappings):
         # Guard pages have no RWX permissions and are used to detect
@@ -758,31 +823,6 @@ class DiagAttributes:
 
             file.write('SECTIONS\n{\n')
             defined_sections = []
-
-            file.write(
-                f"   . = {hex(self.jumpstart_source_attributes['diag_attributes']['rcode_start_address'])};\n"
-            )
-            file.write(f"   .jumpstart.text.rcode : {{\n")
-            rcode_sections = [
-                '.jumpstart.text.rcode.init', '.jumpstart.text.rcode'
-            ]
-            for sections in rcode_sections:
-                file.write(f"      *({sections})\n")
-            file.write(f"   }}\n\n")
-            defined_sections.append(rcode_sections)
-
-            file.write(
-                f"   . = {hex(self.jumpstart_source_attributes['diag_attributes']['machine_mode_start_address'])};\n"
-            )
-            file.write(f"   .jumpstart.text.machine : {{\n")
-            machine_sections = [
-                '.jumpstart.text.machine.init', '.jumpstart.text.machine',
-                '.jumpstart.text.machine.end'
-            ]
-            for section in machine_sections:
-                file.write(f"      *({section})\n")
-            file.write(f"   }}\n\n")
-            defined_sections.append(machine_sections)
 
             # The entries are already sorted by VA
             # we also expect that the pages for the same section

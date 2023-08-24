@@ -8,6 +8,10 @@ max_num_harts_supported: 4
 # Allows us to keep track of infrastructure code size.
 # The test pages are not limited by these counts and are dependent on the
 # number of pages allocated in the test memory map.
+jumpstart_rcode_text_page_counts:
+  num_pages_for_all_text: 1
+jumpstart_machine_text_page_counts:
+  num_pages_for_all_text: 2
 jumpstart_supervisor_text_page_counts:
   num_pages_for_all_text: 2
 jumpstart_privileged_data_page_counts:
