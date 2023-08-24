@@ -283,7 +283,7 @@ class DiagAttributes:
                 reverse=False)
         self.sanity_check_memory_map()
 
-        self.create_pagetables()
+        self.create_pagetables_in_memory_for_mappings()
         self.create_pmarr_regions()
 
         self.sanity_check_memory_map()
@@ -663,7 +663,7 @@ class DiagAttributes:
         return new_PT_page
 
     # Populates the sparse memory with the pagetable entries
-    def allocate_PT_mappings(self):
+    def create_pagetables_in_memory_for_mappings(self):
         for entry in self.split_mappings_at_page_granularity(
                 self.jumpstart_source_attributes['diag_attributes']
             ['mappings']):
@@ -757,9 +757,6 @@ class DiagAttributes:
                 self.update_pte_region_sparse_memory(pte_address, pte_value)
 
                 current_level += 1
-
-    def create_pagetables(self):
-        self.allocate_PT_mappings()
 
         # Make sure that we have the first and last addresses set so that we
         # know the range of the page table memory when generating the
