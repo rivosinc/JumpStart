@@ -317,6 +317,10 @@ class DiagAttributes:
                 self.jumpstart_source_attributes['diag_attributes']
                 ['mappings'])
         self.jumpstart_source_attributes['diag_attributes'][
+            'mappings'] = self.add_pagetable_section_to_mappings(
+                self.jumpstart_source_attributes['diag_attributes']
+                ['mappings'])
+        self.jumpstart_source_attributes['diag_attributes'][
             'mappings'] = self.add_pa_guard_page_after_last_mapping(
                 self.jumpstart_source_attributes['diag_attributes']
                 ['mappings'])
@@ -463,7 +467,6 @@ class DiagAttributes:
         return updated_mappings
 
     def add_pagetable_section_to_mappings(self, mappings):
-        # Add an additional mapping after the last mapping for the pagetables
         updated_mappings = self.add_after_mapping(
             mappings,
             len(mappings) - 1, "0b001", "0b0",
@@ -661,11 +664,6 @@ class DiagAttributes:
 
     # Populates the sparse memory with the pagetable entries
     def allocate_PT_mappings(self):
-        self.jumpstart_source_attributes['diag_attributes'][
-            'mappings'] = self.add_pagetable_section_to_mappings(
-                self.jumpstart_source_attributes['diag_attributes']
-                ['mappings'])
-
         for entry in self.split_mappings_at_page_granularity(
                 self.jumpstart_source_attributes['diag_attributes']
             ['mappings']):
