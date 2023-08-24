@@ -22,7 +22,6 @@ jumpstart_umode_text_page_counts:
   num_pages_for_all_text: 1
 jumpstart_umode_data_page_counts:
   num_pages_for_stack: 4
-  num_pages_for_data_section: 1
 
 
 # These attributes can be overriden by the test attributes file or
