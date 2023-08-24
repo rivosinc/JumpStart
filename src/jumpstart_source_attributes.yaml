@@ -29,7 +29,7 @@ jumpstart_umode_data_page_counts:
 diag_attributes:
   start_test_in_machine_mode: false
   in_qemu_mode: false
-  max_num_pages_for_PT_allocation: 3
+  max_num_pages_for_PT_allocation: 5
   rcode_start_address: 0x06000000
   machine_mode_start_address: 0x7f800000
   active_hart_mask: '0b1'

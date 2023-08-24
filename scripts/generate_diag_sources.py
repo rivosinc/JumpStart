@@ -266,26 +266,32 @@ class DiagAttributes:
                     f"Command line overriding {attribute_name} with {attribute_value}."
                 )
 
-        self.jumpstart_source_attributes['diag_attributes'][
-            'mappings'] = self.add_jumpstart_rcode_and_machine_mode_text_section_to_mappings(
-                self.jumpstart_source_attributes['diag_attributes']
-                ['mappings'])
+        self.sanity_check_diag_attributes()
 
+        self.append_jumpstart_sections_to_mappings()
+
+        # Sort all the mappings and sanity check them.
         self.jumpstart_source_attributes['diag_attributes'][
             'mappings'] = sorted(
                 self.jumpstart_source_attributes['diag_attributes']
                 ['mappings'],
                 key=lambda x: x['pa'],
                 reverse=False)
+        self.sanity_check_memory_map()
 
-        self.sanity_check_diag_attributes()
+        self.create_pagetables()
+        self.create_pmarr_regions()
 
-        # Add a guard page between the diag sections and the jumpstart infrastructure sections.
+        self.sanity_check_memory_map()
+
+    def append_jumpstart_sections_to_mappings(self):
+        # the rocde and machine mode sections are added at specific locations
+        # the rest are just added on at locations immediately following
+        # these sections.
         self.jumpstart_source_attributes['diag_attributes'][
-            'mappings'] = self.add_pa_guard_page_after_last_mapping(
+            'mappings'] = self.add_jumpstart_rcode_and_machine_mode_text_section_to_mappings(
                 self.jumpstart_source_attributes['diag_attributes']
                 ['mappings'])
-
         self.jumpstart_source_attributes['diag_attributes'][
             'mappings'] = self.add_jumpstart_supervisor_text_section_to_mappings(
                 self.jumpstart_source_attributes['diag_attributes']
@@ -310,11 +316,6 @@ class DiagAttributes:
             'mappings'] = self.add_pa_guard_page_after_last_mapping(
                 self.jumpstart_source_attributes['diag_attributes']
                 ['mappings'])
-
-        self.create_pagetables()
-        self.create_pmarr_regions()
-
-        self.sanity_check_memory_map()
 
     def sanity_check_memory_map(self):
         for mapping in self.jumpstart_source_attributes['diag_attributes'][
