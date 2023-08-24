@@ -464,7 +464,7 @@ class DiagAttributes:
             mappings,
             len(mappings) - 1, "0b001", "0b0",
             self.num_pages_available_for_PT_allocation, 'wb',
-            '.jumpstart.rodata.pagetables')
+            '.jumpstart.rodata.pagetables', True)
         self.PT_section_start_address = updated_mappings[-1]['pa']
         return updated_mappings
 
