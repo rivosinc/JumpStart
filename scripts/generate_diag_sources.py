@@ -231,6 +231,10 @@ class DiagAttributes:
     pt_attributes = PageTableAttributes()
     num_guard_pages_generated = 0
 
+    PT_section_start_address = None
+    PT_pages = []
+    pte_region_sparse_memory = {}
+
     def __init__(self, jumpstart_source_attributes_yaml, diag_attributes_yaml,
                  override_diag_attributes):
         self.diag_attributes_yaml = diag_attributes_yaml
@@ -463,7 +467,8 @@ class DiagAttributes:
         updated_mappings = self.add_after_mapping(
             mappings,
             len(mappings) - 1, "0b001", "0b0",
-            self.num_pages_available_for_PT_allocation, 'wb',
+            self.jumpstart_source_attributes['diag_attributes']
+            ['max_num_pages_for_PT_allocation'], 'wb',
             '.jumpstart.rodata.pagetables', True)
         self.PT_section_start_address = updated_mappings[-1]['pa']
         return updated_mappings
@@ -634,7 +639,8 @@ class DiagAttributes:
         log.debug(
             f"Allocating new pagetable page for VA {hex(va)} at level {level}")
 
-        if len(self.PT_pages) == self.num_pages_available_for_PT_allocation:
+        if len(self.PT_pages) == self.jumpstart_source_attributes[
+                'diag_attributes']['max_num_pages_for_PT_allocation']:
             # Can't create any more pagetable pages
             return None
 
@@ -653,15 +659,16 @@ class DiagAttributes:
 
         return new_PT_page
 
-    # Populates the sparse memory with the pagetable entries and returns the
-    # updated mappings with the pagetable section added.
-    # Returns None if there are insufficient number of pagetable pages
-    # to allocate from.
+    # Populates the sparse memory with the pagetable entries
     def allocate_PT_mappings(self):
-        updated_mappings = self.add_pagetable_section_to_mappings(
-            self.jumpstart_source_attributes['diag_attributes']['mappings'])
+        self.jumpstart_source_attributes['diag_attributes'][
+            'mappings'] = self.add_pagetable_section_to_mappings(
+                self.jumpstart_source_attributes['diag_attributes']
+                ['mappings'])
 
-        for entry in self.split_mappings_at_page_granularity(updated_mappings):
+        for entry in self.split_mappings_at_page_granularity(
+                self.jumpstart_source_attributes['diag_attributes']
+            ['mappings']):
             # TODO: support superpages
             assert (entry['page_size'] == 0x1000)
 
@@ -673,10 +680,10 @@ class DiagAttributes:
                 current_level_PT_page = self.get_PT_page(
                     entry['va'], current_level)
                 if (current_level_PT_page is None):
-                    log.debug(
-                        f"Insufficient pagetable pages to create level {current_level + 1} pagetable for {entry}"
+                    log.error(
+                        f"Insufficient pagetable pages (max_num_pages_for_PT_allocation = {self.jumpstart_source_attributes['diag_attributes']['max_num_pages_for_PT_allocation']}) to create level {current_level + 1} pagetable for {entry}"
                     )
-                    return None
+                    sys.exit(1)
 
                 current_level_range_start = current_level_PT_page.get_sparse_memory_address(
                 )
@@ -690,10 +697,10 @@ class DiagAttributes:
                     next_level_pagetable = self.get_PT_page(
                         entry['va'], current_level + 1)
                     if next_level_pagetable is None:
-                        log.debug(
-                            f"Insufficient pagetable pages to create next level {current_level + 1} pagetable for {entry}"
+                        log.error(
+                            f"Insufficient pagetable pages (max_num_pages_for_PT_allocation = {self.jumpstart_source_attributes['diag_attributes']['max_num_pages_for_PT_allocation']}) to create next level {current_level + 1} pagetable for {entry}"
                         )
-                        return None
+                        sys.exit(1)
 
                     next_level_range_start = next_level_pagetable.get_sparse_memory_address(
                     )
@@ -753,39 +760,8 @@ class DiagAttributes:
 
                 current_level += 1
 
-        return updated_mappings
-
     def create_pagetables(self):
-        # this is the minimum number of page tables we need.
-        self.num_pages_available_for_PT_allocation = self.get_attribute(
-            'num_levels')
-
-        while True:
-            self.PT_section_start_address = None
-            self.PT_pages = []
-            self.pte_region_sparse_memory = {}
-
-            updated_mappings = self.allocate_PT_mappings()
-            if updated_mappings == None:
-                if self.num_pages_available_for_PT_allocation >= self.jumpstart_source_attributes[
-                        'diag_attributes']['max_num_pages_for_PT_allocation']:
-                    log.error(
-                        f"Hit max number of PT pages ({self.jumpstart_source_attributes['diag_attributes']['max_num_pages_for_PT_allocation']}) available to create pagetables"
-                    )
-                    sys.exit(1)
-
-                self.num_pages_available_for_PT_allocation += 1
-                log.debug(
-                    f"Increasing the number of pagetable pages to {self.num_pages_available_for_PT_allocation} and retrying PT allocation."
-                )
-                continue
-
-            break
-
-        # Update the existing mappings as we've added new mappings
-        # for the page table region.
-        self.jumpstart_source_attributes['diag_attributes'][
-            'mappings'] = updated_mappings
+        self.allocate_PT_mappings()
 
         # Make sure that we have the first and last addresses set so that we
         # know the range of the page table memory when generating the
