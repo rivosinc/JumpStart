@@ -797,7 +797,7 @@ class DiagAttributes:
                     # that don't have a linker_script_section attribute.
                     continue
 
-                file.write(f"   /* {entry['linker_script_section']}: \n")
+                file.write(f"   /* {entry['linker_script_section']}:\n")
                 file.write(
                     f"       PA Range: {hex(entry['pa'])} - {hex(entry['pa'] + entry['num_pages'] * entry['page_size'])}\n"
                 )
