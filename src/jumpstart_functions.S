@@ -182,6 +182,61 @@ run_function_in_user_mode_return_point:
   addi  sp, sp, 16
   ret
 
+# Inputs:
+#   a0: hart id of current hart
+#   a1: hart mask of harts to sync.
+#   a2: hart id of primary hart for sync
+#   a3: sync point address (4 byte aligned)
+.global sync_harts_in_mask
+sync_harts_in_mask:
+  addi  sp, sp, -16
+  sd  ra, 8(sp)
+  sd  fp, 0(sp)
+  addi    fp, sp, 16
+
+  li t0, 1
+  sll t2, t0, a0
+  sll t0, t0, a2
+
+  # Both this hart id and the primary hart id should be part of
+  # the mask of harts to sync
+  and t3, t2, a1
+  beqz t3, jumpstart_supervisor_fail
+  and t3, t0, a1
+  beqz t3, jumpstart_supervisor_fail
+
+  amoor.w.aq t3, t2, (a3)
+
+  # This bit should not be already set.
+  and t3, t3, t2
+  bnez t3, jumpstart_supervisor_fail
+
+  bne t0, t2, wait_for_primary_hart_to_clear_sync_point_bits
+
+wait_for_all_harts_to_set_sync_point_bits:
+  # Primary hart waits till all the harts have set their bits in the sync point.
+  lw t0, (a3)
+  bne t0, a1, wait_for_all_harts_to_set_sync_point_bits
+
+  amoswap.w t0, zero, (a3)
+
+  bne t0, a1, jumpstart_supervisor_fail
+
+  j return_from_sync_harts_in_mask
+
+wait_for_primary_hart_to_clear_sync_point_bits:
+  # non-primary harts wait for the primary hart to clear the sync point bits.
+  lw t0, (a3)
+  srl t0, t0, a0
+  andi t0, t0, 1
+  bnez t0, wait_for_primary_hart_to_clear_sync_point_bits
+
+return_from_sync_harts_in_mask:
+  ld  ra, 8(sp)
+  ld  fp, 0(sp)
+  addi  sp, sp, 16
+  ret
+
 .global sync_all_harts_from_supervisor_mode
 sync_all_harts_from_supervisor_mode:
   addi  sp, sp, -16
@@ -189,39 +244,14 @@ sync_all_harts_from_supervisor_mode:
   sd  fp, 0(sp)
   addi    fp, sp, 16
 
-  jal get_thread_attributes_hart_id_from_supervisor_mode
-
-  li t0, 1
-  sll t2, t0, a0
-
-  la t1, hart_sync_point
-
-  amoor.w.aq t3, t2, (t1)
-
-  slli t0, t0, PRIMARY_HART_ID
-  bne t0, t2, wait_for_primary_hart_to_clear_sync_point_bits
-
   jal get_active_hart_mask_from_supervisor_mode
+  mv a1, a0
+  jal get_thread_attributes_hart_id_from_supervisor_mode
+  li a2, PRIMARY_HART_ID
+  la a3, hart_sync_point
 
-wait_for_all_harts_to_set_sync_point_bits:
-  # Primary hart waits till all the harts have set their bits in the sync point.
-  lw t0, (t1)
-  bne t0, a0, wait_for_all_harts_to_set_sync_point_bits
+  jal sync_harts_in_mask
 
-  amoswap.w t0, zero, (t1)
-
-  bne t0, a0, jumpstart_supervisor_fail
-
-  j return_from_sync_all_harts_from_supervisor_mode
-
-wait_for_primary_hart_to_clear_sync_point_bits:
-  # non-primary harts wait for the primary hart to clear the sync point bits.
-  lw t0, (t1)
-  srl t0, t0, a0
-  andi t0, t0, 1
-  bnez t0, wait_for_primary_hart_to_clear_sync_point_bits
-
-return_from_sync_all_harts_from_supervisor_mode:
   ld  ra, 8(sp)
   ld  fp, 0(sp)
   addi  sp, sp, 16
