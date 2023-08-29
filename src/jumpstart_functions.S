@@ -73,12 +73,13 @@ save_context:
   srli  gp, gp, MSTATUS_SPP_SHIFT
   andi  gp, gp, MSTATUS_SPP_MASK
   addi  gp, gp, -SUPERVISOR_MODE_ENCODING
-  bnez  gp, return_from_handling_user_mode_trap
+  bnez  gp, restore_user_mode_context
 
+restore_supervisor_mode_context:
   GET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
   j restore_context
 
-return_from_handling_user_mode_trap:
+restore_user_mode_context:
   li  gp, USER_MODE_ENCODING
   SET_THREAD_ATTRIBUTES_CURRENT_MODE(gp)
   GET_THREAD_ATTRIBUTES_UMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
@@ -86,6 +87,7 @@ return_from_handling_user_mode_trap:
 restore_context:
   RESTORE_ALL_GPRS
 
+return_from_stvec_trap_handler:
   sret
 
 check_for_env_call_requests:
