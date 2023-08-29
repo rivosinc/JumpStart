@@ -617,8 +617,10 @@ class DiagAttributes:
 
     def update_pte_region_sparse_memory(self, address, value):
         if address in self.pte_region_sparse_memory:
-            log.debug(f"[{hex(address)}] = {hex(value)} (already exists)")
             assert (self.pte_region_sparse_memory[address] == value)
+            log.debug(
+                f"[{hex(address)}] already contains {hex(value)}. No update needed."
+            )
         else:
             self.pte_region_sparse_memory[address] = value
             log.debug(f"[{hex(address)}] = {hex(value)}")
