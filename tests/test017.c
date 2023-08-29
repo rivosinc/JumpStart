@@ -4,8 +4,8 @@
 
 #include "jumpstart_functions.h"
 
-void test016_illegal_instruction_handler(void);
-void test016_illegal_instruction_function(void);
+void test017_illegal_instruction_handler(void);
+int test017_illegal_instruction_function(void);
 
 int test016_main(void);
 void main(void);
@@ -32,9 +32,11 @@ int test016_main(void) {
 
   register_machine_mode_trap_handler_override(
       MCAUSE_EC_ILLEGAL_INSTRUCTION,
-      (uint64_t)(&test016_illegal_instruction_handler));
+      (uint64_t)(&test017_illegal_instruction_handler));
 
-  test016_illegal_instruction_function();
+  if (test017_illegal_instruction_function() != 0) {
+    return DIAG_FAILED;
+  }
 
   return DIAG_PASSED;
 }
