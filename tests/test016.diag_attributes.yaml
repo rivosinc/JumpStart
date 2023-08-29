@@ -4,7 +4,7 @@
 
 satp_mode: "sv39"
 
-max_num_pages_for_PT_allocation: 6
+max_num_pages_for_PT_allocation: 7
 
 active_hart_mask: "0b1111"
 

@@ -9,6 +9,7 @@
 import argparse
 import enum
 import logging as log
+import math
 import os
 import sys
 
@@ -616,8 +617,8 @@ class DiagAttributes:
 
     def update_pte_region_sparse_memory(self, address, value):
         if address in self.pte_region_sparse_memory:
-            assert (self.pte_region_sparse_memory[address] == value)
             log.debug(f"[{hex(address)}] = {hex(value)} (already exists)")
+            assert (self.pte_region_sparse_memory[address] == value)
         else:
             self.pte_region_sparse_memory[address] = value
             log.debug(f"[{hex(address)}] = {hex(value)}")
@@ -646,9 +647,12 @@ class DiagAttributes:
 
         PT_page_size = 1 << self.get_attribute('page_offset')
         va_msb = 63
-        va_lsb = self.get_attribute('va_vpn_bits')[level][0]
+        va_lsb = self.get_attribute('va_vpn_bits')[level][0] + 1
         start_va = extract_bits(va, (va_msb, va_lsb)) << va_lsb
         va_range = 1 << (self.get_attribute('va_vpn_bits')[level][0] + 1)
+        # The start VA for the address range covered by this PTE should
+        # be a multiple of the size of the area it covers.
+        assert (start_va == (math.floor(va / va_range)) * va_range)
         new_PT_page = PageTablePage(
             self.PT_section_start_address + PT_page_size * len(self.PT_pages),
             start_va, level, va_range)
@@ -667,6 +671,7 @@ class DiagAttributes:
             # TODO: support superpages
             assert (entry['page_size'] == 0x1000)
 
+            log.debug("\n")
             log.debug(f"Generating PTEs for {entry}")
 
             current_level = 0

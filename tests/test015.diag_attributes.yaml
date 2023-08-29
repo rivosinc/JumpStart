@@ -33,3 +33,11 @@ mappings:
     num_pages: 32
     pbmt_mode: "io"
     pmarr_memory_type: "uc"
+  -
+    va: 0x20408000 # UART base
+    pa: 0x20408000
+    xwr: "0b011"
+    page_size: 0x1000
+    num_pages: 1
+    pbmt_mode: "io"
+    pmarr_memory_type: "uc"

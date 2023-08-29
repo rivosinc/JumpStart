@@ -4,6 +4,8 @@
 
 satp_mode: "sv48"
 
+max_num_pages_for_PT_allocation: 6
+
 mappings:
   -
     va: 0x80000000
