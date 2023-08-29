@@ -653,17 +653,16 @@ class DiagAttributes:
             # Can't create any more pagetable pages
             return None
 
-        PT_page_size = 1 << self.get_attribute('page_offset')
-        va_msb = 63
-        va_lsb = self.get_attribute('va_vpn_bits')[level][0] + 1
-        start_va = extract_bits(va, (va_msb, va_lsb)) << va_lsb
-        va_range = 1 << (self.get_attribute('va_vpn_bits')[level][0] + 1)
+        page_size = 1 << self.get_attribute('page_offset')
+        pte_start_va_lsb = self.get_attribute('va_vpn_bits')[level][0] + 1
+        pte_start_va = (va >> pte_start_va_lsb) << pte_start_va_lsb
+        pte_va_range = 1 << (self.get_attribute('va_vpn_bits')[level][0] + 1)
         # The start VA for the address range covered by this PTE should
         # be a multiple of the size of the area it covers.
-        assert (start_va == (math.floor(va / va_range)) * va_range)
+        assert (pte_start_va == (math.floor(va / pte_va_range)) * pte_va_range)
         new_PT_page = PageTablePage(
-            self.PT_section_start_address + PT_page_size * len(self.PT_pages),
-            start_va, level, va_range)
+            self.PT_section_start_address + page_size * len(self.PT_pages),
+            pte_start_va, level, pte_va_range)
 
         log.debug(f"Allocated new pagetable page {new_PT_page}")
 
@@ -775,9 +774,9 @@ class DiagAttributes:
                 self.PT_pages[0].get_sparse_memory_address())
         pte_region_sparse_memory_start = self.PT_pages[
             0].get_sparse_memory_address()
-        PT_page_size = 1 << self.get_attribute('page_offset')
+        page_size = 1 << self.get_attribute('page_offset')
         pte_region_sparse_memory_end = self.PT_pages[
-            len(self.PT_pages) - 1].get_sparse_memory_address() + PT_page_size
+            len(self.PT_pages) - 1].get_sparse_memory_address() + page_size
 
         if pte_region_sparse_memory_start not in self.pte_region_sparse_memory:
             self.pte_region_sparse_memory[pte_region_sparse_memory_start] = 0
