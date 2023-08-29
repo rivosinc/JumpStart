@@ -747,6 +747,12 @@ class DiagAttributes:
                             pte_value, pbmt_mode,
                             self.pt_attributes.common_attributes["pbmt_bits"])
 
+                    if 'valid' in entry:
+                        valid_bit = int(entry['valid'], 2)
+                        pte_value = place_bits(
+                            pte_value, valid_bit,
+                            self.pt_attributes.common_attributes["valid_bit"])
+
                     next_level_pa = entry['pa']
 
                 for ppn_id in range(len(self.get_attribute('pa_ppn_bits'))):

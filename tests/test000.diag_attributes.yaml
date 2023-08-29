@@ -19,6 +19,7 @@ mappings:
     va: 0x80002000
     pa: 0x80002000
     xwr: "0b011"
+    valid: "0b0"
     page_size: 0x1000
     num_pages: 1
     pmarr_memory_type: "wb"

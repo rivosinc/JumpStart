@@ -26,6 +26,7 @@ mappings:
     pa: 0x80003000
     xwr: "0b101"
     umode: "0b1"
+    valid: "0b1"
     page_size: 0x1000
     num_pages: 2
     pmarr_memory_type: "wb"
