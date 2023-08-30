@@ -78,5 +78,5 @@ uint64_t get_active_hart_mask_from_machine_mode(void);
 
 void sync_all_harts_from_supervisor_mode(void);
 
-void jumpstart_supervisor_fail(void);
-void jumpstart_fail(void);
+void jumpstart_supervisor_fail(void) __attribute__((noreturn));
+void jumpstart_fail(void) __attribute__((noreturn));
