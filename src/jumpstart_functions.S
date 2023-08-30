@@ -6,10 +6,6 @@
 
 .section .jumpstart.text.supervisor, "ax"
 
-# Make stvec_trap_handler return label global. This is needed for
-# control transfer records diag.
-.global return_from_stvec_trap_handler
-
 # a0 contains the address of the function to jump to.
 .global jump_to_function_in_smode
 jump_to_function_in_smode:
@@ -91,6 +87,9 @@ restore_user_mode_context:
 restore_context:
   RESTORE_ALL_GPRS
 
+# The return_from_stvec_trap_handler label is referenced in control transfer
+# records diag so mark it as global.
+.global return_from_stvec_trap_handler
 return_from_stvec_trap_handler:
   sret
 
