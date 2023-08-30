@@ -4,8 +4,9 @@
 
 #include "jumpstart_functions.h"
 
-void register_supervisor_mode_trap_handler_override(uint64_t mcause,
-                                                    uint64_t handler_address) {
+__attribute__((section(".jumpstart.text.supervisor"))) void
+register_supervisor_mode_trap_handler_override(uint64_t mcause,
+                                               uint64_t handler_address) {
   uint64_t trap_override_struct_address =
       get_thread_attributes_trap_override_struct_address_from_supervisor_mode();
 
@@ -34,7 +35,8 @@ void register_supervisor_mode_trap_handler_override(uint64_t mcause,
   }
 }
 
-uint64_t get_supervisor_mode_trap_handler_override(uint64_t mcause) {
+__attribute__((section(".jumpstart.text.supervisor"))) uint64_t
+get_supervisor_mode_trap_handler_override(uint64_t mcause) {
   uint64_t trap_override_struct_address =
       get_thread_attributes_trap_override_struct_address_from_supervisor_mode();
 
@@ -63,8 +65,9 @@ uint64_t get_supervisor_mode_trap_handler_override(uint64_t mcause) {
   jumpstart_supervisor_fail();
 }
 
-void register_machine_mode_trap_handler_override(uint64_t mcause,
-                                                 uint64_t handler_address) {
+__attribute__((section(".jumpstart.text.machine"))) void
+register_machine_mode_trap_handler_override(uint64_t mcause,
+                                            uint64_t handler_address) {
   uint64_t trap_override_struct_address =
       get_thread_attributes_trap_override_struct_address_from_machine_mode();
 
@@ -91,7 +94,8 @@ void register_machine_mode_trap_handler_override(uint64_t mcause,
   }
 }
 
-uint64_t get_machine_mode_trap_handler_override(uint64_t mcause) {
+__attribute__((section(".jumpstart.text.machine"))) uint64_t
+get_machine_mode_trap_handler_override(uint64_t mcause) {
   uint64_t trap_override_struct_address =
       get_thread_attributes_trap_override_struct_address_from_machine_mode();
 

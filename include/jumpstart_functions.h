@@ -46,17 +46,13 @@ int run_function_in_supervisor_mode(uint64_t function_address);
 
 void disable_mmu_from_supervisor_mode(void);
 
-uint64_t get_machine_mode_trap_handler_override(uint64_t mcause)
-    __attribute__((section(".jumpstart.text.machine")));
+uint64_t get_machine_mode_trap_handler_override(uint64_t mcause);
 void register_machine_mode_trap_handler_override(uint64_t mcause,
-                                                 uint64_t handler_address)
-    __attribute__((section(".jumpstart.text.machine")));
+                                                 uint64_t handler_address);
 
-uint64_t get_supervisor_mode_trap_handler_override(uint64_t mcause)
-    __attribute__((section(".jumpstart.text.supervisor")));
+uint64_t get_supervisor_mode_trap_handler_override(uint64_t mcause);
 void register_supervisor_mode_trap_handler_override(uint64_t mcause,
-                                                    uint64_t handler_address)
-    __attribute__((section(".jumpstart.text.supervisor")));
+                                                    uint64_t handler_address);
 
 uint64_t get_thread_attributes_bookend_magic_number_from_supervisor_mode(void);
 uint64_t
