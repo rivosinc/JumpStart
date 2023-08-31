@@ -24,7 +24,6 @@ int main(void) {
     return DIAG_FAILED;
   }
 
-  setup_uart();
   puts("Hello World\n");
   printk("Checking format specifier int %d, char %c \n", 0xc001, 'A');
 

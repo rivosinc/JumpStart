@@ -23,7 +23,6 @@ int main(void) {
   /* TODO: We don't have a spinlock. Allow only Hart0 to write to the UART */
   uint8_t hart_id = get_thread_attributes_hart_id_from_supervisor_mode();
   if (hart_id == 0) {
-    setup_uart();
     puts("Hello World\n");
     printk("Checking format specifier int %d, char %c \n", 0xc001, 'A');
   } else if (hart_id > 3) {

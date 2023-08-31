@@ -19,12 +19,17 @@ static int vprintk(const char *fmt, va_list args)
 static void putch(char c)
     __attribute__((section(".jumpstart.text.supervisor")));
 
-__attribute__((section(".jumpstart.text.supervisor"))) void setup_uart(void) {
+static uint8_t uart_initialized = 0;
+
+__attribute__((section(".jumpstart.text.supervisor"))) static void
+setup_uart(void) {
   volatile uint32_t *uart_ctrl =
       (uint32_t *)((uint32_t)OT_UART_BASE + OT_UART_CTRL);
   volatile uint32_t uart_init = (OT_UART_CTRL_TXEN | OT_UART_CTRL_RXEN);
 
   *uart_ctrl = uart_init;
+
+  uart_initialized = 1;
 }
 
 static void putch(char c) {
@@ -42,6 +47,10 @@ static void putch(char c) {
 
 __attribute__((section(".jumpstart.text.supervisor"))) int
 puts(const char *str) {
+  if (uart_initialized == 0) {
+    setup_uart();
+  }
+
   int count = 0;
 
   while (*str != '\0') {
@@ -71,6 +80,10 @@ static int vprintk(const char *fmt, va_list args) {
 
 __attribute__((section(".jumpstart.text.supervisor"))) int
 printk(const char *fmt, ...) {
+  if (uart_initialized == 0) {
+    setup_uart();
+  }
+
   va_list args;
   int rc;
 
