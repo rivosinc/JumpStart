@@ -3,8 +3,14 @@
 // SPDX-License-Identifier: LicenseRef-Rivos-Internal-Only
 
 #include "uart_functions.supervisor.h"
+
 #include "jumpstart_defines.h"
-#include "string_functions.supervisor.h"
+
+#include <inttypes.h>
+#include <stdarg.h>
+#include <stdio.h>
+
+int toupper(int c);
 
 static int vprintk(const char *fmt, va_list args)
     __attribute__((format(printf, 1, 0)))
