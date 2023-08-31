@@ -4,9 +4,12 @@
 
 # TODO: rename the files to have a consistent naming pattern
 jumpstart_sources = files(
-                          'start.S',
-                          'jumpstart_functions.S',
-                          'end.S',
+                          'start.rcode.S',
+                          'start.machine.S',
+                          'jumpstart_functions.supervisor.S',
+                          'jumpstart_functions.umode.S',
+                          'data.privileged.S',
+                          'end.machine.S',
                           'imsic_functions.supervisor.c',
                           'string_functions.supervisor.c',
                           'tablewalk_functions.supervisor.c',

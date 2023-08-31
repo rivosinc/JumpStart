@@ -261,37 +261,3 @@ sync_all_harts_from_supervisor_mode:
   ld  fp, 0(sp)
   addi  sp, sp, 16
   ret
-
-# User mode code. Don't add any supervisor mode code in this section.
-.section .jumpstart.text.umode, "ax"
-
-# A0 contains the address of the function to jump to.
-.global jump_to_function_in_umode
-jump_to_function_in_umode:
-
-  # A0 contains arg value passed by S mode.
-  jalr ra, a0
-
-  # a0 contains the exit code.
-  li  a7, SYSCALL_RUN_FUNC_IN_USER_MODE_COMPLETE
-  ecall
-
-  # We shouldn't come back here.
-  wfi
-
-
-.section .jumpstart.data.privileged, "aw"
-
-.global hart_status_tracker
-hart_status_tracker:
-  .rept MAX_NUM_HARTS_SUPPORTED
-    .byte HART_INACTIVE
-  .endr
-
-
-.align 2
-.global hart_sync_point
-hart_sync_point:
-  # We're going to use the amoor.w instruction to update the bits
-  # so allocate 4 bytes.
-  .4byte 0x0
