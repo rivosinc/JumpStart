@@ -104,6 +104,14 @@ mappings:
 
 The specified section will be placed in the executable but no mapping will be created for it in the page table map. It doesn't have the attributes that an entry with a page table entry would have such as xwr, va, umode.
 
+#### Updating Page Tables
+
+The page tables are generated from the memory map. Page tables are only generated for mappings with the `no_pte_allocation` attribute set to `false`. The maximum number of pages that can be used to allocate Page Tables is controlled by `max_num_pages_for_PT_allocation`.
+
+The Page Tables are marked Read Only by default. This prevents accidental modification of the page tables from supervisor mode.
+
+To enable page table modification, set the `allow_page_table_modifications` to `true` diag attribute. This will enable the write permissions in the page table entries for the Page Table area.
+
 #### Overriding Diag Attributes
 
 Certain diag attributes can be overriden from the command line at setup time using the meson option `diag_attribute_overrides` which takes a list of attributes that can be overriden.
@@ -141,7 +149,7 @@ active_hart_mask: "0b1111"
 
 **NOTE: Spike takes the number of active cores and not a bitmask so a diag built with non-consecutive harts enabled in the `active_hart_mask` mask cannot be run on Spike.**
 
-**NOTE: The UART APIs have not been tested with MP diags.**
+**NOTE: The UART APIs are not multi-hart safe. Only one hart should write to the UART at a time.**
 
 
 ### Building Diags

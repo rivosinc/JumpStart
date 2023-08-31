@@ -32,6 +32,7 @@ diag_attributes:
   max_num_pages_for_PT_allocation: 5
   num_pages_for_bss_section: 1
   num_pages_for_rodata_section: 1
+  allow_page_table_modifications: false
   rcode_start_address: 0x06000000
   machine_mode_start_address: 0x7f800000
   active_hart_mask: '0b1'

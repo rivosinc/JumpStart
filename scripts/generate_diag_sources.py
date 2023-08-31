@@ -468,12 +468,18 @@ class DiagAttributes:
         return updated_mappings
 
     def add_pagetable_section_to_mappings(self, mappings):
+        xwr = "0b001"
+
+        if self.jumpstart_source_attributes['diag_attributes'][
+                'allow_page_table_modifications'] is True:
+            xwr = "0b011"
+
         updated_mappings = self.add_after_mapping(
             mappings,
-            len(mappings) - 1, "0b001", "0b0",
+            len(mappings) - 1, xwr, "0b0",
             self.jumpstart_source_attributes['diag_attributes']
             ['max_num_pages_for_PT_allocation'], 'wb',
-            '.jumpstart.rodata.pagetables', True)
+            '.jumpstart.rodata.pagetables')
         self.PT_section_start_address = updated_mappings[-1]['pa']
         return updated_mappings
 
