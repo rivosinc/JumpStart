@@ -4,9 +4,9 @@
 
 #include <stdint.h>
 
+#include "imsic_functions.supervisor.h"
 #include "jumpstart_defines.h"
 #include "jumpstart_functions.h"
-#include "jumpstart_imsic.h"
 
 #define IMSIC_DISABLE_EIDELIVERY  0
 #define IMSIC_ENABLE_EIDELIVERY   1

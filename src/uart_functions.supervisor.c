@@ -2,9 +2,9 @@
 //
 // SPDX-License-Identifier: LicenseRef-Rivos-Internal-Only
 
+#include "uart_functions.supervisor.h"
 #include "jumpstart_defines.h"
-#include "jumpstart_uart.h"
-#include "string.h"
+#include "string_functions.supervisor.h"
 
 static int vprintk(const char *fmt, va_list args)
     __attribute__((format(printf, 1, 0)))

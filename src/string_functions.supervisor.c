@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: LicenseRef-Rivos-Internal-Only
 
-#include "string.h"
+#include "string_functions.supervisor.h"
 
 static char *ksprintn(char *nbuf, uintmax_t num, int base, int *lenp, int upper)
     __attribute__((section(".jumpstart.text.supervisor")));

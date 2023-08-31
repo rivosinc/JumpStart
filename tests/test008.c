@@ -2,8 +2,8 @@
 //
 // SPDX-License-Identifier: LicenseRef-Rivos-Internal-Only
 
+#include "imsic_functions.supervisor.h"
 #include "jumpstart_functions.h"
-#include "jumpstart_imsic.h"
 
 volatile uint64_t irq_var = 0;
 

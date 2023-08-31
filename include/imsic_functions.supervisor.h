@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <inttypes.h>
+
 void send_ipi_to_supervisor_mode(uint64_t id);
 
 // Triggers `interrupt_id` from the guest interrupt file `guest_id` on hart

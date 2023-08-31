@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: LicenseRef-Rivos-Internal-Only
 
 #include "jumpstart_functions.h"
-#include "jumpstart_uart.h"
+#include "uart_functions.supervisor.h"
 
 int main(void) {
   if (get_thread_attributes_hart_id_from_supervisor_mode() != 0) {
