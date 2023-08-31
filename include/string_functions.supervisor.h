@@ -2,9 +2,9 @@
 //
 // SPDX-License-Identifier: LicenseRef-Rivos-Internal-Only
 
-#include "stdarg.h"
-#include "stddef.h"
 #include <inttypes.h>
+#include <stdarg.h>
+#include <stddef.h>
 
 int snprintf(char *buf, size_t size, const char *fmt, ...);
 int vsnprintf(char *str, size_t size, char const *fmt, va_list ap);
