@@ -74,13 +74,11 @@ typedef enum REG_BIT_ACTION {
     clear_csr(vsireg, __v);                                                    \
   } while (0)
 
-static void set_vgein(unsigned guest_id)
-    __attribute__((section(".jumpstart.text.supervisor")));
-
 // Sets the vgein field of hstatus to the given guest_id. This selects the
 // IMSIC file for that guest so that access to registers through viselect and
 // vireg are directed to that interrupt file.
-static void set_vgein(unsigned guest_id) {
+__attribute__((section(".jumpstart.text.supervisor"))) static void
+set_vgein(unsigned guest_id) {
   uint64_t hstatus_val = read_csr(hstatus);
   hstatus_val &= ~((uint64_t)HSTATUS_VGEIN_MASK << HSTATUS_VGEIN_LSB);
   hstatus_val |=
@@ -88,19 +86,15 @@ static void set_vgein(unsigned guest_id) {
   write_csr(hstatus, hstatus_val);
 }
 
-static void __imsic_eix_update_bits(unsigned long reg_idx, unsigned long mask,
-                                    reg_bit_action_t action, unsigned guest_id)
-    __attribute__((section(".jumpstart.text.supervisor")));
-
 // Sets or clears the bits specified in the given IMSIC register.
 // Args:
 // reg_idx - the IMSIC register to modify.
 // mask - the bits to set or clear.
 // set - if true set the bits given in mask, otherwise clear them.
 // guest_id - the guest interrupt file to modify. If 0, modify the host.
-static void __imsic_eix_update_bits(unsigned long reg_idx, unsigned long mask,
-                                    reg_bit_action_t action,
-                                    unsigned guest_id) {
+__attribute__((section(".jumpstart.text.supervisor"))) static void
+__imsic_eix_update_bits(unsigned long reg_idx, unsigned long mask,
+                        reg_bit_action_t action, unsigned guest_id) {
   if (guest_id == 0) { // host(s-mode)
     if (action == REG_BIT_SET)
       imsic_s_csr_set(reg_idx, mask);
@@ -115,14 +109,9 @@ static void __imsic_eix_update_bits(unsigned long reg_idx, unsigned long mask,
   }
 }
 
-static void __imsic_eix_update(unsigned long interrupt_id,
-                               eix_reg_type_t reg_type, reg_bit_action_t action,
-                               unsigned guest_id)
-    __attribute__((section(".jumpstart.text.supervisor")));
-
-static void __imsic_eix_update(unsigned long interrupt_id,
-                               eix_reg_type_t reg_type, reg_bit_action_t action,
-                               unsigned guest_id) {
+__attribute__((section(".jumpstart.text.supervisor"))) static void
+__imsic_eix_update(unsigned long interrupt_id, eix_reg_type_t reg_type,
+                   reg_bit_action_t action, unsigned guest_id) {
   unsigned long isel, ireg;
 
   isel = interrupt_id / __riscv_xlen;
@@ -134,52 +123,60 @@ static void __imsic_eix_update(unsigned long interrupt_id,
   __imsic_eix_update_bits(isel, ireg, action, guest_id);
 }
 
-void imsic_id_enable(unsigned long id) {
+__attribute__((section(".jumpstart.text.supervisor"))) void
+imsic_id_enable(unsigned long id) {
   __imsic_eix_update(id, EIX_REG_ENABLED, REG_BIT_SET, 0);
 }
 
-void imsic_id_disable(unsigned long id) {
+__attribute__((section(".jumpstart.text.supervisor"))) void
+imsic_id_disable(unsigned long id) {
   __imsic_eix_update(id, EIX_REG_ENABLED, REG_BIT_CLEAR, 0);
 }
 
-void imsic_id_enable_guest(unsigned guest_id, unsigned long interrupt_id) {
+__attribute__((section(".jumpstart.text.supervisor"))) void
+imsic_id_enable_guest(unsigned guest_id, unsigned long interrupt_id) {
   __imsic_eix_update(interrupt_id, EIX_REG_ENABLED, REG_BIT_SET, guest_id);
 }
 
-void imsic_id_disable_guest(unsigned guest_id, unsigned long interrupt_id) {
+__attribute__((section(".jumpstart.text.supervisor"))) void
+imsic_id_disable_guest(unsigned guest_id, unsigned long interrupt_id) {
   __imsic_eix_update(interrupt_id, EIX_REG_ENABLED, REG_BIT_CLEAR, guest_id);
 }
 
-void imsic_init(void) {
+__attribute__((section(".jumpstart.text.supervisor"))) void imsic_init(void) {
   imsic_s_csr_write(IMSIC_EITHRESHOLD, IMSIC_ENABLE_EITHRESHOLD);
   imsic_s_csr_write(IMSIC_EIDELIVERY, IMSIC_ENABLE_EIDELIVERY);
 }
 
-void imsic_fini(void) {
+__attribute__((section(".jumpstart.text.supervisor"))) void imsic_fini(void) {
   imsic_s_csr_write(IMSIC_EIDELIVERY, IMSIC_DISABLE_EIDELIVERY);
   imsic_s_csr_write(IMSIC_EITHRESHOLD, IMSIC_DISABLE_EITHRESHOLD);
 }
 
-void imsic_enable_guest(unsigned guest_id) {
+__attribute__((section(".jumpstart.text.supervisor"))) void
+imsic_enable_guest(unsigned guest_id) {
   set_vgein(guest_id);
   imsic_vs_csr_write(IMSIC_EITHRESHOLD, IMSIC_ENABLE_EITHRESHOLD);
   imsic_vs_csr_write(IMSIC_EIDELIVERY, IMSIC_ENABLE_EIDELIVERY);
 }
 
-void imsic_disable_guest(unsigned guest_id) {
+__attribute__((section(".jumpstart.text.supervisor"))) void
+imsic_disable_guest(unsigned guest_id) {
   set_vgein(guest_id);
   imsic_vs_csr_write(IMSIC_EIDELIVERY, IMSIC_DISABLE_EIDELIVERY);
   imsic_vs_csr_write(IMSIC_EITHRESHOLD, IMSIC_DISABLE_EITHRESHOLD);
 }
 
-void send_ipi_to_supervisor_mode(unsigned long hart_id) {
+__attribute__((section(".jumpstart.text.supervisor"))) void
+send_ipi_to_supervisor_mode(unsigned long hart_id) {
   uintptr_t addr = IMSIC_S_BASE + IMSIC_S_INTERLEAVE * hart_id;
 
   *(uint32_t *)addr = IMSIC_IPI_ID;
 }
 
-void send_interrupt_to_guest(unsigned long hart_id, unsigned long guest_id,
-                             uint32_t interrupt_id) {
+__attribute__((section(".jumpstart.text.supervisor"))) void
+send_interrupt_to_guest(unsigned long hart_id, unsigned long guest_id,
+                        uint32_t interrupt_id) {
   uintptr_t hart_base = IMSIC_S_BASE + IMSIC_S_INTERLEAVE * hart_id;
   uintptr_t addr =
       hart_base + IMSIC_GUEST_OFFSET + (guest_id - 1) * IMSIC_MMIO_PAGE_SIZE;

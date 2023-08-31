@@ -27,12 +27,13 @@ inline int tolower(int c) {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsuggest-attribute=const"
-int toupper(int c) {
+__attribute__((section(".jumpstart.text.supervisor"))) int toupper(int c) {
   return islower(c) ? c + ('A' - 'a') : c;
 }
 #pragma GCC diagnostic pop
 
-size_t strlen(const char *str) {
+__attribute__((section(".jumpstart.text.supervisor"))) size_t
+strlen(const char *str) {
   size_t len = 0;
 
   while (str[len])
@@ -72,7 +73,8 @@ static char *ksprintn(char *nbuf, uintmax_t num, int base, int *lenp,
 /*
  * Scaled down version of printf(3).
  */
-int vsnprintf(char *str, size_t size, char const *fmt, va_list ap) {
+__attribute__((section(".jumpstart.text.supervisor"))) int
+vsnprintf(char *str, size_t size, char const *fmt, va_list ap) {
 #define PCHAR(c)                                                               \
   {                                                                            \
     if (size >= 2) {                                                           \
@@ -372,7 +374,8 @@ int vsnprintf(char *str, size_t size, char const *fmt, va_list ap) {
 
 #pragma GCC diagnostic pop
 
-int snprintf(char *buf, size_t size, const char *fmt, ...) {
+__attribute__((section(".jumpstart.text.supervisor"))) int
+snprintf(char *buf, size_t size, const char *fmt, ...) {
   va_list args;
   int retval = 0;
 
