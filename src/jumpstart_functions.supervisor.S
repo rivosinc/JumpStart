@@ -210,7 +210,7 @@ sync_harts_in_mask:
   and t3, t0, a1
   beqz t3, jumpstart_supervisor_fail
 
-  amoor.w.aq t3, t2, (a3)
+  amoor.w.aqrl t3, t2, (a3)
 
   # This bit should not be already set.
   and t3, t3, t2
