@@ -54,7 +54,19 @@ setup_supervisor_mode_trap_related_csrs:
   csrw stvec, t0
 
   # Enable trap delegation to supervisor mode.
-  li t0, (1 << SCAUSE_EC_ENV_CALL_FROM_UMODE) | (1 << SCAUSE_EC_ILLEGAL_INSTRUCTION)
+  li t0, (1 << SCAUSE_EC_INSTRUCTION_ADDRESS_MISALIGNED) | \
+            (1 << SCAUSE_EC_INSTRUCTION_ACCESS_FAULT) | \
+            (1 << SCAUSE_EC_ILLEGAL_INSTRUCTION) | \
+            (1 << SCAUSE_EC_BREAKPOINT) | \
+            (1 << SCAUSE_EC_LOAD_ADDRESS_MISALIGNED) | \
+            (1 << SCAUSE_EC_LOAD_ACCESS_FAULT) | \
+            (1 << SCAUSE_EC_STORE_ADDRESS_MISALIGNED) | \
+            (1 << SCAUSE_EC_STORE_ACCESS_FAULT) | \
+            (1 << SCAUSE_EC_ENV_CALL_FROM_UMODE) | \
+            (1 << SCAUSE_EC_INSTRUCTION_PAGE_FAULT) | \
+            (1 << SCAUSE_EC_LOAD_PAGE_FAULT) | \
+            (1 << SCAUSE_EC_STORE_PAGE_FAULT)
+
   csrw medeleg, t0
   li t0, (1 << MIDELEG_S_SOFT_INTERRUPT) | (1 << MIDELEG_S_TIMER_INTERRUPT) | (1 << MIDELEG_S_EXT_INTERRUPT)
   csrw mideleg, t0
