@@ -265,6 +265,16 @@ class DiagAttributes:
                     attribute_value = True
                 elif attribute_value in ["False", "false"]:
                     attribute_value = False
+
+                if attribute_name == "active_hart_mask" and self.jumpstart_source_attributes[
+                        'diag_attributes'][
+                            'allow_active_hart_mask_override'] == False and attribute_value != self.jumpstart_source_attributes[
+                                'diag_attributes']['active_hart_mask']:
+                    log.error(
+                        f"Command line override of active_hart_mask is not allowed for this diag. Set allow_active_hart_mask_override to True in the diag attributes file to allow this."
+                    )
+                    sys.exit(1)
+
                 self.jumpstart_source_attributes['diag_attributes'][
                     attribute_name] = attribute_value
                 log.warning(
@@ -865,12 +875,10 @@ class DiagAttributes:
                 f".global get_active_hart_mask_from_{mode}_mode\n")
             file_descriptor.write(
                 f"get_active_hart_mask_from_{mode}_mode:\n\n")
-            active_hart_mask = 1  # hart 0 is active by default.
-            if 'active_hart_mask' in self.jumpstart_source_attributes[
-                    'diag_attributes']:
-                active_hart_mask = int(
-                    self.jumpstart_source_attributes['diag_attributes']
-                    ['active_hart_mask'], 2)
+
+            active_hart_mask = int(
+                self.jumpstart_source_attributes['diag_attributes']
+                ['active_hart_mask'], 2)
 
             assert (
                 active_hart_mask.bit_count() <=

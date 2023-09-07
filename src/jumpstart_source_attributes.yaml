@@ -36,6 +36,7 @@ diag_attributes:
   rcode_start_address: 0x06000000
   machine_mode_start_address: 0x7f800000
   active_hart_mask: '0b1'
+  allow_active_hart_mask_override: false
   satp_mode: 'sv39'
   mappings: null
 
