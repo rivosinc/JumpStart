@@ -844,14 +844,6 @@ class DiagAttributes:
             file_descriptor, ['start_test_in_machine_mode', 'in_qemu_mode'])
         self.generate_get_active_hart_mask_function(file_descriptor)
 
-        if self.jumpstart_source_attributes['diag_attributes'][
-                'in_qemu_mode'] == True and self.jumpstart_source_attributes[
-                    'diag_attributes']['active_hart_mask'] != '0b1111':
-            log.error(
-                f"Unsupported active_hart_mask {self.jumpstart_source_attributes['diag_attributes']['active_hart_mask']} for QEMU mode. active_hart_mask must be 0b1111."
-            )
-            sys.exit(1)
-
     def generate_boolean_diag_attribute_functions(self, file_descriptor,
                                                   boolean_attributes):
         for attribute in boolean_attributes:
