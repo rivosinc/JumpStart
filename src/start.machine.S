@@ -19,7 +19,8 @@ _machine_mode_start:
   li t1, 1
   sll t1, t1, t0
   and a0, a0, t1
-  beqz a0, jumpstart_fail
+  # We don't know about this core. Move it to the wfi state
+  beqz a0, just_wfi
 
   # Have the hart mark itself as running.
   la t1, hart_status_tracker

@@ -126,6 +126,7 @@ run_qemu_end_of_sim_sequence:
   sw s1, 0(t0)
 
   # 4. In WFI
+.global just_wfi
 just_wfi:
   wfi
 
