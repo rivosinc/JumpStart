@@ -118,6 +118,7 @@ loop_magic_store:
   # code if t0 is not 1
   mv t0, s1
   lui x0, 0xdeadb
+  j just_wfi
 
 run_qemu_end_of_sim_sequence:
   # 2. Store PASS/FAIL to Qemu magic address
