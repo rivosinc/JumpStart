@@ -59,12 +59,12 @@ int main(void) {
 
   // The translation should exist but should be marked with V=0 at this
   // point in the memory map.
-  if (hart_id == 0) {
-    if (xlate_info.walk_successful != 0 || xlate_info.levels_traversed != 3 ||
-        (xlate_info.pte_value[2] & PTE_VALID_BIT_MASK) != 0) {
-      return DIAG_FAILED;
-    }
-  } else {
+  if (xlate_info.walk_successful != 0 || xlate_info.levels_traversed != 3 ||
+      (xlate_info.pte_value[2] & PTE_VALID_BIT_MASK) != 0) {
+    return DIAG_FAILED;
+  }
+
+  if (hart_id == 1) {
     register_supervisor_mode_trap_handler_override(
         SCAUSE_EC_LOAD_PAGE_FAULT, (uint64_t)(&hart1_load_page_fault_handler));
 
