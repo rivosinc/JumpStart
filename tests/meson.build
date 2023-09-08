@@ -26,6 +26,7 @@ jumpstart_tests = [
   ['test018', 'Run C/Assembly functions with run_function_in_supervisor_mode() from machine mode.'],
   ['test019', 'Sync 4P CPUs.', '-p4'],
   ['test020', 'translate_VA() and page table modification test.'],
+  ['test021', '2P translate_VA() and page table modification test.', '-p2'],
 ]
 
 foreach jumpstart_test : jumpstart_tests
