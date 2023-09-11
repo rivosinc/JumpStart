@@ -183,3 +183,10 @@ send_interrupt_to_guest(unsigned long hart_id, unsigned long guest_id,
 
   *(uint32_t *)addr = interrupt_id;
 }
+
+__attribute__((section(".jumpstart.text.supervisor"))) uint64_t
+imsic_next_pending_interrupt(unsigned guest_id) {
+  set_vgein(guest_id);
+  uint64_t vstopei = read_write_csr(vstopei, 0);
+  return vstopei >> IMSIC_TOPEI_VAL_SHIFT;
+}

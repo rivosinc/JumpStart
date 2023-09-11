@@ -29,5 +29,9 @@ void imsic_enable_guest(unsigned guest_id);
 // file `guest_id`.
 void imsic_disable_guest(unsigned guest_id);
 
+// Returns the next pending interrupt for the guest interrupt file `guest_id` or
+// 0 if none are pending.
+uint64_t imsic_next_pending_interrupt(unsigned guest_id);
+
 void imsic_init(void);
 void imsic_fini(void);
