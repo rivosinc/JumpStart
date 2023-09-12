@@ -2,6 +2,8 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+diag_entry_label: _rcode_start
+
 max_num_harts_supported: 4
 
 # Hard limits on how many pages the jumsptart infrastructure itself will occupy.

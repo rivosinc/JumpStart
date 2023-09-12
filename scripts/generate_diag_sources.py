@@ -816,7 +816,9 @@ class DiagAttributes:
                 f"/* SATP.Mode is {self.jumpstart_source_attributes['diag_attributes']['satp_mode']} */\n\n"
             )
             file.write('OUTPUT_ARCH( "riscv" )\n')
-            file.write('ENTRY(_rcode_start)\n\n')
+            file.write(
+                f"ENTRY({self.jumpstart_source_attributes['diag_entry_label']})\n\n"
+            )
 
             file.write('SECTIONS\n{\n')
             defined_sections = []
