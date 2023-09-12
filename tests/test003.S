@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2023 Rivos Inc.
 #
-# SPDX-License-Identifier: LicenseRef-Rivos-Internal-Only
+# SPDX-License-Identifier: Apache-2.0
 
 .global test003_illegal_instruction_function
 test003_illegal_instruction_function:

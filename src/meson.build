@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2023 Rivos Inc.
 #
-# SPDX-License-Identifier: LicenseRef-Rivos-Internal-Only
+# SPDX-License-Identifier: Apache-2.0
 
 # TODO: rename the files to have a consistent naming pattern
 jumpstart_sources = files(

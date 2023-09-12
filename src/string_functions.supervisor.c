@@ -2,7 +2,7 @@
 // Copyright © 2011 The FreeBSD Foundation
 // SPDX-FileCopyrightText: 2023 Rivos Inc.
 //
-// SPDX-License-Identifier: LicenseRef-Rivos-Internal-Only
+// SPDX-License-Identifier: Apache-2.0
 
 #include <inttypes.h>
 #include <stdarg.h>

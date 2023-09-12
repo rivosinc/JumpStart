@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2023 Rivos Inc.
 #
-# SPDX-License-Identifier: LicenseRef-Rivos-Internal-Only
+# SPDX-License-Identifier: Apache-2.0
 
 include:
   # https://gitlab.ba.rivosinc.com/rv/group_gitlab_config/raw/rivos/main/ci_includes/pre-commit-lint.yml

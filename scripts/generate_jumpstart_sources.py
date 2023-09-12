@@ -3,7 +3,7 @@
 # SPDX-FileCopyrightText: 2023 Rivos Inc.
 # SPDX-FileCopyrightText: Copyright (c) 2022 by Rivos Inc.
 #
-# SPDX-License-Identifier: LicenseRef-Rivos-Internal-Only
+# SPDX-License-Identifier: Apache-2.0
 
 # Generates the jumpstart source files from the jumpstart attributes YAML file.
 

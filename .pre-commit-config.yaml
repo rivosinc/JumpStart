@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2023 Rivos Inc.
 #
-# SPDX-License-Identifier: LicenseRef-Rivos-Internal-Only
+# SPDX-License-Identifier: Apache-2.0
 
 repos:
   # pull mirror from: https://github.com/pre-commit/pre-commit-hooks
@@ -79,6 +79,6 @@ repos:
       - id: reuse-annotate
         args:
           - -c=Rivos Inc.
-          - -l=LicenseRef-Rivos-Internal-Only
+          - -l=Apache-2.0
           - --skip-unrecognised
       - id: reuse
