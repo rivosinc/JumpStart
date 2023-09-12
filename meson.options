@@ -43,3 +43,8 @@ option('spike_generate_trace',
        type : 'boolean',
        value : false,
        description : 'Generate spike trace.')
+
+option('rivos_internal_build',
+       type : 'boolean',
+       value : true,
+       description : 'Build the Rivos internal version of JumpStart.')
