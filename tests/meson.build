@@ -40,19 +40,11 @@ foreach jumpstart_test : jumpstart_tests
   diag_attributes_yaml = files(test_prefix +'.diag_attributes.yaml')
 
   diag_source_generator_output = custom_target(
-                                'Generate diag attribute build files for ' + test_prefix,
-                                input : [diag_source_generator,
-                                          diag_attributes_yaml,
-                                          jumpstart_source_attributes_yaml],
+                                'Generate diag attributes related source files for ' + test_prefix,
+                                input : diag_source_generator_common_inputs + [diag_attributes_yaml],
                                 output : [test_prefix + '.generated.S',
                                           test_prefix + '.linker_script.ld'],
-                                command : [prog_python,
-                                          '@INPUT0@',
-                                          '--diag_attributes_yaml', '@INPUT1@',
-                                          '--jumpstart_source_attributes_yaml', '@INPUT2@',
-                                          '--output_assembly_file', '@OUTPUT0@',
-                                          '--output_linker_script', '@OUTPUT1@',
-                                          ])
+                                command : diag_source_generator_command)
 
   test_sources = [diag_source_generator_output[0]]
   linker_script = diag_source_generator_output[1].full_path()
