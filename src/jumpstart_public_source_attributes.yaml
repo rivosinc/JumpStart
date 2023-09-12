@@ -1,0 +1,176 @@
+# SPDX-FileCopyrightText: 2023 Rivos Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+
+diag_entry_label: _machine_mode_start
+
+max_num_harts_supported: 4
+
+# Hard limits on how many pages the jumsptart infrastructure itself will occupy.
+# Allows us to keep track of infrastructure code size.
+# The test pages are not limited by these counts and are dependent on the
+# number of pages allocated in the test memory map.
+jumpstart_rcode_text_page_counts:
+  num_pages_for_all_text: 1
+jumpstart_machine_text_page_counts:
+  num_pages_for_all_text: 2
+jumpstart_supervisor_text_page_counts:
+  num_pages_for_all_text: 2
+jumpstart_privileged_data_page_counts:
+  num_pages_for_stack: 4
+  num_pages_for_c_structs: 1
+  num_pages_for_data_section: 1
+jumpstart_umode_text_page_counts:
+  num_pages_for_all_text: 1
+jumpstart_umode_data_page_counts:
+  num_pages_for_stack: 4
+
+
+# These attributes can be overriden by the test attributes file or
+# at build time.
+diag_attributes:
+  start_test_in_machine_mode: false
+  in_qemu_mode: false
+  max_num_pages_for_PT_allocation: 5
+  num_pages_for_bss_section: 1
+  num_pages_for_rodata_section: 1
+  allow_page_table_modifications: false
+  rcode_start_address: 0x06000000
+  machine_mode_start_address: 0x7f800000
+  active_hart_mask: '0b1'
+  allow_active_hart_mask_override: false
+  satp_mode: 'sv39'
+  mappings: null
+
+c_structs:
+  thread_attributes:
+    fields:
+      hart_id: uint8_t
+      current_mode: uint8_t
+      trap_override_struct_address: uint64_t
+      mmode_reg_context_save_region_address: uint64_t
+      smode_reg_context_save_region_address: uint64_t
+      umode_reg_context_save_region_address: uint64_t
+      bookend_magic_number: uint64_t
+  trap_override_attributes:
+    fields:
+      supervisor_mode_interrupt_handler_overrides: uint64_t,16
+      supervisor_mode_exception_handler_overrides: uint64_t,16
+      machine_mode_interrupt_handler_overrides: uint64_t,16
+      machine_mode_exception_handler_overrides: uint64_t,16
+
+defines:
+  THREAD_ATTRIBUTES_BOOKEND_MAGIC_NUMBER_VALUE: 0x3317150533171505
+  END_OF_SIM_MAGIC_ADDRESS: 0x800a0000
+  UC_END_OF_SIM_MAGIC_ADDRESS: 0x42000000
+  PMARR_0_MAGIC_STORE_MASK_VAL: 0x3ffffff00003
+  L2CACHE_WAY_SIZE: 0x100000
+  L2CACHE_NUM_WAYS: 36
+  USER_MODE_ENCODING: 0
+  SUPERVISOR_MODE_ENCODING: 1
+  HYPERVISOR_MODE_ENCODING: 2
+  MACHINE_MODE_ENCODING: 3
+  MSTATUS_MPP_SHIFT: 11
+  MSTATUS_MPP_MASK: 3
+  MSTATUS_SPP_SHIFT: 8
+  MSTATUS_SPP_MASK: 1
+  MSTATUS_SUM_SHIFT: 18
+  SSTATUS_SIE_SHIFT: 1
+  SATP_MODE_LSB: 60
+  SATP_MODE_BARE: 0
+  SATP_MODE_SV39: 8
+  SATP_MODE_SV48: 9
+  SATP_PPN_MSB: 43
+  SATP_PPN_MASK: ((1ULL << SATP_PPN_MSB) - 1ULL)
+  PTE_XWR_BIT_MSB: 3
+  PTE_XWR_BIT_LSB: 1
+  PTE_D_BIT_MSB: 7
+  PTE_D_BIT_LSB: 7
+  PTE_A_BIT_MSB: 6
+  PTE_A_BIT_LSB: 6
+  PTE_VALID_BIT_MSB: 0
+  PTE_VALID_BIT_LSB: 0
+  PTE_VALID_BIT_MASK: 1
+  MENVCFG_PBMTE_BIT_LSB: 62
+  MIDELEG_S_SOFT_INTERRUPT: 1
+  MIDELEG_S_TIMER_INTERRUPT: 5
+  MIDELEG_S_EXT_INTERRUPT: 9
+  MCAUSE_INTERRUPT_BIT_LSB: 63
+  MCAUSE_EC_MASK: 0x7FFFFFFFFFFFFFFFULL
+  MCAUSE_EC_ILLEGAL_INSTRUCTION: 2
+  MCAUSE_EC_ENV_CALL_FROM_SMODE: 9
+  SCAUSE_INTERRUPT_BIT_LSB: 63
+  SCAUSE_EC_MASK: 0x7FFFFFFFFFFFFFFFULL
+  SCAUSE_EC_INSTRUCTION_ADDRESS_MISALIGNED: 0
+  SCAUSE_EC_INSTRUCTION_ACCESS_FAULT: 1
+  SCAUSE_EC_ILLEGAL_INSTRUCTION: 2
+  SCAUSE_EC_BREAKPOINT: 3
+  SCAUSE_EC_LOAD_ADDRESS_MISALIGNED: 4
+  SCAUSE_EC_LOAD_ACCESS_FAULT: 5
+  SCAUSE_EC_STORE_ADDRESS_MISALIGNED: 6
+  SCAUSE_EC_STORE_ACCESS_FAULT: 7
+  SCAUSE_EC_ENV_CALL_FROM_UMODE: 8
+  SCAUSE_EC_ENV_CALL_FROM_SMODE: 9
+  SCAUSE_EC_INSTRUCTION_PAGE_FAULT: 12
+  SCAUSE_EC_LOAD_PAGE_FAULT: 13
+  SCAUSE_EC_STORE_PAGE_FAULT: 15
+  SCAUSE_INT_SOFTWARE: 1
+  SCAUSE_INT_TIMER: 5
+  SCAUSE_INT_EXTERNAL: 9
+  SCAUSE_INT_GUEST_EXTERNAL: 12
+  SIE_EXT_INTERRUPT: 9
+  HIE_INT_GUEST_EXTERNAL: 12
+  HSTATUS_VGEIN_LSB: 12
+  HSTATUS_VGEIN_MASK: 0x2f
+  PAGE_OFFSET: 12
+  SOC_TB_BOOT_ADDRESS: 0x80000000
+  IO_BASE: 0x20408000
+  OT_UART_BASE: (IO_BASE + 0)
+  OT_UART_CTRL: 0x10
+  OT_UART_CTRL_TXEN: 0x01
+  OT_UART_CTRL_RXEN: 0x02
+  OT_UART_STATUS: 0x14
+  OT_UART_STATUS_TXFULL: 0x01
+  OT_UART_FIFO_STATUS: 0x24
+  OT_UART_FIFO_STATUS_TXLVL_MASK: 0x3f
+  OT_UART_FIFO_STATUS_RXLVL_MASK: 0x3f0000
+  OT_UART_RDATA: 0x18
+  OT_UART_WDATA: 0x1c
+  GEILEN:             6
+  IMSIC_MMIO_PAGE_SIZE: 0x1000
+  IMSIC_M_BASE: 0x40007000
+  IMSIC_S_BASE: 0x40000000
+  IMSIC_GUEST_OFFSET: IMSIC_MMIO_PAGE_SIZE
+  IMSIC_M_INTERLEAVE: (IMSIC_MMIO_PAGE_SIZE * 8)
+  IMSIC_S_INTERLEAVE: IMSIC_M_INTERLEAVE
+  IMSIC_S_SIZE:       (IMSIC_MMIO_PAGE_SIZE * (GEILEN + 1))
+  IMSIC_TOPEI_VAL_SHIFT: 16
+  IMSIC_IPI_ID:       1
+  # Spike unfortunately uses 1 for PASS and 0 for FAIL.
+  SPIKE_RUN_PASSED: 1
+  SPIKE_RUN_FAILED: 0
+  # These are the various states that a hart can be in.
+  DIAG_PASSED: 0
+  DIAG_FAILED: 1
+  HART_RUNNING: 2
+  HART_INACTIVE: 3
+  PRIMARY_HART_ID: 0
+
+  QEMU_RIVOS_AP_END_MAGIC_ADDRESS: 0x100000
+  QEMU_RIVOS_AP_RUN_FAILED   : ((1 << 16) | 0x3333)
+  QEMU_RIVOS_AP_RUN_PASSED   : 0x5555
+
+syscall_numbers:
+  - SYSCALL_RUN_FUNC_IN_USER_MODE_COMPLETE
+  - SYSCALL_RUN_FUNC_IN_SUPERVISOR_MODE_COMPLETE
+
+# These are the registers that need to be saved/restored when moving
+# between U-mode and S-mode. We will generate S and U mode regions to
+# hold this context across context switches.
+reg_context_to_save_across_modes:
+  registers:
+    gprs: [sp, s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, t0, t1, t2, t3, t4, t5, t6, a0, a1, a2, a3, a4, a5, a6, a7, ra]
+    csrs: [sepc, sstatus, mepc, mstatus]
+  # Temporary register to hold the address of the context save area when
+  # saving and restoring.
+  temp_register: gp

@@ -18,6 +18,9 @@ jumpstart_sources = files(
 if get_option('rivos_internal_build') == true
   subdir('rivos_internal')
   jumpstart_sources += jumpstart_rivos_internal_sources
-endif
 
-jumpstart_source_attributes_yaml = files('jumpstart_source_attributes.yaml')
+  jumpstart_source_attributes_yaml = jumpstart_internal_source_attributes_yaml
+else
+
+  jumpstart_source_attributes_yaml = files('jumpstart_public_source_attributes.yaml')
+endif
