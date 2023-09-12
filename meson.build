@@ -44,7 +44,7 @@ diag_attributes_yaml = get_option('diag_attributes_yaml')
 
 default_c_args_list = ['-march=' + get_option('gcc_march_string')]
 
-spike = find_program('spike')
+spike = find_program(get_option('spike_binary'))
 default_spike_args = ['--pass-fail',
                       '--isa=' + get_option('spike_default_isa_string') ]
 if get_option('spike_generate_trace') == true
