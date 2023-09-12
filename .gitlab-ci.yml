@@ -46,6 +46,9 @@ build-and-test:
     - meson compile -C builddir
     - echo "Testing jumpstart debug build"
     - meson test -C builddir --repeat 50
+    - meson setup --reconfigure builddir --buildtype release -Drivos_internal_build=false
+    - echo "Building jumpstart public release build"
+    - meson compile -C builddir
   artifacts:
     when: always
     paths:
