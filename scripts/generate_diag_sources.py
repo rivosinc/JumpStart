@@ -300,13 +300,21 @@ class DiagAttributes:
         self.sanity_check_memory_map()
 
     def append_jumpstart_sections_to_mappings(self):
-        # the rocde and machine mode sections are added at specific locations
+        # the rcode and machine mode sections are added at specific locations
         # the rest are just added on at locations immediately following
         # these sections.
+        self.jumpstart_source_attributes['diag_attributes']['mappings'].append(
+            self.get_jumpstart_rcode_text_section_mapping())
+
+        self.jumpstart_source_attributes['diag_attributes']['mappings'].append(
+            self.get_jumpstart_machine_mode_text_section_mapping())
+
+        # Add a guard page mapping to catch linker script overruns of machine_mode
         self.jumpstart_source_attributes['diag_attributes'][
-            'mappings'] = self.add_jumpstart_rcode_and_machine_mode_text_section_to_mappings(
+            'mappings'] = self.add_pa_guard_page_after_last_mapping(
                 self.jumpstart_source_attributes['diag_attributes']
                 ['mappings'])
+
         self.jumpstart_source_attributes['diag_attributes'][
             'mappings'] = self.add_jumpstart_supervisor_text_section_to_mappings(
                 self.jumpstart_source_attributes['diag_attributes']
@@ -563,9 +571,7 @@ class DiagAttributes:
                                                   '.jumpstart.data.umode')
         return updated_mappings
 
-    def add_jumpstart_rcode_and_machine_mode_text_section_to_mappings(
-            self, mappings):
-        # rcode section
+    def get_jumpstart_rcode_text_section_mapping(self):
         rcode_mapping = {}
         rcode_mapping['pa'] = self.jumpstart_source_attributes[
             'diag_attributes']['rcode_start_address']
@@ -576,9 +582,10 @@ class DiagAttributes:
             'linker_script_section'] = ".jumpstart.text.rcode.init,.jumpstart.text.rcode"
         # rcode region does not get a PMARR mapping.
         rcode_mapping['no_pte_allocation'] = True
-        mappings.append(rcode_mapping)
 
-        # machine mode section
+        return rcode_mapping
+
+    def get_jumpstart_machine_mode_text_section_mapping(self):
         machine_mode_mapping = {}
         machine_mode_mapping['pa'] = self.jumpstart_source_attributes[
             'diag_attributes']['machine_mode_start_address']
@@ -590,12 +597,8 @@ class DiagAttributes:
             'linker_script_section'] = ".jumpstart.text.machine.init,.jumpstart.text.machine,.jumpstart.text.machine.end"
         machine_mode_mapping['pmarr_memory_type'] = "wb"
         machine_mode_mapping['no_pte_allocation'] = True
-        mappings.append(machine_mode_mapping)
 
-        # Add a guard page mapping to catch linker script overruns of machine_mode
-        mappings = self.add_pa_guard_page_after_last_mapping(mappings)
-
-        return mappings
+        return machine_mode_mapping
 
     def add_pa_guard_page_after_last_mapping(self, mappings):
         # Guard pages have no allocations in the page tables but
