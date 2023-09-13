@@ -8,12 +8,16 @@
 
 import argparse
 import enum
+import importlib
 import logging as log
 import math
 import os
 import sys
 
 import yaml
+
+if importlib.util.find_spec("rivos_internal.lib") is not None:
+    import rivos_internal.lib as rivos_internal
 
 
 def extract_bits(value, bit_range):
@@ -246,6 +250,20 @@ class DiagAttributes:
         with open(jumpstart_source_attributes_yaml, "r") as f:
             self.jumpstart_source_attributes = yaml.safe_load(f)
 
+        if self.jumpstart_source_attributes[
+                'rivos_internal_build'] == True and importlib.util.find_spec(
+                    "rivos_internal.lib") is None:
+            log.error(
+                f"rivos_internal.lib not found but rivos_internal_build is set to True in {jumpstart_source_attributes_yaml}"
+            )
+            sys.exit(1)
+        elif self.jumpstart_source_attributes[
+                'rivos_internal_build'] == False and importlib.util.find_spec(
+                    "rivos_internal.lib") is not None:
+            log.warning(
+                f"rivos_internal.lib exists but rivos_internal_build is set to False in {jumpstart_source_attributes_yaml}"
+            )
+
         # Override the default diag attribute values with the values
         # specified by the diag.
         for key in diag_attributes.keys():
@@ -300,11 +318,15 @@ class DiagAttributes:
         self.sanity_check_memory_map()
 
     def append_jumpstart_sections_to_mappings(self):
-        # the rcode and machine mode sections are added at specific locations
+        # the rivos and machine mode sections are added at specific locations
         # the rest are just added on at locations immediately following
         # these sections.
-        self.jumpstart_source_attributes['diag_attributes']['mappings'].append(
-            self.get_jumpstart_rcode_text_section_mapping())
+        if self.jumpstart_source_attributes['rivos_internal_build'] is True:
+            self.jumpstart_source_attributes['diag_attributes'][
+                'mappings'].append(
+                    rivos_internal.get_rivos_specific_mappings(
+                        self.get_attribute('page_offset'),
+                        self.jumpstart_source_attributes))
 
         self.jumpstart_source_attributes['diag_attributes']['mappings'].append(
             self.get_jumpstart_machine_mode_text_section_mapping())
@@ -395,7 +417,6 @@ class DiagAttributes:
         for mapping in self.jumpstart_source_attributes['diag_attributes'][
                 'mappings']:
             if 'pmarr_memory_type' not in mapping:
-                # rcode region does not get a PMARR.
                 if mapping[
                         'linker_script_section'] == '.jumpstart.text.rcode.init,.jumpstart.text.rcode':
                     continue
@@ -570,20 +591,6 @@ class DiagAttributes:
                                                   'wb',
                                                   '.jumpstart.data.umode')
         return updated_mappings
-
-    def get_jumpstart_rcode_text_section_mapping(self):
-        rcode_mapping = {}
-        rcode_mapping['pa'] = self.jumpstart_source_attributes[
-            'diag_attributes']['rcode_start_address']
-        rcode_mapping['page_size'] = 1 << self.get_attribute('page_offset')
-        rcode_mapping['num_pages'] = self.jumpstart_source_attributes[
-            'jumpstart_rcode_text_page_counts']['num_pages_for_all_text']
-        rcode_mapping[
-            'linker_script_section'] = ".jumpstart.text.rcode.init,.jumpstart.text.rcode"
-        # rcode region does not get a PMARR mapping.
-        rcode_mapping['no_pte_allocation'] = True
-
-        return rcode_mapping
 
     def get_jumpstart_machine_mode_text_section_mapping(self):
         machine_mode_mapping = {}

@@ -4,6 +4,8 @@
 
 diag_entry_label: _rcode_start
 
+rivos_internal_build: true
+
 max_num_harts_supported: 4
 
 # Hard limits on how many pages the jumsptart infrastructure itself will occupy.

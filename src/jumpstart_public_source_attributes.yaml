@@ -4,14 +4,14 @@
 
 diag_entry_label: _machine_mode_start
 
+rivos_internal_build: false
+
 max_num_harts_supported: 4
 
 # Hard limits on how many pages the jumsptart infrastructure itself will occupy.
 # Allows us to keep track of infrastructure code size.
 # The test pages are not limited by these counts and are dependent on the
 # number of pages allocated in the test memory map.
-jumpstart_rcode_text_page_counts:
-  num_pages_for_all_text: 1
 jumpstart_machine_text_page_counts:
   num_pages_for_all_text: 2
 jumpstart_supervisor_text_page_counts:
@@ -35,7 +35,6 @@ diag_attributes:
   num_pages_for_bss_section: 1
   num_pages_for_rodata_section: 1
   allow_page_table_modifications: false
-  rcode_start_address: 0x06000000
   machine_mode_start_address: 0x7f800000
   active_hart_mask: '0b1'
   allow_active_hart_mask_override: false
@@ -159,6 +158,9 @@ defines:
   QEMU_RIVOS_AP_END_MAGIC_ADDRESS: 0x100000
   QEMU_RIVOS_AP_RUN_FAILED   : ((1 << 16) | 0x3333)
   QEMU_RIVOS_AP_RUN_PASSED   : 0x5555
+
+  CHECKTC_DISABLE: nop
+  CHECKTC_ENABLE: nop
 
 syscall_numbers:
   - SYSCALL_RUN_FUNC_IN_USER_MODE_COMPLETE
