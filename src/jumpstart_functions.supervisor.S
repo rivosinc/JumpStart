@@ -199,6 +199,8 @@ sync_harts_in_mask:
   sd  fp, 0(sp)
   addi    fp, sp, 16
 
+  CHECKTC_DISABLE
+
   li t0, 1
   sll t2, t0, a0
   sll t0, t0, a2
@@ -237,6 +239,8 @@ wait_for_primary_hart_to_clear_sync_point_bits:
   bnez t0, wait_for_primary_hart_to_clear_sync_point_bits
 
 return_from_sync_harts_in_mask:
+  CHECKTC_ENABLE
+
   ld  ra, 8(sp)
   ld  fp, 0(sp)
   addi  sp, sp, 16

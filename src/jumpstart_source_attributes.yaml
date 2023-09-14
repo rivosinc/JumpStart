@@ -158,6 +158,12 @@ defines:
   QEMU_RIVOS_AP_RUN_FAILED   : ((1 << 16) | 0x3333)
   QEMU_RIVOS_AP_RUN_PASSED   : 0x5555
 
+  # Magic instructions that disable/enable the checkTC comparison.
+  # lui r0, #0x177a
+  CHECKTC_DISABLE: .4byte 0x0177a037
+  # lui r0, #0x5deb
+  CHECKTC_ENABLE: .4byte 0x05deb037
+
 syscall_numbers:
   - SYSCALL_RUN_FUNC_IN_USER_MODE_COMPLETE
   - SYSCALL_RUN_FUNC_IN_SUPERVISOR_MODE_COMPLETE

@@ -21,6 +21,8 @@ _machine_mode_end:
   li t1, PRIMARY_HART_ID
   bne t0, t1, just_wfi
 
+  CHECKTC_DISABLE
+
   # Check the status of all the active harts.
   # a0: Active hart mask. Gets shifted right as we check each hart.
   # t0: hart_status_tracker address
@@ -53,6 +55,8 @@ done_with_current_hart:
   srli a0, a0, 1
   addi t1, t1, 1
   bnez a0, check_hart_status_loop
+
+  CHECKTC_ENABLE
 
   # All harts have passed, we're done.
   li t1, DIAG_PASSED
