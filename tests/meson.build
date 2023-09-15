@@ -4,30 +4,17 @@
 
 fs = import('fs')
 
-jumpstart_tests = [
-  ['test000', 'Enable MMU (SATP.mode = sv39), jump to main and exit.'],
-  ['test001', 'Enable MMU (SATP.mode = sv48), jump to main and exit.'],
-  ['test002', 'Run C/Assembly functions with run_function_in_user_mode() from supervisor mode.'],
-  ['test003', 'Register and run Supervisor mode illegal instruction exception handler.'],
-  ['test004', 'HWP AMPM perf diag.'],
-  ['test005', '16K data block move from WB to UC (PBMT) region.'],
-  ['test006', 'Read and Write CSRs.'],
-  ['test007', 'UART test.'],
-  ['test008', 'IMSIC test.'],
-  ['test009', 'Jump to main() in machine mode and exit.'],
-  ['test010', 'Override default M-mode start address.'],
-  ['test011', 'Handle user mode exceptions in supervisor mode.'],
-  ['test012', 'Exit with DIAG_FAILED to test fail path.', '', true],
-  ['test013', 'test000 with 4 harts.', '-p4'],
-  ['test014', 'Hart 2 exits with DIAG_FAILED to test MP fail path.', '-p3', true],
-  ['test015', 'MP IMSIC test.', '-p4'],
-  ['test016', 'MP UART test.', '-p4'],
-  ['test017', 'Register and run Machine mode illegal instruction exception handler.'],
-  ['test018', 'Run C/Assembly functions with run_function_in_supervisor_mode() from machine mode.'],
-  ['test019', 'Sync 4P CPUs.', '-p4'],
-  ['test020', 'translate_VA() and page table modification test.'],
-  ['test021', '2P translate_VA() and page table modification test.', '-p2'],
-]
+source_suffixes = ['.S', '.c']
+
+subdir('public')
+
+jumpstart_tests = public_jumpstart_tests
+
+if get_option('rivos_internal_build') == true
+  subdir('rivos_internal')
+  jumpstart_tests += rivos_internal_jumpstart_tests
+endif
+
 
 foreach jumpstart_test : jumpstart_tests
   test_prefix = jumpstart_test.get(0)
@@ -37,7 +24,13 @@ foreach jumpstart_test : jumpstart_tests
 
   test_should_fail = jumpstart_test.get(3, false)
 
-  diag_attributes_yaml = files(test_prefix +'.diag_attributes.yaml')
+  if fs.is_file(meson.current_source_dir() + '/' + 'public' + '/' + test_prefix + '.diag_attributes.yaml')
+    diag_attributes_yaml = files('public' + '/' + test_prefix + '.diag_attributes.yaml')
+  elif get_option('rivos_internal_build') == true
+    if fs.is_file(meson.current_source_dir() + '/' + 'rivos_internal' + '/' + test_prefix + '.diag_attributes.yaml')
+      diag_attributes_yaml = files('rivos_internal' + '/' + test_prefix + '.diag_attributes.yaml')
+    endif
+  endif
 
   diag_source_generator_output = custom_target(
                                 'Generate diag attributes related source files for ' + test_prefix,
@@ -49,11 +42,15 @@ foreach jumpstart_test : jumpstart_tests
   test_sources = [diag_source_generator_output[0]]
   linker_script = diag_source_generator_output[1].full_path()
 
-  possible_suffixes = ['.S', '.c']
-  foreach possible_suffix : possible_suffixes
-    if fs.is_file(meson.current_source_dir() + '/' + test_prefix + possible_suffix)
-      test_sources += [test_prefix + possible_suffix]
+  foreach suffix : source_suffixes
+    if fs.is_file(meson.current_source_dir() + '/' + 'public' + '/' + test_prefix + suffix)
+      test_sources += ['public' + '/' + test_prefix + suffix]
+    elif get_option('rivos_internal_build') == true
+      if fs.is_file(meson.current_source_dir() + '/' + 'rivos_internal' + '/' + test_prefix + suffix)
+        test_sources += ['rivos_internal' + '/' + test_prefix + suffix]
+      endif
     endif
+
   endforeach
 
   test_exe = executable(test_prefix,
