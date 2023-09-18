@@ -46,18 +46,43 @@ diag_source_generator = files('scripts/generate_diag_sources.py')
 diag_sources = get_option('diag_sources')
 diag_attributes_yaml = get_option('diag_attributes_yaml')
 
-default_c_args_list = ['-march=' + get_option('gcc_march_string')]
 
 spike = find_program(get_option('spike_binary'))
-default_spike_args = ['--pass-fail',
-                      '--isa=' + get_option('spike_default_isa_string') ]
+
+spike_isa_string = get_option('spike_isa_string')
+gcc_march_string = get_option('gcc_march_string')
+
+default_spike_args = []
+
+if get_option('rivos_internal_build') == true
+  default_spike_args += rivos_spike_args
+
+  if spike_isa_string == ''
+    spike_isa_string = rivos_spike_isa_string
+  endif
+
+  if gcc_march_string == ''
+    gcc_march_string = rivos_gcc_march_string
+  endif
+endif
+
+if gcc_march_string == ''
+  gcc_march_string = 'rv64gc_zicbom'
+endif
+
+if spike_isa_string != ''
+  default_spike_args += ['--isa=' + spike_isa_string ]
+endif
+
 if get_option('spike_generate_trace') == true
-  default_spike_args += ['-v1', '--log-commits']
+  default_spike_args += ['-l', '--log-commits']
 endif
 
 if get_option('spike_additional_arguments').length() > 0
   default_spike_args += get_option('spike_additional_arguments')
 endif
+
+default_c_args_list = ['-march=' + gcc_march_string]
 
 diag_source_generator_common_inputs = [diag_source_generator, jumpstart_source_attributes_yaml]
 diag_source_generator_command = [prog_python,

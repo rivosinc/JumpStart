@@ -22,7 +22,7 @@ option('diag_attribute_overrides',
 
 option('gcc_march_string',
        type : 'string',
-       value : 'rv64gcv_svinval_zba_zbb_zbs_zicbom_zicbop_zicboz_zfh_zfhmin_zfbfmin_zicond_zihintntl_xrivosrcode',
+       value : '',
        description : '-march string to pass to gcc.')
 
 option('spike_binary',
@@ -30,10 +30,10 @@ option('spike_binary',
        value : 'spike',
        description : 'Spike binary to use')
 
-option('spike_default_isa_string',
+option('spike_isa_string',
        type : 'string',
-       value : 'rv64gchv_zba_zbb_zbc_zbs_zbkb_sstc_svpbmt_svinval_sscofpmf_zicbom_zicbop_zicboz_zfh_zfhmin_zfbfmin_zvfh_zvfhmin_zvfbfmin_zvfbfwma_zkt_zkr_zicsr_zifencei_zihintpause_zawrs_zicond_zvkned_zvbb_zvkg_zvknha_zvknhb_zvksh_zvksed_xrivostime_xrivospagewalk_xrivoscode_smaia_ssaia',
-       description : '--isa string to use for spike. (Should match cad/cfg/.envmod from rvsys)')
+       value : '',
+       description : '--isa string to use for spike.')
 
 option('spike_additional_arguments',
        type : 'array',
