@@ -53,6 +53,7 @@ spike_isa_string = get_option('spike_isa_string')
 gcc_march_string = get_option('gcc_march_string')
 
 default_spike_args = []
+default_c_args_list = []
 
 if get_option('rivos_internal_build') == true
   default_spike_args += rivos_spike_args
@@ -64,11 +65,13 @@ if get_option('rivos_internal_build') == true
   if gcc_march_string == ''
     gcc_march_string = rivos_gcc_march_string
   endif
+else
+  if gcc_march_string == ''
+    gcc_march_string = 'rv64gc'
+  endif
 endif
 
-if gcc_march_string == ''
-  gcc_march_string = 'rv64gc_zicbom'
-endif
+default_c_args_list += ['-march=' + gcc_march_string]
 
 if spike_isa_string != ''
   default_spike_args += ['--isa=' + spike_isa_string ]
@@ -81,8 +84,6 @@ endif
 if get_option('spike_additional_arguments').length() > 0
   default_spike_args += get_option('spike_additional_arguments')
 endif
-
-default_c_args_list = ['-march=' + gcc_march_string]
 
 diag_source_generator_common_inputs = [diag_source_generator, jumpstart_source_attributes_yaml]
 diag_source_generator_command = [prog_python,

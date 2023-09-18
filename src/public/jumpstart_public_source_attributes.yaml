@@ -145,19 +145,12 @@ defines:
   IMSIC_S_SIZE:       (IMSIC_MMIO_PAGE_SIZE * (GEILEN + 1))
   IMSIC_TOPEI_VAL_SHIFT: 16
   IMSIC_IPI_ID:       1
-  # Spike unfortunately uses 1 for PASS and 0 for FAIL.
-  SPIKE_RUN_PASSED: 1
-  SPIKE_RUN_FAILED: 0
-  # These are the various states that a hart can be in.
   DIAG_PASSED: 0
   DIAG_FAILED: 1
+  # These are the various states that a hart can be in.
   HART_RUNNING: 2
   HART_INACTIVE: 3
   PRIMARY_HART_ID: 0
-
-  QEMU_RIVOS_AP_END_MAGIC_ADDRESS: 0x100000
-  QEMU_RIVOS_AP_RUN_FAILED   : ((1 << 16) | 0x3333)
-  QEMU_RIVOS_AP_RUN_PASSED   : 0x5555
 
   CHECKTC_DISABLE: nop
   CHECKTC_ENABLE: nop
