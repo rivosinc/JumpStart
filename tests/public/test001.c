@@ -6,7 +6,7 @@
 
 int main(void) {
   uint64_t main_function_address = (uint64_t)&main;
-  if (main_function_address != 0x80000000) {
+  if (main_function_address != 0x80020000) {
     return DIAG_FAILED;
   }
 

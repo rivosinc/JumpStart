@@ -35,7 +35,7 @@ diag_attributes:
   num_pages_for_bss_section: 1
   num_pages_for_rodata_section: 1
   allow_page_table_modifications: false
-  machine_mode_start_address: 0x7f800000
+  machine_mode_start_address: 0x80000000
   active_hart_mask: '0b1'
   allow_active_hart_mask_override: false
   satp_mode: 'sv39'

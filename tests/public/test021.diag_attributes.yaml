@@ -10,8 +10,8 @@ allow_page_table_modifications: true
 
 mappings:
   -
-    va: 0x80000000
-    pa: 0x80000000
+    va: 0x80020000
+    pa: 0x80020000
     xwr: "0b101"
     page_size: 0x1000
     num_pages: 2
@@ -20,8 +20,8 @@ mappings:
 
 
   -
-    va: 0x80004000
-    pa: 0x80004000
+    va: 0x80024000
+    pa: 0x80024000
     xwr: "0b101"
     page_size: 0x1000
     num_pages: 1
@@ -29,8 +29,8 @@ mappings:
     linker_script_section: ".data"
 
   -
-    va: 0x80006000
-    pa: 0x80006000
+    va: 0x80026000
+    pa: 0x80026000
     xwr: "0b001"
     valid: "0b0"
     page_size: 0x1000
