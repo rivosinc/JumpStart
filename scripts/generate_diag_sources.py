@@ -14,6 +14,7 @@ import math
 import os
 import sys
 
+import public.lib as public
 import yaml
 
 if importlib.util.find_spec("rivos_internal.lib") is not None:
@@ -125,113 +126,6 @@ class PageTableAttributes:
             sys.exit(1)
 
 
-class PmarrRegionMemoryType(enum.IntEnum):
-    PMA_UC = 0
-    PMA_WC = 1
-    PMA_WB = 3
-
-
-class PmarrAttributes:
-    base_lsb = 20
-    mask_lsb = 20
-
-    # Minimum size os 1M
-    minimum_size = 1024 * 1024
-
-    # The number of PMARR register pairs
-    num_registers = 10
-
-    def __init__(self) -> None:
-        pass
-
-    def convert_memory_type_to_string(self, memory_type):
-        if memory_type == PmarrRegionMemoryType.PMA_UC:
-            return "uc"
-        elif memory_type == PmarrRegionMemoryType.PMA_WC:
-            return "wc"
-        elif memory_type == PmarrRegionMemoryType.PMA_WB:
-            return "wb"
-        else:
-            log.error(f"Unknown memory type {memory_type}")
-            sys.exit(1)
-
-    def convert_string_to_memory_type(self, memory_type_string):
-        if memory_type_string == "uc":
-            return PmarrRegionMemoryType.PMA_UC
-        elif memory_type_string == "wc":
-            return PmarrRegionMemoryType.PMA_WC
-        elif memory_type_string == "wb":
-            return PmarrRegionMemoryType.PMA_WB
-        else:
-            log.error(f"Unknown memory type {memory_type_string}")
-            sys.exit(1)
-
-
-class PmarrRegion:
-    pmarr_attributes = PmarrAttributes()
-
-    def __init__(self, start_address, end_address, memory_type_string) -> None:
-        self.start_address = (start_address >> self.pmarr_attributes.base_lsb
-                              ) << self.pmarr_attributes.base_lsb
-
-        self.end_address = self.start_address + self.pmarr_attributes.minimum_size
-        if end_address > self.end_address:
-            self.end_address = end_address
-
-        self.memory_type = self.pmarr_attributes.convert_string_to_memory_type(
-            memory_type_string)
-
-    def __str__(self):
-        return f"PmarrRegion: start_address={hex(self.start_address)}, end_address={hex(self.end_address)}, memory_type={self.pmarr_attributes.convert_memory_type_to_string(self.memory_type)}"
-
-    def can_add_to_region(self, start_address, end_address,
-                          memory_type_string):
-        memory_type = self.pmarr_attributes.convert_string_to_memory_type(
-            memory_type_string)
-
-        if (self.start_address <= (end_address - 1)) and (
-                start_address <=
-            (self.end_address - 1)) and memory_type != self.memory_type:
-            log.error(
-                f"Region [{hex(start_address)}, {hex(end_address)}, {memory_type_string}] overlaps with an existing PMARR region [{hex(self.start_address)}, {hex(self.end_address)}] with different memory type {self.pmarr_attributes.convert_memory_type_to_string(self.memory_type)}"
-            )
-            sys.exit(1)
-
-        if (self.start_address <= end_address) and (
-                start_address <=
-                self.end_address) and memory_type == self.memory_type:
-            return True
-
-        return False
-
-    def add_to_region(self, start_address, end_address):
-        assert ((self.start_address <= end_address)
-                and (start_address <= self.end_address))
-
-        if start_address < self.start_address:
-            self.start_address = start_address
-
-        if self.end_address < end_address:
-            self.end_address = end_address
-
-    def generate_pmarr_region_setup_code(self, file_descriptor, reg_id):
-        file_descriptor.write(f"   # {reg_id}: {self}\n")
-
-        pmarr_base_reg_value = int(self.memory_type) | self.start_address
-
-        region_size = self.end_address - self.start_address
-        # Assuming that the region size is a multiple of the minimum size
-        assert (region_size % self.pmarr_attributes.minimum_size == 0)
-        pmarr_mask = (0xffffffffffffffff <<
-                      (region_size.bit_length() - 1)) & 0xffffffffffffffff
-        pmarr_mask_reg_value = pmarr_mask | 0x3  # set the L and V bits.
-
-        file_descriptor.write(f"   li   t0, {hex(pmarr_base_reg_value)}\n")
-        file_descriptor.write(f"   csrw pmarr_base_{reg_id}, t0\n")
-        file_descriptor.write(f"   li   t0, {hex(pmarr_mask_reg_value)}\n")
-        file_descriptor.write(f"   csrw pmarr_mask_{reg_id}, t0\n\n")
-
-
 class DiagAttributes:
     pt_attributes = PageTableAttributes()
     num_guard_pages_generated = 0
@@ -310,18 +204,28 @@ class DiagAttributes:
                 ['mappings'],
                 key=lambda x: x['pa'],
                 reverse=False)
+
         self.sanity_check_memory_map()
 
         self.create_pagetables_in_memory_for_mappings()
-        self.create_pmarr_regions()
 
         self.sanity_check_memory_map()
+
+    def sanity_check_memory_map(self):
+        if self.jumpstart_source_attributes['rivos_internal_build'] == True:
+            rivos_internal.sanity_check_memory_map(
+                self.jumpstart_source_attributes['diag_attributes']
+                ['mappings'])
+        else:
+            public.sanity_check_memory_map(
+                self.jumpstart_source_attributes['diag_attributes']
+                ['mappings'])
 
     def append_jumpstart_sections_to_mappings(self):
         # the rivos and machine mode sections are added at specific locations
         # the rest are just added on at locations immediately following
         # these sections.
-        if self.jumpstart_source_attributes['rivos_internal_build'] is True:
+        if self.jumpstart_source_attributes['rivos_internal_build'] == True:
             self.jumpstart_source_attributes['diag_attributes'][
                 'mappings'].append(
                     rivos_internal.get_rivos_specific_mappings(
@@ -366,85 +270,12 @@ class DiagAttributes:
                 self.jumpstart_source_attributes['diag_attributes']
                 ['mappings'])
 
-    def sanity_check_memory_map(self):
-        for mapping in self.jumpstart_source_attributes['diag_attributes'][
-                'mappings']:
-            if 'no_pte_allocation' in mapping and mapping[
-                    'no_pte_allocation'] is True:
-                pte_attributes = ['xwr', 'umode', 'va']
-                # if the mapping has a no_pte_allocation attribute, then
-                # it should not have any xwr or umode bits set.
-                assert (not any(x in mapping for x in pte_attributes))
-
-        # check that the memory mappings don't overlap
-        # the mappings are sorted by the physical address at this point.
-        last_mapping = None
-        for mapping in self.jumpstart_source_attributes['diag_attributes'][
-                'mappings']:
-
-            if last_mapping is None:
-                last_mapping = mapping
-                continue
-
-            last_mapping_size = last_mapping['page_size'] * last_mapping[
-                'num_pages']
-            last_mapping_pmarr_memory_type = last_mapping[
-                'pmarr_memory_type'] if 'pmarr_memory_type' in last_mapping else None
-
-            if last_mapping_pmarr_memory_type is not None and 'pmarr_memory_type' in mapping and mapping[
-                    'pmarr_memory_type'] != last_mapping_pmarr_memory_type and last_mapping_size < PmarrAttributes.minimum_size:
-                #  These mappings will fall into different PMARR regions which have a minimum size of 1M.
-                last_mapping_size = PmarrAttributes.minimum_size
-
-            last_mapping_end_address = last_mapping['pa'] + last_mapping_size
-
-            if mapping['pa'] < last_mapping_end_address:
-                log.error(
-                    f"Memory mapping {mapping} overlaps with {last_mapping}")
-                sys.exit(1)
-
-            last_mapping = mapping
-
     def sanity_check_diag_attributes(self):
         assert ('satp_mode'
                 in self.jumpstart_source_attributes['diag_attributes'])
         assert (
             self.jumpstart_source_attributes['diag_attributes']['satp_mode']
             in self.pt_attributes.mode_attributes)
-
-    def create_pmarr_regions(self):
-        self.pmarr_regions = []
-        for mapping in self.jumpstart_source_attributes['diag_attributes'][
-                'mappings']:
-            if 'pmarr_memory_type' not in mapping:
-                if mapping[
-                        'linker_script_section'] == '.jumpstart.text.rcode.init,.jumpstart.text.rcode':
-                    continue
-
-                log.error(
-                    f"pmarr_memory_type is not specified in the mapping: {mapping}"
-                )
-                sys.exit(1)
-
-            mapping_size = mapping['page_size'] * mapping['num_pages']
-
-            pmarr_memory_type = mapping['pmarr_memory_type']
-
-            matching_pmarr_region = None
-            for pmarr_region in self.pmarr_regions:
-                if pmarr_region.can_add_to_region(mapping['pa'],
-                                                  mapping['pa'] + mapping_size,
-                                                  pmarr_memory_type):
-                    matching_pmarr_region = pmarr_region
-                    break
-            if matching_pmarr_region is None:
-                new_pmarr_region = PmarrRegion(mapping['pa'],
-                                               mapping['pa'] + mapping_size,
-                                               pmarr_memory_type)
-                self.pmarr_regions.append(new_pmarr_region)
-            else:
-                matching_pmarr_region.add_to_region(
-                    mapping['pa'], mapping['pa'] + mapping_size)
 
     def add_after_mapping(self,
                           mappings,
@@ -465,11 +296,11 @@ class DiagAttributes:
         previous_mapping_pmarr_memory_type = previous_mapping[
             'pmarr_memory_type'] if 'pmarr_memory_type' in previous_mapping else None
 
-        if previous_mapping_pmarr_memory_type is not None and previous_mapping_pmarr_memory_type != pmarr_memory_type and previous_mapping_size < PmarrAttributes.minimum_size:
+        if previous_mapping_pmarr_memory_type is not None and previous_mapping_pmarr_memory_type != pmarr_memory_type and previous_mapping_size < rivos_internal.PmarrAttributes.minimum_size:
             log.debug(
-                f"Placing new mapping {previous_mapping_size} bytes after {previous_mapping} to account for PMARR minimum size of {PmarrAttributes.minimum_size}"
+                f"Placing new mapping {previous_mapping_size} bytes after {previous_mapping} to account for PMARR minimum size of {rivos_internal.PmarrAttributes.minimum_size}"
             )
-            previous_mapping_size = PmarrAttributes.minimum_size
+            previous_mapping_size = rivos_internal.PmarrAttributes.minimum_size
 
         # If the last mapping is a no_pte_allocation mapping, then it
         # won't have a VA.
@@ -928,21 +759,6 @@ class DiagAttributes:
             file_descriptor.write(f"    sfence.vma\n")
             file_descriptor.write(f"    ret\n")
 
-    def generate_pmarr_functions(self, file_descriptor):
-        file_descriptor.write('.section .jumpstart.text.rcode, "ax"\n\n')
-        file_descriptor.write("\n")
-        file_descriptor.write(".global setup_pmarr\n")
-        file_descriptor.write("setup_pmarr:\n\n")
-
-        pmarr_reg_id = 0
-        for region in self.pmarr_regions:
-            region.generate_pmarr_region_setup_code(file_descriptor,
-                                                    pmarr_reg_id)
-            pmarr_reg_id += 1
-            assert (pmarr_reg_id < PmarrAttributes.num_registers)
-        file_descriptor.write(f"   ret\n\n\n")
-        file_descriptor.write("\n")
-
     def generate_page_table_data(self, file_descriptor):
         file_descriptor.write('.section .jumpstart.rodata.pagetables, "a"\n\n')
         file_descriptor.write(f".global {self.pt_attributes.pt_start_label}\n")
@@ -994,7 +810,12 @@ class DiagAttributes:
             self.generate_diag_attribute_functions(file)
 
             self.generate_mmu_functions(file)
-            self.generate_pmarr_functions(file)
+
+            if self.jumpstart_source_attributes[
+                    'rivos_internal_build'] == True:
+                rivos_internal.generate_rivos_internal_functions(
+                    file, self.jumpstart_source_attributes['diag_attributes']
+                    ['mappings'])
 
             self.generate_page_table_data(file)
 
