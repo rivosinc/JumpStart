@@ -4,6 +4,7 @@
 
 jumpstart_rivos_internal_sources = files(
                           'start.rcode.S',
+                          'jump_to_main.machine.S',
                           'end.machine.S'
                           )
 
