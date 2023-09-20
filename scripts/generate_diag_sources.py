@@ -813,7 +813,7 @@ class DiagAttributes:
 
             if self.jumpstart_source_attributes[
                     'rivos_internal_build'] == True:
-                rivos_internal.generate_rivos_internal_functions(
+                rivos_internal.generate_rivos_internal_mmu_functions(
                     file, self.jumpstart_source_attributes['diag_attributes']
                     ['mappings'])
 

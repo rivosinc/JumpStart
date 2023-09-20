@@ -225,5 +225,5 @@ def generate_pmarr_functions(file_descriptor, mappings):
     file_descriptor.write("\n")
 
 
-def generate_rivos_internal_functions(file_descriptor, mappings):
+def generate_rivos_internal_mmu_functions(file_descriptor, mappings):
     generate_pmarr_functions(file_descriptor, mappings)
