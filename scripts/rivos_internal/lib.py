@@ -227,3 +227,19 @@ def generate_pmarr_functions(file_descriptor, mappings):
 
 def generate_rivos_internal_mmu_functions(file_descriptor, mappings):
     generate_pmarr_functions(file_descriptor, mappings)
+
+
+def generate_uc_end_of_sim_magic_address_function(file_descriptor,
+                                                  uc_end_of_sim_magic_address):
+    file_descriptor.write(f'.section .jumpstart.text.machine, "ax"\n\n')
+    file_descriptor.write(f".global get_uc_end_of_sim_magic_address\n")
+    file_descriptor.write(f"get_uc_end_of_sim_magic_address:\n\n")
+
+    file_descriptor.write(f"   li a0, {uc_end_of_sim_magic_address}\n")
+    file_descriptor.write(f"   ret\n\n\n")
+
+
+def generate_rivos_internal_diag_attribute_functions(file_descriptor,
+                                                     diag_attributes):
+    generate_uc_end_of_sim_magic_address_function(
+        file_descriptor, diag_attributes['uc_end_of_sim_magic_address'])

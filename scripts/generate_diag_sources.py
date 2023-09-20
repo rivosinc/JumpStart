@@ -696,6 +696,10 @@ class DiagAttributes:
         self.generate_boolean_diag_attribute_functions(
             file_descriptor, ['start_test_in_machine_mode', 'in_qemu_mode'])
         self.generate_get_active_hart_mask_function(file_descriptor)
+        if self.jumpstart_source_attributes['rivos_internal_build'] == True:
+            rivos_internal.generate_rivos_internal_diag_attribute_functions(
+                file_descriptor,
+                self.jumpstart_source_attributes['diag_attributes'])
 
     def generate_boolean_diag_attribute_functions(self, file_descriptor,
                                                   boolean_attributes):

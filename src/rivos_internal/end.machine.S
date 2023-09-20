@@ -89,8 +89,8 @@ run_end_of_sim_sequence:
   bnez a0, run_qemu_end_of_sim_sequence
 
 run_spike_and_rtl_end_of_sim_sequence:
-  li     t0, UC_END_OF_SIM_MAGIC_ADDRESS
-  csrw   pmarr_base_0, t0
+  jal   get_uc_end_of_sim_magic_address
+  csrw   pmarr_base_0, a0
   li     t0, PMARR_0_MAGIC_STORE_MASK_VAL
   csrw   pmarr_mask_0, t0
   fence.i
@@ -115,8 +115,8 @@ loop_magic_store:
   bne    t2, x0, loop_magic_store
 
   # 3. Store PASS/FAIL to the UC magic address
-  li t0, UC_END_OF_SIM_MAGIC_ADDRESS
-  sw s1, 0(t0)
+  jal   get_uc_end_of_sim_magic_address
+  sw s1, 0(a0)
 
   # Spike run with --pass-fail will exit with non-zero error
   # code if t0 is not 1
