@@ -5,6 +5,8 @@
 jumpstart_rivos_internal_sources = files(
                           'start.rcode.S',
                           'jump_to_main.machine.S',
+                          'imsic_functions.supervisor.c',
+                          'uart_functions.supervisor.c',
                           'end.machine.S'
                           )
 
