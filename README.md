@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # JumpStart
 
-Bare-metal kernel, APIs and build infrastructure for writing directed diags.
+Bare-metal kernel, APIs and build infrastructure for writing directed diags for RISC-V CPU/SoC validation.
 
 ## Getting Started
 

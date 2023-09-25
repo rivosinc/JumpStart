@@ -6,181 +6,215 @@ SPDX-License-Identifier: Apache-2.0
 
 # Reference Manual
 
-The Jumpstart [`Unit Tests`](tests) are a good reference on writing diags. This [file](tests/meson.build) has the list of unit tests and a description of each of them.
+Jumpstart provides a bare-metal kernel, APIs and build infrastructure for writing directed diags for RISC-V CPU/SoC validation.
 
-Jumpstart provides a set of basic API functions that help with writing diags. These are listed in [jumpstart_functions.h](jumpstart_functions.h).
+A Diag is expected to provide sources (C and assembly files) and it's attributes in a YAML file.
+
+The Jumpstart [`Unit Tests`](../tests) are a good reference on writing diags:
+* [Common tests](../tests/common/meson.build)
+* [Rivos Internal tests](../tests/rivos_internal/meson.build)
+
+**For a Quick Start Guide, see [Anatomy of a Diag](quick_start_anatomy_of_a_diag.md)** which provides a detailed explanation of `test021` which is a 2-core diag that modifies a shared page table in memory and checks that the change is visible to both cores.
+
+## Diag Sources
+
+Diags are written in C and/or Assembly. The diag sources are expected to provide a `main()` function which is the entry point for the diag.
+
+Jumpstart provides a set of basic API functions that the diag can use. Details [HERE](#jumpstart-apis).
+
 
 **Diags are expected to follow the [RISC-V ABI Calling Convention](https://github.com/riscv-non-isa/riscv-elf-psabi-doc/blob/master/riscv-cc.adoc).**
 
 **The Thread Pointer (x4) and Global Pointer (x3) registers are reserved for jumpstart purposes and should not be used in diags.** TP is used to point to a per hart attributes structure and GP is used as a temporary in jumpstart routines.
 
-Diags are expected to provide sources (C and assembly files) and it's attributes in a YAML file.
-
-For example, `test003` has:
-* Sources
-  * [test003.c](tests/test003.c)
-  * [test003.S](tests/test003.S)
-* Test Attribute File:
-  * [test003.test_attributes.yaml](tests/test003.test_attributes.yaml)
+Machine, Supervisor and User mode cannot share code so the code for different modes have to be placed in different sections. The [`mappings`](#mappings) diag attribute should be used to assign the different sections in distinct memory regions and assigned different linker script section names.
 
 ## Diag Attributes File
 
 The Diag Attributes File specifies the memory layout and various attributes of the diag such as the MMU mode, number of active harts, etc.
 
-### Memory Layout Examples
+The default diag attribute values are defined in the [Source Attributes YAML file](../src/public/jumpstart_public_source_attributes.yaml).
 
-```
-mappings:
-  -
-    va: 0x80000000
-    pa: 0x80000000
-    xwr: "0b101"
-    page_size: 0x1000
-    num_pages: 1
-    pmarr_memory_type: "wb"
-    linker_script_section: ".text"
-  -
-    va: 0x80002000
-    pa: 0x80002000
-    xwr: "0b011"
-    page_size: 0x1000
-    num_pages: 1
-    pmarr_memory_type: "wb"
-    linker_script_section: ".data"
-  -
-    va: 0x80003000
-    pa: 0x80003000
-    xwr: "0b101"
-    umode: "0b1"
-    page_size: 0x1000
-    num_pages: 2
-    pmarr_memory_type: "wb"
-    linker_script_section: ".text.umode"
-  -
-    va: 0x80005000
-    pa: 0x80005000
-    xwr: "0b011"
-    umode: "0b1"
-    page_size: 0x1000
-    num_pages: 1
-    pmarr_memory_type: "wb"
-    linker_script_section: ".data.umode"
-```
+### `active_hart_mask`
 
-specifies the 4 sections of a diag as well as their VA, page protection attributes (xwr, umode), memory type (pmarr_memory_type) as well as the linker section that they will be placed in.
+Binary bitmask controlling how many active harts are in the diag. Any hart that is not part of the bitmask will be sent to `wfi`.
 
-```
-mappings:
-  -
-    pa: 0x80000000
-    page_size: 0x1000
-    num_pages: 2
-    pmarr_memory_type: "wb"
-    no_pte_allocation: True
-    linker_script_section: ".text"
-```
+Default: `0b1` or 1 hart active.
 
-The specified section will be placed in the executable but no mapping will be created for it in the page table map. It doesn't have the attributes that an entry with a page table entry would have such as xwr, va, umode.
+Specifies the active harts in the diag. The default is `0b1` or 1 hart active.
 
-### Updating Page Tables
+### `satp_mode`
 
-The page tables are generated from the memory map. Page tables are only generated for mappings with the `no_pte_allocation` attribute set to `false`. The maximum number of pages that can be used to allocate Page Tables is controlled by `max_num_pages_for_PT_allocation`.
+The MMU mode (SV39, SV48, SV57, SV64, ...) that the diag will run in.
 
-The Page Tables are marked Read Only by default. This prevents accidental modification of the page tables from supervisor mode.
+### `start_test_in_machine_mode`
 
-To enable page table modification, set the `allow_page_table_modifications` to `true` diag attribute. This will enable the write permissions in the page table entries for the Page Table area.
+Controls whether the diag's `main()` will be called in M-mode or S-mode.
 
-### Overriding Diag Attributes
+Default: `False`. The diag's `main()` will be called in S-mode.
 
-Certain diag attributes can be overriden from the command line at setup time using the meson option `diag_attribute_overrides` which takes a list of attributes that can be overriden.
+Example: [test009](../tests/common/test009.diag_attributes.yaml).
 
-Examples:
+### `machine_mode_start_address`
 
-* Overriding the `active_hart_mask` (the default is `0b1` or 1 hart active):
+The address at which the start of the M-mode section will be placed by the linker.
 
-```
-meson setup builddir --cross-file cross-file.txt --buildtype release -Ddiag_attribute_overrides=active_hart_mask=0b11 -Ddiag_attributes_yaml=<ATTRIBUTES> -Ddiag_sources=<SOURCES> -Ddiag_name=<NAME>
-```
+### `max_num_pages_for_PT_allocation`
 
-* QEMU expects 4 harts to be active and a separate diag termination procedure which is enabled by setting `in_qemu_mode` to `True`:
+The maximum number of pages that can be used to allocate Page Tables.
 
-```
-meson setup builddir --cross-file cross-file.txt --buildtype release -Ddiag_attribute_overrides=active_hart_mask=0b11,in_qemu_mode=True -Ddiag_attributes_yaml=<ATTRIBUTES> -Ddiag_sources=<SOURCES> -Ddiag_name=<NAME>
-```
+### `num_pages_for_bss_section` and `num_pages_for_rodata_section`
 
-## Running diags in M/S/U modes
+The number of pages allowed for the `.bss` and `.rodata` sections respectively.
 
-Jumpstart will initialize the system and jump to the diag `main()`.
+### `allow_page_table_modifications`
 
-By default, `main()` will be called in S-mode. To enter `main()` in M-mode, set the `start_test_in_machine_mode` attribute to `True` in the Attribute file (See [test009's Attribute File](tests/test009.test_attributes.yaml) for an example).
+Allows the diag to modify the page tables.
 
-Diags can use the `run_function_in_supervisor_mode()` and `run_function_in_user_mode()` functions to run functions in supervisor and user mode respectively. Machine, Supervisor and User mode cannot share code sections so the code for different modes have to be separated using the `mappings` attribute and by tagging the functions with the names of the corresponding sections.
-Refer to the Unit Tests `test002`, `test011` (Run in User Mode) and `test018` (Run in Supervisor Mode) for examples of how these functions can be called and how the memory map can be set up.
+Default: `False`. The page tables regions are marked Read Only in the page table map. This prevents accidental modification of the page tables from supervisor mode.
 
-## MP diags
+Example: [test021](../tests/common/test021.diag_attributes.yaml).
 
-The active harts in a diag are indicated by setting the `active_hart_mask` test attribute.
+### `allow_active_hart_mask_override`
 
-```
-active_hart_mask: "0b1111"
-```
+Allows `active_hart_mask` to be overriden from the command line at `meson setup` time.
 
-**NOTE: Spike takes the number of active cores and not a bitmask so a diag built with non-consecutive harts enabled in the `active_hart_mask` mask cannot be run on Spike.**
+Diags may be written to allow a fixed number of active harts or can be written to scale with the number of active harts. `meson compile` will fail if a command line override of `active_hart_mask` is attempted for a diag that does not allow it.
 
-**NOTE: The UART APIs are not multi-hart safe. Only one hart should write to the UART at a time.**
+Default: `False`.
 
+### `mappings`
+
+Controls the memory layout and attributes of all the sections of the diag.
+
+#### `va` and `pa`
+
+Controls the virtual and physical addresses of the section.
+
+#### `xwr`, `umode` and `valid`
+
+Controls the values of the `xwr`, `umode` and `valid` bits in the page table entry for the section.
+
+#### `page_size`
+
+Controls the page size of the section.
+
+NOTE: Jumpstart only supports 4K pages and not the super pages at this point.
+
+#### `num_pages`
+
+Controls the number of pages allocated for the section.
+
+#### `no_pte_allocation`
+
+Controls whether the diag will allocate page table entries for the section.
+
+Default: `False`. Page table entries will be allocated for the section.
+
+#### `linker_script_section`
+
+The name of the linker script section that this section will be placed in.
 
 ## Building Diags
 
-Pass the sources and the attribute file to `meson setup` with the `-Ddiag_attributes_yaml`, `-Ddiag_name` and `-Ddiag_sources` build flags:
+`meson` is used to build the diags. The diags are built in 2 stages - `meson setup` and `meson compile`.
 
+### `meson setup`
+
+Takes the diag's sources and attributes and generates a meson build directory.
+
+Pass the sources and the attribute file to `meson setup` with the `diag_attributes_yaml`, `diag_name` and `diag_sources` setup options:
 
 ```
-meson setup builddir --cross-file cross-file.txt --buildtype release -Ddiag_attributes_yaml=<PATH_TO_TEST_ATTRIBUTES_YAML> -Ddiag_sources=<COMMA SEPARATED LIST OF SOURCE FILES> -Ddiag_name=<DIAG NAME>
-meson compile -C builddir
+meson setup builddir --cross-file cross-file.txt --buildtype release -Ddiag_attributes_yaml=tests/common/test000.diag_attributes.yaml -Ddiag_sources=tests/common/test000.c -Ddiag_name=my_jumpstart_diag
 ```
 
-Example:
+All `meson setup` options are listed in the [meson_options.txt](../meson.options) file.
+
+#### `diag_attribute_overrides`
+
+Diag attributes specified in the diag's attribute file can be overriden at `meson setup` with the `diag_attribute_overrides` option. `diag_attribute_overrides` takes a list of attributes that can be overriden.
+
+For example, to override the `active_hart_mask`:
+
 ```
-meson setup builddir --cross-file cross-file.txt --buildtype release -Ddiag_attributes_yaml=`pwd`/tests/test000.diag_attributes.yaml -Ddiag_sources=`pwd`/tests/test000.c -Ddiag_name=my_jumpstart_diag
+meson setup builddir -Ddiag_attribute_overrides=active_hart_mask=0b11 ...
+```
+
+### `meson compile`
+
+Compiles the diag for which the meson build directory has been generated by `meson setup`.
+
+```
 meson compile -C builddir
 ```
 
 This will build `builddir/my_jumpstart_diag`
 
-To run the generated diag on Spike, use the `meson test` option.
+### `meson test`
 
-## Miscellaneous debugging help
-
-If the diag requires additional arguments be passed to Spike, these can be specified at setup time with `-Dspike_additional_arguments`.
-
-For example, to pass the options:
-
-* `-p2`: Run 2 harts
-
-to spike when running a generated diag:
+Runs the generated diag in Spike.
 
 ```
-meson setup builddir --cross-file cross-file.txt --buildtype release -Ddiag_attributes_yaml=`pwd`/tests/test013.diag_attributes.yaml -Ddiag_sources=`pwd`/tests/test013.c -Ddiag_attribute_overrides=active_hart_mask=0b11 -Dspike_additional_arguments=-p2
-meson compile -C builddir
+meson test -C builddir
+```
+
+## Jumpstart APIs
+
+These are listed in [jumpstart_functions.h](../include/common/jumpstart_functions.h).
+
+Functions with names that end in `_from_supervisor_mode()` or `_from_machine_mode()` can only be called from the respective modes.
+
+### `get_thread_attributes_hart_id_from_supervisor_mode()`
+
+Returns the hart id of the hart calling the function. Can only be called from S-mode.
+
+### `read_csr()`, `write_csr()`, `read_write_csr()`, `set_csr()`, `clear_csr()`, `read_set_csr()` and `read_clear_csr()`
+
+Operates on the specified CSR. The CSR names are passed to the RISC-V `csrr` and `csrw` instructions so the names should match what GCC expects.
+
+### `run_function_in_supervisor_mode()` and `run_function_in_user_mode()`
+
+Diags can use the `run_function_in_supervisor_mode()` and `run_function_in_user_mode()` functions to run functions in supervisor and user mode respectively.
+
+The modes cannot share the same code space so the functions belonging to each mode should be tagged with the corresponding linker script section name to place them in different sections.
+
+Refer to Unit Tests `test002`, `test011` and `test018` for examples of how these functions can be called and how the memory map can be set up.
+
+### `disable_mmu_from_supervisor_mode()`
+
+Disables the MMU. The page tables are set up and the MMU is enabled by default when the diag starts.
+
+### `sync_all_harts_from_supervisor_mode()`
+
+Synchronization point for all active harts in the diag.
+
+### `register_machine_mode_trap_handler_override()` and `get_machine_mode_trap_handler_override()`
+
+Allows the diag to register a trap handler override function for M-mode traps. The registered function will be called when the trap occurs in M-mode.
+
+### `register_supervisor_mode_trap_handler_override()` and `get_supervisor_mode_trap_handler_override()`
+
+Allows the diag to register a trap handler override function for S-mode traps. The registered function will be called when the trap occurs in S-mode.
+
+## Running and Debugging diags
+
+### Running diags on Spike
+
+`meson test` will attempt to run the diag on Spike. To see the options being passed to Spike as well as the output from Spike, run `meson test` with the `-v` option.
+
+```
 meson test -C builddir -v
 ```
 
-### Generating the trace
-
-The execution traces can be obtained in one of the following additional arguments during setup time:
-
-* -Dspike_additional_arguments=-v1 --log-commits
-* -Dspike_generate_trace=true
-
-### Interactive debugging
+To generate the execution trace, pass the `spike_generate_trace=true` option to `meson setup`.
 
 ```
-meson setup builddir --cross-file cross-file.txt --buildtype release -Ddiag_attributes_yaml=`pwd`/tests/test006.diag_attributes.yaml -Ddiag_sources=`pwd`/tests/test006.c -Dspike_additional_arguments=-d
-meson compile -C builddir
-meson test -C builddir
+meson setup -C builddir -Dspike_generate_trace=true ...
+```
 
-#Extract the spike command line from the log file and fix the diag path correctly
-spike --pass-fail --isa=rv64gchv_zba_zbb_zbc_zbs_zbkb_sstc_svpbmt_svinval_sscofpmf_zicbom_zicbop_zicboz_zfh_zfhmin_zfbfmin_zvfh_zvfhmin_zvfbfmin_\
-zvfbfwma_zkt_zkr_zicsr_zifencei_zihintpause_zawrs_zicond_zvkned_zvbb_zvkg_zvknha_zvknhb_zvksh_zvksed_xrivostime_xrivospagewalk_xrivoscode_smaia_ssaia -d builddir/jumpstart_diag.elf
+If the diag requires additional arguments be passed to Spike, specify them with the `spike_additional_arguments` option to `meson setup`. `spike_additional_arguments` takes a list of arguments.
+
+```
+meson setup -C builddir -Dspike_additional_arguments=-p2 ...
 ```
