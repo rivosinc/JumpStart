@@ -17,8 +17,11 @@ import sys
 import public.lib as public
 import yaml
 
-if importlib.util.find_spec("rivos_internal.lib") is not None:
+try:
     import rivos_internal.lib as rivos_internal
+except ImportError:
+    log.debug("rivos_internal Python module not present.")
+    pass
 
 
 def extract_bits(value, bit_range):
@@ -144,16 +147,18 @@ class DiagAttributes:
         with open(jumpstart_source_attributes_yaml, "r") as f:
             self.jumpstart_source_attributes = yaml.safe_load(f)
 
+        rivos_internal_lib_dir = f"{os.path.dirname(os.path.realpath(__file__))}/rivos_internal"
+
         if self.jumpstart_source_attributes[
-                'rivos_internal_build'] == True and importlib.util.find_spec(
-                    "rivos_internal.lib") is None:
+                'rivos_internal_build'] == True and os.path.isdir(
+                    rivos_internal_lib_dir) == False:
             log.error(
                 f"rivos_internal.lib not found but rivos_internal_build is set to True in {jumpstart_source_attributes_yaml}"
             )
             sys.exit(1)
         elif self.jumpstart_source_attributes[
-                'rivos_internal_build'] == False and importlib.util.find_spec(
-                    "rivos_internal.lib") is not None:
+                'rivos_internal_build'] == False and os.path.isdir(
+                    rivos_internal_lib_dir) == True:
             log.warning(
                 f"rivos_internal.lib exists but rivos_internal_build is set to False in {jumpstart_source_attributes_yaml}"
             )
