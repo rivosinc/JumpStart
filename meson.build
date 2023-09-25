@@ -17,8 +17,7 @@ add_project_arguments('-Wno-c++-compat',
                       language: 'c')
 
 subdir('src')
-
-jumpstart_includes = include_directories('include')
+subdir('include')
 
 prog_python = find_program('python3')
 jumpstart_source_generator = files('scripts/generate_jumpstart_sources.py')
