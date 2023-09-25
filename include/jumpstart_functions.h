@@ -54,10 +54,8 @@
 #define STRINGIFY(x)      #x
 #define ADD_QUOTES(x)     STRINGIFY(x)
 // Disables instruction by instruction checking when running on the simulator,
-// is a nop otherwise: `lui r0, 0x177a`.
 #define disable_checktc() __asm__ __volatile__(ADD_QUOTES(CHECKTC_DISABLE))
 // Enables instruction by instruction checking when running on the simulator,
-// is a nop otherwise: `lui r0, 0x5deb`.
 #define enable_checktc()  __asm__ __volatile__(ADD_QUOTES(CHECKTC_ENABLE))
 
 int run_function_in_user_mode(uint64_t function_address);

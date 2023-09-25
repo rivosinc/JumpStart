@@ -72,9 +72,9 @@ By default, the compiler will place all C code in the `.text` section and all C 
 
 Based on the `mappings` specified for this diag, JumpStart will generate a linker script that places the `.text` section at Physical Address `0x80000000` and the `.data` section at Physical Address  `0x80004000`. This linker script is passed to the compiler to generate the diag ELF.
 
-The `.text` section is 2 pages long and as `RX` (Read-Execute) permissions along with the `wb` (writeback) memory type. The page tables entries generated for the `.text` section are marked as `RX` (read-execute). JumpStart will generate a function to program the PMARR with the `wb` attribute for the address range of this section.
+The `.text` section is 2 pages long and as `RX` (Read-Execute) permissions along with the `wb` (writeback) memory type. The page tables entries generated for the `.text` section are marked as `RX` (read-execute).
 
-The `.data` section is 1 page long and has RW permissions along with the `wb` memory type. The page table entries generated for the `.data` section are marked as `RW` (read-write). The generated PMARR function will set the `wb` attribute for the address range of this section.
+The `.data` section is 1 page long and has RW permissions along with the `wb` memory type. The page table entries generated for the `.data` section are marked as `RW` (read-write).
 
 The diag additionally defines a `.data.diag` section at `0x80006000`. The `valid` attribute for this section is set to `0b0` - JumpStart will set up the page tables for this section but set the valid bit in it's it's leaf (last level) page table entry to `0`.
 

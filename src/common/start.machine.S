@@ -4,7 +4,7 @@
 
 #include "jumpstart_defines.h"
 
-# This section should fall into the initial 4K page set up in MCRR_0
+# This section should fall into the initial 4K page set up.
 .section .jumpstart.text.machine.init, "ax"
 
 .global _machine_mode_start
