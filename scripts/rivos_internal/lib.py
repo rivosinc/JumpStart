@@ -135,6 +135,23 @@ def get_rivos_specific_mappings(page_offset, jumpstart_source_attributes):
         page_offset, jumpstart_source_attributes)
 
 
+def get_rivos_specific_previous_mapping_size(
+        previous_mapping, current_mapping_pmarr_memory_type):
+    previous_mapping_size = previous_mapping['page_size'] * previous_mapping[
+        'num_pages']
+
+    previous_mapping_pmarr_memory_type = previous_mapping[
+        'pmarr_memory_type'] if 'pmarr_memory_type' in previous_mapping else None
+
+    if previous_mapping_pmarr_memory_type is not None and previous_mapping_pmarr_memory_type != current_mapping_pmarr_memory_type and previous_mapping_size < PmarrAttributes.minimum_size:
+        log.debug(
+            f"Placing new mapping {previous_mapping_size} bytes after {previous_mapping} to account for PMARR minimum size of {PmarrAttributes.minimum_size}"
+        )
+        previous_mapping_size = PmarrAttributes.minimum_size
+
+    return previous_mapping_size
+
+
 def sanity_check_memory_map(mappings):
     for mapping in mappings:
         if 'no_pte_allocation' in mapping and mapping[
@@ -146,30 +163,28 @@ def sanity_check_memory_map(mappings):
 
     # check that the memory mappings don't overlap
     # the mappings are sorted by the physical address at this point.
-    last_mapping = None
+    previous_mapping = None
     for mapping in mappings:
 
-        if last_mapping is None:
-            last_mapping = mapping
+        if previous_mapping is None:
+            previous_mapping = mapping
             continue
 
-        last_mapping_size = last_mapping['page_size'] * last_mapping[
-            'num_pages']
-        last_mapping_pmarr_memory_type = last_mapping[
-            'pmarr_memory_type'] if 'pmarr_memory_type' in last_mapping else None
+        previous_mapping_size = previous_mapping[
+            'page_size'] * previous_mapping['num_pages']
+        if 'pmarr_memory_type' in mapping:
+            previous_mapping_size = get_rivos_specific_previous_mapping_size(
+                previous_mapping, mapping['pmarr_memory_type'])
 
-        if last_mapping_pmarr_memory_type is not None and 'pmarr_memory_type' in mapping and mapping[
-                'pmarr_memory_type'] != last_mapping_pmarr_memory_type and last_mapping_size < PmarrAttributes.minimum_size:
-            #  These mappings will fall into different PMARR regions which have a minimum size of 1M.
-            last_mapping_size = PmarrAttributes.minimum_size
+        previous_mapping_end_address = previous_mapping[
+            'pa'] + previous_mapping_size
 
-        last_mapping_end_address = last_mapping['pa'] + last_mapping_size
-
-        if mapping['pa'] < last_mapping_end_address:
-            log.error(f"Memory mapping {mapping} overlaps with {last_mapping}")
+        if mapping['pa'] < previous_mapping_end_address:
+            log.error(
+                f"Memory mapping {mapping} overlaps with {previous_mapping}")
             sys.exit(1)
 
-        last_mapping = mapping
+        previous_mapping = mapping
 
 
 def create_pmarr_regions(mappings):

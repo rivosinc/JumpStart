@@ -293,14 +293,9 @@ class DiagAttributes:
 
         previous_mapping_size = previous_mapping[
             'page_size'] * previous_mapping['num_pages']
-        previous_mapping_pmarr_memory_type = previous_mapping[
-            'pmarr_memory_type'] if 'pmarr_memory_type' in previous_mapping else None
-
-        if previous_mapping_pmarr_memory_type is not None and previous_mapping_pmarr_memory_type != pmarr_memory_type and previous_mapping_size < rivos_internal.PmarrAttributes.minimum_size:
-            log.debug(
-                f"Placing new mapping {previous_mapping_size} bytes after {previous_mapping} to account for PMARR minimum size of {rivos_internal.PmarrAttributes.minimum_size}"
-            )
-            previous_mapping_size = rivos_internal.PmarrAttributes.minimum_size
+        if self.jumpstart_source_attributes['rivos_internal_build'] == True:
+            previous_mapping_size = rivos_internal.get_rivos_specific_previous_mapping_size(
+                previous_mapping, pmarr_memory_type)
 
         # If the last mapping is a no_pte_allocation mapping, then it
         # won't have a VA.
