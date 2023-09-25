@@ -6,7 +6,7 @@ fs = import('fs')
 
 source_suffixes = ['.S', '.c']
 
-public_jumpstart_tests = [
+common_jumpstart_tests = [
   ['test000', 'Enable MMU (SATP.mode = sv39), jump to main and exit.'],
   ['test001', 'Enable MMU (SATP.mode = sv48), jump to main and exit.'],
   ['test002', 'Run C/Assembly functions with run_function_in_user_mode() from supervisor mode.'],

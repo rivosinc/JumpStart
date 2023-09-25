@@ -6,9 +6,9 @@ fs = import('fs')
 
 source_suffixes = ['.S', '.c']
 
-subdir('public')
+subdir('common')
 
-jumpstart_tests = public_jumpstart_tests
+jumpstart_tests = common_jumpstart_tests
 
 if get_option('rivos_internal_build') == true
   subdir('rivos_internal')
@@ -24,8 +24,8 @@ foreach jumpstart_test : jumpstart_tests
 
   test_should_fail = jumpstart_test.get(3, false)
 
-  if fs.is_file(meson.current_source_dir() + '/' + 'public' + '/' + test_prefix + '.diag_attributes.yaml')
-    diag_attributes_yaml = files('public' + '/' + test_prefix + '.diag_attributes.yaml')
+  if fs.is_file(meson.current_source_dir() + '/' + 'common' + '/' + test_prefix + '.diag_attributes.yaml')
+    diag_attributes_yaml = files('common' + '/' + test_prefix + '.diag_attributes.yaml')
   elif get_option('rivos_internal_build') == true
     if fs.is_file(meson.current_source_dir() + '/' + 'rivos_internal' + '/' + test_prefix + '.diag_attributes.yaml')
       diag_attributes_yaml = files('rivos_internal' + '/' + test_prefix + '.diag_attributes.yaml')
@@ -43,8 +43,8 @@ foreach jumpstart_test : jumpstart_tests
   linker_script = diag_source_generator_output[1].full_path()
 
   foreach suffix : source_suffixes
-    if fs.is_file(meson.current_source_dir() + '/' + 'public' + '/' + test_prefix + suffix)
-      test_sources += ['public' + '/' + test_prefix + suffix]
+    if fs.is_file(meson.current_source_dir() + '/' + 'common' + '/' + test_prefix + suffix)
+      test_sources += ['common' + '/' + test_prefix + suffix]
     elif get_option('rivos_internal_build') == true
       if fs.is_file(meson.current_source_dir() + '/' + 'rivos_internal' + '/' + test_prefix + suffix)
         test_sources += ['rivos_internal' + '/' + test_prefix + suffix]
