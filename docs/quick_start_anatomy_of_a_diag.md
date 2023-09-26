@@ -45,7 +45,7 @@ mappings:
     xwr: "0b101"
     page_size: 0x1000
     num_pages: 2
-    pmarr_memory_type: "wb"
+    pma_memory_type: "wb"
     linker_script_section: ".text"
   -
     va: 0x80004000
@@ -53,7 +53,7 @@ mappings:
     xwr: "0b101"
     page_size: 0x1000
     num_pages: 1
-    pmarr_memory_type: "wb"
+    pma_memory_type: "wb"
     linker_script_section: ".data"
   -
     va: 0x80006000
@@ -62,7 +62,7 @@ mappings:
     valid: "0b0"
     page_size: 0x1000
     num_pages: 1
-    pmarr_memory_type: "wb"
+    pma_memory_type: "wb"
     linker_script_section: ".data.diag"
 ```
 

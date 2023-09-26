@@ -13,7 +13,7 @@ mappings:
     xwr: "0b101"
     page_size: 0x1000
     num_pages: 2
-    pmarr_memory_type: "wb"
+    pma_memory_type: "wb"
     linker_script_section: ".text"
   -
     va: 0x80002000
@@ -21,7 +21,7 @@ mappings:
     xwr: "0b011"
     page_size: 0x1000
     num_pages: 1
-    pmarr_memory_type: "wb"
+    pma_memory_type: "wb"
     linker_script_section: ".data"
   -
     va: 0x40000000 # IMSIC base
@@ -30,4 +30,4 @@ mappings:
     page_size: 0x1000
     num_pages: 8
     pbmt_mode: "io"
-    pmarr_memory_type: "uc"
+    pma_memory_type: "uc"

@@ -29,11 +29,11 @@ Jumpstart provides a set of basic API functions that the diag can use. Details [
 
 Machine, Supervisor and User mode cannot share code so the code for different modes have to be placed in different sections. The [`mappings`](#mappings) diag attribute should be used to assign the different sections in distinct memory regions and assigned different linker script section names.
 
-## Diag Attributes File
+## Diag Attributes
 
-The Diag Attributes File specifies the memory layout and various attributes of the diag such as the MMU mode, number of active harts, etc.
+The Diag Attributes file specifies the memory layout and various attributes of the diag such as the MMU mode, number of active harts, etc.
 
-The default diag attribute values are defined in the [Source Attributes YAML file](../src/public/jumpstart_public_source_attributes.yaml).
+The default diag attribute values are defined in the [Source Attributes YAML file](../src/rivos_internal/jumpstart_internal_source_attributes.yaml).
 
 ### `active_hart_mask`
 
@@ -110,6 +110,10 @@ Controls the number of pages allocated for the section.
 Controls whether the diag will allocate page table entries for the section.
 
 Default: `False`. Page table entries will be allocated for the section.
+
+#### `pma_memory_type` (Rivos Internal)
+
+The memory type of the section. This is used to set the memory type for the PMARR region that holds this section.
 
 #### `linker_script_section`
 

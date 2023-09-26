@@ -141,7 +141,7 @@ def get_rivos_specific_previous_mapping_size(
         'num_pages']
 
     previous_mapping_pmarr_memory_type = previous_mapping[
-        'pmarr_memory_type'] if 'pmarr_memory_type' in previous_mapping else None
+        'pma_memory_type'] if 'pma_memory_type' in previous_mapping else None
 
     if previous_mapping_pmarr_memory_type is not None and previous_mapping_pmarr_memory_type != current_mapping_pmarr_memory_type and previous_mapping_size < PmarrAttributes.minimum_size:
         log.debug(
@@ -172,9 +172,9 @@ def sanity_check_memory_map(mappings):
 
         previous_mapping_size = previous_mapping[
             'page_size'] * previous_mapping['num_pages']
-        if 'pmarr_memory_type' in mapping:
+        if 'pma_memory_type' in mapping:
             previous_mapping_size = get_rivos_specific_previous_mapping_size(
-                previous_mapping, mapping['pmarr_memory_type'])
+                previous_mapping, mapping['pma_memory_type'])
 
         previous_mapping_end_address = previous_mapping[
             'pa'] + previous_mapping_size
@@ -190,31 +190,30 @@ def sanity_check_memory_map(mappings):
 def create_pmarr_regions(mappings):
     pmarr_regions = []
     for mapping in mappings:
-        if 'pmarr_memory_type' not in mapping:
+        if 'pma_memory_type' not in mapping:
             if mapping[
                     'linker_script_section'] == '.jumpstart.text.rcode.init,.jumpstart.text.rcode':
                 continue
 
             log.error(
-                f"pmarr_memory_type is not specified in the mapping: {mapping}"
-            )
+                f"pma_memory_type is not specified in the mapping: {mapping}")
             sys.exit(1)
 
         mapping_size = mapping['page_size'] * mapping['num_pages']
 
-        pmarr_memory_type = mapping['pmarr_memory_type']
+        pma_memory_type = mapping['pma_memory_type']
 
         matching_pmarr_region = None
         for pmarr_region in pmarr_regions:
             if pmarr_region.can_add_to_region(mapping['pa'],
                                               mapping['pa'] + mapping_size,
-                                              pmarr_memory_type):
+                                              pma_memory_type):
                 matching_pmarr_region = pmarr_region
                 break
         if matching_pmarr_region is None:
             new_pmarr_region = PmarrRegion(mapping['pa'],
                                            mapping['pa'] + mapping_size,
-                                           pmarr_memory_type)
+                                           pma_memory_type)
             pmarr_regions.append(new_pmarr_region)
         else:
             matching_pmarr_region.add_to_region(mapping['pa'],

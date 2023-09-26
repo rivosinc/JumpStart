@@ -13,5 +13,5 @@ mappings:
     xwr: "0b101"
     page_size: 0x1000
     num_pages: 1
-    pmarr_memory_type: "wb"
+    pma_memory_type: "wb"
     linker_script_section: ".text"

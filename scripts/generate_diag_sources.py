@@ -288,7 +288,7 @@ class DiagAttributes:
                           xwr,
                           umode,
                           num_pages,
-                          pmarr_memory_type,
+                          pma_memory_type,
                           linker_script_section,
                           no_pte_allocation=False):
         # We expect that the mappings are sorted by the virtual address.
@@ -300,7 +300,7 @@ class DiagAttributes:
             'page_size'] * previous_mapping['num_pages']
         if self.jumpstart_source_attributes['rivos_internal_build'] == True:
             previous_mapping_size = rivos_internal.get_rivos_specific_previous_mapping_size(
-                previous_mapping, pmarr_memory_type)
+                previous_mapping, pma_memory_type)
 
         # If the last mapping is a no_pte_allocation mapping, then it
         # won't have a VA.
@@ -323,7 +323,7 @@ class DiagAttributes:
 
         new_mapping['page_size'] = 1 << self.get_attribute('page_offset')
         new_mapping['num_pages'] = num_pages
-        new_mapping['pmarr_memory_type'] = pmarr_memory_type
+        new_mapping['pma_memory_type'] = pma_memory_type
         new_mapping['linker_script_section'] = linker_script_section
 
         # make sure that the new mapping doesn't overlap with the next
@@ -433,7 +433,7 @@ class DiagAttributes:
             'jumpstart_machine_text_page_counts']['num_pages_for_all_text']
         machine_mode_mapping[
             'linker_script_section'] = ".jumpstart.text.machine.init,.jumpstart.text.machine,.jumpstart.text.machine.end"
-        machine_mode_mapping['pmarr_memory_type'] = "wb"
+        machine_mode_mapping['pma_memory_type'] = "wb"
         machine_mode_mapping['no_pte_allocation'] = True
 
         return machine_mode_mapping
