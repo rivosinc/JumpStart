@@ -68,6 +68,10 @@ else
   if gcc_march_string == ''
     gcc_march_string = 'rv64gc'
   endif
+
+  if spike_isa_string == ''
+    spike_isa_string = 'rv64gc'
+  endif
 endif
 
 default_c_args_list += ['-march=' + gcc_march_string]
