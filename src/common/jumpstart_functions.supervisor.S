@@ -110,7 +110,7 @@ handle_env_call_from_umode:
 
 .global jumpstart_supervisor_fail
 jumpstart_supervisor_fail:
-  # TODO: This is a temporary fail handler. We need to figure out
+  # TODO: This is a temporary fail handler. We should exit gracefully instead.
   wfi
 
 handle_syscall_run_func_in_user_mode_complete:

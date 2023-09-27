@@ -20,7 +20,8 @@ int main(void) {
     return DIAG_FAILED;
   }
 
-  /* TODO: We don't have a spinlock. Allow only Hart0 to write to the UART */
+  /* TODO: Update this test to allow all harts to write once we have
+           a thread safe UART. */
   uint8_t hart_id = get_thread_attributes_hart_id_from_supervisor_mode();
   if (hart_id == 0) {
     puts("Hello World\n");

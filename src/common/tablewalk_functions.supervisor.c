@@ -114,7 +114,6 @@ translate_VA(uint64_t va, struct translation_info *xlate_info) {
 
     if ((xwr & 0x3) == 0x2) {
       // PTE at pte_address has R=0 and W=1.
-      // TODO: Should we just return?
       jumpstart_supervisor_fail();
     }
 
@@ -134,13 +133,11 @@ translate_VA(uint64_t va, struct translation_info *xlate_info) {
                             (struct bit_range){PTE_A_BIT_MSB, PTE_A_BIT_LSB}) !=
                0) {
       // PTE has A=1 but is not a Leaf PTE.
-      // TODO: Should we just return?
       jumpstart_supervisor_fail();
     } else if (extract_bits(pte_value,
                             (struct bit_range){PTE_D_BIT_MSB, PTE_D_BIT_LSB}) !=
                0) {
       // PTE has D=1 but is not a Leaf PTE
-      // TODO: Should we just return?
       jumpstart_supervisor_fail();
     }
 
