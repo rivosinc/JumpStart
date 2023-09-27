@@ -33,7 +33,7 @@ Machine, Supervisor and User mode cannot share code so the code for different mo
 
 The Diag Attributes file specifies the memory layout and various attributes of the diag such as the MMU mode, number of active harts, etc.
 
-The default diag attribute values are defined in the [Source Attributes YAML file](../src/rivos_internal/jumpstart_internal_source_attributes.yaml).
+The default diag attribute values are defined in the [Source Attributes YAML file](../src/rivos_internal/jumpstart_rivos_internal_source_attributes.yaml).
 
 ### `active_hart_mask`
 

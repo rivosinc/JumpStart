@@ -11,7 +11,7 @@ jumpstart_rivos_internal_sources = files(
                           'end.machine.S',
                           )
 
-jumpstart_source_attributes_yaml = files('jumpstart_internal_source_attributes.yaml')
+jumpstart_source_attributes_yaml = files('jumpstart_rivos_internal_source_attributes.yaml')
 
 # (Should match cad/cfg/.envmod from rvsys)
 rivos_spike_isa_string = 'rv64gchv_zba_zbb_zbc_zbs_zbkb_sstc_svpbmt_svinval_sscofpmf_zicbom_zicbop_zicboz_zfh_zfhmin_zfbfmin_zvfh_zvfhmin_zvfbfmin_zvfbfwma_zkt_zkr_zicsr_zifencei_zihintpause_zawrs_zicond_zvkned_zvbb_zvkg_zvknha_zvknhb_zvksh_zvksed_xrivostime_xrivospagewalk_xrivoscode_smaia_ssaia'
