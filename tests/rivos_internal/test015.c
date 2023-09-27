@@ -25,7 +25,7 @@ int main(void) {
         while (hart_imsic_enabled[current_hart_id] == 0)
           ;
 
-        send_ipi_to_supervisor_mode(current_hart_id);
+        send_interrupt_to_supervisor_mode(current_hart_id, IMSIC_IPI_ID);
       }
 
       active_hart_mask >>= 1;

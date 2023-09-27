@@ -22,7 +22,7 @@ int main(void) {
   imsic_init();
   imsic_id_enable(IMSIC_IPI_ID);
 
-  send_ipi_to_supervisor_mode(hart_id);
+  send_interrupt_to_supervisor_mode(hart_id, IMSIC_IPI_ID);
 
   asm volatile("wfi");
 
