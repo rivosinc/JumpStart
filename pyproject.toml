@@ -1,0 +1,9 @@
+# SPDX-FileCopyrightText: 2023 Rivos Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+
+[tool.black]
+line_length = 100
+
+[tool.isort]
+profile = "black"
