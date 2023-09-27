@@ -75,12 +75,12 @@ def generate_getter_and_setter_methods_for_field(
         assembly_file_fd.write(f".global {getter_method}\n")
         assembly_file_fd.write(f"{getter_method}:\n")
         assembly_file_fd.write(f"    GET_{c_struct.upper()}_{field_name.upper()}(a0)\n")
-        assembly_file_fd.write(f"    ret\n\n")
+        assembly_file_fd.write("    ret\n\n")
 
         assembly_file_fd.write(f".global set_{c_struct}_{field_name}_from_{mode}_mode\n")
         assembly_file_fd.write(f"set_{c_struct}_{field_name}_from_{mode}_mode:\n")
         assembly_file_fd.write(f"    SET_{c_struct.upper()}_{field_name.upper()}(a0)\n")
-        assembly_file_fd.write(f"    ret\n\n")
+        assembly_file_fd.write("    ret\n\n")
 
 
 def generate_reg_context_save_restore_code(attributes_data, defines_file_fd, assembly_file_fd):
@@ -104,21 +104,21 @@ def generate_reg_context_save_restore_code(attributes_data, defines_file_fd, ass
         f"\n#define REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES ({num_registers} * 8)\n"
     )
 
-    defines_file_fd.write(f"\n#define SAVE_ALL_GPRS   ;")
+    defines_file_fd.write("\n#define SAVE_ALL_GPRS   ;")
     for gpr_name in attributes_data["reg_context_to_save_across_modes"]["registers"]["gprs"]:
         defines_file_fd.write(
             f"\\\n  sd {gpr_name}, {gpr_name.upper()}_OFFSET_IN_SAVE_REGION({temp_reg_name})   ;"
         )
-    defines_file_fd.write(f"\n\n")
+    defines_file_fd.write("\n\n")
 
-    defines_file_fd.write(f"\n#define RESTORE_ALL_GPRS   ;")
+    defines_file_fd.write("\n#define RESTORE_ALL_GPRS   ;")
     for gpr_name in attributes_data["reg_context_to_save_across_modes"]["registers"]["gprs"]:
         defines_file_fd.write(
             f"\\\n  ld {gpr_name}, {gpr_name.upper()}_OFFSET_IN_SAVE_REGION({temp_reg_name})   ;"
         )
-    defines_file_fd.write(f"\n\n")
+    defines_file_fd.write("\n\n")
 
-    assembly_file_fd.write(f'\n\n.section .jumpstart.data.privileged, "aw"\n')
+    assembly_file_fd.write('\n\n.section .jumpstart.data.privileged, "aw"\n')
     modes = ["mmode", "smode", "umode"]
     assembly_file_fd.write(
         f"\n# {modes} context saved registers: \n# {attributes_data['reg_context_to_save_across_modes']['registers']}\n"
@@ -216,7 +216,7 @@ def generate_jumpstart_sources(
             f"#define {c_struct.upper()}_STRUCT_SIZE_IN_BYTES {current_offset}\n\n"
         )
 
-        assembly_file_fd.write(f'.section .jumpstart.data.privileged, "aw"\n\n')
+        assembly_file_fd.write('.section .jumpstart.data.privileged, "aw"\n\n')
         assembly_file_fd.write(f".global {c_struct}_region\n")
         assembly_file_fd.write(f"{c_struct}_region:\n")
         for i in range(attributes_data["max_num_harts_supported"]):
@@ -255,7 +255,7 @@ def generate_jumpstart_sources(
         )
 
         assembly_file_fd.write(f'.section .jumpstart.data.{stack_type}, "aw"\n')
-        assembly_file_fd.write(f".align 12\n")
+        assembly_file_fd.write(".align 12\n")
         assembly_file_fd.write(f".global {stack_type}_stack_top\n")
         assembly_file_fd.write(f"{stack_type}_stack_top:\n")
         for i in range(attributes_data["max_num_harts_supported"]):
@@ -285,21 +285,21 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--jumpstart_source_attributes_yaml",
-        help=f"YAML containing the jumpstart attributes.",
+        help="YAML containing the jumpstart attributes.",
         required=True,
         type=str,
     )
     parser.add_argument(
-        "--defines_file", help=f"Header file containing the defines.", required=True, type=str
+        "--defines_file", help="Header file containing the defines.", required=True, type=str
     )
     parser.add_argument(
         "--data_structures_file",
-        help=f"Header file containing the c structures.",
+        help="Header file containing the c structures.",
         required=True,
         type=str,
     )
     parser.add_argument(
-        "--assembly_file", help=f"Assembly file containing functions.", required=True, type=str
+        "--assembly_file", help="Assembly file containing functions.", required=True, type=str
     )
     parser.add_argument(
         "-v", "--verbose", help="Verbose output.", action="store_true", default=False

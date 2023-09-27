@@ -8,7 +8,6 @@
 
 import argparse
 import enum
-import importlib
 import logging as log
 import math
 import os
@@ -21,7 +20,6 @@ try:
     import rivos_internal.lib as rivos_internal
 except ImportError:
     log.debug("rivos_internal Python module not present.")
-    pass
 
 
 def extract_bits(value, bit_range):
@@ -150,16 +148,16 @@ class DiagAttributes:
         rivos_internal_lib_dir = f"{os.path.dirname(os.path.realpath(__file__))}/rivos_internal"
 
         if (
-            self.jumpstart_source_attributes["rivos_internal_build"] == True
-            and os.path.isdir(rivos_internal_lib_dir) == False
+            self.jumpstart_source_attributes["rivos_internal_build"] is True
+            and os.path.isdir(rivos_internal_lib_dir) is False
         ):
             log.error(
                 f"rivos_internal.lib not found but rivos_internal_build is set to True in {jumpstart_source_attributes_yaml}"
             )
             sys.exit(1)
         elif (
-            self.jumpstart_source_attributes["rivos_internal_build"] == False
-            and os.path.isdir(rivos_internal_lib_dir) == True
+            self.jumpstart_source_attributes["rivos_internal_build"] is False
+            and os.path.isdir(rivos_internal_lib_dir) is True
         ):
             log.warning(
                 f"rivos_internal.lib exists but rivos_internal_build is set to False in {jumpstart_source_attributes_yaml}"
@@ -189,12 +187,12 @@ class DiagAttributes:
                     and self.jumpstart_source_attributes["diag_attributes"][
                         "allow_active_hart_mask_override"
                     ]
-                    == False
+                    is False
                     and attribute_value
                     != self.jumpstart_source_attributes["diag_attributes"]["active_hart_mask"]
                 ):
                     log.error(
-                        f"Command line override of active_hart_mask is not allowed for this diag. Set allow_active_hart_mask_override to True in the diag attributes file to allow this."
+                        "Command line override of active_hart_mask is not allowed for this diag. Set allow_active_hart_mask_override to True in the diag attributes file to allow this."
                     )
                     sys.exit(1)
 
@@ -221,7 +219,7 @@ class DiagAttributes:
         self.sanity_check_memory_map()
 
     def sanity_check_memory_map(self):
-        if self.jumpstart_source_attributes["rivos_internal_build"] == True:
+        if self.jumpstart_source_attributes["rivos_internal_build"] is True:
             rivos_internal.sanity_check_memory_map(
                 self.jumpstart_source_attributes["diag_attributes"]["mappings"]
             )
@@ -234,7 +232,7 @@ class DiagAttributes:
         # the rivos and machine mode sections are added at specific locations
         # the rest are just added on at locations immediately following
         # these sections.
-        if self.jumpstart_source_attributes["rivos_internal_build"] == True:
+        if self.jumpstart_source_attributes["rivos_internal_build"] is True:
             self.jumpstart_source_attributes["diag_attributes"]["mappings"].append(
                 rivos_internal.get_rivos_specific_mappings(
                     self.get_attribute("page_offset"), self.jumpstart_source_attributes
@@ -312,7 +310,7 @@ class DiagAttributes:
         new_mapping = {}
 
         previous_mapping_size = previous_mapping["page_size"] * previous_mapping["num_pages"]
-        if self.jumpstart_source_attributes["rivos_internal_build"] == True:
+        if self.jumpstart_source_attributes["rivos_internal_build"] is True:
             previous_mapping_size = rivos_internal.get_rivos_specific_previous_mapping_size(
                 previous_mapping, pma_memory_type
             )
@@ -726,7 +724,7 @@ class DiagAttributes:
                 file.write(
                     f"       PA Range: {hex(entry['pa'])} - {hex(entry['pa'] + entry['num_pages'] * entry['page_size'])}\n"
                 )
-                file.write(f"   */\n")
+                file.write("   */\n")
                 file.write(f"   . = {hex(entry['pa'])};\n")
 
                 linker_script_sections = entry["linker_script_section"]
@@ -735,7 +733,7 @@ class DiagAttributes:
                     assert section_name not in defined_sections
                     file.write(f"      *({section_name})\n")
                     defined_sections.append(section_name)
-                file.write(f"   }}\n\n")
+                file.write("   }\n\n")
             file.write("\n}\n")
 
             file.close()
@@ -744,7 +742,7 @@ class DiagAttributes:
         boolean_attributes = ["start_test_in_machine_mode"]
 
         self.generate_get_active_hart_mask_function(file_descriptor)
-        if self.jumpstart_source_attributes["rivos_internal_build"] == True:
+        if self.jumpstart_source_attributes["rivos_internal_build"] is True:
             rivos_internal.generate_rivos_internal_diag_attribute_functions(
                 file_descriptor, self.jumpstart_source_attributes["diag_attributes"]
             )
@@ -762,7 +760,7 @@ class DiagAttributes:
             attribute_value = int(self.jumpstart_source_attributes["diag_attributes"][attribute])
 
             file_descriptor.write(f"   li a0, {attribute_value}\n")
-            file_descriptor.write(f"   ret\n\n\n")
+            file_descriptor.write("   ret\n\n\n")
 
     def generate_get_active_hart_mask_function(self, file_descriptor):
         modes = ["machine", "supervisor"]
@@ -781,7 +779,7 @@ class DiagAttributes:
             )
 
             file_descriptor.write(f"   li a0, {active_hart_mask}\n")
-            file_descriptor.write(f"   ret\n\n\n")
+            file_descriptor.write("   ret\n\n\n")
 
     def generate_mmu_functions(self, file_descriptor):
         file_descriptor.write(
@@ -795,19 +793,19 @@ class DiagAttributes:
 
             file_descriptor.write(f".global get_diag_satp_mode_from_{mode}_mode\n")
             file_descriptor.write(f"get_diag_satp_mode_from_{mode}_mode:\n\n")
-            file_descriptor.write(f"    li   a0, DIAG_SATP_MODE\n")
-            file_descriptor.write(f"    ret\n\n\n")
+            file_descriptor.write("    li   a0, DIAG_SATP_MODE\n")
+            file_descriptor.write("    ret\n\n\n")
 
             file_descriptor.write(f".global enable_mmu_from_{mode}_mode\n")
             file_descriptor.write(f"enable_mmu_from_{mode}_mode:\n\n")
-            file_descriptor.write(f"    li   t0, DIAG_SATP_MODE\n")
-            file_descriptor.write(f"    slli  t0, t0, SATP_MODE_LSB\n")
+            file_descriptor.write("    li   t0, DIAG_SATP_MODE\n")
+            file_descriptor.write("    slli  t0, t0, SATP_MODE_LSB\n")
             file_descriptor.write(f"    la t1, {self.pt_attributes.pt_start_label}\n")
-            file_descriptor.write(f"    srai t1, t1, PAGE_OFFSET\n")
-            file_descriptor.write(f"    add  t1, t1, t0\n")
-            file_descriptor.write(f"    csrw  satp, t1\n")
-            file_descriptor.write(f"    sfence.vma\n")
-            file_descriptor.write(f"    ret\n")
+            file_descriptor.write("    srai t1, t1, PAGE_OFFSET\n")
+            file_descriptor.write("    add  t1, t1, t0\n")
+            file_descriptor.write("    csrw  satp, t1\n")
+            file_descriptor.write("    sfence.vma\n")
+            file_descriptor.write("    ret\n")
 
     def generate_page_table_data(self, file_descriptor):
         file_descriptor.write('.section .jumpstart.rodata.pagetables, "a"\n\n')
@@ -845,7 +843,7 @@ class DiagAttributes:
             )
             file_descriptor.write(f".global guard_page_{guard_page_id}\n")
             file_descriptor.write(f"guard_page_{guard_page_id}:\n")
-            file_descriptor.write(f".zero 4096\n\n")
+            file_descriptor.write(".zero 4096\n\n")
 
     def generate_assembly_file(self, output_assembly_file):
         with open(output_assembly_file, "w") as file:
@@ -859,7 +857,7 @@ class DiagAttributes:
 
             self.generate_mmu_functions(file)
 
-            if self.jumpstart_source_attributes["rivos_internal_build"] == True:
+            if self.jumpstart_source_attributes["rivos_internal_build"] is True:
                 rivos_internal.generate_rivos_internal_mmu_functions(
                     file, self.jumpstart_source_attributes["diag_attributes"]["mappings"]
                 )
@@ -889,7 +887,7 @@ class DiagAttributes:
                 va, self.get_attribute("va_vpn_bits")[current_level]
             ) * self.get_attribute("pte_size_in_bytes")
             pte_value = self.get_pte_region_sparse_memory_contents_at(pte_address)
-            if pte_value == None:
+            if pte_value is None:
                 log.error(f"Expected PTE at {hex(pte_address)} is not present")
                 sys.exit(1)
 
@@ -910,19 +908,19 @@ class DiagAttributes:
                 a = place_bits(a, ppn_value, self.get_attribute("pa_ppn_bits")[ppn_id])
 
             if (xwr & 0x6) or (xwr & 0x1):
-                log.info(f"    This is a Leaf PTE")
+                log.info("    This is a Leaf PTE")
                 break
             else:
                 if extract_bits(pte_value, self.pt_attributes.common_attributes["a_bit"]) != 0:
-                    log.error(f"PTE has A=1 but is not a Leaf PTE")
+                    log.error("PTE has A=1 but is not a Leaf PTE")
                     sys.exit(1)
                 elif extract_bits(pte_value, self.pt_attributes.common_attributes["d_bit"]) != 0:
-                    log.error(f"PTE has D=1 but is not a Leaf PTE")
+                    log.error("PTE has D=1 but is not a Leaf PTE")
                     sys.exit(1)
 
             current_level += 1
             if current_level >= self.get_attribute("num_levels"):
-                log.error(f"Ran out of levels")
+                log.error("Ran out of levels")
                 sys.exit(1)
             continue
 
@@ -939,7 +937,7 @@ def main():
     )
     parser.add_argument(
         "--jumpstart_source_attributes_yaml",
-        help=f"YAML containing the jumpstart attributes.",
+        help="YAML containing the jumpstart attributes.",
         required=True,
         type=str,
     )

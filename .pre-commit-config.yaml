@@ -26,7 +26,7 @@ repos:
 
   # - repo: https://github.com/PyCQA/isort
   - repo: https://gitlab.ba.rivosinc.com/pub/it/isort
-    rev: "5.12.0"
+    rev: 5.12.0
     hooks:
       - id: isort
 
@@ -38,7 +38,7 @@ repos:
 
   # pull mirror of https://github.com/ikamensh/flynt/
   - repo: https://gitlab.ba.rivosinc.com/pub/it/flynt
-    rev: '1.0.1'
+    rev: 1.0.1
     hooks:
       - id: flynt
 
@@ -64,3 +64,9 @@ repos:
           - -l=Apache-2.0
           - --skip-unrecognised
       - id: reuse
+
+  # pull mirror of https://github.com/pycqa/flake8
+  - repo: https://gitlab.ba.rivosinc.com/pub/it/flake8
+    rev: 6.1.0
+    hooks:
+      - id: flake8

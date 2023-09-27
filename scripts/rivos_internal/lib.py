@@ -231,7 +231,7 @@ def generate_pmarr_functions(file_descriptor, mappings):
         region.generate_pmarr_region_setup_code(file_descriptor, pmarr_reg_id)
         pmarr_reg_id += 1
         assert pmarr_reg_id < PmarrAttributes.num_registers
-    file_descriptor.write(f"   ret\n\n\n")
+    file_descriptor.write("   ret\n\n\n")
     file_descriptor.write("\n")
 
 
@@ -240,12 +240,12 @@ def generate_rivos_internal_mmu_functions(file_descriptor, mappings):
 
 
 def generate_uc_end_of_sim_magic_address_function(file_descriptor, uc_end_of_sim_magic_address):
-    file_descriptor.write(f'.section .jumpstart.text.machine, "ax"\n\n')
-    file_descriptor.write(f".global get_uc_end_of_sim_magic_address\n")
-    file_descriptor.write(f"get_uc_end_of_sim_magic_address:\n\n")
+    file_descriptor.write('.section .jumpstart.text.machine, "ax"\n\n')
+    file_descriptor.write(".global get_uc_end_of_sim_magic_address\n")
+    file_descriptor.write("get_uc_end_of_sim_magic_address:\n\n")
 
     file_descriptor.write(f"   li a0, {uc_end_of_sim_magic_address}\n")
-    file_descriptor.write(f"   ret\n\n\n")
+    file_descriptor.write("   ret\n\n\n")
 
 
 def generate_rivos_internal_diag_attribute_functions(file_descriptor, diag_attributes):
