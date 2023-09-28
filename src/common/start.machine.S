@@ -37,6 +37,12 @@ _machine_mode_start:
 
   mv  fp, sp
 
+  # Enable interrupts in machine mode.
+  li t0, (1 << MSTATUS_MIE_SHIFT)
+  csrs mstatus, t0
+  li t0, (1 << MIE_EXT_INTERRUPT)
+  csrw mie, t0
+
   jal setup_thread_attributes
 
   jal enable_svpbmt_for_supervisor_mode
