@@ -4,6 +4,8 @@
 
 #include "jumpstart_functions.h"
 
+void just_nops(void);
+
 int main(void) {
   if (get_thread_attributes_hart_id_from_machine_mode() != 0) {
     return DIAG_FAILED;
@@ -18,6 +20,8 @@ int main(void) {
       MACHINE_MODE_ENCODING) {
     return DIAG_FAILED;
   }
+
+  just_nops();
 
   return DIAG_PASSED;
 }
