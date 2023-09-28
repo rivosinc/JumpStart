@@ -18,7 +18,11 @@ The Jumpstart [`Unit Tests`](../tests) are a good reference on writing diags:
 
 ## Diag Sources
 
-Diags are written in C and/or Assembly. The diag sources are expected to provide a `main()` function which is the entry point for the diag.
+Diags are written in C and/or Assembly.
+
+The diag sources are required to contain a `main()` function which is the entry point for the diag that JumpStart jumps to. The linker will automatically place diag code (including `main()`) in the `.text` section. JumpStart expects that the `main()` function is always in the `.text` section. A [mapping](#mappings) for the `.text` section should be present in the diag's [attribute file](#diag-attributes).
+
+Machine, Supervisor and User mode cannot share code so the code for different modes have to be placed in different linker sections. The [`linker_script_section`](#linker_script_section) in the [`mappings`](#mappings) diag attribute should be used by the diag to place the code for different modes in different sections.
 
 Jumpstart provides a set of basic API functions that the diag can use. Details [HERE](#jumpstart-apis).
 
@@ -27,8 +31,6 @@ The diag exits by returning from `main()` with a `DIAG_PASSED` or `DIAG_FAILED` 
 **Diags are expected to follow the [RISC-V ABI Calling Convention](https://github.com/riscv-non-isa/riscv-elf-psabi-doc/blob/master/riscv-cc.adoc).**
 
 **The Thread Pointer (x4) and Global Pointer (x3) registers are reserved for jumpstart purposes and should not be used in diags.** TP is used to point to a per hart attributes structure and GP is used as a temporary in jumpstart routines.
-
-Machine, Supervisor and User mode cannot share code so the code for different modes have to be placed in different sections. The [`mappings`](#mappings) diag attribute should be used to assign the different sections in distinct memory regions and assigned different linker script section names.
 
 ## Diag Attributes
 
@@ -119,6 +121,24 @@ The memory type of the section. This is used to set the memory type for the PMAR
 #### `linker_script_section`
 
 The name of the linker script section that this section will be placed in.
+
+Machine, Supervisor and User mode cannot share code so the code for different modes have to be placed in different linker sections.
+
+This takes a comma separated list of all the sections that should be placed together. For example:
+
+```
+linker_script_section: ".text,.text.end"
+```
+
+The sections `.text` and `.text.end` will be placed together in the `.text` linker script section - the name of the first section in the list is used as the linker script section name:
+
+```
+   . = 0x80000000;
+   .text : {
+      *(.text)
+      *(.text.end)
+   }
+```
 
 ## Building Diags
 
