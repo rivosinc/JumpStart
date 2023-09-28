@@ -781,6 +781,96 @@ class DiagAttributes:
             file_descriptor.write(f"   li a0, {active_hart_mask}\n")
             file_descriptor.write("   ret\n\n\n")
 
+    def generate_hart_sync_functions(self, file_descriptor):
+        active_hart_mask = int(
+            self.jumpstart_source_attributes["diag_attributes"]["active_hart_mask"], 2
+        )
+
+        modes = ["machine", "supervisor"]
+        for mode in modes:
+            file_descriptor.write(
+                f"""
+.section .jumpstart.text.{mode}, "ax"
+# Inputs:
+#   a0: hart id of current hart
+#   a1: hart mask of harts to sync.
+#   a2: hart id of primary hart for sync
+#   a3: sync point address (4 byte aligned)
+.global sync_harts_in_mask_from_{mode}_mode
+sync_harts_in_mask_from_{mode}_mode:
+  addi  sp, sp, -16
+  sd  ra, 8(sp)
+  sd  fp, 0(sp)
+  addi    fp, sp, 16
+
+  CHECKTC_DISABLE
+
+  li t0, 1
+  sll t2, t0, a0
+  sll t0, t0, a2
+
+  # Both this hart id and the primary hart id should be part of
+  # the mask of harts to sync
+  and t3, t2, a1
+  beqz t3, jumpstart_{mode}_fail
+  and t3, t0, a1
+  beqz t3, jumpstart_{mode}_fail
+
+  amoor.w.aqrl t3, t2, (a3)
+
+  # This bit should not be already set.
+  and t3, t3, t2
+  bnez t3, jumpstart_{mode}_fail
+
+  bne t0, t2, wait_for_primary_hart_to_clear_sync_point_bits_{mode}
+
+wait_for_all_harts_to_set_sync_point_bits_{mode}:
+  # Primary hart waits till all the harts have set their bits in the sync point.
+  lw t0, (a3)
+  bne t0, a1, wait_for_all_harts_to_set_sync_point_bits_{mode}
+
+  amoswap.w t0, zero, (a3)
+
+  bne t0, a1, jumpstart_{mode}_fail
+
+  j return_from_sync_harts_in_mask_from_{mode}_mode
+
+wait_for_primary_hart_to_clear_sync_point_bits_{mode}:
+  # non-primary harts wait for the primary hart to clear the sync point bits.
+  lw t0, (a3)
+  srl t0, t0, a0
+  andi t0, t0, 1
+  bnez t0, wait_for_primary_hart_to_clear_sync_point_bits_{mode}
+
+return_from_sync_harts_in_mask_from_{mode}_mode:
+  CHECKTC_ENABLE
+
+  ld  ra, 8(sp)
+  ld  fp, 0(sp)
+  addi  sp, sp, 16
+  ret
+
+.global sync_all_harts_from_{mode}_mode
+sync_all_harts_from_{mode}_mode:
+  addi  sp, sp, -16
+  sd  ra, 8(sp)
+  sd  fp, 0(sp)
+  addi    fp, sp, 16
+
+  jal get_thread_attributes_hart_id_from_{mode}_mode
+  li a1, {active_hart_mask}
+  li a2, PRIMARY_HART_ID
+  la a3, hart_sync_point
+
+  jal sync_harts_in_mask_from_{mode}_mode
+
+  ld  ra, 8(sp)
+  ld  fp, 0(sp)
+  addi  sp, sp, 16
+  ret
+        """
+            )
+
     def generate_mmu_functions(self, file_descriptor):
         file_descriptor.write(
             f"# SATP.Mode is {self.jumpstart_source_attributes['diag_attributes']['satp_mode']}\n\n"
@@ -856,6 +946,8 @@ class DiagAttributes:
             self.generate_diag_attribute_functions(file)
 
             self.generate_mmu_functions(file)
+
+            self.generate_hart_sync_functions(file)
 
             if self.jumpstart_source_attributes["rivos_internal_build"] is True:
                 rivos_internal.generate_rivos_internal_mmu_functions(
