@@ -9,15 +9,15 @@ SPDX-License-Identifier: Apache-2.0
 `test021` is a 2P diag that has `CPU0` update the page table mapping of a page in memory by changing the valid bit from `0` to `1`. `CPU1` reads from the page before and after the valid bit is set to `1`. The test verifies that the read from `CPU1` fails when the valid bit is `0` and eventually succeeds after the valid bit is set to `1`.
 
 The diag comprises of 2 source files:
-* [`test021.c`](../tests/test021.c)
-* [`test021.S`](../tests/test021.S)
+* [`test021.c`](../tests/common/test021.c)
+* [`test021.S`](../tests/common/test021.S)
 
 and a diag attributes file:
-* [`test021.diag_attributes.yaml`](../tests/test021.diag_attributes.yaml)
+* [`test021.diag_attributes.yaml`](../tests/common/test021.diag_attributes.yaml)
 
 ## Diag Attributes YAML file
 
-[`test021.diag_attributes.yaml`](../tests/test021.diag_attributes.yaml) contains attributes that describe the diag. JumpStart uses these attributes to generate diag specific code, data structures and files.
+[`test021.diag_attributes.yaml`](../tests/common/test021.diag_attributes.yaml) contains attributes that describe the diag. JumpStart uses these attributes to generate diag specific code, data structures and files.
 
 ```
 active_hart_mask: "0b11"
@@ -82,7 +82,7 @@ The diag additionally defines a `.data.diag` section at `0x80006000`. The `valid
 
 By default, the JumptStart boot code will start in rcode, jump to machine mode, initialize the system (MMU, interrupts, exception handling etc) and then jump to the diag's `main` function in Supervisor mode.
 
-[`test021.c`](../tests/test021.c) contains `main()` that the JumpStart boot code will jump to after initializing the system.
+[`test021.c`](../tests/common/test021.c) contains `main()` that the JumpStart boot code will jump to after initializing the system.
 
 ```
   uint8_t hart_id = get_thread_attributes_hart_id_from_supervisor_mode();
@@ -112,7 +112,7 @@ struct translation_info {
 };
 ```
 
-The `data_area` variable is a global variable defined in the `.data.diag` section by [`test021.S`](../tests/test021.S):
+The `data_area` variable is a global variable defined in the `.data.diag` section by [`test021.S`](../tests/common/test021.S):
 
 ```
 .section .data.diag, "wa", @progbits
@@ -148,7 +148,7 @@ CPU1 registers a supervisor mode trap handler override (`hart1_load_page_fault_h
 
 `CPU1` calls `is_load_allowed_to_data_area()` to check that the reads to the data area are not allowed.
 
-`is_load_allowed_to_data_area()` is defined in [`test021.S`](../tests/test021.S):
+`is_load_allowed_to_data_area()` is defined in [`test021.S`](../tests/common/test021.S):
 
 ```
 .section .text, "ax", @progbits
