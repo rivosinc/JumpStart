@@ -714,6 +714,7 @@ class DiagAttributes:
             # The entries are already sorted by VA
             # we also expect that the pages for the same section
             # are in consecutive order when the VAs are sorted.
+            found_text_section = False
             for entry in self.jumpstart_source_attributes["diag_attributes"]["mappings"]:
                 if "linker_script_section" not in entry:
                     # We don't generate linker script sections for entries
@@ -727,16 +728,32 @@ class DiagAttributes:
                 file.write("   */\n")
                 file.write(f"   . = {hex(entry['pa'])};\n")
 
-                linker_script_sections = entry["linker_script_section"]
-                file.write(f"   {linker_script_sections.split(',')[0]} : {{\n")
-                for section_name in linker_script_sections.split(","):
+                # If this is a list of sections, the first section listed is the
+                # top level section that all the other sections get placed in.
+                linker_script_sections = entry["linker_script_section"].split(",")
+
+                # The diag should have a .text section.
+                if ".text" in linker_script_sections:
+                    found_text_section = True
+
+                file.write(f"   {linker_script_sections[0]} : {{\n")
+                top_level_section_variable_name_prefix = (
+                    linker_script_sections[0].replace(".", "_").upper()
+                )
+                file.write(f"   {top_level_section_variable_name_prefix}_START = .;\n")
+                for section_name in linker_script_sections:
                     assert section_name not in defined_sections
                     file.write(f"      *({section_name})\n")
                     defined_sections.append(section_name)
                 file.write("   }\n\n")
+                file.write(f"  {top_level_section_variable_name_prefix}_END = .;\n")
             file.write("\n}\n")
 
             file.close()
+
+            if found_text_section is False:
+                log.error("The diag must have a .text section.")
+                sys.exit(1)
 
     def generate_diag_attribute_functions(self, file_descriptor):
         boolean_attributes = ["start_test_in_machine_mode"]
