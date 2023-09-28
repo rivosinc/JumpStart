@@ -49,7 +49,7 @@ wait_for_running_hart_loop:
   beq t4, t6, wait_for_running_hart_loop
 
   li t6, DIAG_PASSED
-  bne t4, t6, jumpstart_fail
+  bne t4, t6, jumpstart_machine_fail
 
 done_with_current_hart:
   srli a0, a0, 1
@@ -60,7 +60,7 @@ done_with_current_hart:
 
   # All harts have passed, we're done.
   li t1, DIAG_PASSED
-  bne a0, t1, jumpstart_fail
+  bne a0, t1, jumpstart_machine_fail
 
   li s1, SPIKE_RUN_PASSED
 
@@ -72,8 +72,8 @@ done_with_current_hart:
 1:
   j run_end_of_sim_sequence
 
-.global jumpstart_fail
-jumpstart_fail:
+.global jumpstart_machine_fail
+jumpstart_machine_fail:
   li s1, SPIKE_RUN_FAILED
 
   jal in_qemu_mode

@@ -92,7 +92,7 @@ setup_thread_attributes:
 
   csrr a0, mhartid
   li t1, MAX_NUM_HARTS_SUPPORTED
-  bgeu a0, t1, jumpstart_fail
+  bgeu a0, t1, jumpstart_machine_fail
 
   li  t2, THREAD_ATTRIBUTES_STRUCT_SIZE_IN_BYTES
   mul t2, a0, t2
@@ -113,19 +113,19 @@ setup_thread_attributes:
   la t1, mmode_reg_context_save_region
   add t1, t1, t0
   la t2, mmode_reg_context_save_region_end
-  bgeu t1, t2, jumpstart_fail
+  bgeu t1, t2, jumpstart_machine_fail
   SET_THREAD_ATTRIBUTES_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(t1)
 
   la t1, smode_reg_context_save_region
   add t1, t1, t0
   la t2, smode_reg_context_save_region_end
-  bgeu t1, t2, jumpstart_fail
+  bgeu t1, t2, jumpstart_machine_fail
   SET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(t1)
 
   la t1, umode_reg_context_save_region
   add t1, t1, t0
   la t2, umode_reg_context_save_region_end
-  bgeu t1, t2, jumpstart_fail
+  bgeu t1, t2, jumpstart_machine_fail
   SET_THREAD_ATTRIBUTES_UMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(t1)
 
   li  t0, THREAD_ATTRIBUTES_BOOKEND_MAGIC_NUMBER_VALUE
@@ -173,7 +173,7 @@ handle_env_call_from_smode:
   li t0, SYSCALL_RUN_FUNC_IN_SUPERVISOR_MODE_COMPLETE
   beq a7, t0, handle_syscall_run_func_in_supervisor_mode_complete
 
-  j jumpstart_fail
+  j jumpstart_machine_fail
 
 handle_syscall_run_func_in_supervisor_mode_complete:
   # This is the return to machine path for run_function_in_supervisor_mode().
@@ -208,7 +208,7 @@ run_function_in_supervisor_mode:
 
   GET_THREAD_ATTRIBUTES_CURRENT_MODE(t0)
   li  t1, MACHINE_MODE_ENCODING
-  bne t0, t1, jumpstart_fail
+  bne t0, t1, jumpstart_machine_fail
 
   # Save machine mode context
   GET_THREAD_ATTRIBUTES_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
@@ -255,7 +255,7 @@ mtvec_trap_handler:
   beqz  t0, handle_trap_from_machine_mode
 
   # We don't expect to get an exception from any other modes.
-  j jumpstart_fail
+  j jumpstart_machine_fail
 
 handle_trap_from_machine_mode:
   csrr  t0, mscratch
@@ -269,7 +269,7 @@ handle_trap_from_machine_mode:
   call  get_machine_mode_trap_handler_override
 
   # We don't handle any other traps from M-mode at this point.
-  beqz  a0, jumpstart_fail
+  beqz  a0, jumpstart_machine_fail
 
   # Jump to the registered trap handler.
   # TODO: Do we need to pass any arguments to the trap handler?
@@ -290,4 +290,4 @@ check_for_env_call_requests:
   li  t1, MCAUSE_EC_ENV_CALL_FROM_SMODE
   beq t0, t1, handle_env_call_from_smode
 
-  j jumpstart_fail
+  j jumpstart_machine_fail

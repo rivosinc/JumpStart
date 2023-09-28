@@ -15,7 +15,7 @@ jump_to_main_in_machine_mode:
   # the adjoining pages following this page.
   li t1, 0xfff
   and t2, t0, t1
-  bnez t2, jumpstart_fail
+  bnez t2, jumpstart_machine_fail
 
   csrw mcrr_1_base, t0
 

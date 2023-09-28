@@ -79,14 +79,14 @@ register_machine_mode_trap_handler_override(uint64_t mcause,
 
   if (interrupt == 1) {
     if (exception_code >= NUM_MACHINE_MODE_INTERRUPT_HANDLER_OVERRIDES) {
-      jumpstart_fail();
+      jumpstart_machine_fail();
     }
 
     trap_overrides->machine_mode_interrupt_handler_overrides[exception_code] =
         handler_address;
   } else {
     if (exception_code >= NUM_MACHINE_MODE_EXCEPTION_HANDLER_OVERRIDES) {
-      jumpstart_fail();
+      jumpstart_machine_fail();
     }
 
     trap_overrides->machine_mode_exception_handler_overrides[exception_code] =
@@ -107,19 +107,19 @@ get_machine_mode_trap_handler_override(uint64_t mcause) {
 
   if (interrupt == 1) {
     if (exception_code >= NUM_MACHINE_MODE_INTERRUPT_HANDLER_OVERRIDES) {
-      jumpstart_fail();
+      jumpstart_machine_fail();
     }
 
     return trap_overrides
         ->machine_mode_interrupt_handler_overrides[exception_code];
   } else {
     if (exception_code >= NUM_MACHINE_MODE_EXCEPTION_HANDLER_OVERRIDES) {
-      jumpstart_fail();
+      jumpstart_machine_fail();
     }
 
     return trap_overrides
         ->machine_mode_exception_handler_overrides[exception_code];
   }
 
-  jumpstart_fail();
+  jumpstart_machine_fail();
 }
