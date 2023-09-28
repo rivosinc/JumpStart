@@ -12,9 +12,6 @@ int copy_bytes(void);
 int compare_copied_bytes(void) __attribute__((section(".text.user")))
 __attribute__((pure));
 
-// Supervisor mode functions.
-int main(void) __attribute__((section(".text.supervisor")));
-
 extern uint64_t source_location;
 extern uint64_t destination_location;
 

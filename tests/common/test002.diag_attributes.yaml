@@ -12,7 +12,7 @@ mappings:
     page_size: 0x1000
     num_pages: 1
     pma_memory_type: "wb"
-    linker_script_section: ".text.supervisor"
+    linker_script_section: ".text"
   -
     va: 0x80022000
     pa: 0x80022000
@@ -20,7 +20,7 @@ mappings:
     page_size: 0x1000
     num_pages: 1
     pma_memory_type: "wb"
-    linker_script_section: ".data.supervisor"
+    linker_script_section: ".data"
   -
     va: 0x80023000
     pa: 0x80023000
