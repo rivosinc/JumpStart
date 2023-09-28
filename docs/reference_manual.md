@@ -22,6 +22,7 @@ Diags are written in C and/or Assembly. The diag sources are expected to provide
 
 Jumpstart provides a set of basic API functions that the diag can use. Details [HERE](#jumpstart-apis).
 
+The diag exits by returning from `main()` with a `DIAG_PASSED` or `DIAG_FAILED` return code. Alternatively, the diag can call `jumpstart_machine_fail()` or `jumpstart_supervisor_fail()` functions if a clean return from `main()` is not possible. On return from the diag, Jumpstart will exit the simulation with the appropriate exit code and exit sequence for the simulation environment.
 
 **Diags are expected to follow the [RISC-V ABI Calling Convention](https://github.com/riscv-non-isa/riscv-elf-psabi-doc/blob/master/riscv-cc.adoc).**
 
