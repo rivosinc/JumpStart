@@ -731,10 +731,23 @@ class DiagAttributes:
                 # top level section that all the other sections get placed in.
                 linker_script_sections = entry["linker_script_section"].split(",")
 
-                file.write(f"   {linker_script_sections[0]} : {{\n")
-                top_level_section_variable_name_prefix = (
-                    linker_script_sections[0].replace(".", "_").upper()
-                )
+                top_level_section_name = linker_script_sections[0]
+
+                # main() automatically gets placed in the .text.startup section
+                # and we want the .text.startup section to be part of the
+                # .text section.
+                if (
+                    ".text" in linker_script_sections
+                    and ".text.startup" not in linker_script_sections
+                ):
+                    # Place .text.startup at the beginning of the list
+                    # so that main() is the first thing in the .text section?
+                    linker_script_sections.insert(0, ".text.startup")
+
+                file.write(f"   {top_level_section_name} : {{\n")
+                top_level_section_variable_name_prefix = top_level_section_name.replace(
+                    ".", "_"
+                ).upper()
                 file.write(f"   {top_level_section_variable_name_prefix}_START = .;\n")
                 for section_name in linker_script_sections:
                     assert section_name not in defined_sections
