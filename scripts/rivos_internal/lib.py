@@ -188,7 +188,8 @@ def create_pmarr_regions(mappings):
     for mapping in mappings:
         if "pma_memory_type" not in mapping:
             if (
-                mapping["linker_script_section"]
+                "linker_script_section" in mapping
+                and mapping["linker_script_section"]
                 == ".jumpstart.text.rcode.init,.jumpstart.text.rcode"
             ):
                 continue
