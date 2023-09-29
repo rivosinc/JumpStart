@@ -25,25 +25,45 @@ _rtvec:
 .section .jumpstart.text.rcode, "ax"
 
 update_mcrr_0_to_cover_jumpstart_machine_code:
-  # The reset default of the MCRR_0 is the 4K page starting at the LLC-as-SRAM
-  # range base address. We expect _machine_mode_start to be at the beginning of this page.
   # Update the MCRR_0 to include all the machine mode code pages for the
   # jumpstart framework.
 
-  la t0, _machine_mode_start
+  la t0, _JUMPSTART_TEXT_MACHINE_INIT_START
   csrw mcrr_0_base, t0
 
-  # Determine the size of the jumpstart machine mode code region.
-  # We expect it to start at _machine_mode_start (from the .jumpstart.machine.init) section
-  # and extend to jumpstart_machine_mode_end_point (from the
-  # from the .jumpstart.machine.end
-  la t1, jumpstart_machine_mode_end_point
-  sub t0, t1, t0
+  la t2, _JUMPSTART_TEXT_MACHINE_INIT_END
+  # Check if _JUMPSTART_TEXT_MACHINE_INIT_END is page aligned.
+  li t1, ((1 << PAGE_OFFSET) - 1)
+  and t3, t2, t1
+  beqz t3, 1f
 
-  # Compute the mask for the number of machine mode code pages.
-  addi t0, t0, -1
-  not t0, t0
-  ori t0, t0, 0x1
-  csrw mcrr_0_mask, t0
+  # It's not page aligned so round it up to the next page.
+  srli t2, t2, PAGE_OFFSET
+  slli t2, t2, PAGE_OFFSET
+  li t1, (1 << PAGE_OFFSET)
+  add t2, t2, t1
+
+1:
+  addi t1, t2, -1
+
+  # t0 contains _JUMPSTART_TEXT_MACHINE_INIT_START
+  # t1 contains the address of the last byte of the last page of the
+  # jumpstart mmode text section.
+  # The MCRR region will cover a NAPOT number of pages. The build scripts
+  # check for this.
+  # Find the minimum mask value that will cover the entire text section.
+
+  # Minimum mask value
+  li t2, (0xFFFFFFFFFFFFFFFFULL << PAGE_OFFSET)
+
+2:
+  and t3, t2, t1
+  beq t3, t0, found_suitable_mcrr_0_mask
+  slli t2, t2, 1
+  j 2b
+
+found_suitable_mcrr_0_mask:
+  ori t2, t2, 0x1 # set the valid bit in the mask
+  csrw mcrr_0_mask, t2
 
   ret
