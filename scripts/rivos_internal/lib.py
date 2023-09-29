@@ -152,14 +152,9 @@ def get_rivos_specific_previous_mapping_size(previous_mapping, current_mapping_p
     return previous_mapping_size
 
 
-def sanity_check_memory_map(mappings):
-    for mapping in mappings:
-        if "no_pte_allocation" in mapping and mapping["no_pte_allocation"] is True:
-            pte_attributes = ["xwr", "umode", "va"]
-            # if the mapping has a no_pte_allocation attribute, then
-            # it should not have any xwr or umode bits set.
-            assert not any(x in mapping for x in pte_attributes)
-
+def sanity_check_memory_map(diag_attributes):
+    mappings = diag_attributes["mappings"]
+    found_jumpstart_machine_mode_text_section_mapping = False
     # check that the memory mappings don't overlap
     # the mappings are sorted by the physical address at this point.
     previous_mapping = None
@@ -180,7 +175,36 @@ def sanity_check_memory_map(mappings):
             log.error(f"Memory mapping {mapping} overlaps with {previous_mapping}")
             sys.exit(1)
 
+        if "linker_script_section" in mapping and ".jumpstart.text.machine" in mapping[
+            "linker_script_section"
+        ].split(","):
+            # The number of pages in the jumpstart machine mode text section
+            # should be a NAPOT value.
+            if mapping["num_pages"] & (mapping["num_pages"] - 1) != 0:
+                log.error(
+                    f"The number of pages in the jumpstart machine mode text section {mapping['num_pages']} is not a NAPOT value."
+                )
+                sys.exit(1)
+            found_jumpstart_machine_mode_text_section_mapping = True
+
+        if (
+            diag_attributes["start_test_in_machine_mode"] is True
+            and "linker_script_section" in mapping
+            and ".text" in mapping["linker_script_section"].split(",")
+        ):
+            # The text section is machine mode code and should occupy a
+            # NAPOT number of pages.
+            if mapping["num_pages"] & (mapping["num_pages"] - 1) != 0:
+                log.error(
+                    f".text is machine mode and it has {mapping['num_pages']} pages which is not a NAPOT number of pages"
+                )
+                sys.exit(1)
+
         previous_mapping = mapping
+
+    if found_jumpstart_machine_mode_text_section_mapping is False:
+        log.error("Could not find the jumpstart machine mode text section mapping in mappings.")
+        sys.exit(1)
 
 
 def create_pmarr_regions(mappings):
