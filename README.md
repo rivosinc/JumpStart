@@ -52,7 +52,7 @@ meson test -C builddir
 * [Quick Start: Anatomy of a Diag](docs/quick_start_anatomy_of_a_diag.md)
 * [Reference Manual](docs/reference_manual.md)
 * [FAQs](docs/faqs.md)
-* [Jumpstart Internals](docs/jumpstart_internals.md)
+* [JumpStart Internals](docs/jumpstart_internals.md)
 
 ## Support
 

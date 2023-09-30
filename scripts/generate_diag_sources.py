@@ -1091,7 +1091,7 @@ def main():
 
     if os.path.exists(args.jumpstart_source_attributes_yaml) is False:
         raise Exception(
-            f"Jumpstart Attributes file {args.jumpstart_source_attributes_yaml} not found"
+            f"JumpStart Attributes file {args.jumpstart_source_attributes_yaml} not found"
         )
 
     pagetables = DiagAttributes(

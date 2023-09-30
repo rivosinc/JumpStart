@@ -6,11 +6,11 @@ SPDX-License-Identifier: Apache-2.0
 
 # Reference Manual
 
-Jumpstart provides a bare-metal kernel, APIs and build infrastructure for writing directed diags for RISC-V CPU/SoC validation.
+JumpStart provides a bare-metal kernel, APIs and build infrastructure for writing directed diags for RISC-V CPU/SoC validation.
 
 A Diag is expected to provide sources (C and assembly files) and it's attributes in a YAML file.
 
-The Jumpstart [`Unit Tests`](../tests) are a good reference on writing diags:
+The JumpStart [`Unit Tests`](../tests) are a good reference on writing diags:
 * [Common tests](../tests/common/meson.build)
 * [Rivos Internal tests](../tests/rivos_internal/meson.build)
 
@@ -24,13 +24,13 @@ The diag sources are required to contain a `main()` function which is the entry 
 
 Machine, Supervisor and User mode cannot share code so the code for different modes have to be placed in different linker sections. The [`linker_script_section`](#linker_script_section) in the [`mappings`](#mappings) diag attribute should be used by the diag to place the code for different modes in different sections.
 
-Jumpstart provides a set of basic API functions that the diag can use. Details [HERE](#jumpstart-apis).
+JumpStart provides a set of basic API functions that the diag can use. Details [HERE](#jumpstart-apis).
 
-The diag exits by returning from `main()` with a `DIAG_PASSED` or `DIAG_FAILED` return code. Alternatively, the diag can call `jumpstart_machine_fail()` or `jumpstart_supervisor_fail()` functions if a clean return from `main()` is not possible. On return from the diag, Jumpstart will exit the simulation with the appropriate exit code and exit sequence for the simulation environment.
+The diag exits by returning from `main()` with a `DIAG_PASSED` or `DIAG_FAILED` return code. Alternatively, the diag can call `jumpstart_machine_fail()` or `jumpstart_supervisor_fail()` functions if a clean return from `main()` is not possible. On return from the diag, JumpStart will exit the simulation with the appropriate exit code and exit sequence for the simulation environment.
 
 **Diags are expected to follow the [RISC-V ABI Calling Convention](https://github.com/riscv-non-isa/riscv-elf-psabi-doc/blob/master/riscv-cc.adoc).**
 
-**The Thread Pointer (x4) and Global Pointer (x3) registers are reserved for jumpstart purposes and should not be used in diags.** TP is used to point to a per hart attributes structure and GP is used as a temporary in jumpstart routines.
+**The Thread Pointer (x4) and Global Pointer (x3) registers are reserved for JumpStart purposes and should not be used in diags.** TP is used to point to a per hart attributes structure and GP is used as a temporary in JumpStart routines.
 
 ## Diag Attributes
 
@@ -102,7 +102,7 @@ Controls the values of the `xwr`, `umode` and `valid` bits in the page table ent
 
 Controls the page size of the section.
 
-NOTE: Jumpstart only supports 4K pages and not the super pages at this point.
+NOTE: JumpStart only supports 4K pages and not the super pages at this point.
 
 #### `num_pages`
 
@@ -184,7 +184,7 @@ Runs the generated diag in Spike.
 meson test -C builddir
 ```
 
-## Jumpstart APIs
+## JumpStart APIs
 
 These are listed in [jumpstart_functions.h](../include/common/jumpstart_functions.h).
 
