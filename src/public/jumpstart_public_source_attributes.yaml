@@ -1,0 +1,139 @@
+# SPDX-FileCopyrightText: 2023 Rivos Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+
+diag_entry_label: _machine_mode_start
+
+rivos_internal_build: false
+
+max_num_harts_supported: 4
+
+# Hard limits on how many pages the jumsptart infrastructure itself will occupy.
+# Allows us to keep track of infrastructure code size.
+# The test pages are not limited by these counts and are dependent on the
+# number of pages allocated in the test memory map.
+jumpstart_machine_text_page_counts:
+  num_pages_for_all_text: 2
+jumpstart_supervisor_text_page_counts:
+  num_pages_for_all_text: 2
+jumpstart_privileged_data_page_counts:
+  num_pages_for_stack: 4
+  num_pages_for_c_structs: 1
+  num_pages_for_data_section: 1
+jumpstart_umode_text_page_counts:
+  num_pages_for_all_text: 1
+jumpstart_umode_data_page_counts:
+  num_pages_for_stack: 4
+
+
+# These attributes can be overriden by the test attributes file or
+# at build time.
+diag_attributes:
+  start_test_in_machine_mode: false
+  max_num_pages_for_PT_allocation: 5
+  num_pages_for_bss_section: 1
+  num_pages_for_rodata_section: 1
+  allow_page_table_modifications: false
+  machine_mode_start_address: 0x80000000
+  active_hart_mask: '0b1'
+  allow_active_hart_mask_override: false
+  satp_mode: 'sv39'
+  mappings: null
+
+c_structs:
+  thread_attributes:
+    fields:
+      hart_id: uint8_t
+      current_mode: uint8_t
+      trap_override_struct_address: uint64_t
+      mmode_reg_context_save_region_address: uint64_t
+      smode_reg_context_save_region_address: uint64_t
+      umode_reg_context_save_region_address: uint64_t
+      bookend_magic_number: uint64_t
+  trap_override_attributes:
+    fields:
+      supervisor_mode_interrupt_handler_overrides: uint64_t,16
+      supervisor_mode_exception_handler_overrides: uint64_t,16
+      machine_mode_interrupt_handler_overrides: uint64_t,16
+      machine_mode_exception_handler_overrides: uint64_t,16
+
+defines:
+  THREAD_ATTRIBUTES_BOOKEND_MAGIC_NUMBER_VALUE: 0x3317150533171505
+  USER_MODE_ENCODING: 0
+  SUPERVISOR_MODE_ENCODING: 1
+  HYPERVISOR_MODE_ENCODING: 2
+  MACHINE_MODE_ENCODING: 3
+  MSTATUS_MPP_SHIFT: 11
+  MSTATUS_MPP_MASK: 3
+  MSTATUS_SPP_SHIFT: 8
+  MSTATUS_SPP_MASK: 1
+  MSTATUS_SUM_SHIFT: 18
+  SSTATUS_SIE_SHIFT: 1
+  SATP_MODE_LSB: 60
+  SATP_MODE_BARE: 0
+  SATP_MODE_SV39: 8
+  SATP_MODE_SV48: 9
+  SATP_PPN_MSB: 43
+  SATP_PPN_MASK: ((1ULL << SATP_PPN_MSB) - 1ULL)
+  PTE_XWR_BIT_MSB: 3
+  PTE_XWR_BIT_LSB: 1
+  PTE_D_BIT_MSB: 7
+  PTE_D_BIT_LSB: 7
+  PTE_A_BIT_MSB: 6
+  PTE_A_BIT_LSB: 6
+  PTE_VALID_BIT_MSB: 0
+  PTE_VALID_BIT_LSB: 0
+  PTE_VALID_BIT_MASK: 1
+  MENVCFG_PBMTE_BIT_LSB: 62
+  MIDELEG_S_SOFT_INTERRUPT: 1
+  MIDELEG_S_TIMER_INTERRUPT: 5
+  MIDELEG_S_EXT_INTERRUPT: 9
+  MCAUSE_INTERRUPT_BIT_LSB: 63
+  MCAUSE_EC_MASK: 0x7FFFFFFFFFFFFFFFULL
+  MCAUSE_EC_ILLEGAL_INSTRUCTION: 2
+  MCAUSE_EC_ENV_CALL_FROM_SMODE: 9
+  SCAUSE_INTERRUPT_BIT_LSB: 63
+  SCAUSE_EC_MASK: 0x7FFFFFFFFFFFFFFFULL
+  SCAUSE_EC_INSTRUCTION_ADDRESS_MISALIGNED: 0
+  SCAUSE_EC_INSTRUCTION_ACCESS_FAULT: 1
+  SCAUSE_EC_ILLEGAL_INSTRUCTION: 2
+  SCAUSE_EC_BREAKPOINT: 3
+  SCAUSE_EC_LOAD_ADDRESS_MISALIGNED: 4
+  SCAUSE_EC_LOAD_ACCESS_FAULT: 5
+  SCAUSE_EC_STORE_ADDRESS_MISALIGNED: 6
+  SCAUSE_EC_STORE_ACCESS_FAULT: 7
+  SCAUSE_EC_ENV_CALL_FROM_UMODE: 8
+  SCAUSE_EC_ENV_CALL_FROM_SMODE: 9
+  SCAUSE_EC_INSTRUCTION_PAGE_FAULT: 12
+  SCAUSE_EC_LOAD_PAGE_FAULT: 13
+  SCAUSE_EC_STORE_PAGE_FAULT: 15
+  SCAUSE_INT_SOFTWARE: 1
+  SCAUSE_INT_TIMER: 5
+  SCAUSE_INT_EXTERNAL: 9
+  SCAUSE_INT_GUEST_EXTERNAL: 12
+  SIE_EXT_INTERRUPT: 9
+  PAGE_OFFSET: 12
+  DIAG_PASSED: 0
+  DIAG_FAILED: 1
+  # These are the various states that a hart can be in.
+  HART_RUNNING: 2
+  HART_INACTIVE: 3
+  PRIMARY_HART_ID: 0
+
+  CHECKTC_DISABLE: nop
+  CHECKTC_ENABLE: nop
+
+syscall_numbers:
+  - SYSCALL_RUN_FUNC_IN_USER_MODE_COMPLETE
+  - SYSCALL_RUN_FUNC_IN_SUPERVISOR_MODE_COMPLETE
+
+# These are the registers that need to be saved/restored when moving
+# between U-mode and S-mode. We will generate S and U mode regions to
+# hold this context across context switches.
+reg_context_to_save_across_modes:
+  registers:
+    gprs: [sp, s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, t0, t1, t2, t3, t4, t5, t6, a0, a1, a2, a3, a4, a5, a6, a7, ra]
+    csrs: [sepc, sstatus, mepc, mstatus]
+  # Temporary register to hold the address of the context save area when
+  # saving and restoring.
+  temp_register: gp

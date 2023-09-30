@@ -1,0 +1,17 @@
+# SPDX-FileCopyrightText: 2023 Rivos Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+
+[binaries]
+c = 'riscv64-unknown-elf-gcc'
+strip = 'riscv64-unknown-elf-strip'
+
+[properties]
+needs_exe_wrapper = true
+
+# these attributes don't seem to actually do anything
+[host_machine]
+system = 'linux'
+cpu_family = 'riscv64'
+cpu = 'rv64gc'
+endian = 'little'

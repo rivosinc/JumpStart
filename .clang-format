@@ -1,0 +1,17 @@
+# SPDX-FileCopyrightText: 2023 Rivos Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+
+---
+IndentWidth: 2
+TabWidth: 2
+UseTab: Never
+BreakBeforeBraces: Attach
+AllowShortIfStatementsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: None
+AlignOperands: Align
+AlignEscapedNewlines: Right
+AlignConsecutiveMacros: AcrossEmptyLinesAndComments
+IndentCaseLabels: false
+Standard: Latest
+...

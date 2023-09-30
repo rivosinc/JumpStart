@@ -1,0 +1,50 @@
+# SPDX-FileCopyrightText: 2023 Rivos Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+
+option('diag_name',
+       type : 'string',
+       value : 'jumpstart_diag.elf',
+       description : 'Name of the diag binary.')
+
+option('diag_sources',
+       type : 'array',
+       description : 'C and assembly sources for the directed diag.')
+
+option('diag_attributes_yaml',
+       type : 'string',
+       value : '',
+       description : 'Attributes of the directed diag.')
+
+option('diag_attribute_overrides',
+       type : 'array',
+       description : 'Overrides specified test attributes.')
+
+option('gcc_march_string',
+       type : 'string',
+       value : '',
+       description : '-march string to pass to gcc.')
+
+option('spike_binary',
+       type : 'string',
+       value : 'spike',
+       description : 'Spike binary to use')
+
+option('spike_isa_string',
+       type : 'string',
+       value : '',
+       description : '--isa string to use for spike.')
+
+option('spike_additional_arguments',
+       type : 'array',
+       description : 'Additional arguments to pass to spike when running the diag.')
+
+option('spike_generate_trace',
+       type : 'boolean',
+       value : false,
+       description : 'Generate spike trace.')
+
+option('rivos_internal_build',
+       type : 'boolean',
+       value : false,
+       description : 'Build the Rivos internal version of JumpStart.')
