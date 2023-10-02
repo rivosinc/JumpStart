@@ -14,8 +14,8 @@ Bare-metal kernel, APIs and build infrastructure for writing directed diags for 
 
 ### Setup the Environment
 
-JumpStart requires the following to available in your path:
-* [`meson`](https://mesonbuild.com)
+JumpStart requires the following tools to be available in your path:
+* [meson](https://mesonbuild.com)
 * [riscv-gnu-toolchain](https://github.com/riscv-collab/riscv-gnu-toolchain)
 * [Spike](https://github.com/riscv-software-src/riscv-isa-sim)
 
@@ -25,7 +25,7 @@ JumpStart has been tested on Ubuntu 22.04 and macOS.
 
 This will build JumpStart and run the unit tests.
 
-```
+```shell
 meson setup builddir --cross-file cross-file.txt --buildtype release
 meson compile -C builddir
 meson test -C builddir
@@ -35,7 +35,7 @@ meson test -C builddir
 
 This will build a diag and run it on Spike.
 
-```
+```shell
 meson setup builddir --cross-file cross-file.txt --buildtype release -Ddiag_attributes_yaml=tests/common/test000.diag_attributes.yaml -Ddiag_sources=tests/common/test000.c -Ddiag_name=my_jumpstart_diag
 meson compile -C builddir
 meson test -C builddir

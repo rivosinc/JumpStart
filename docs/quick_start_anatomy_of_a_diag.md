@@ -19,17 +19,17 @@ and a diag attributes file:
 
 [`test021.diag_attributes.yaml`](../tests/common/test021.diag_attributes.yaml) contains attributes that describe the diag. JumpStart uses these attributes to generate diag specific code, data structures and files.
 
-```
+```yaml
 active_hart_mask: "0b11"
 ```
 This is a 2P diag with CPUs 0 and 1 active. JumpStart will allocate enough space in data structures for 2 CPUs. Any CPUs not specified in the active_hart_mask will be considered inactive and sent to wfi if encountered.
 
-```
+```yaml
 satp_mode: "sv39"
 ```
 JumpStart will generate MMU setup functions to program the `sv39` mode into the `SATP` CSR as well as generate the page tables for `sv39` mode.
 
-```
+```yaml
 allow_page_table_modifications: true
 ```
 Page tables are read-only by default - the page table entries for the page table area are only assigned `R` permissions.
@@ -37,7 +37,7 @@ Page tables are read-only by default - the page table entries for the page table
 This attribute tells JumpStart that the diag will be modifying the page tables so JumpStart will additionally add the `W` permission to the page table entries for the page table area.
 
 
-```
+```yaml
 mappings:
   -
     va: 0x80000000
@@ -84,7 +84,7 @@ By default, the JumptStart boot code will start in rcode, jump to machine mode, 
 
 [`test021.c`](../tests/common/test021.c) contains `main()` that the JumpStart boot code will jump to after initializing the system.
 
-```
+```c
   uint8_t hart_id = get_thread_attributes_hart_id_from_supervisor_mode();
   if (hart_id > 1) {
     return DIAG_FAILED;
@@ -93,14 +93,14 @@ By default, the JumptStart boot code will start in rcode, jump to machine mode, 
 
 It reads out the CPU id and checks that only CPU 0 or 1 is running the diag.
 
-```
+```c
   struct translation_info xlate_info;
   translate_VA(data_area_address, &xlate_info);
 ```
 
 The diag calls `translate_VA()` to get the page table details for the VA of the `data_area` variable. JumpStart provides the `translate_VA()` function that returns a `struct translation_info` object that details of a table walk for a given `VA`:
 
-```
+```c
 struct translation_info {
   uint8_t satp_mode;
   uint8_t levels_traversed;
@@ -114,14 +114,14 @@ struct translation_info {
 
 The `data_area` variable is a global variable defined in the `.data.diag` section by [`test021.S`](../tests/common/test021.S):
 
-```
+```asm
 .section .data.diag, "wa", @progbits
 .global data_area
 data_area:
   .8byte MAGIC_VALUE
 ```
 
-```
+```c
   if (xlate_info.walk_successful != 0 || xlate_info.levels_traversed != 3 ||
       (xlate_info.pte_value[2] & PTE_VALID_BIT_MASK) != 0) {
     return DIAG_FAILED;
@@ -130,7 +130,7 @@ data_area:
 
 The diag sanity checks that the valid bit is not set for the leaf page table entry for this translation. `walk_successful` will be `0` as the translation encountered the invalid leaf page table entry but `levels_traversed` will be `3` as it would have traversed 3 levels to get to the leaf page table entry.
 
-```
+```c
   if (hart_id == 1) {
     register_supervisor_mode_trap_handler_override(
         SCAUSE_EC_LOAD_PAGE_FAULT, (uint64_t)(&hart1_load_page_fault_handler));
@@ -140,7 +140,7 @@ The diag sanity checks that the valid bit is not set for the leaf page table ent
 
 CPU1 registers a supervisor mode trap handler override (`hart1_load_page_fault_handler()`) for the load page fault exception using the `register_supervisor_mode_trap_handler_override()` API provided by JumpStart.
 
-```
+```c
     if (is_load_allowed_to_data_area() == 1) {
       return DIAG_FAILED;
     }
@@ -150,7 +150,7 @@ CPU1 registers a supervisor mode trap handler override (`hart1_load_page_fault_h
 
 `is_load_allowed_to_data_area()` is defined in [`test021.S`](../tests/common/test021.S):
 
-```
+```asm
 .section .text, "ax", @progbits
 .global is_load_allowed_to_data_area
 is_load_allowed_to_data_area:
@@ -170,7 +170,7 @@ is_load_allowed_to_data_area:
 ```
 `is_load_allowed_to_data_area()` issues a load to the `data_area` variable and returns `1` if the load succeeds. If the load faults, the load page fault exception handler `hart1_load_page_fault_handler()` simply skips over the faulting instruction:
 
-```
+```c
 void hart1_load_page_fault_handler(void) {
 ..
 ..
@@ -181,13 +181,13 @@ void hart1_load_page_fault_handler(void) {
 }
 ```
 
-```
+```c
   sync_all_harts_from_supervisor_mode();
 ```
 
 The diag syncs up the cores so that they both complete all the above steps before `CPU0` modifies the page table entry to mark it as valid.
 
-```
+```c
   if (hart_id == 0) {
     *((uint64_t *)xlate_info.pte_address[2]) =
         xlate_info.pte_value[2] | PTE_VALID_BIT_MASK;
@@ -196,7 +196,7 @@ The diag syncs up the cores so that they both complete all the above steps befor
 
 `CPU0` then marks the leaf page table entry for the `data_area` variable as valid and issues an `sfence.vma` to ensure that the page table entry is visible to all cores.
 
-```
+```c
     while (1) {
       translate_VA(data_area_address, &xlate_info);
 
