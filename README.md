@@ -31,7 +31,7 @@ module load rivos-sdk/riscv-gnu-toolchain
 
 This will build JumpStart and run the unit tests.
 
-```
+```shell
 meson setup builddir --cross-file cross-file.txt --buildtype release
 meson compile -C builddir
 meson test -C builddir
@@ -41,7 +41,7 @@ meson test -C builddir
 
 This will build a diag and run it on Spike.
 
-```
+```shell
 meson setup builddir --cross-file cross-file.txt --buildtype release -Ddiag_attributes_yaml=tests/common/test000.diag_attributes.yaml -Ddiag_sources=tests/common/test000.c -Ddiag_name=my_jumpstart_diag
 meson compile -C builddir
 meson test -C builddir
