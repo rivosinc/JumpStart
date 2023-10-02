@@ -6,6 +6,8 @@ SPDX-License-Identifier: Apache-2.0
 
 # JumpStart
 
+[![REUSE status](https://api.reuse.software/badge/github.com/rivosinc/JumpStart)](https://api.reuse.software/info/github.com/rivosinc/JumpStart)
+
 Bare-metal kernel, APIs and build infrastructure for writing directed diags for RISC-V CPU/SoC validation.
 
 ## Getting Started
