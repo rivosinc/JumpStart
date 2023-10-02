@@ -14,8 +14,8 @@ Bare-metal kernel, APIs and build infrastructure for writing directed diags for 
 
 ### Setup the Environment
 
-JumpStart requires the following to available in your path:
-* [`meson`](https://mesonbuild.com)
+JumpStart requires the following tools to be available in your path:
+* [meson](https://mesonbuild.com)
 * [riscv-gnu-toolchain](https://github.com/riscv-collab/riscv-gnu-toolchain)
 * [Spike](https://github.com/riscv-software-src/riscv-isa-sim)
 
