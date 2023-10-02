@@ -1,0 +1,107 @@
+# SPDX-FileCopyrightText: 2023 Rivos Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+
+name: Build and Test Jumpstart
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+env:
+  SPIKE_REPO: https://github.com/riscv-software-src/riscv-isa-sim.git
+  SPIKE_REV: master
+  TOOLCHAIN_URL: https://github.com/riscv-collab/riscv-gnu-toolchain/releases/download/2023.09.27/riscv64-elf-ubuntu-22.04-gcc-nightly-2023.09.27-nightly.tar.gz
+
+jobs:
+  build-and-test-jumpstart:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+        fetch-depth: 0
+
+    - name: Install Packages
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y device-tree-compiler build-essential
+
+    - name: Get revisions of dependencies
+      run: |
+        SPIKE_COMMIT=$( git ls-remote "$SPIKE_REPO" $SPIKE_REV | awk '{ print $1; }' )
+        echo "Revison of Spike: $SPIKE_COMMIT"
+        # Save for later use
+        echo "SPIKE_COMMIT=$SPIKE_COMMIT" >> $GITHUB_ENV
+
+    - name: Get the toolchain from cache (if available)
+      id: cache-restore-toolchain
+      uses: actions/cache/restore@v3
+      with:
+        path: /opt/riscv/toolchain
+        key: "toolchain-${{env.TOOLCHAIN_URL}}"
+
+    - if: ${{ steps.cache-restore-toolchain.outputs.cache-hit != 'true' }}
+      name: Download Toolchain (if not cached)
+      run: |
+        mkdir -p /opt/riscv/toolchain
+        wget --progress=dot:giga $TOOLCHAIN_URL -O /tmp/toolchain.tar.gz
+
+    - if: ${{ steps.cache-restore-toolchain.outputs.cache-hit != 'true' }}
+      name: Install Toolchain (if not cached)
+      run: tar zxf /tmp/toolchain.tar.gz --strip-components=1 -C /opt/riscv/toolchain
+
+    - name: Save the toolchain to the cache (if necessary)
+      id: cache-save-toolchain
+      uses: actions/cache/save@v3
+      with:
+        path: /opt/riscv/toolchain
+        key: "toolchain-${{env.TOOLCHAIN_URL}}"
+
+    - name: Add the toolchain to the path
+      run: echo "/opt/riscv/toolchain/bin" >> $GITHUB_PATH
+
+    - name: Get spike from cache (if available)
+      id: cache-restore-spike
+      uses: actions/cache/restore@v3
+      with:
+        path: /opt/riscv/spike
+        key: "spike-${{env.SPIKE_COMMIT}}"
+
+    - if: ${{ steps.cache-restore-spike.outputs.cache-hit != 'true' }}
+      name: Download Spike source (if not cached)
+      run: |
+        git clone "$SPIKE_REPO"
+        cd riscv-isa-sim
+        git checkout "$SPIKE_COMMIT"
+        git submodule update --init --recursive
+
+    - if: ${{ steps.cache-restore-spike.outputs.cache-hit != 'true' }}
+      name: Build Spike (if not cached)
+      run: |
+        cd riscv-isa-sim
+        mkdir build && cd build
+        ../configure --prefix=/opt/riscv/spike
+        make -j"$(nproc 2> /dev/null || sysctl -n hw.ncpu)"
+        make install
+
+    - if: ${{ steps.cache-restore-spike.outputs.cache-hit != 'true' }}
+      name: Save spike to cache (if built)
+      id: cache-save-spike
+      uses: actions/cache/save@v3
+      with:
+        path: /opt/riscv/spike
+        key: "spike-${{env.SPIKE_COMMIT}}"
+
+    - uses: BSFishy/meson-build@v1.0.3
+      with:
+        action: test
+        directory: build
+        setup-options: --cross-file cross-file.txt --buildtype release -Dspike_binary=/opt/riscv/spike/bin/spike
+        options: --verbose
+        meson-version: 1.2.0
