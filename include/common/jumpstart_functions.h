@@ -9,14 +9,17 @@
 #include "jumpstart_data_structures.h"
 #include "jumpstart_defines.h"
 
+#define __ASM_STR(x) #x
+
 #define read_csr(reg)                                                          \
   ({                                                                           \
     unsigned long __tmp;                                                       \
-    asm volatile("csrr %0, " #reg : "=r"(__tmp));                              \
+    asm volatile("csrr %0, " __ASM_STR(reg) : "=r"(__tmp));                    \
     __tmp;                                                                     \
   })
 
-#define write_csr(reg, val) ({ asm volatile("csrw " #reg ", %0" ::"rK"(val)); })
+#define write_csr(reg, val)                                                    \
+  ({ asm volatile("csrw " __ASM_STR(reg) ", %0" ::"rK"(val)); })
 
 #define read_write_csr(reg, val)                                               \
   ({                                                                           \
