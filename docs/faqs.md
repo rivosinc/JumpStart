@@ -17,5 +17,3 @@ SPDX-License-Identifier: Apache-2.0
 Running spike through `meson test` breaks spike's command line debugging facility (`-d`) for interactive debugging.
 
 You will need to run spike manually with `-d` for interactive debugging.
-
-# Rivos Internal FAQs
