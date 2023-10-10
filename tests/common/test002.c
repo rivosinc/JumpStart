@@ -2,6 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+#include "cpu_bits.h"
 #include "jumpstart_functions.h"
 
 // user mode functions
@@ -25,8 +26,7 @@ int main(void) {
     return DIAG_FAILED;
   }
 
-  if (get_thread_attributes_current_mode_from_supervisor_mode() !=
-      SUPERVISOR_MODE_ENCODING) {
+  if (get_thread_attributes_current_mode_from_supervisor_mode() != PRV_S) {
     return DIAG_FAILED;
   }
 
@@ -38,7 +38,7 @@ int main(void) {
   // We want supervisor mode to be able to write to the user mode data area
   // so set SSTATUS.SUM to 1.
   uint64_t sstatus_value = read_csr(sstatus);
-  sstatus_value |= 1 << MSTATUS_SUM_SHIFT;
+  sstatus_value |= MSTATUS_SUM;
   write_csr(sstatus, sstatus_value);
 
   uint64_t fill_value = 0x123456789abcdef0;
@@ -58,8 +58,7 @@ int main(void) {
       return DIAG_FAILED;
     }
 
-    if (get_thread_attributes_current_mode_from_supervisor_mode() !=
-        SUPERVISOR_MODE_ENCODING) {
+    if (get_thread_attributes_current_mode_from_supervisor_mode() != PRV_S) {
       return DIAG_FAILED;
     }
 
@@ -67,8 +66,7 @@ int main(void) {
       return DIAG_FAILED;
     }
 
-    if (get_thread_attributes_current_mode_from_supervisor_mode() !=
-        SUPERVISOR_MODE_ENCODING) {
+    if (get_thread_attributes_current_mode_from_supervisor_mode() != PRV_S) {
       return DIAG_FAILED;
     }
   }

@@ -910,7 +910,7 @@ sync_all_harts_from_{mode}_mode:
             file_descriptor.write(f".global enable_mmu_from_{mode}_mode\n")
             file_descriptor.write(f"enable_mmu_from_{mode}_mode:\n\n")
             file_descriptor.write("    li   t0, DIAG_SATP_MODE\n")
-            file_descriptor.write("    slli  t0, t0, SATP_MODE_LSB\n")
+            file_descriptor.write("    slli  t0, t0, SATP64_MODE_SHIFT\n")
             file_descriptor.write(f"    la t1, {self.pt_attributes.pt_start_label}\n")
             file_descriptor.write("    srai t1, t1, PAGE_OFFSET\n")
             file_descriptor.write("    add  t1, t1, t0\n")
@@ -963,6 +963,7 @@ sync_all_harts_from_{mode}_mode:
             )
 
             file.write('#include "jumpstart_defines.h"\n\n')
+            file.write('#include "cpu_bits.h"\n\n')
 
             self.generate_diag_attribute_functions(file)
 

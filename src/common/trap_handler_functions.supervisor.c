@@ -2,6 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+#include "cpu_bits.h"
 #include "jumpstart_functions.h"
 
 __attribute__((section(".jumpstart.text.supervisor"))) void
@@ -14,9 +15,9 @@ register_supervisor_mode_trap_handler_override(uint64_t mcause,
       (struct trap_override_attributes *)trap_override_struct_address;
 
   uint64_t exception_code = mcause & MCAUSE_EC_MASK;
-  uint64_t interrupt = mcause >> MCAUSE_INTERRUPT_BIT_LSB;
+  uint64_t interrupt = mcause & MCAUSE_INT_FLAG;
 
-  if (interrupt == 1) {
+  if (interrupt) {
     if (exception_code >= NUM_SUPERVISOR_MODE_INTERRUPT_HANDLER_OVERRIDES) {
       jumpstart_supervisor_fail();
     }
@@ -44,9 +45,9 @@ get_supervisor_mode_trap_handler_override(uint64_t mcause) {
       (struct trap_override_attributes *)trap_override_struct_address;
 
   uint64_t exception_code = mcause & MCAUSE_EC_MASK;
-  uint64_t interrupt = mcause >> MCAUSE_INTERRUPT_BIT_LSB;
+  uint64_t interrupt = mcause & MCAUSE_INT_FLAG;
 
-  if (interrupt == 1) {
+  if (interrupt) {
     if (exception_code >= NUM_SUPERVISOR_MODE_INTERRUPT_HANDLER_OVERRIDES) {
       jumpstart_supervisor_fail();
     }
@@ -75,9 +76,9 @@ register_machine_mode_trap_handler_override(uint64_t mcause,
       (struct trap_override_attributes *)trap_override_struct_address;
 
   uint64_t exception_code = mcause & MCAUSE_EC_MASK;
-  uint64_t interrupt = mcause >> MCAUSE_INTERRUPT_BIT_LSB;
+  uint64_t interrupt = mcause & MCAUSE_INT_FLAG;
 
-  if (interrupt == 1) {
+  if (interrupt) {
     if (exception_code >= NUM_MACHINE_MODE_INTERRUPT_HANDLER_OVERRIDES) {
       jumpstart_machine_fail();
     }
@@ -103,9 +104,9 @@ get_machine_mode_trap_handler_override(uint64_t mcause) {
       (struct trap_override_attributes *)trap_override_struct_address;
 
   uint64_t exception_code = mcause & MCAUSE_EC_MASK;
-  uint64_t interrupt = mcause >> MCAUSE_INTERRUPT_BIT_LSB;
+  uint64_t interrupt = mcause & MCAUSE_INT_FLAG;
 
-  if (interrupt == 1) {
+  if (interrupt) {
     if (exception_code >= NUM_MACHINE_MODE_INTERRUPT_HANDLER_OVERRIDES) {
       jumpstart_machine_fail();
     }

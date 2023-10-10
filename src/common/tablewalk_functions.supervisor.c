@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "tablewalk_functions.supervisor.h"
+#include "cpu_bits.h"
 #include "jumpstart_functions.h"
 
 struct bit_range {
@@ -21,14 +22,14 @@ struct mmu_mode_attribute {
 
 // TODO: generate this from the Python.
 const struct mmu_mode_attribute mmu_mode_attributes[] = {
-    {.satp_mode = SATP_MODE_SV39,
+    {.satp_mode = VM_1_10_SV39,
      .pte_size_in_bytes = 8,
      .num_levels = 3,
      .va_vpn_bits = {{38, 30}, {29, 21}, {20, 12}},
      .pa_ppn_bits = {{55, 30}, {29, 21}, {20, 12}},
      .pte_ppn_bits = {{53, 28}, {27, 19}, {18, 10}}},
 
-    {.satp_mode = SATP_MODE_SV48,
+    {.satp_mode = VM_1_10_SV48,
      .pte_size_in_bytes = 8,
      .num_levels = 4,
      .va_vpn_bits = {{47, 39}, {38, 30}, {29, 21}, {20, 12}},
@@ -55,7 +56,7 @@ translate_VA(uint64_t va, struct translation_info *xlate_info) {
   // C reimplementation of the DiagAttributes.translate_VA() from
   // generate_diag_sources.py.
   uint64_t satp_value = read_csr(satp);
-  xlate_info->satp_mode = (uint8_t)(satp_value >> SATP_MODE_LSB);
+  xlate_info->satp_mode = (uint8_t)get_field(satp_value, SATP64_MODE);
 
   xlate_info->va = va;
 
@@ -67,7 +68,7 @@ translate_VA(uint64_t va, struct translation_info *xlate_info) {
     xlate_info->pte_value[i] = 0;
   }
 
-  if (xlate_info->satp_mode == SATP_MODE_BARE) {
+  if (xlate_info->satp_mode == VM_1_10_MBARE) {
     xlate_info->pa = va;
     xlate_info->walk_successful = 1;
     return;
@@ -88,7 +89,7 @@ translate_VA(uint64_t va, struct translation_info *xlate_info) {
   }
 
   // Step 1
-  uint64_t a = (satp_value & SATP_PPN_MASK) << PAGE_OFFSET;
+  uint64_t a = (satp_value & SATP64_PPN) << PAGE_OFFSET;
 
   uint8_t current_level = 0;
 
@@ -103,14 +104,12 @@ translate_VA(uint64_t va, struct translation_info *xlate_info) {
 
     ++(xlate_info->levels_traversed);
 
-    if (extract_bits(pte_value, (struct bit_range){PTE_VALID_BIT_MSB,
-                                                   PTE_VALID_BIT_LSB}) == 0) {
+    if (get_field(pte_value, PTE_V) == 0) {
       // PTE is not valid. stop the walk.
       return;
     }
 
-    uint8_t xwr = (uint8_t)extract_bits(
-        pte_value, (struct bit_range){PTE_XWR_BIT_MSB, PTE_XWR_BIT_LSB});
+    uint8_t xwr = (uint8_t)get_field(pte_value, PTE_R | PTE_W | PTE_X);
 
     if ((xwr & 0x3) == 0x2) {
       // PTE at pte_address has R=0 and W=1.
@@ -129,14 +128,10 @@ translate_VA(uint64_t va, struct translation_info *xlate_info) {
     if ((xwr & 0x6) || (xwr & 0x1)) {
       // This is a Leaf PTE. Done with the walk.
       break;
-    } else if (extract_bits(pte_value,
-                            (struct bit_range){PTE_A_BIT_MSB, PTE_A_BIT_LSB}) !=
-               0) {
+    } else if (get_field(pte_value, PTE_A) != 0) {
       // PTE has A=1 but is not a Leaf PTE.
       jumpstart_supervisor_fail();
-    } else if (extract_bits(pte_value,
-                            (struct bit_range){PTE_D_BIT_MSB, PTE_D_BIT_LSB}) !=
-               0) {
+    } else if (get_field(pte_value, PTE_D) != 0) {
       // PTE has D=1 but is not a Leaf PTE
       jumpstart_supervisor_fail();
     }

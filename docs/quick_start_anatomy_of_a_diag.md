@@ -123,7 +123,7 @@ data_area:
 
 ```c
   if (xlate_info.walk_successful != 0 || xlate_info.levels_traversed != 3 ||
-      (xlate_info.pte_value[2] & PTE_VALID_BIT_MASK) != 0) {
+      (xlate_info.pte_value[2] & PTE_V) != 0) {
     return DIAG_FAILED;
   }
 ```
@@ -190,7 +190,7 @@ The diag syncs up the cores so that they both complete all the above steps befor
 ```c
   if (hart_id == 0) {
     *((uint64_t *)xlate_info.pte_address[2]) =
-        xlate_info.pte_value[2] | PTE_VALID_BIT_MASK;
+        xlate_info.pte_value[2] | PTE_V;
     asm volatile("sfence.vma");
 ```
 

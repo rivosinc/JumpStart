@@ -2,6 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+#include "cpu_bits.h"
 #include "jumpstart_functions.h"
 
 int test_illegal_instruction_in_umode(void);
@@ -28,13 +29,12 @@ int main(void) {
     return DIAG_FAILED;
   }
 
-  if (get_thread_attributes_current_mode_from_supervisor_mode() !=
-      SUPERVISOR_MODE_ENCODING) {
+  if (get_thread_attributes_current_mode_from_supervisor_mode() != PRV_S) {
     return DIAG_FAILED;
   }
 
   register_supervisor_mode_trap_handler_override(
-      SCAUSE_EC_ILLEGAL_INSTRUCTION, (uint64_t)(&test011_exception_handler));
+      RISCV_EXCP_ILLEGAL_INST, (uint64_t)(&test011_exception_handler));
 
   if (run_function_in_user_mode((uint64_t)test_illegal_instruction_in_umode) !=
       0) {

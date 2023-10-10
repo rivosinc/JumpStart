@@ -2,6 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+#include "cpu_bits.h"
 #include "jumpstart_functions.h"
 
 // Supervisor functions
@@ -25,8 +26,7 @@ int main(void) {
     return DIAG_FAILED;
   }
 
-  if (get_thread_attributes_current_mode_from_machine_mode() !=
-      MACHINE_MODE_ENCODING) {
+  if (get_thread_attributes_current_mode_from_machine_mode() != PRV_M) {
     return DIAG_FAILED;
   }
 
@@ -52,8 +52,7 @@ int main(void) {
       return DIAG_FAILED;
     }
 
-    if (get_thread_attributes_current_mode_from_machine_mode() !=
-        MACHINE_MODE_ENCODING) {
+    if (get_thread_attributes_current_mode_from_machine_mode() != PRV_M) {
       return DIAG_FAILED;
     }
 
@@ -61,8 +60,7 @@ int main(void) {
       return DIAG_FAILED;
     }
 
-    if (get_thread_attributes_current_mode_from_machine_mode() !=
-        MACHINE_MODE_ENCODING) {
+    if (get_thread_attributes_current_mode_from_machine_mode() != PRV_M) {
       return DIAG_FAILED;
     }
   }
@@ -71,8 +69,7 @@ int main(void) {
 }
 
 int compare_copied_bytes(void) {
-  if (get_thread_attributes_current_mode_from_supervisor_mode() !=
-      SUPERVISOR_MODE_ENCODING) {
+  if (get_thread_attributes_current_mode_from_supervisor_mode() != PRV_S) {
     return DIAG_FAILED;
   }
 

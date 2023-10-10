@@ -2,11 +2,11 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+#include "cpu_bits.h"
 #include "jumpstart_functions.h"
 
 int main(void) {
-  if (get_thread_attributes_current_mode_from_supervisor_mode() !=
-      SUPERVISOR_MODE_ENCODING) {
+  if (get_thread_attributes_current_mode_from_supervisor_mode() != PRV_S) {
     return DIAG_FAILED;
   }
 
