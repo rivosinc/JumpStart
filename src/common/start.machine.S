@@ -50,6 +50,8 @@ _machine_mode_start:
 
   jal enable_cmo_instructions
 
+  jal enable_float_and_vector_instructions
+
   jal setup_supervisor_mode_trap_related_csrs
 
   jal enable_mmu_from_machine_mode
@@ -157,6 +159,13 @@ enable_cmo_instructions:
   # CBZE: Cache Block Zero instruction Enable
   li t0, (MENVCFG_CBIE | MENVCFG_CBCFE | MENVCFG_CBZE)
   csrrs t1, menvcfg, t0
+
+  ret
+
+.global enable_float_and_vector_instructions
+enable_float_and_vector_instructions:
+  li t0, (MSTATUS_VS | MSTATUS_FS)
+  csrrs t1, mstatus, t0
 
   ret
 
