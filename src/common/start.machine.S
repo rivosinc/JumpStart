@@ -46,7 +46,7 @@ _machine_mode_start:
 
   jal setup_thread_attributes
 
-  jal enable_svpbmt_for_supervisor_mode
+  jal enable_svpbmt
 
   jal setup_supervisor_mode_trap_related_csrs
 
@@ -148,16 +148,14 @@ setup_thread_attributes:
   ret
 
 
-.global enable_svpbmt_for_supervisor_mode
-enable_svpbmt_for_supervisor_mode:
+.global enable_svpbmt
+enable_svpbmt:
   # Enable menvcfg.pbmte
   # The PBMTE bit controls whether the Svpbmt extension is
   # available for use in S-mode and G-stage address translation
   # (i.e., for page tables pointed to by satp or hgatp).
-  csrr  t0, menvcfg
-  li  t1, MENVCFG_PBMTE
-  or  t0, t0, t1
-  csrw  menvcfg, t0
+  li  t0, MENVCFG_PBMTE
+  csrrs t1, menvcfg, t0
 
   ret
 
