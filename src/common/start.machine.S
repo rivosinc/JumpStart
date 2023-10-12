@@ -48,6 +48,8 @@ _machine_mode_start:
 
   jal enable_svpbmt
 
+  jal enable_cmo_instructions
+
   jal setup_supervisor_mode_trap_related_csrs
 
   jal enable_mmu_from_machine_mode
@@ -147,6 +149,16 @@ setup_thread_attributes:
 
   ret
 
+.global enable_cmo_instructions
+enable_cmo_instructions:
+  # Enables the cache maintenence op instructions.
+  # CBIE: Cache Block Invalidate instruction Enable
+  # CBCFE: Cache Block Clean and Flush instruction Enable
+  # CBZE: Cache Block Zero instruction Enable
+  li t0, (MENVCFG_CBIE | MENVCFG_CBCFE | MENVCFG_CBZE)
+  csrrs t1, menvcfg, t0
+
+  ret
 
 .global enable_svpbmt
 enable_svpbmt:
