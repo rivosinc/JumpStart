@@ -3,13 +3,14 @@
 # SPDX-License-Identifier: Apache-2.0
 
 #include "jumpstart_defines.h"
+#include "cpu_bits.h"
 
 .section .jumpstart.text.supervisor, "ax"
 
 # a0 contains the address of the function to jump to.
 .global jump_to_function_in_smode
 jump_to_function_in_smode:
-  li  t0, SUPERVISOR_MODE_ENCODING
+  li  t0, PRV_S
   SET_THREAD_ATTRIBUTES_CURRENT_MODE(t0)
 
   # A0 contains arg value passed by S mode.
@@ -30,13 +31,13 @@ disable_mmu_from_supervisor_mode:
 .align 2
 .global stvec_trap_handler
 stvec_trap_handler:
-  li  gp, SUPERVISOR_MODE_ENCODING
+  li  gp, PRV_S
   SET_THREAD_ATTRIBUTES_CURRENT_MODE(gp)
 
   csrr  gp, sstatus
-  srli  gp, gp, MSTATUS_SPP_SHIFT
-  andi  gp, gp, MSTATUS_SPP_MASK
-  addi  gp, gp, -SUPERVISOR_MODE_ENCODING
+  andi  gp, gp, SSTATUS_SPP
+  srli  gp, gp, SSTATUS_SPP_SHIFT
+  addi  gp, gp, -PRV_S
   beqz  gp, handle_trap_from_supervisor_mode
   j  handle_trap_from_user_mode
 
@@ -70,9 +71,9 @@ save_context:
   jalr  ra, a0
 
   csrr  gp, sstatus
-  srli  gp, gp, MSTATUS_SPP_SHIFT
-  andi  gp, gp, MSTATUS_SPP_MASK
-  addi  gp, gp, -SUPERVISOR_MODE_ENCODING
+  andi  gp, gp, SSTATUS_SPP
+  srli  gp, gp, SSTATUS_SPP_SHIFT
+  addi  gp, gp, -PRV_S
   bnez  gp, restore_user_mode_context
 
 restore_supervisor_mode_context:
@@ -80,7 +81,7 @@ restore_supervisor_mode_context:
   j restore_context
 
 restore_user_mode_context:
-  li  gp, USER_MODE_ENCODING
+  li  gp, PRV_U
   SET_THREAD_ATTRIBUTES_CURRENT_MODE(gp)
   GET_THREAD_ATTRIBUTES_UMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
 
@@ -95,7 +96,7 @@ return_from_stvec_trap_handler:
 
 check_for_env_call_requests:
   csrr t0, scause
-  li t1, SCAUSE_EC_ENV_CALL_FROM_UMODE
+  li t1, RISCV_EXCP_U_ECALL
   beq t0, t1, handle_env_call_from_umode
 
   j jumpstart_supervisor_fail
@@ -112,6 +113,7 @@ handle_env_call_from_umode:
 jumpstart_supervisor_fail:
   # TODO: This is a temporary fail handler. We should exit gracefully instead.
   wfi
+  j jumpstart_supervisor_fail
 
 handle_syscall_run_func_in_user_mode_complete:
   # This is the return to supervisor path for run_function_in_user_mode().
@@ -120,7 +122,7 @@ handle_syscall_run_func_in_user_mode_complete:
   GET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
 
   ld a1, SSTATUS_OFFSET_IN_SAVE_REGION(gp)
-  li a2, (SUPERVISOR_MODE_ENCODING << MSTATUS_SPP_SHIFT)
+  li a2, (PRV_S << SSTATUS_SPP_SHIFT)
   or a1, a1, a2
   csrw sstatus, a1
 
@@ -138,7 +140,7 @@ run_function_in_user_mode:
   addi  fp, sp, 16
 
   GET_THREAD_ATTRIBUTES_CURRENT_MODE(t0)
-  li  t1, SUPERVISOR_MODE_ENCODING
+  li  t1, PRV_S
   bne t0, t1, jumpstart_supervisor_fail
 
   # Pass a0 to usermode as argument.
@@ -156,7 +158,7 @@ run_function_in_user_mode:
   la a1, jump_to_function_in_umode
   csrw sepc, a1
 
-  li t0, (SUPERVISOR_MODE_ENCODING << MSTATUS_SPP_SHIFT)
+  li t0, (PRV_S << SSTATUS_SPP_SHIFT)
   csrc sstatus, t0
 
   # Switch to the U-mode stack.
@@ -167,7 +169,7 @@ run_function_in_user_mode:
   add sp, t2, t0
   add sp, sp, t1 # We want the stack bottom.
 
-  li  t0, USER_MODE_ENCODING
+  li  t0, PRV_U
   SET_THREAD_ATTRIBUTES_CURRENT_MODE(t0)
 
   GET_THREAD_ATTRIBUTES_UMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)

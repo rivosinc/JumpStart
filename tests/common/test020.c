@@ -2,11 +2,12 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+#include "cpu_bits.h"
 #include "jumpstart_functions.h"
 #include "tablewalk_functions.supervisor.h"
 
 int main(void) {
-  if ((read_csr(satp) >> SATP_MODE_LSB) != SATP_MODE_SV39) {
+  if (get_field(read_csr(satp), SATP64_MODE) != VM_1_10_SV39) {
     return DIAG_FAILED;
   }
 
@@ -20,7 +21,7 @@ int main(void) {
     return DIAG_FAILED;
   }
 
-  if (xlate_info.satp_mode != SATP_MODE_SV39) {
+  if (xlate_info.satp_mode != VM_1_10_SV39) {
     return DIAG_FAILED;
   }
 
@@ -34,13 +35,12 @@ int main(void) {
     }
   }
 
-  if (xlate_info.pte_value[2] & PTE_VALID_BIT_MASK) {
+  if (xlate_info.pte_value[2] & PTE_V) {
     return DIAG_FAILED;
   }
 
   // Mark the leaf PTE as valid and retry the translation.
-  *((uint64_t *)xlate_info.pte_address[2]) =
-      xlate_info.pte_value[2] | PTE_VALID_BIT_MASK;
+  *((uint64_t *)xlate_info.pte_address[2]) = xlate_info.pte_value[2] | PTE_V;
   asm volatile("sfence.vma");
 
   translate_VA(0x80021000, &xlate_info);

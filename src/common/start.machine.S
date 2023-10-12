@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 #include "jumpstart_defines.h"
+#include "cpu_bits.h"
 
 # This section should fall into the initial 4K page set up.
 .section .jumpstart.text.machine.init, "ax"
@@ -38,14 +39,18 @@ _machine_mode_start:
   mv  fp, sp
 
   # Enable interrupts in machine mode.
-  li t0, (1 << MSTATUS_MIE_SHIFT)
+  li t0, MSTATUS_MIE
   csrs mstatus, t0
-  li t0, (1 << MIE_EXT_INTERRUPT)
+  li t0, MIP_MEIP
   csrw mie, t0
 
   jal setup_thread_attributes
 
-  jal enable_svpbmt_for_supervisor_mode
+  jal enable_svpbmt
+
+  jal enable_cmo_instructions
+
+  jal enable_float_and_vector_instructions
 
   jal setup_supervisor_mode_trap_related_csrs
 
@@ -61,30 +66,30 @@ setup_supervisor_mode_trap_related_csrs:
   csrw stvec, t0
 
   # Enable trap delegation to supervisor mode.
-  li t0, (1 << SCAUSE_EC_INSTRUCTION_ADDRESS_MISALIGNED) | \
-            (1 << SCAUSE_EC_INSTRUCTION_ACCESS_FAULT) | \
-            (1 << SCAUSE_EC_ILLEGAL_INSTRUCTION) | \
-            (1 << SCAUSE_EC_BREAKPOINT) | \
-            (1 << SCAUSE_EC_LOAD_ADDRESS_MISALIGNED) | \
-            (1 << SCAUSE_EC_LOAD_ACCESS_FAULT) | \
-            (1 << SCAUSE_EC_STORE_ADDRESS_MISALIGNED) | \
-            (1 << SCAUSE_EC_STORE_ACCESS_FAULT) | \
-            (1 << SCAUSE_EC_ENV_CALL_FROM_UMODE) | \
-            (1 << SCAUSE_EC_INSTRUCTION_PAGE_FAULT) | \
-            (1 << SCAUSE_EC_LOAD_PAGE_FAULT) | \
-            (1 << SCAUSE_EC_STORE_PAGE_FAULT)
-
+  li t0, (1 << RISCV_EXCP_INST_ADDR_MIS) | \
+            (1 << RISCV_EXCP_INST_ACCESS_FAULT) | \
+            (1 << RISCV_EXCP_ILLEGAL_INST) | \
+            (1 << RISCV_EXCP_BREAKPOINT) | \
+            (1 << RISCV_EXCP_LOAD_ADDR_MIS) | \
+            (1 << RISCV_EXCP_LOAD_ACCESS_FAULT) | \
+            (1 << RISCV_EXCP_STORE_AMO_ADDR_MIS) | \
+            (1 << RISCV_EXCP_STORE_AMO_ACCESS_FAULT) | \
+            (1 << RISCV_EXCP_U_ECALL) | \
+            (1 << RISCV_EXCP_INST_PAGE_FAULT) | \
+            (1 << RISCV_EXCP_LOAD_PAGE_FAULT) | \
+            (1 << RISCV_EXCP_STORE_PAGE_FAULT)
   csrw medeleg, t0
-  li t0, (1 << MIDELEG_S_SOFT_INTERRUPT) | (1 << MIDELEG_S_TIMER_INTERRUPT) | (1 << MIDELEG_S_EXT_INTERRUPT)
+
+  li t0, SIP_SEIP | SIP_STIP | SIP_SSIP
   csrw mideleg, t0
 
   # Enable interrupts in supervisor mode. Indicate that we're executing
   # in a privileged mode before entering Supervisor mode.
-  li t0, (1 << SSTATUS_SIE_SHIFT) | (SUPERVISOR_MODE_ENCODING << MSTATUS_SPP_SHIFT)
+  li t0, SSTATUS_SIE | SSTATUS_SPP
   csrs sstatus, t0
 
   # Enable external interrupts in supervisor mode.
-  li t0, (1 << SIE_EXT_INTERRUPT)
+  li t0, SIP_SEIP
   csrw sie, t0
 
   ret
@@ -137,7 +142,7 @@ setup_thread_attributes:
   li  t0, THREAD_ATTRIBUTES_BOOKEND_MAGIC_NUMBER_VALUE
   SET_THREAD_ATTRIBUTES_BOOKEND_MAGIC_NUMBER(t0)
 
-  li  t0, MACHINE_MODE_ENCODING
+  li  t0, PRV_M
   SET_THREAD_ATTRIBUTES_CURRENT_MODE(t0)
 
   ld  ra, 8(sp)
@@ -146,17 +151,32 @@ setup_thread_attributes:
 
   ret
 
+.global enable_cmo_instructions
+enable_cmo_instructions:
+  # Enables the cache maintenence op instructions.
+  # CBIE: Cache Block Invalidate instruction Enable
+  # CBCFE: Cache Block Clean and Flush instruction Enable
+  # CBZE: Cache Block Zero instruction Enable
+  li t0, (MENVCFG_CBIE | MENVCFG_CBCFE | MENVCFG_CBZE)
+  csrrs t1, menvcfg, t0
 
-.global enable_svpbmt_for_supervisor_mode
-enable_svpbmt_for_supervisor_mode:
+  ret
+
+.global enable_float_and_vector_instructions
+enable_float_and_vector_instructions:
+  li t0, (MSTATUS_VS | MSTATUS_FS)
+  csrrs t1, mstatus, t0
+
+  ret
+
+.global enable_svpbmt
+enable_svpbmt:
   # Enable menvcfg.pbmte
   # The PBMTE bit controls whether the Svpbmt extension is
   # available for use in S-mode and G-stage address translation
   # (i.e., for page tables pointed to by satp or hgatp).
-  csrr  t0, menvcfg
-  li  t1, (1 << MENVCFG_PBMTE_BIT_LSB)
-  or  t0, t0, t1
-  csrw  menvcfg, t0
+  li  t0, MENVCFG_PBMTE
+  csrrs t1, menvcfg, t0
 
   ret
 
@@ -191,7 +211,7 @@ handle_syscall_run_func_in_supervisor_mode_complete:
   GET_THREAD_ATTRIBUTES_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
 
   ld  t0, MSTATUS_OFFSET_IN_SAVE_REGION(gp)
-  li  t1, (SUPERVISOR_MODE_ENCODING << MSTATUS_MPP_SHIFT)
+  li  t1, (PRV_S << MSTATUS_MPP_SHIFT)
   or  t0, t0, t1
   csrw  mstatus, t0
 
@@ -213,7 +233,7 @@ run_function_in_supervisor_mode:
   addi  fp, sp, 16
 
   GET_THREAD_ATTRIBUTES_CURRENT_MODE(t0)
-  li  t1, MACHINE_MODE_ENCODING
+  li  t1, PRV_M
   bne t0, t1, jumpstart_machine_fail
 
   # Save machine mode context
@@ -226,9 +246,9 @@ run_function_in_supervisor_mode:
   la t0, jump_to_function_in_smode
   csrw mepc, t0
 
-  li  t0, (MSTATUS_MPP_MASK << MSTATUS_MPP_SHIFT)
+  li  t0, MSTATUS_MPP
   csrc mstatus, t0
-  li  t0, (SUPERVISOR_MODE_ENCODING << MSTATUS_MPP_SHIFT)
+  li  t0, PRV_S << MSTATUS_MPP_SHIFT
   csrs  mstatus, t0
 
   mret
@@ -245,7 +265,7 @@ run_function_in_supervisor_mode_return_point:
 .align 2
 .global mtvec_trap_handler
 mtvec_trap_handler:
-  li  gp, MACHINE_MODE_ENCODING
+  li  gp, PRV_M
   SET_THREAD_ATTRIBUTES_CURRENT_MODE(gp)
 
   # Save away t0 which we're going to use as a temporary register.
@@ -253,11 +273,11 @@ mtvec_trap_handler:
 
   csrr  gp, mstatus
   srli  gp, gp, MSTATUS_MPP_SHIFT
-  andi  gp, gp, MSTATUS_MPP_MASK
-  addi  t0, gp, -SUPERVISOR_MODE_ENCODING
+  andi  gp, gp, PRV_M
+  addi  t0, gp, -PRV_S
   beqz  t0, handle_trap_from_supervisor_mode
 
-  addi  t0, gp, -MACHINE_MODE_ENCODING
+  addi  t0, gp, -PRV_M
   beqz  t0, handle_trap_from_machine_mode
 
   # We don't expect to get an exception from any other modes.
@@ -293,7 +313,7 @@ handle_trap_from_supervisor_mode:
 
 check_for_env_call_requests:
   csrr  t0, mcause
-  li  t1, MCAUSE_EC_ENV_CALL_FROM_SMODE
+  li  t1, RISCV_EXCP_S_ECALL
   beq t0, t1, handle_env_call_from_smode
 
   j jumpstart_machine_fail

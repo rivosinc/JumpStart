@@ -2,6 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+#include "cpu_bits.h"
 #include "jumpstart_functions.h"
 
 void just_nops(void);
@@ -16,8 +17,7 @@ int main(void) {
     return DIAG_FAILED;
   }
 
-  if (get_thread_attributes_current_mode_from_machine_mode() !=
-      MACHINE_MODE_ENCODING) {
+  if (get_thread_attributes_current_mode_from_machine_mode() != PRV_M) {
     return DIAG_FAILED;
   }
 

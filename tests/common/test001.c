@@ -2,6 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+#include "cpu_bits.h"
 #include "jumpstart_functions.h"
 
 int main(void) {
@@ -19,16 +20,15 @@ int main(void) {
     return DIAG_FAILED;
   }
 
-  if (get_diag_satp_mode_from_supervisor_mode() != SATP_MODE_SV48) {
+  if (get_diag_satp_mode_from_supervisor_mode() != VM_1_10_SV48) {
     return DIAG_FAILED;
   }
 
-  if (get_thread_attributes_current_mode_from_supervisor_mode() !=
-      SUPERVISOR_MODE_ENCODING) {
+  if (get_thread_attributes_current_mode_from_supervisor_mode() != PRV_S) {
     return DIAG_FAILED;
   }
 
-  if ((read_csr(satp) >> SATP_MODE_LSB) != SATP_MODE_SV48) {
+  if (get_field(read_csr(satp), SATP64_MODE) != VM_1_10_SV48) {
     return DIAG_FAILED;
   }
 
