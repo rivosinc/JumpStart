@@ -111,9 +111,9 @@ handle_env_call_from_umode:
 
 .global jumpstart_supervisor_fail
 jumpstart_supervisor_fail:
-  # TODO: This is a temporary fail handler. We should exit gracefully instead.
-  wfi
-  j jumpstart_supervisor_fail
+  li a0, DIAG_FAILED
+  li  a7, SYSCALL_RUN_FUNC_IN_SUPERVISOR_MODE_COMPLETE
+  ecall
 
 handle_syscall_run_func_in_user_mode_complete:
   # This is the return to supervisor path for run_function_in_user_mode().
