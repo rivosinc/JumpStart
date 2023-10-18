@@ -31,13 +31,15 @@
     __v;                                                                       \
   })
 
-#define set_csr(reg, val)   ({ asm volatile("csrs " #reg ", %0" ::"rK"(val)); })
-#define clear_csr(reg, val) ({ asm volatile("csrc " #reg ", %0" ::"rK"(val)); })
+#define set_csr(reg, val)                                                      \
+  ({ asm volatile("csrs " __ASM_STR(reg) ", %0" ::"rK"(val)); })
+#define clear_csr(reg, val)                                                    \
+  ({ asm volatile("csrc " __ASM_STR(reg) ", %0" ::"rK"(val)); })
 
 #define read_set_csr(reg, val)                                                 \
   ({                                                                           \
     unsigned long __v = (unsigned long)(val);                                  \
-    __asm__ __volatile__("csrrs %0, " #reg ", %1"                              \
+    __asm__ __volatile__("csrrs %0, " __ASM_STR(reg) ", %1"                    \
                          : "=r"(__v)                                           \
                          : "rK"(__v)                                           \
                          : "memory");                                          \
@@ -47,7 +49,7 @@
 #define read_clear_csr(reg, val)                                               \
   ({                                                                           \
     unsigned long __v = (unsigned long)(val);                                  \
-    __asm__ __volatile__("csrrc %0, " #reg ", %1"                              \
+    __asm__ __volatile__("csrrc %0, " __ASM_STR(reg) ", %1"                    \
                          : "=r"(__v)                                           \
                          : "rK"(__v)                                           \
                          : "memory");                                          \
