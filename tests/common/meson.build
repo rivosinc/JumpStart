@@ -22,4 +22,5 @@ common_jumpstart_tests = [
   ['test019', 'Sync 4P CPUs.', '-p4'],
   ['test020', 'translate_VA() and page table modification test.'],
   ['test021', '2P translate_VA() and page table modification test.', '-p2'],
+  ['test022', 'Exit with jumpstart_supervisor_fail() to test fail path.', '', true],
 ]
