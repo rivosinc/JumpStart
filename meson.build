@@ -70,7 +70,7 @@ else
   endif
 
   if spike_isa_string == ''
-    spike_isa_string = 'rv64gc'
+    spike_isa_string = 'rv64gch'
   endif
 endif
 

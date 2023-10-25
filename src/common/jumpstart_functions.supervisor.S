@@ -43,7 +43,12 @@ stvec_trap_handler:
 
 handle_trap_from_supervisor_mode:
   GET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
-  j save_context
+  SAVE_ALL_GPRS
+
+  csrr t0, hstatus
+  sd t0, HSTATUS_OFFSET_IN_SAVE_REGION(gp)
+
+  j check_for_trap_handler_overrides
 
 handle_trap_from_user_mode:
   # Save away the U-mode stack.
@@ -55,10 +60,9 @@ handle_trap_from_user_mode:
 
   # We will save away the user mode context to the user mode region
   # which GP currently points to.
-
-save_context:
   SAVE_ALL_GPRS
 
+check_for_trap_handler_overrides:
   # Check if the test has registered a trap handler for this trap.
   csrr a0, scause
   call get_supervisor_mode_trap_handler_override
@@ -78,6 +82,10 @@ save_context:
 
 restore_supervisor_mode_context:
   GET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
+
+  ld t0, HSTATUS_OFFSET_IN_SAVE_REGION(gp)
+  csrw hstatus, t0
+
   j restore_context
 
 restore_user_mode_context:
