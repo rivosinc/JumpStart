@@ -47,6 +47,7 @@ c_structs:
       current_mode: uint8_t
       trap_override_struct_address: uint64_t
       mmode_reg_context_save_region_address: uint64_t
+      lower_mode_in_mmode_reg_context_save_region_address: uint64_t
       smode_reg_context_save_region_address: uint64_t
       umode_reg_context_save_region_address: uint64_t
       bookend_magic_number: uint64_t

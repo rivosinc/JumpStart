@@ -66,11 +66,11 @@ if get_option('rivos_internal_build') == true
   endif
 else
   if gcc_march_string == ''
-    gcc_march_string = 'rv64gc'
+    gcc_march_string = 'rv64gc_zbs'
   endif
 
   if spike_isa_string == ''
-    spike_isa_string = 'rv64gch'
+    spike_isa_string = 'rv64gch_zbs'
   endif
 endif
 

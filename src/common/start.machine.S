@@ -127,6 +127,12 @@ setup_thread_attributes:
   bgeu t1, t2, jumpstart_machine_fail
   SET_THREAD_ATTRIBUTES_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(t1)
 
+  la t1, lower_mode_in_mmode_reg_context_save_region
+  add t1, t1, t0
+  la t2, lower_mode_in_mmode_reg_context_save_region_end
+  bgeu t1, t2, jumpstart_machine_fail
+  SET_THREAD_ATTRIBUTES_LOWER_MODE_IN_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(t1)
+
   la t1, smode_reg_context_save_region
   add t1, t1, t0
   la t2, smode_reg_context_save_region_end
@@ -203,21 +209,16 @@ handle_env_call_from_smode:
 
 handle_syscall_run_func_in_supervisor_mode_complete:
   # This is the return to machine path for run_function_in_supervisor_mode().
-  # a0 will contain the return status. save it away till we've restored
-  # all the mmode registers.
-  csrw  mscratch, a0
 
   # Restore M mode context and return status in a0
   GET_THREAD_ATTRIBUTES_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
 
   ld  t0, MSTATUS_OFFSET_IN_SAVE_REGION(gp)
-  li  t1, (PRV_S << MSTATUS_MPP_SHIFT)
+  li  t1, (PRV_M << MSTATUS_MPP_SHIFT)
   or  t0, t0, t1
   csrw  mstatus, t0
 
   RESTORE_ALL_GPRS
-
-  csrr a0, mscratch
 
   la  ra, run_function_in_supervisor_mode_return_point
   ret
@@ -255,6 +256,8 @@ run_function_in_supervisor_mode:
 
 run_function_in_supervisor_mode_return_point:
   # return status is in a0.
+  GET_THREAD_ATTRIBUTES_LOWER_MODE_IN_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
+  ld a0, A0_OFFSET_IN_SAVE_REGION(gp)
 
   ld  ra, 8(sp)
   ld  fp, 0(sp)
@@ -265,53 +268,77 @@ run_function_in_supervisor_mode_return_point:
 .align 2
 .global mtvec_trap_handler
 mtvec_trap_handler:
+  # Save away gp as we may be entering the mmode trap handler when running
+  # the smode trap handler.
+  csrw mscratch, gp
+
   li  gp, PRV_M
   SET_THREAD_ATTRIBUTES_CURRENT_MODE(gp)
 
-  # Save away t0 which we're going to use as a temporary register.
-  csrw  mscratch, t0
-
+  # We just need to check MSB of MPP field here to determine if we came from
+  # M or S mode. U mode is also handled in S mode path.
   csrr  gp, mstatus
-  srli  gp, gp, MSTATUS_MPP_SHIFT
-  andi  gp, gp, PRV_M
-  addi  t0, gp, -PRV_S
-  beqz  t0, handle_trap_from_supervisor_mode
+  bexti gp, gp, MSTATUS_MPP_MSB
+  bnez  gp, handle_trap_from_machine_mode
 
-  addi  t0, gp, -PRV_M
-  beqz  t0, handle_trap_from_machine_mode
-
-  # We don't expect to get an exception from any other modes.
-  j jumpstart_machine_fail
+handle_trap_from_supervisor_mode:
+  # Save away the S/U-mode reg context.
+  GET_THREAD_ATTRIBUTES_LOWER_MODE_IN_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
+  j save_context
 
 handle_trap_from_machine_mode:
-  csrr  t0, mscratch
-
   # Save away the M-mode reg context.
   GET_THREAD_ATTRIBUTES_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
+
+save_context:
   SAVE_ALL_GPRS
+
+  csrr t0, hstatus
+  sd t0, HSTATUS_OFFSET_IN_SAVE_REGION(gp)
 
   # Check if the test has registered a trap handler for this trap.
   csrr  a0, mcause
   call  get_machine_mode_trap_handler_override
 
-  # We don't handle any other traps from M-mode at this point.
-  beqz  a0, jumpstart_machine_fail
+  beqz  a0, check_for_env_call_requests
 
   # Jump to the registered trap handler.
   # TODO: Do we need to pass any arguments to the trap handler?
   #       If so, we need to restore them from the context save region.
   jalr  ra, a0
 
-  # Restore the context from before the trap.
+  csrr  gp, mstatus
+  bexti gp, gp, MSTATUS_MPP_MSB
+  bnez  gp, restore_machine_mode_context
+
+restore_supervisor_mode_context:
+  # Set thread attribute from mstatus.
+  csrr  gp, mstatus
+  bexti gp, gp, MSTATUS_MPP_SHIFT
+  SET_THREAD_ATTRIBUTES_CURRENT_MODE(gp)
+
+  GET_THREAD_ATTRIBUTES_LOWER_MODE_IN_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
+
+  j restore_context
+
+restore_machine_mode_context:
   GET_THREAD_ATTRIBUTES_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
+
+restore_context:
+  ld t0, HSTATUS_OFFSET_IN_SAVE_REGION(gp)
+  csrw hstatus, t0
+
   RESTORE_ALL_GPRS
+  csrr  gp, mscratch
 
   mret
 
-handle_trap_from_supervisor_mode:
-  csrr  t0, mscratch
-
 check_for_env_call_requests:
+  # We don't expect to get any env calls from M-mode at this time.
+  csrr  t0, mstatus
+  bexti t0, t0, MSTATUS_MPP_MSB
+  bnez  t0, jumpstart_machine_fail
+
   csrr  t0, mcause
   li  t1, RISCV_EXCP_S_ECALL
   beq t0, t1, handle_env_call_from_smode
