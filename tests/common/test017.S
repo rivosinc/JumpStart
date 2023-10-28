@@ -2,6 +2,8 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+#include "jumpstart_defines.h"
+
 .global main
 main:
   addi  sp, sp, -16
@@ -40,6 +42,8 @@ test017_illegal_instruction_function:
   li a5, 0xf5
   li a6, 0xf6
   li a7, 0xf7
+
+  addi sp, sp, -8
 
   sd s1, 0(sp)
   sd s2, -8(sp)
@@ -103,6 +107,8 @@ test017_illegal_instruction_function:
   ld s10, -72(sp)
   ld s11, -80(sp)
 
+  addi sp, sp, 8
+
   addi t0, t0, -0xf0
   bnez  t0, test017_illegal_instruction_function_fail
   addi t1, t1, -0xf1
@@ -142,11 +148,11 @@ test017_illegal_instruction_function:
   nop
 
 test017_illegal_instruction_function_pass:
-  li a0, 0
+  li a0, DIAG_PASSED
   j 1f
 
 test017_illegal_instruction_function_fail:
-  li a0, 1
+  li a0, DIAG_FAILED
 
 1:
   ld  ra, 8(sp)

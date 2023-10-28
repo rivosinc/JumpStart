@@ -6,7 +6,7 @@
 #include "jumpstart_functions.h"
 
 void test003_illegal_instruction_handler(void);
-void test003_illegal_instruction_function(void);
+int test003_illegal_instruction_function(void);
 
 int main(void) {
 
@@ -14,7 +14,9 @@ int main(void) {
       RISCV_EXCP_ILLEGAL_INST,
       (uint64_t)(&test003_illegal_instruction_handler));
 
-  test003_illegal_instruction_function();
+  if (test003_illegal_instruction_function() != DIAG_PASSED) {
+    return DIAG_FAILED;
+  }
 
   return DIAG_PASSED;
 }

@@ -34,7 +34,7 @@ int test016_main(void) {
       RISCV_EXCP_ILLEGAL_INST,
       (uint64_t)(&test017_illegal_instruction_handler));
 
-  if (test017_illegal_instruction_function() != 0) {
+  if (test017_illegal_instruction_function() != DIAG_PASSED) {
     return DIAG_FAILED;
   }
 
