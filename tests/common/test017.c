@@ -38,5 +38,11 @@ int test016_main(void) {
     return DIAG_FAILED;
   }
 
+  deregister_machine_mode_trap_handler_override(RISCV_EXCP_ILLEGAL_INST);
+
+  if (get_machine_mode_trap_handler_override(RISCV_EXCP_ILLEGAL_INST) != 0x0) {
+    return DIAG_FAILED;
+  }
+
   return DIAG_PASSED;
 }

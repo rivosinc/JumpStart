@@ -71,10 +71,12 @@ void disable_mmu_from_supervisor_mode(void);
 uint64_t get_machine_mode_trap_handler_override(uint64_t mcause);
 void register_machine_mode_trap_handler_override(uint64_t mcause,
                                                  uint64_t handler_address);
+void deregister_machine_mode_trap_handler_override(uint64_t mcause);
 
 uint64_t get_supervisor_mode_trap_handler_override(uint64_t mcause);
 void register_supervisor_mode_trap_handler_override(uint64_t mcause,
                                                     uint64_t handler_address);
+void deregister_supervisor_mode_trap_handler_override(uint64_t mcause);
 
 uint64_t get_thread_attributes_bookend_magic_number_from_supervisor_mode(void);
 uint64_t
