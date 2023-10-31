@@ -4,8 +4,10 @@
 
 #include "jumpstart_defines.h"
 
-.global test003_illegal_instruction_function
-test003_illegal_instruction_function:
+.section .text.supervisor, "ax"
+
+.global smode_illegal_instruction_function
+smode_illegal_instruction_function:
   addi  sp, sp, -16
   sd  ra, 8(sp)
   sd  fp, 0(sp)
@@ -28,8 +30,9 @@ test003_illegal_instruction_function:
   li a5, 0xf5
   li a6, 0xf6
   li a7, 0xf7
+  li gp, 0xf8
 
-  addi sp, sp, -8
+  addi  sp, sp, -8
 
   sd s1, 0(sp)
   sd s2, -8(sp)
@@ -59,27 +62,27 @@ test003_illegal_instruction_function:
   .4byte 0xffffffff
 
   addi s1, s1, -0xf1
-  bnez  s1, test003_illegal_instruction_function_fail
+  bnez  s1, smode_illegal_instruction_function_fail
   addi s2, s2, -0xf2
-  bnez  s2, test003_illegal_instruction_function_fail
+  bnez  s2, smode_illegal_instruction_function_fail
   addi s3, s3, -0xf3
-  bnez  s3, test003_illegal_instruction_function_fail
+  bnez  s3, smode_illegal_instruction_function_fail
   addi s4, s4, -0xf4
-  bnez  s4, test003_illegal_instruction_function_fail
+  bnez  s4, smode_illegal_instruction_function_fail
   addi s5, s5, -0xf5
-  bnez  s5, test003_illegal_instruction_function_fail
+  bnez  s5, smode_illegal_instruction_function_fail
   addi s6, s6, -0xf6
-  bnez  s6, test003_illegal_instruction_function_fail
+  bnez  s6, smode_illegal_instruction_function_fail
   addi s7, s7, -0xf7
-  bnez  s7, test003_illegal_instruction_function_fail
+  bnez  s7, smode_illegal_instruction_function_fail
   addi s8, s8, -0xf8
-  bnez  s8, test003_illegal_instruction_function_fail
+  bnez  s8, smode_illegal_instruction_function_fail
   addi s9, s9, -0xf9
-  bnez  s9, test003_illegal_instruction_function_fail
+  bnez  s9, smode_illegal_instruction_function_fail
   addi s10, s10, -0xfa
-  bnez  s10, test003_illegal_instruction_function_fail
+  bnez  s10, smode_illegal_instruction_function_fail
   addi s11, s11, -0xfb
-  bnez  s11, test003_illegal_instruction_function_fail
+  bnez  s11, smode_illegal_instruction_function_fail
 
   ld s1, 0(sp)
   ld s2, -8(sp)
@@ -93,64 +96,56 @@ test003_illegal_instruction_function:
   ld s10, -72(sp)
   ld s11, -80(sp)
 
-  addi sp, sp, 8
+  addi  sp, sp, 8
 
   addi t0, t0, -0xf0
-  bnez  t0, test003_illegal_instruction_function_fail
+  bnez  t0, smode_illegal_instruction_function_fail
   addi t1, t1, -0xf1
-  bnez  t1, test003_illegal_instruction_function_fail
+  bnez  t1, smode_illegal_instruction_function_fail
   addi t2, t2, -0xf2
-  bnez  t2, test003_illegal_instruction_function_fail
+  bnez  t2, smode_illegal_instruction_function_fail
   addi t3, t3, -0xf3
-  bnez  t3, test003_illegal_instruction_function_fail
+  bnez  t3, smode_illegal_instruction_function_fail
   addi t4, t4, -0xf4
-  bnez  t4, test003_illegal_instruction_function_fail
+  bnez  t4, smode_illegal_instruction_function_fail
   addi t5, t5, -0xf5
-  bnez  t5, test003_illegal_instruction_function_fail
+  bnez  t5, smode_illegal_instruction_function_fail
   addi t6, t6, -0xf6
-  bnez  t6, test003_illegal_instruction_function_fail
+  bnez  t6, smode_illegal_instruction_function_fail
 
   addi a0, a0, -0xf0
-  bnez  a0, test003_illegal_instruction_function_fail
+  bnez  a0, smode_illegal_instruction_function_fail
   addi a1, a1, -0xf1
-  bnez  a1, test003_illegal_instruction_function_fail
+  bnez  a1, smode_illegal_instruction_function_fail
   addi a2, a2, -0xf2
-  bnez  a2, test003_illegal_instruction_function_fail
+  bnez  a2, smode_illegal_instruction_function_fail
   addi a3, a3, -0xf3
-  bnez  a3, test003_illegal_instruction_function_fail
+  bnez  a3, smode_illegal_instruction_function_fail
   addi a4, a4, -0xf4
-  bnez  a4, test003_illegal_instruction_function_fail
+  bnez  a4, smode_illegal_instruction_function_fail
   addi a5, a5, -0xf5
-  bnez  a5, test003_illegal_instruction_function_fail
+  bnez  a5, smode_illegal_instruction_function_fail
   addi a6, a6, -0xf6
-  bnez  a6, test003_illegal_instruction_function_fail
+  bnez  a6, smode_illegal_instruction_function_fail
   addi a7, a7, -0xf7
-  bnez  a7, test003_illegal_instruction_function_fail
+  bnez  a7, smode_illegal_instruction_function_fail
+  addi gp, gp, -0xf8
+  bnez  gp, smode_illegal_instruction_function_fail
 
   nop
   nop
   nop
   nop
 
-test003_illegal_instruction_function_pass:
+smode_illegal_instruction_function_pass:
   li a0, DIAG_PASSED
   j 1f
 
-test003_illegal_instruction_function_fail:
+smode_illegal_instruction_function_fail:
   li a0, DIAG_FAILED
 
 1:
   ld  ra, 8(sp)
   ld  fp, 0(sp)
   addi  sp, sp, 16
-  ret
-
-.align 2
-.global test003_illegal_instruction_handler
-test003_illegal_instruction_handler:
-  # skip over the illegal instruction
-  csrr a0, sepc
-  addi a0, a0, 4
-  csrw sepc, a0
-
   ret

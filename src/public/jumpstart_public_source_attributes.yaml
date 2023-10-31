@@ -18,8 +18,8 @@ jumpstart_supervisor_text_page_counts:
   num_pages_for_all_text: 2
 jumpstart_privileged_data_page_counts:
   num_pages_for_stack: 4
-  num_pages_for_c_structs: 1
-  num_pages_for_data_section: 1
+  num_pages_for_c_structs: 2
+  num_pages_for_data_section: 2
 jumpstart_umode_text_page_counts:
   num_pages_for_all_text: 1
 jumpstart_umode_data_page_counts:
@@ -47,14 +47,15 @@ c_structs:
       current_mode: uint8_t
       trap_override_struct_address: uint64_t
       mmode_reg_context_save_region_address: uint64_t
+      lower_mode_in_mmode_reg_context_save_region_address: uint64_t
       smode_reg_context_save_region_address: uint64_t
       umode_reg_context_save_region_address: uint64_t
       bookend_magic_number: uint64_t
   trap_override_attributes:
     fields:
-      supervisor_mode_interrupt_handler_overrides: uint64_t,16
+      supervisor_mode_interrupt_handler_overrides: uint64_t,46
       supervisor_mode_exception_handler_overrides: uint64_t,16
-      machine_mode_interrupt_handler_overrides: uint64_t,16
+      machine_mode_interrupt_handler_overrides: uint64_t,46
       machine_mode_exception_handler_overrides: uint64_t,16
 
 defines:

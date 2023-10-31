@@ -23,4 +23,5 @@ common_jumpstart_tests = [
   ['test020', 'translate_VA() and page table modification test.'],
   ['test021', '2P translate_VA() and page table modification test.', '-p2'],
   ['test022', 'Exit with jumpstart_supervisor_fail() to test fail path.', '', true],
+  ['test023', 'Handle S mode exceptions in M mode handlers.'],
 ]

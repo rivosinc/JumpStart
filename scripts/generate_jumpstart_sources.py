@@ -119,7 +119,7 @@ def generate_reg_context_save_restore_code(attributes_data, defines_file_fd, ass
     defines_file_fd.write("\n\n")
 
     assembly_file_fd.write('\n\n.section .jumpstart.data.privileged, "aw"\n')
-    modes = ["mmode", "smode", "umode"]
+    modes = ["mmode", "lower_mode_in_mmode", "smode", "umode"]
     assembly_file_fd.write(
         f"\n# {modes} context saved registers: \n# {attributes_data['reg_context_to_save_across_modes']['registers']}\n"
     )
