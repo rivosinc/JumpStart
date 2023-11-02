@@ -149,6 +149,7 @@
 #define CSR_HPMCOUNTER29H   0xc9d
 #define CSR_HPMCOUNTER30H   0xc9e
 #define CSR_HPMCOUNTER31H   0xc9f
+#define CSR_SCOUNTINHIBIT   0x120
 
 /* Machine Timers and Counters */
 #define CSR_MCYCLE          0xb00
@@ -240,6 +241,7 @@
 /* Supervisor-Level Window to Indirectly Accessed Registers (AIA) */
 #define CSR_SISELECT        0x150
 #define CSR_SIREG           0x151
+#define CSR_SIREG2          0x152
 
 /* Supervisor-Level Interrupts (AIA) */
 #define CSR_STOPEI          0x15c
@@ -764,11 +766,13 @@
 #define MENVCFG_CBIE                       (3UL << 4)
 #define MENVCFG_CBCFE                      BIT(6)
 #define MENVCFG_CBZE                       BIT(7)
+#define MENVCFG_CDE                        (1ULL << 60)
 #define MENVCFG_ADUE                       (1ULL << 61)
 #define MENVCFG_PBMTE                      (1ULL << 62)
 #define MENVCFG_STCE                       (1ULL << 63)
 
 /* For RV32 */
+#define MENVCFGH_CDE                       BIT(28)
 #define MENVCFGH_ADUE                      BIT(29)
 #define MENVCFGH_PBMTE                     BIT(30)
 #define MENVCFGH_STCE                      BIT(31)
@@ -888,6 +892,11 @@
 #define HVICTL_IPRIO                       0x000000ff
 #define HVICTL_VALID_MASK                  \
     (HVICTL_VTI | HVICTL_IID | HVICTL_IPRIOM | HVICTL_IPRIO)
+
+/* SISELECT bits for smcdeleg */
+#define SISELECT_SMCDELEG_CYCLE           0x40
+#define SISELECT_SMCDELEG_RESV            0x41
+#define SISELECT_SMCDELEG_LAST            0x5F
 
 /* seed CSR bits */
 #define SEED_OPST                        (0b11 << 30)

@@ -163,7 +163,7 @@ enable_cmo_instructions:
   # CBIE: Cache Block Invalidate instruction Enable
   # CBCFE: Cache Block Clean and Flush instruction Enable
   # CBZE: Cache Block Zero instruction Enable
-  li t0, (MENVCFG_CBIE | MENVCFG_CBCFE | MENVCFG_CBZE)
+  li t0, (MENVCFG_CBIE | MENVCFG_CBCFE | MENVCFG_CBZE | MENVCFG_CDE)
   csrrs t1, menvcfg, t0
 
   ret
