@@ -46,9 +46,7 @@ _machine_mode_start:
 
   jal setup_thread_attributes
 
-  jal enable_svpbmt
-
-  jal enable_cmo_instructions
+  jal program_menvcfg
 
   jal enable_float_and_vector_instructions
 
@@ -157,13 +155,15 @@ setup_thread_attributes:
 
   ret
 
-.global enable_cmo_instructions
-enable_cmo_instructions:
-  # Enables the cache maintenence op instructions.
+.global program_menvcfg
+program_menvcfg:
   # CBIE: Cache Block Invalidate instruction Enable
   # CBCFE: Cache Block Clean and Flush instruction Enable
   # CBZE: Cache Block Zero instruction Enable
-  li t0, (MENVCFG_CBIE | MENVCFG_CBCFE | MENVCFG_CBZE | MENVCFG_CDE)
+  # PMBTE: Enables Svpbmt extension for S-mode and G-stage address translation.
+  #        i.e., for page tables pointed to by satp or hgatp.
+  # CDE: Counter Delegation Enable
+  li t0, (MENVCFG_CBIE | MENVCFG_CBCFE | MENVCFG_CBZE | MENVCFG_PBMTE | MENVCFG_CDE)
   csrrs t1, menvcfg, t0
 
   ret
@@ -172,17 +172,6 @@ enable_cmo_instructions:
 enable_float_and_vector_instructions:
   li t0, (MSTATUS_VS | MSTATUS_FS)
   csrrs t1, mstatus, t0
-
-  ret
-
-.global enable_svpbmt
-enable_svpbmt:
-  # Enable menvcfg.pbmte
-  # The PBMTE bit controls whether the Svpbmt extension is
-  # available for use in S-mode and G-stage address translation
-  # (i.e., for page tables pointed to by satp or hgatp).
-  li  t0, MENVCFG_PBMTE
-  csrrs t1, menvcfg, t0
 
   ret
 
