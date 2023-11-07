@@ -36,6 +36,46 @@ register_supervisor_mode_trap_handler_override(uint64_t mcause,
   }
 }
 
+__attribute__((section(".jumpstart.text.supervisor"))) void
+deregister_supervisor_mode_trap_handler_override(uint64_t mcause) {
+  uint64_t trap_override_struct_address =
+      get_thread_attributes_trap_override_struct_address_from_supervisor_mode();
+
+  struct trap_override_attributes *trap_overrides =
+      (struct trap_override_attributes *)trap_override_struct_address;
+
+  uint64_t exception_code = mcause & MCAUSE_EC_MASK;
+  uint64_t interrupt = mcause & MCAUSE_INT_FLAG;
+
+  if (interrupt) {
+    if (exception_code >= NUM_SUPERVISOR_MODE_INTERRUPT_HANDLER_OVERRIDES) {
+      jumpstart_supervisor_fail();
+    }
+
+    if (trap_overrides
+            ->supervisor_mode_interrupt_handler_overrides[exception_code] ==
+        0x0) {
+      jumpstart_supervisor_fail();
+    }
+
+    trap_overrides
+        ->supervisor_mode_interrupt_handler_overrides[exception_code] = 0x0;
+  } else {
+    if (exception_code >= NUM_SUPERVISOR_MODE_EXCEPTION_HANDLER_OVERRIDES) {
+      jumpstart_supervisor_fail();
+    }
+
+    if (trap_overrides
+            ->supervisor_mode_exception_handler_overrides[exception_code] ==
+        0x0) {
+      jumpstart_supervisor_fail();
+    }
+
+    trap_overrides
+        ->supervisor_mode_exception_handler_overrides[exception_code] = 0x0;
+  }
+}
+
 __attribute__((section(".jumpstart.text.supervisor"))) uint64_t
 get_supervisor_mode_trap_handler_override(uint64_t mcause) {
   uint64_t trap_override_struct_address =
@@ -92,6 +132,44 @@ register_machine_mode_trap_handler_override(uint64_t mcause,
 
     trap_overrides->machine_mode_exception_handler_overrides[exception_code] =
         handler_address;
+  }
+}
+
+__attribute__((section(".jumpstart.text.machine"))) void
+deregister_machine_mode_trap_handler_override(uint64_t mcause) {
+  uint64_t trap_override_struct_address =
+      get_thread_attributes_trap_override_struct_address_from_machine_mode();
+
+  struct trap_override_attributes *trap_overrides =
+      (struct trap_override_attributes *)trap_override_struct_address;
+
+  uint64_t exception_code = mcause & MCAUSE_EC_MASK;
+  uint64_t interrupt = mcause & MCAUSE_INT_FLAG;
+
+  if (interrupt) {
+    if (exception_code >= NUM_MACHINE_MODE_INTERRUPT_HANDLER_OVERRIDES) {
+      jumpstart_machine_fail();
+    }
+
+    if (trap_overrides
+            ->machine_mode_interrupt_handler_overrides[exception_code] == 0x0) {
+      jumpstart_machine_fail();
+    }
+
+    trap_overrides->machine_mode_interrupt_handler_overrides[exception_code] =
+        0x0;
+  } else {
+    if (exception_code >= NUM_MACHINE_MODE_EXCEPTION_HANDLER_OVERRIDES) {
+      jumpstart_machine_fail();
+    }
+
+    if (trap_overrides
+            ->machine_mode_exception_handler_overrides[exception_code] == 0) {
+      jumpstart_machine_fail();
+    }
+
+    trap_overrides->machine_mode_exception_handler_overrides[exception_code] =
+        0x0;
   }
 }
 
