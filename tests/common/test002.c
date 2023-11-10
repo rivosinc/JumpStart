@@ -30,7 +30,7 @@ int main(void) {
     return DIAG_FAILED;
   }
 
-  int bytes_to_copy = run_function_in_user_mode((uint64_t)get_bytes_to_copy);
+  int bytes_to_copy = run_function_in_user_mode((uint64_t)get_bytes_to_copy, 0);
   if (bytes_to_copy != 512) {
     return DIAG_FAILED;
   }
@@ -54,7 +54,7 @@ int main(void) {
       ++fill_value;
     }
 
-    if (run_function_in_user_mode((uint64_t)copy_bytes) != 0) {
+    if (run_function_in_user_mode((uint64_t)copy_bytes, 0) != 0) {
       return DIAG_FAILED;
     }
 
@@ -62,7 +62,7 @@ int main(void) {
       return DIAG_FAILED;
     }
 
-    if (run_function_in_user_mode((uint64_t)compare_copied_bytes) != 0) {
+    if (run_function_in_user_mode((uint64_t)compare_copied_bytes, 0) != 0) {
       return DIAG_FAILED;
     }
 

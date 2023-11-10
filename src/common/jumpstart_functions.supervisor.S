@@ -139,7 +139,9 @@ handle_syscall_run_func_in_user_mode_complete:
   la  ra, run_function_in_user_mode_return_point
   ret
 
-# A0 contains the address of the function to run in usermode.
+# Inputs:
+#   a0: address of the function to run in usermode.
+#   a1: arg0 to function to run in usermode.
 .global run_function_in_user_mode
 run_function_in_user_mode:
   addi  sp, sp, -16
@@ -155,9 +157,9 @@ run_function_in_user_mode:
   # state we set up if we encounter an interrupt.
   csrci sstatus, SSTATUS_SIE
 
-  # Pass a0 to usermode as argument.
   GET_THREAD_ATTRIBUTES_UMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
   sd a0, A0_OFFSET_IN_SAVE_REGION(gp)
+  sd a1, A1_OFFSET_IN_SAVE_REGION(gp)
 
   # Save S-mode context
   GET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
@@ -170,7 +172,7 @@ run_function_in_user_mode:
   sd t0, SSTATUS_OFFSET_IN_SAVE_REGION(gp)
 
   # Load U-mode context. We just need to set sepc, sstatus and a0 register.
-  la a1, jump_to_function_in_umode
+    la a1, jump_to_function_in_umode
   csrw sepc, a1
 
   li t0, (PRV_S << SSTATUS_SPP_SHIFT)
@@ -189,6 +191,7 @@ run_function_in_user_mode:
 
   GET_THREAD_ATTRIBUTES_UMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
   ld a0, A0_OFFSET_IN_SAVE_REGION(gp)
+  ld a1, A1_OFFSET_IN_SAVE_REGION(gp)
 
   sret
 
