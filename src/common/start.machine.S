@@ -226,20 +226,27 @@ run_function_in_supervisor_mode:
   li  t1, PRV_M
   bne t0, t1, jumpstart_machine_fail
 
+  # Disable interrupts when switching modes to avoid clobbering any
+  # state we set up if we encounter an interrupt.
+  csrci mstatus, MSTATUS_MIE
+
   # Save machine mode context
   GET_THREAD_ATTRIBUTES_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
   SAVE_ALL_GPRS
 
   csrr t0, mstatus
+  # Set the MIE bit that we cleared above. We want the interrupts
+  # to be re-enabled when we return to machine mode.
+  ori t0, t0, MSTATUS_MIE
   sd t0, MSTATUS_OFFSET_IN_SAVE_REGION(gp)
-
-  la t0, jump_to_function_in_smode
-  csrw mepc, t0
 
   li  t0, MSTATUS_MPP
   csrc mstatus, t0
-  li  t0, PRV_S << MSTATUS_MPP_SHIFT
+  li  t0, (PRV_S << MSTATUS_MPP_SHIFT)
   csrs  mstatus, t0
+
+  la t0, jump_to_function_in_smode
+  csrw mepc, t0
 
   mret
 

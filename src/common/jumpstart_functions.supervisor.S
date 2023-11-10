@@ -151,6 +151,10 @@ run_function_in_user_mode:
   li  t1, PRV_S
   bne t0, t1, jumpstart_supervisor_fail
 
+  # Disable interrupts when switching modes to avoid clobbering any
+  # state we set up if we encounter an interrupt.
+  csrci sstatus, SSTATUS_SIE
+
   # Pass a0 to usermode as argument.
   GET_THREAD_ATTRIBUTES_UMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
   sd a0, A0_OFFSET_IN_SAVE_REGION(gp)
@@ -160,6 +164,9 @@ run_function_in_user_mode:
   SAVE_ALL_GPRS
 
   csrr t0, sstatus
+  # Set the SIE bit that we cleared above. We want the interrupts
+  # to be re-enabled when we return to supervisor mode.
+  ori t0, t0, SSTATUS_SIE
   sd t0, SSTATUS_OFFSET_IN_SAVE_REGION(gp)
 
   # Load U-mode context. We just need to set sepc, sstatus and a0 register.
