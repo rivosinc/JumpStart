@@ -199,18 +199,23 @@ handle_env_call_from_smode:
 handle_syscall_run_func_in_supervisor_mode_complete:
   # This is the return to machine path for run_function_in_supervisor_mode().
 
-  # Restore M mode context and return status in a0
+  # Re-enable interrupts that were disabled in run_function_in_supervisor_mode().
+  # Set MPIE to 1, on mret this will set MIE to 1.
+  li  t0, (PRV_M << MSTATUS_MPP_SHIFT) | MSTATUS_MPIE
+  csrs  mstatus, t0
+
+  la  t0, run_function_in_supervisor_mode_return_point
+  csrw mepc, t0
+
+  # Restore M mode context
   GET_THREAD_ATTRIBUTES_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
-
-  ld  t0, MSTATUS_OFFSET_IN_SAVE_REGION(gp)
-  li  t1, (PRV_M << MSTATUS_MPP_SHIFT)
-  or  t0, t0, t1
-  csrw  mstatus, t0
-
   RESTORE_ALL_GPRS
 
-  la  ra, run_function_in_supervisor_mode_return_point
-  ret
+  # return status is in a0.
+  GET_THREAD_ATTRIBUTES_LOWER_MODE_IN_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
+  ld a0, A0_OFFSET_IN_SAVE_REGION(gp)
+
+  mret
 
 # END syscall handlers
 
@@ -227,18 +232,13 @@ run_function_in_supervisor_mode:
   bne t0, t1, jumpstart_machine_fail
 
   # Disable interrupts when switching modes to avoid clobbering any
-  # state we set up if we encounter an interrupt.
+  # state we set up if we encounter an interrupt. We will re-enable
+  # the interrupts in the return path.
   csrci mstatus, MSTATUS_MIE
 
   # Save machine mode context
   GET_THREAD_ATTRIBUTES_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
   SAVE_ALL_GPRS
-
-  csrr t0, mstatus
-  # Set the MIE bit that we cleared above. We want the interrupts
-  # to be re-enabled when we return to machine mode.
-  ori t0, t0, MSTATUS_MIE
-  sd t0, MSTATUS_OFFSET_IN_SAVE_REGION(gp)
 
   li  t0, MSTATUS_MPP
   csrc mstatus, t0
@@ -250,11 +250,9 @@ run_function_in_supervisor_mode:
 
   mret
 
+# Inputs:
+#   a0: return status from S-mode function.
 run_function_in_supervisor_mode_return_point:
-  # return status is in a0.
-  GET_THREAD_ATTRIBUTES_LOWER_MODE_IN_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
-  ld a0, A0_OFFSET_IN_SAVE_REGION(gp)
-
   ld  ra, 8(sp)
   ld  fp, 0(sp)
   addi  sp, sp, 16
