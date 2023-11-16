@@ -80,7 +80,7 @@ The diag additionally defines a `.data.diag` section at `0x80006000`. The `valid
 
 ## Source Files
 
-By default, the JumptStart boot code will start in rcode, jump to machine mode, initialize the system (MMU, interrupts, exception handling etc) and then jump to the diag's `main` function in Supervisor mode.
+By default, the JumptStart boot code will start in machine mode, initialize the system (MMU, interrupts, exception handling etc) and then jump to the diag's `main` function in Supervisor mode.
 
 [`test021.c`](../tests/common/test021.c) contains `main()` that the JumpStart boot code will jump to after initializing the system.
 
