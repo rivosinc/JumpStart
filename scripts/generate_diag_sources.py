@@ -1038,7 +1038,7 @@ sync_all_harts_from_{mode}_mode:
                 sys.exit(1)
             continue
 
-        pa = a + extract_bits(va, (self.get_attribute("page_offset"), 0))
+        pa = a + extract_bits(va, (self.get_attribute("page_offset") - 1, 0))
 
         log.info(f"Translated PA = {hex(pa)}")
         log.info(f"    PTE value = {hex(pte_value)}")

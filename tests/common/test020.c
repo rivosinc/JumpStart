@@ -48,5 +48,9 @@ int main(void) {
     return DIAG_FAILED;
   }
 
+  if (xlate_info.pa != 0x80021000) {
+    return DIAG_FAILED;
+  }
+
   return DIAG_PASSED;
 }

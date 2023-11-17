@@ -143,6 +143,6 @@ translate_VA(uint64_t va, struct translation_info *xlate_info) {
     }
   }
 
-  xlate_info->pa = a + extract_bits(va, (struct bit_range){PAGE_OFFSET, 0});
+  xlate_info->pa = a + extract_bits(va, (struct bit_range){PAGE_OFFSET - 1, 0});
   xlate_info->walk_successful = 1;
 }
