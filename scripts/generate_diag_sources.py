@@ -506,7 +506,7 @@ class DiagAttributes:
             for _ in range(entry["num_pages"]):
                 new_entry = entry.copy()
                 new_entry["va"] = va
-                new_entry["pa"] = va
+                new_entry["pa"] = pa
                 new_entry["num_pages"] = 1
                 split_mappings.append(new_entry)
 
