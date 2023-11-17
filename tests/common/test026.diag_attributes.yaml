@@ -1,0 +1,34 @@
+# SPDX-FileCopyrightText: 2023 Rivos Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+
+satp_mode: "sv39"
+
+active_hart_mask: "0b1"
+
+mappings:
+  -
+    va: 0x80020000
+    pa: 0x80020000
+    xwr: "0b101"
+    page_size: 0x1000
+    num_pages: 2
+    pma_memory_type: "wb"
+    linker_script_section: ".text"
+  -
+    va: 0x80023000
+    pa: 0x80023000
+    xwr: "0b011"
+    page_size: 0x1000
+    num_pages: 1
+    pma_memory_type: "wb"
+    linker_script_section: ".data"
+
+  -
+    va: 0x80033000
+    pa: 0x80043000
+    xwr: "0b011"
+    page_size: 0x1000
+    num_pages: 1
+    pma_memory_type: "wb"
+    linker_script_section: ".data.1"
