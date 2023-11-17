@@ -6,12 +6,16 @@
 
 .section .jumpstart.text.umode, "ax"
 
-# a0 contains the address of the function to jump to.
+# Inputs:
+#   a0: address of the function to run.
+#   a1: arg0 to function to run.
 .global jump_to_function_in_umode
 jump_to_function_in_umode:
+  # arg0 needs to be passed to function in a0.
+  mv a2, a0
+  mv a0, a1
 
-  # A0 contains arg value passed by S mode.
-  jalr ra, a0
+  jalr ra, a2
 
   # a0 contains the exit code.
   li  a7, SYSCALL_RUN_FUNC_IN_USER_MODE_COMPLETE
