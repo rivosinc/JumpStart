@@ -4,8 +4,6 @@
 
 #include "jumpstart_defines.h"
 
-#define MAGIC_VALUE 0xcafecafecafecafe
-
 .section .text, "ax"
 
 # Inputs:
@@ -19,18 +17,8 @@ load_from_address:
 
 .global data_area
 data_area:
-  .8byte MAGIC_VALUE
+  .8byte 0x0
 
+  .align 12
 
-.section .data.2, "aw"
-
-.global data_area_2
-data_area_2:
-  .8byte MAGIC_VALUE + 1
-
-
-.section .data.3, "aw"
-
-.global data_area_3
-data_area_3:
-  .8byte MAGIC_VALUE + 2
+  .8byte 0x0

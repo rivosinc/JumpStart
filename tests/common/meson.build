@@ -25,4 +25,5 @@ common_jumpstart_tests = [
   ['test022', 'Exit with jumpstart_supervisor_fail() to test fail path.', '', true],
   ['test023', 'Handle S mode exceptions in M mode handlers.'],
   ['test026', 'VA != PA mapping.'],
+  ['test027', 'VA aliasing test.'],
 ]
