@@ -205,7 +205,7 @@ class DiagAttributes:
 
         self.append_jumpstart_sections_to_mappings()
 
-        # Sort all the mappings and sanity check them.
+        # Sort all the mappings by the PA.
         self.jumpstart_source_attributes["diag_attributes"]["mappings"] = sorted(
             self.jumpstart_source_attributes["diag_attributes"]["mappings"],
             key=lambda x: x["pa"],
@@ -304,7 +304,7 @@ class DiagAttributes:
         linker_script_section,
         no_pte_allocation=False,
     ):
-        # We expect that the mappings are sorted by the virtual address.
+        # We expect that the mappings are sorted by the PAs.
         updated_mappings = mappings.copy()
         previous_mapping = updated_mappings[previous_mapping_id]
         new_mapping = {}
@@ -315,17 +315,6 @@ class DiagAttributes:
                 previous_mapping, pma_memory_type
             )
 
-        # If the last mapping is a no_pte_allocation mapping, then it
-        # won't have a VA.
-        assert "va" in previous_mapping or (
-            "no_pte_allocation" in previous_mapping
-            and previous_mapping["no_pte_allocation"] is True
-        )
-        if "va" not in previous_mapping:
-            previous_mapping_va = previous_mapping["pa"]
-        else:
-            previous_mapping_va = previous_mapping["va"]
-
         new_mapping["pa"] = previous_mapping["pa"] + previous_mapping_size
 
         new_mapping["no_pte_allocation"] = no_pte_allocation
@@ -333,7 +322,7 @@ class DiagAttributes:
         if no_pte_allocation is False:
             new_mapping["xwr"] = xwr
             new_mapping["umode"] = umode
-            new_mapping["va"] = previous_mapping_va + previous_mapping_size
+            new_mapping["va"] = new_mapping["pa"]
 
         new_mapping["page_size"] = 1 << self.get_attribute("page_offset")
         new_mapping["num_pages"] = num_pages
@@ -711,9 +700,8 @@ class DiagAttributes:
             file.write("SECTIONS\n{\n")
             defined_sections = []
 
-            # The entries are already sorted by VA
-            # we also expect that the pages for the same section
-            # are in consecutive order when the VAs are sorted.
+            # The linker script lays out the diag in physical memory. The
+            # mappings are already sorted by PA.
             for entry in self.jumpstart_source_attributes["diag_attributes"]["mappings"]:
                 if "linker_script_section" not in entry:
                     # We don't generate linker script sections for entries

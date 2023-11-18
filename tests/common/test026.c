@@ -46,6 +46,27 @@ int main(void) {
 
   // This is the value initialized in assembly.
   const uint64_t magic_value = 0xcafecafecafecafe;
+
+  // The linker script requires that the mappings are sorted by PA but the
+  // PTE generation code requires that the mappings are sorted by VA.
+  // This test has data.2 mapped to 0x80053000 and data.3 mapped to 0x80063000.
+  // This will check that both these are functioning correctly.
+  translate_VA(0x80053000, &xlate_info);
+  if (xlate_info.pa != 0x80063000) {
+    return DIAG_FAILED;
+  }
+  if (load_from_address(0x80053000) != (magic_value + 1)) {
+    return DIAG_FAILED;
+  }
+
+  translate_VA(0x80063000, &xlate_info);
+  if (xlate_info.pa != 0x80053000) {
+    return DIAG_FAILED;
+  }
+  if (load_from_address(0x80063000) != (magic_value + 2)) {
+    return DIAG_FAILED;
+  }
+
   // This is the value we will write to the VA.
   uint64_t new_magic_value = UINT64_C(0xdeadbeefdeadbeef);
 
