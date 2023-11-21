@@ -175,11 +175,27 @@ enable_float_and_vector_instructions:
 
   ret
 
+.global delegate_mmode_resources_to_smode
+delegate_mmode_resources_to_smode:
+  # Delegate resources which are otherwise retained by M mode.
+
+  # Allow S mode to handle PMU overflow interrupts.
+  li t0, 1 << IRQ_PMU_OVF
+  csrs mideleg, t0
+
+  # Enable access to all 32 counters from S mode.
+  li t0, 0xFFFFFFFF
+  csrw mcounteren, t0
+
+  ret
+
 .global jump_to_main
 jump_to_main:
 
   jal start_test_in_machine_mode
   bnez a0, jump_to_main_in_machine_mode
+
+  jal delegate_mmode_resources_to_smode
 
   la a0, main
   jal run_function_in_supervisor_mode
