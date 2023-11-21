@@ -61,7 +61,12 @@ def sanity_check_memory_map(mappings):
         if "no_pte_allocation" in mapping and mapping["no_pte_allocation"] is True:
             assert not any(x in mapping for x in pte_attributes)
         if "alias" in mapping and mapping["alias"] is True:
-            assert not any(x in mapping for x in attributes_not_allowed_for_va_alias)
+            if any(x in mapping for x in attributes_not_allowed_for_va_alias):
+                log.error(
+                    f"Alias mapping has attributes that are not allowed for VA aliases: {attributes_not_allowed_for_va_alias}"
+                )
+                log.error(f"\t{mapping}")
+                sys.exit(1)
 
             if alias_mapping_overlaps_with_existing_mapping(mapping, mappings) is False:
                 log.error(
