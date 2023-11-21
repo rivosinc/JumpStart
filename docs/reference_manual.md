@@ -107,6 +107,10 @@ NOTE: JumpStart only supports 4K pages and not the super pages at this point.
 
 Controls the number of pages allocated for the section.
 
+#### `alias`
+
+Indicates whether this is a VA alias. It's PA should be contained in the PA range of another mapping.
+
 #### `no_pte_allocation`
 
 Controls whether the diag will allocate page table entries for the section.
