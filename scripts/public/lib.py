@@ -44,7 +44,9 @@ def sanity_check_memory_map(mappings):
         previous_mapping_end_va = previous_mapping["va"] + previous_mapping_size
 
         if mapping["va"] < previous_mapping_end_va:
-            log.error(f"VA of {mapping} overlaps with VA of {previous_mapping}")
+            log.error("VA overlap in these mappings.")
+            log.error(f"\t{mapping}")
+            log.error(f"\t{previous_mapping}")
             sys.exit(1)
 
     # Check that mappings with "no_pte_allocation" entries don't have
@@ -79,7 +81,11 @@ def sanity_check_memory_map(mappings):
         previous_mapping_end_pa = previous_mapping["pa"] + previous_mapping_size
 
         if mapping["pa"] < previous_mapping_end_pa:
-            log.error(f"PA of {mapping} overlaps with {previous_mapping}")
+            log.error(
+                "PA overlap in these mappings. If one of these is an alias add the 'alias: True' attribute for it's entry in the memory map."
+            )
+            log.error(f"\t{mapping}")
+            log.error(f"\t{previous_mapping}")
             sys.exit(1)
 
         # The diag should have a .text section.
