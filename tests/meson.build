@@ -65,6 +65,15 @@ foreach jumpstart_test : jumpstart_tests
     spike_args += spike_additional_arguments.split()
   endif
 
+  if get_option('diag_generate_disassembly') == true
+    custom_target(test_prefix + '_dump',
+                capture          : true,
+                output           : test_prefix + '.dis',
+                build_by_default : true,
+                command          : [objdump, '-D', '-S', '-t', test_exe],
+                depends          : [test_exe])
+  endif
+
   test(test_prefix + ' 🧪 ' + test_description,
         spike,
         args : [spike_args, test_exe],

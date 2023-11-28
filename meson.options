@@ -20,6 +20,11 @@ option('diag_attribute_overrides',
        type : 'array',
        description : 'Overrides specified test attributes.')
 
+option('diag_generate_disassembly',
+       type : 'boolean',
+       value : false,
+       description : 'Generate diag disassembly.')
+
 option('gcc_march_string',
        type : 'string',
        value : '',

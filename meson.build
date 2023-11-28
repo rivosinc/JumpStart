@@ -47,6 +47,7 @@ diag_attributes_yaml = get_option('diag_attributes_yaml')
 
 
 spike = find_program(get_option('spike_binary'))
+objdump = find_program('objdump')
 
 spike_isa_string = get_option('spike_isa_string')
 gcc_march_string = get_option('gcc_march_string')
@@ -124,6 +125,15 @@ if diag_attributes_yaml != '' and diag_sources.length() > 0
                         include_directories: jumpstart_includes,
                         c_args: default_c_args_list,
                         link_args: ['-T' + linker_script, '-nostdlib'])
+
+  if get_option('diag_generate_disassembly') == true
+        custom_target('dump',
+                capture          : true,
+                output           : diag_name + '.dis',
+                build_by_default : true,
+                command          : [objdump, '-D', '-S', '-t', diag_exe],
+                depends          : [diag_exe])
+  endif
 
   test('🧪 ' + diag_name,
         spike,

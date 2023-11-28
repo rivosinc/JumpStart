@@ -5,6 +5,7 @@
 [binaries]
 c = 'riscv64-unknown-elf-gcc'
 strip = 'riscv64-unknown-elf-strip'
+objdump = 'riscv64-unknown-elf-objdump'
 
 [properties]
 needs_exe_wrapper = true
