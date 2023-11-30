@@ -20,7 +20,6 @@ foreach jumpstart_test : jumpstart_tests
   test_prefix = jumpstart_test.get(0)
   test_description = jumpstart_test.get(1)
 
-  spike_additional_arguments = jumpstart_test.get(2, '')
 
   test_should_fail = jumpstart_test.get(3, false)
 
@@ -59,12 +58,6 @@ foreach jumpstart_test : jumpstart_tests
                         c_args: default_c_args_list,
                         link_args: ['-T' + linker_script, '-nostdlib'])
 
-  spike_args = default_spike_args
-
-  if spike_additional_arguments != ''
-    spike_args += spike_additional_arguments.split()
-  endif
-
   if get_option('diag_generate_disassembly') == true
     custom_target(test_prefix + '_dump',
                 capture          : true,
@@ -74,10 +67,19 @@ foreach jumpstart_test : jumpstart_tests
                 depends          : [test_exe])
   endif
 
-  test(test_prefix + ' 🧪 ' + test_description,
-        spike,
-        args : [spike_args, test_exe],
-        suite:'basic',
-        should_fail: test_should_fail)
+  if get_option('diag_target') == 'spike'
+    spike_args = default_spike_args
+
+    spike_additional_arguments = jumpstart_test.get(2, '')
+    if spike_additional_arguments != ''
+      spike_args += spike_additional_arguments.split()
+    endif
+
+    test(test_prefix + ' 🧪 ' + test_description,
+          spike,
+          args : [spike_args, test_exe],
+          suite:'basic',
+          should_fail: test_should_fail)
+  endif
 
 endforeach

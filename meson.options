@@ -25,6 +25,12 @@ option('diag_generate_disassembly',
        value : false,
        description : 'Generate diag disassembly.')
 
+option('diag_target',
+       type : 'combo',
+       choices: ['spike'],
+       value : 'spike',
+       description : 'Target to build the diag for.')
+
 option('gcc_march_string',
        type : 'string',
        value : '',

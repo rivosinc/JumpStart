@@ -45,49 +45,53 @@ diag_source_generator = files('scripts/generate_diag_sources.py')
 diag_sources = get_option('diag_sources')
 diag_attributes_yaml = get_option('diag_attributes_yaml')
 
+if get_option('diag_target') == 'spike'
+  spike = find_program(get_option('spike_binary'))
+  spike_isa_string = get_option('spike_isa_string')
 
-spike = find_program(get_option('spike_binary'))
+  default_spike_args = []
+
+  if get_option('rivos_internal_build') == true
+    default_spike_args += rivos_spike_args
+    if spike_isa_string == ''
+      spike_isa_string = rivos_spike_isa_string
+    endif
+
+  else
+    if spike_isa_string == ''
+      spike_isa_string = 'rv64gch_zbs'
+    endif
+
+  endif
+
+  if spike_isa_string != ''
+    default_spike_args += ['--isa=' + spike_isa_string ]
+  endif
+
+  if get_option('spike_generate_trace') == true
+    default_spike_args += ['-l', '--log-commits']
+  endif
+
+  if get_option('spike_additional_arguments').length() > 0
+    default_spike_args += get_option('spike_additional_arguments')
+  endif
+endif
+
 objdump = find_program('objdump')
 
-spike_isa_string = get_option('spike_isa_string')
 gcc_march_string = get_option('gcc_march_string')
 
-default_spike_args = []
 default_c_args_list = []
 
-if get_option('rivos_internal_build') == true
-  default_spike_args += rivos_spike_args
-
-  if spike_isa_string == ''
-    spike_isa_string = rivos_spike_isa_string
-  endif
-
-  if gcc_march_string == ''
+if gcc_march_string == ''
+  if get_option('rivos_internal_build') == true
     gcc_march_string = rivos_gcc_march_string
-  endif
-else
-  if gcc_march_string == ''
+  else
     gcc_march_string = 'rv64gc_zbs'
-  endif
-
-  if spike_isa_string == ''
-    spike_isa_string = 'rv64gch_zbs'
   endif
 endif
 
 default_c_args_list += ['-march=' + gcc_march_string]
-
-if spike_isa_string != ''
-  default_spike_args += ['--isa=' + spike_isa_string ]
-endif
-
-if get_option('spike_generate_trace') == true
-  default_spike_args += ['-l', '--log-commits']
-endif
-
-if get_option('spike_additional_arguments').length() > 0
-  default_spike_args += get_option('spike_additional_arguments')
-endif
 
 diag_source_generator_common_inputs = [diag_source_generator, jumpstart_source_attributes_yaml]
 diag_source_generator_command = [prog_python,
@@ -135,12 +139,14 @@ if diag_attributes_yaml != '' and diag_sources.length() > 0
                 depends          : [diag_exe])
   endif
 
-  test('🧪 ' + diag_name,
-        spike,
-        args : [default_spike_args, diag_exe],
-        is_parallel : false) # Parallel runs of the test turns off terminal
-                             # feedback and requires `reset` to be run to
-                             # restore the terminal.
+  if get_option('diag_target') == 'spike'
+    test('🧪 ' + diag_name,
+          spike,
+          args : [default_spike_args, diag_exe],
+          is_parallel : false) # Parallel runs of the test turns off terminal
+                               # feedback and requires `reset` to be run to
+                               # restore the terminal.
+  endif
 
 else
 
