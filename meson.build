@@ -75,6 +75,15 @@ if get_option('diag_target') == 'spike'
   if get_option('spike_additional_arguments').length() > 0
     default_spike_args += get_option('spike_additional_arguments')
   endif
+
+elif get_option('diag_target') == 'qemu'
+  qemu_binary = rivos_qemu_binary
+  if get_option('qemu_binary') != ''
+    qemu_binary = get_option('qemu_binary')
+  endif
+  qemu = find_program(qemu_binary)
+
+  default_qemu_args = rivos_qemu_args
 endif
 
 objdump = find_program('objdump')
@@ -106,6 +115,11 @@ if diag_attributes_yaml != '' and diag_sources.length() > 0
   diag_name = get_option('diag_name')
 
   diag_attribute_overrides = get_option('diag_attribute_overrides')
+
+  if get_option('diag_target') == 'qemu'
+    diag_attribute_overrides += ['in_qemu_mode=True']
+  endif
+
   if diag_attribute_overrides.length() > 0
     diag_source_generator_command += ['--override_diag_attributes']
 
@@ -146,6 +160,10 @@ if diag_attributes_yaml != '' and diag_sources.length() > 0
           is_parallel : false) # Parallel runs of the test turns off terminal
                                # feedback and requires `reset` to be run to
                                # restore the terminal.
+  elif get_option('diag_target') == 'qemu'
+    test('🧪 ' + diag_name,
+          qemu,
+          args : [default_qemu_args, '--var', 'ap-payload:' + diag_exe.full_path()])
   endif
 
 else

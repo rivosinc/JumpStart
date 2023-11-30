@@ -27,7 +27,7 @@ option('diag_generate_disassembly',
 
 option('diag_target',
        type : 'combo',
-       choices: ['spike'],
+       choices: ['spike', 'qemu'],
        value : 'spike',
        description : 'Target to build the diag for.')
 
@@ -54,6 +54,16 @@ option('spike_generate_trace',
        type : 'boolean',
        value : false,
        description : 'Generate spike trace.')
+
+option('qemu_binary',
+       type : 'string',
+       value : '',
+       description : 'QEMU binary to use')
+
+option('qemu_generate_trace',
+       type : 'boolean',
+       value : false,
+       description : 'Generate qemu trace.')
 
 option('rivos_internal_build',
        type : 'boolean',
