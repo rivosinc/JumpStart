@@ -15,6 +15,10 @@ if get_option('rivos_internal_build') == true
   jumpstart_tests += rivos_internal_jumpstart_tests
 endif
 
+if get_option('diag_target') == 'qemu'
+  diag_source_generator_command += ['--override_diag_attributes=in_qemu_mode=True']
+endif
+
 
 foreach jumpstart_test : jumpstart_tests
   test_prefix = jumpstart_test.get(0)
@@ -22,6 +26,8 @@ foreach jumpstart_test : jumpstart_tests
   test_expected_to_fail = jumpstart_test.get(2, false)
 
   spike_additional_arguments = jumpstart_test.get(3, '')
+
+  test_disabled_on_qemu = jumpstart_test.get(4, false)
 
   if fs.is_file(meson.current_source_dir() + '/' + 'common' + '/' + test_prefix + '.diag_attributes.yaml')
     diag_attributes_yaml = files('common' + '/' + test_prefix + '.diag_attributes.yaml')
@@ -79,6 +85,13 @@ foreach jumpstart_test : jumpstart_tests
           args : [spike_args, test_exe],
           suite:'basic',
           should_fail: test_expected_to_fail)
+  elif get_option('diag_target') == 'qemu' and test_disabled_on_qemu == false
+    test(test_prefix + ' 🧪 ' + test_description,
+          qemu,
+          args : [default_qemu_args, '--var', 'ap-payload:' + test_exe.full_path()],
+          suite:'basic',
+          should_fail: test_expected_to_fail,
+          is_parallel: false) # fs-sim doesn't seem to like parallel runs.
   endif
 
 endforeach
