@@ -19,9 +19,9 @@ endif
 foreach jumpstart_test : jumpstart_tests
   test_prefix = jumpstart_test.get(0)
   test_description = jumpstart_test.get(1)
+  test_expected_to_fail = jumpstart_test.get(2, false)
 
-
-  test_should_fail = jumpstart_test.get(3, false)
+  spike_additional_arguments = jumpstart_test.get(3, '')
 
   if fs.is_file(meson.current_source_dir() + '/' + 'common' + '/' + test_prefix + '.diag_attributes.yaml')
     diag_attributes_yaml = files('common' + '/' + test_prefix + '.diag_attributes.yaml')
@@ -70,7 +70,6 @@ foreach jumpstart_test : jumpstart_tests
   if get_option('diag_target') == 'spike'
     spike_args = default_spike_args
 
-    spike_additional_arguments = jumpstart_test.get(2, '')
     if spike_additional_arguments != ''
       spike_args += spike_additional_arguments.split()
     endif
@@ -79,7 +78,7 @@ foreach jumpstart_test : jumpstart_tests
           spike,
           args : [spike_args, test_exe],
           suite:'basic',
-          should_fail: test_should_fail)
+          should_fail: test_expected_to_fail)
   endif
 
 endforeach
