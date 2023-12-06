@@ -101,7 +101,7 @@ Controls the values of the `xwr`, `umode` and `valid` bits in the page table ent
 
 Controls the page size of the section.
 
-NOTE: JumpStart only supports 4K pages and not the super pages at this point.
+The page size has to conform to the sizes supported by the SATP mode.
 
 #### `num_pages`
 

@@ -92,6 +92,7 @@ class PageTableAttributes:
             "va_vpn_bits": [(38, 30), (29, 21), (20, 12)],
             "pa_ppn_bits": [(55, 30), (29, 21), (20, 12)],
             "pte_ppn_bits": [(53, 28), (27, 19), (18, 10)],
+            "page_sizes": [0x40000000, 0x200000, 0x1000],
         },
         "sv48": {
             "satp_mode": 9,
@@ -100,6 +101,7 @@ class PageTableAttributes:
             "va_vpn_bits": [(47, 39), (38, 30), (29, 21), (20, 12)],
             "pa_ppn_bits": [(55, 39), (38, 30), (29, 21), (20, 12)],
             "pte_ppn_bits": [(53, 37), (36, 28), (27, 19), (18, 10)],
+            "page_sizes": [0x8000000000, 0x40000000, 0x200000, 0x1000],
         },
     }
 
@@ -575,15 +577,15 @@ class DiagAttributes:
         for entry in self.split_mappings_at_page_granularity(
             self.jumpstart_source_attributes["diag_attributes"]["mappings"]
         ):
-            # TODO: support superpages
-            assert entry["page_size"] == 0x1000
-
+            assert entry["page_size"] in self.get_attribute("page_sizes")
+            leaf_level = self.get_attribute("page_sizes").index(entry["page_size"])
+            assert leaf_level < self.get_attribute("num_levels")
             log.debug("\n")
             log.debug(f"Generating PTEs for {entry}")
-
+            log.debug(f"Leaf Level: {leaf_level}")
             current_level = 0
 
-            while current_level < self.get_attribute("num_levels"):
+            while current_level <= leaf_level:
                 current_level_PT_page = self.get_PT_page(entry["va"], current_level)
                 if current_level_PT_page is None:
                     log.error(
@@ -598,7 +600,7 @@ class DiagAttributes:
 
                 pte_value = place_bits(0, 1, self.pt_attributes.common_attributes["valid_bit"])
 
-                if current_level < (self.get_attribute("num_levels") - 1):
+                if current_level < leaf_level:
                     next_level_pagetable = self.get_PT_page(entry["va"], current_level + 1)
                     if next_level_pagetable is None:
                         log.error(
@@ -659,12 +661,15 @@ class DiagAttributes:
                     pte_value = place_bits(
                         pte_value, ppn_value, self.get_attribute("pte_ppn_bits")[ppn_id]
                     )
-
-                pte_address = current_level_range_start + extract_bits(
+                current_level_pt_offset = extract_bits(
                     entry["va"], self.get_attribute("va_vpn_bits")[current_level]
-                ) * self.get_attribute("pte_size_in_bytes")
+                )
+                pte_address = (
+                    current_level_range_start
+                    + current_level_pt_offset * self.get_attribute("pte_size_in_bytes")
+                )
                 assert pte_address < current_level_range_end
-
+                log.debug(f"PTE address:{hex(pte_address)}, PTE value:{hex(pte_value)}")
                 self.update_pte_region_sparse_memory(pte_address, pte_value)
 
                 current_level += 1
@@ -1026,7 +1031,8 @@ sync_all_harts_from_{mode}_mode:
                 sys.exit(1)
             continue
 
-        pa = a + extract_bits(va, (self.get_attribute("page_offset") - 1, 0))
+        pa = a
+        pa += extract_bits(va, (self.get_attribute("va_vpn_bits")[current_level][1] - 1, 0))
 
         log.info(f"Translated PA = {hex(pa)}")
         log.info(f"    PTE value = {hex(pte_value)}")
