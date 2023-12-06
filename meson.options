@@ -60,10 +60,9 @@ option('qemu_binary',
        value : '',
        description : 'QEMU binary to use')
 
-option('qemu_generate_trace',
-       type : 'boolean',
-       value : false,
-       description : 'Generate qemu trace.')
+option('qemu_additional_arguments',
+       type : 'array',
+       description : 'Additional arguments to pass to qemu when running the diag.')
 
 option('rivos_internal_build',
        type : 'boolean',

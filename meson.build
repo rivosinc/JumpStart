@@ -84,6 +84,10 @@ elif get_option('diag_target') == 'qemu'
   qemu = find_program(qemu_binary)
 
   default_qemu_args = rivos_qemu_args
+
+  if get_option('qemu_additional_arguments').length() > 0
+    default_qemu_args += get_option('qemu_additional_arguments')
+  endif
 endif
 
 objdump = find_program('objdump')
