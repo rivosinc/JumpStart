@@ -68,7 +68,7 @@ if get_option('diag_target') == 'spike'
     default_spike_args += ['--isa=' + spike_isa_string ]
   endif
 
-  if get_option('spike_generate_trace') == true
+  if get_option('generate_trace') == true
     default_spike_args += ['-l', '--log-commits']
   endif
 

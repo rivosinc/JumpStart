@@ -231,10 +231,10 @@ Allows the diag to register a trap handler override function for S-mode traps. T
 meson test -C builddir -v
 ```
 
-To generate the execution trace, pass the `spike_generate_trace=true` option to `meson setup`.
+To generate the execution trace, pass the `generate_trace=true` option to `meson setup`.
 
 ```shell
-meson setup -C builddir -Dspike_generate_trace=true ...
+meson setup -C builddir -Dgenerate_trace=true ...
 ```
 
 If the diag requires additional arguments be passed to Spike, specify them with the `spike_additional_arguments` option to `meson setup`. `spike_additional_arguments` takes a list of arguments.
