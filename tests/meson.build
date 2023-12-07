@@ -90,6 +90,7 @@ foreach jumpstart_test : jumpstart_tests
           qemu,
           args : [default_qemu_args, '--var', 'ap-payload:' + test_exe.full_path()],
           suite:'basic',
+          timeout: 60,
           should_fail: test_expected_to_fail)
   endif
 

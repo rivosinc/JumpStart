@@ -167,6 +167,7 @@ if diag_attributes_yaml != '' and diag_sources.length() > 0
   elif get_option('diag_target') == 'qemu'
     test('🧪 ' + diag_name,
           qemu,
+          timeout: 60,
           args : [default_qemu_args, '--var', 'ap-payload:' + diag_exe.full_path()])
   endif
 
