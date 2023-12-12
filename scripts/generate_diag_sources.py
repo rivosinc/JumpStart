@@ -302,10 +302,13 @@ class DiagAttributes:
         xwr,
         umode,
         num_pages,
+        page_size,
         pma_memory_type,
         linker_script_section,
         no_pte_allocation=False,
     ):
+        assert page_size in self.get_attribute("page_sizes")
+
         # We expect that the mappings are sorted by the PAs.
         updated_mappings = mappings.copy()
         previous_mapping = updated_mappings[previous_mapping_id]
@@ -319,6 +322,10 @@ class DiagAttributes:
 
         new_mapping["pa"] = previous_mapping["pa"] + previous_mapping_size
 
+        if (new_mapping["pa"] % page_size) != 0:
+            # Align the PA to the page size.
+            new_mapping["pa"] = (math.floor(new_mapping["pa"] / page_size) + 1) * page_size
+
         new_mapping["no_pte_allocation"] = no_pte_allocation
 
         if no_pte_allocation is False:
@@ -326,7 +333,7 @@ class DiagAttributes:
             new_mapping["umode"] = umode
             new_mapping["va"] = new_mapping["pa"]
 
-        new_mapping["page_size"] = 1 << self.get_attribute("page_offset")
+        new_mapping["page_size"] = page_size
         new_mapping["num_pages"] = num_pages
         new_mapping["pma_memory_type"] = pma_memory_type
         new_mapping["linker_script_section"] = linker_script_section
@@ -357,6 +364,7 @@ class DiagAttributes:
             xwr,
             "0b0",
             self.jumpstart_source_attributes["diag_attributes"]["max_num_pages_for_PT_allocation"],
+            1 << self.get_attribute("page_offset"),
             "wb",
             ".jumpstart.rodata.pagetables",
         )
@@ -375,6 +383,7 @@ class DiagAttributes:
             "0b101",
             "0b0",
             num_jumpstart_text_pages,
+            1 << self.get_attribute("page_offset"),
             "wb",
             ".jumpstart.text.supervisor",
         )
@@ -393,26 +402,30 @@ class DiagAttributes:
             "0b011",
             "0b0",
             num_jumpstart_data_pages,
+            1 << self.get_attribute("page_offset"),
             "wb",
             ".jumpstart.data.privileged",
         )
         return updated_mappings
 
     def add_bss_and_rodata_sections_to_mappings(self, mappings):
-        bss_pages = self.jumpstart_source_attributes["diag_attributes"]["num_pages_for_bss_section"]
-        rodata_pages = self.jumpstart_source_attributes["diag_attributes"][
-            "num_pages_for_rodata_section"
-        ]
-
         updated_mappings = self.add_after_mapping(
-            mappings, len(mappings) - 1, "0b011", "0b0", bss_pages, "wb", ".bss"
+            mappings,
+            len(mappings) - 1,
+            "0b011",
+            "0b0",
+            self.jumpstart_source_attributes["diag_attributes"]["num_pages_for_bss_section"],
+            1 << self.get_attribute("page_offset"),
+            "wb",
+            ".bss",
         )
         updated_mappings = self.add_after_mapping(
             updated_mappings,
             len(updated_mappings) - 1,
             "0b001",
             "0b0",
-            rodata_pages,
+            self.jumpstart_source_attributes["diag_attributes"]["num_pages_for_rodata_section"],
+            1 << self.get_attribute("page_offset"),
             "wb",
             ".rodata",
         )
@@ -430,6 +443,7 @@ class DiagAttributes:
             "0b101",
             "0b1",
             num_jumpstart_text_pages,
+            1 << self.get_attribute("page_offset"),
             "wb",
             ".jumpstart.text.umode",
         )
@@ -448,6 +462,7 @@ class DiagAttributes:
             "0b011",
             "0b1",
             num_jumpstart_data_pages,
+            1 << self.get_attribute("page_offset"),
             "wb",
             ".jumpstart.data.umode",
         )
@@ -479,6 +494,7 @@ class DiagAttributes:
             None,
             None,
             1,
+            1 << self.get_attribute("page_offset"),
             "wb",
             f".jumpstart.guard_page.{self.num_guard_pages_generated}",
             True,
