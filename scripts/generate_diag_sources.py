@@ -307,11 +307,12 @@ class DiagAttributes:
         linker_script_section,
         no_pte_allocation=False,
     ):
+        # We only support adding mappings after the last mapping for now.
+        assert previous_mapping_id == (len(mappings) - 1)
         assert page_size in self.get_attribute("page_sizes")
 
         # We expect that the mappings are sorted by the PAs.
-        updated_mappings = mappings.copy()
-        previous_mapping = updated_mappings[previous_mapping_id]
+        previous_mapping = mappings[previous_mapping_id]
         new_mapping = {}
 
         previous_mapping_size = previous_mapping["page_size"] * previous_mapping["num_pages"]
@@ -338,16 +339,8 @@ class DiagAttributes:
         new_mapping["pma_memory_type"] = pma_memory_type
         new_mapping["linker_script_section"] = linker_script_section
 
-        # make sure that the new mapping doesn't overlap with the next
-        # one if it exists.
-        if (previous_mapping_id + 1) < len(updated_mappings):
-            next_mapping = updated_mappings[previous_mapping_id + 1]
-            assert (
-                new_mapping["pa"] + (new_mapping["page_size"] * new_mapping["num_pages"])
-            ) <= next_mapping["pa"]
-
-        updated_mappings.insert(previous_mapping_id + 1, new_mapping)
-        return updated_mappings
+        mappings.insert(previous_mapping_id + 1, new_mapping)
+        return mappings
 
     def add_pagetable_section_to_mappings(self, mappings):
         xwr = "0b001"
