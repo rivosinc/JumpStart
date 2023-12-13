@@ -6,8 +6,6 @@ satp_mode: "sv39"
 
 active_hart_mask: "0b1111"
 
-max_num_pages_for_PT_allocation: 6
-
 mappings:
   -
     va: 0x80020000

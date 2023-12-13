@@ -235,7 +235,7 @@ class DiagAttributes:
         # the rest are just added on at locations immediately following
         # these sections.
         if self.jumpstart_source_attributes["rivos_internal_build"] is True:
-            self.jumpstart_source_attributes["diag_attributes"]["mappings"].append(
+            self.jumpstart_source_attributes["diag_attributes"]["mappings"].extend(
                 rivos_internal.get_rivos_specific_mappings(
                     self.get_attribute("page_offset"), self.jumpstart_source_attributes
                 )
