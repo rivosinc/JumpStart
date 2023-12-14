@@ -270,6 +270,9 @@ class DiagAttributes:
         self.add_pagetable_section_to_mappings(
             self.jumpstart_source_attributes["diag_attributes"]["mappings"]
         )
+        self.add_jumpstart_heap_mapping(
+            self.jumpstart_source_attributes["diag_attributes"]["mappings"]
+        )
 
         self.add_pa_guard_page_after_last_mapping(
             self.jumpstart_source_attributes["diag_attributes"]["mappings"]
@@ -348,6 +351,20 @@ class DiagAttributes:
             ".jumpstart.rodata.pagetables",
         )
         self.PT_section_start_address = mappings[-1]["pa"]
+
+    def add_jumpstart_heap_mapping(self, mappings):
+        # TODO: Move this under the jumpstart_supervisor_area in the YAML.
+        self.add_after_mapping(
+            mappings,
+            len(mappings) - 1,
+            None,
+            None,
+            2,
+            0x200000,
+            "wb",
+            ".jumpstart.supervisor.heap",
+            True,
+        )
 
     def add_jumpstart_area_to_mappings(self, mappings, area_name):
         for section_name in self.jumpstart_source_attributes[area_name]:
