@@ -15,6 +15,7 @@ import sys
 
 import public.lib as public
 import yaml
+from public.lib import PageSize
 
 try:
     import rivos_internal.lib as rivos_internal
@@ -92,7 +93,7 @@ class PageTableAttributes:
             "va_vpn_bits": [(38, 30), (29, 21), (20, 12)],
             "pa_ppn_bits": [(55, 30), (29, 21), (20, 12)],
             "pte_ppn_bits": [(53, 28), (27, 19), (18, 10)],
-            "page_sizes": [0x40000000, 0x200000, 0x1000],
+            "page_sizes": [PageSize.SIZE_1G, PageSize.SIZE_2M, PageSize.SIZE_4K],
         },
         "sv48": {
             "satp_mode": 9,
@@ -101,7 +102,12 @@ class PageTableAttributes:
             "va_vpn_bits": [(47, 39), (38, 30), (29, 21), (20, 12)],
             "pa_ppn_bits": [(55, 39), (38, 30), (29, 21), (20, 12)],
             "pte_ppn_bits": [(53, 37), (36, 28), (27, 19), (18, 10)],
-            "page_sizes": [0x8000000000, 0x40000000, 0x200000, 0x1000],
+            "page_sizes": [
+                PageSize.SIZE_512G,
+                PageSize.SIZE_1G,
+                PageSize.SIZE_2M,
+                PageSize.SIZE_4K,
+            ],
         },
     }
 
@@ -357,7 +363,7 @@ class DiagAttributes:
             xwr,
             "0b0",
             self.jumpstart_source_attributes["diag_attributes"]["max_num_pages_for_PT_allocation"],
-            1 << self.get_attribute("page_offset"),
+            PageSize.SIZE_4K,
             "wb",
             ".jumpstart.rodata.pagetables",
         )
@@ -376,7 +382,7 @@ class DiagAttributes:
             "0b101",
             "0b0",
             num_jumpstart_text_pages,
-            1 << self.get_attribute("page_offset"),
+            PageSize.SIZE_4K,
             "wb",
             ".jumpstart.text.supervisor",
         )
@@ -395,7 +401,7 @@ class DiagAttributes:
             "0b011",
             "0b0",
             num_jumpstart_data_pages,
-            1 << self.get_attribute("page_offset"),
+            PageSize.SIZE_4K,
             "wb",
             ".jumpstart.data.privileged",
         )
@@ -408,7 +414,7 @@ class DiagAttributes:
             "0b011",
             "0b0",
             self.jumpstart_source_attributes["diag_attributes"]["num_pages_for_bss_section"],
-            1 << self.get_attribute("page_offset"),
+            PageSize.SIZE_4K,
             "wb",
             ".bss",
         )
@@ -418,7 +424,7 @@ class DiagAttributes:
             "0b001",
             "0b0",
             self.jumpstart_source_attributes["diag_attributes"]["num_pages_for_rodata_section"],
-            1 << self.get_attribute("page_offset"),
+            PageSize.SIZE_4K,
             "wb",
             ".rodata",
         )
@@ -436,7 +442,7 @@ class DiagAttributes:
             "0b101",
             "0b1",
             num_jumpstart_text_pages,
-            1 << self.get_attribute("page_offset"),
+            PageSize.SIZE_4K,
             "wb",
             ".jumpstart.text.umode",
         )
@@ -455,7 +461,7 @@ class DiagAttributes:
             "0b011",
             "0b1",
             num_jumpstart_data_pages,
-            1 << self.get_attribute("page_offset"),
+            PageSize.SIZE_4K,
             "wb",
             ".jumpstart.data.umode",
         )
@@ -466,7 +472,7 @@ class DiagAttributes:
         machine_mode_mapping["pa"] = self.jumpstart_source_attributes["diag_attributes"][
             "machine_mode_start_address"
         ]
-        machine_mode_mapping["page_size"] = 1 << self.get_attribute("page_offset")
+        machine_mode_mapping["page_size"] = PageSize.SIZE_4K
         machine_mode_mapping["num_pages"] = self.jumpstart_source_attributes[
             "jumpstart_machine_text_page_counts"
         ]["num_pages_for_all_text"]
@@ -487,7 +493,7 @@ class DiagAttributes:
             None,
             None,
             1,
-            1 << self.get_attribute("page_offset"),
+            PageSize.SIZE_4K,
             "wb",
             f".jumpstart.guard_page.{self.num_guard_pages_generated}",
             True,
@@ -561,7 +567,7 @@ class DiagAttributes:
             # Can't create any more pagetable pages
             return None
 
-        page_size = 1 << self.get_attribute("page_offset")
+        page_size = PageSize.SIZE_4K
         pte_start_va_lsb = self.get_attribute("va_vpn_bits")[level][0] + 1
         pte_start_va = (va >> pte_start_va_lsb) << pte_start_va_lsb
         pte_va_range = 1 << (self.get_attribute("va_vpn_bits")[level][0] + 1)
@@ -603,9 +609,7 @@ class DiagAttributes:
                     sys.exit(1)
 
                 current_level_range_start = current_level_PT_page.get_sparse_memory_address()
-                current_level_range_end = current_level_range_start + (
-                    1 << self.get_attribute("page_offset")
-                )
+                current_level_range_end = current_level_range_start + (PageSize.SIZE_4K)
 
                 pte_value = place_bits(0, 1, self.pt_attributes.common_attributes["valid_bit"])
 
@@ -618,9 +622,7 @@ class DiagAttributes:
                         sys.exit(1)
 
                     next_level_range_start = next_level_pagetable.get_sparse_memory_address()
-                    next_level_range_end = next_level_range_start + (
-                        1 << self.get_attribute("page_offset")
-                    )
+                    next_level_range_end = next_level_range_start + (PageSize.SIZE_4K)
 
                     next_level_pa = next_level_range_start + extract_bits(
                         entry["va"], self.get_attribute("va_vpn_bits")[current_level]
@@ -688,7 +690,7 @@ class DiagAttributes:
         # page table section in the assembly file.
         assert self.PT_section_start_address == self.PT_pages[0].get_sparse_memory_address()
         pte_region_sparse_memory_start = self.PT_pages[0].get_sparse_memory_address()
-        page_size = 1 << self.get_attribute("page_offset")
+        page_size = PageSize.SIZE_4K
         pte_region_sparse_memory_end = (
             self.PT_pages[len(self.PT_pages) - 1].get_sparse_memory_address() + page_size
         )
@@ -956,7 +958,7 @@ sync_all_harts_from_{mode}_mode:
             )
             file_descriptor.write(f".global guard_page_{guard_page_id}\n")
             file_descriptor.write(f"guard_page_{guard_page_id}:\n")
-            file_descriptor.write(".zero 4096\n\n")
+            file_descriptor.write(f".zero {PageSize.SIZE_4K}\n\n")
 
     def generate_assembly_file(self, output_assembly_file):
         with open(output_assembly_file, "w") as file:
