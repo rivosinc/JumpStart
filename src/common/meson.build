@@ -4,7 +4,7 @@
 
 jumpstart_common_sources = files(
                                 'start.machine.S',
-                                'data.privileged.S',
+                                'data.supervisor.S',
                                 'jumpstart_functions.supervisor.S',
                                 'jumpstart_functions.umode.S',
                                 'tablewalk_functions.supervisor.c',

@@ -4,9 +4,9 @@
 
 #include "jumpstart_defines.h"
 
-# The privileged data section is can be accessed from both
+# The supervisor data section is can be accessed from both
 # machine and supervisor mode.
-.section .jumpstart.data.privileged, "aw"
+.section .jumpstart.data.supervisor, "aw"
 
 .global hart_status_tracker
 hart_status_tracker:

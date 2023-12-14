@@ -117,7 +117,7 @@ def generate_reg_context_save_restore_code(attributes_data, defines_file_fd, ass
         )
     defines_file_fd.write("\n\n")
 
-    assembly_file_fd.write('\n\n.section .jumpstart.data.privileged, "aw"\n')
+    assembly_file_fd.write('\n\n.section .jumpstart.data.supervisor, "aw"\n')
     modes = ["mmode", "lower_mode_in_mmode", "smode", "umode"]
     assembly_file_fd.write(
         f"\n# {modes} context saved registers: \n# {attributes_data['reg_context_to_save_across_modes']['registers']}\n"
@@ -215,7 +215,7 @@ def generate_jumpstart_sources(
             f"#define {c_struct.upper()}_STRUCT_SIZE_IN_BYTES {current_offset}\n\n"
         )
 
-        assembly_file_fd.write('.section .jumpstart.data.privileged, "aw"\n\n')
+        assembly_file_fd.write('.section .jumpstart.c_structs.supervisor, "aw"\n\n')
         assembly_file_fd.write(f".global {c_struct}_region\n")
         assembly_file_fd.write(f"{c_struct}_region:\n")
         for i in range(attributes_data["max_num_harts_supported"]):
@@ -227,40 +227,49 @@ def generate_jumpstart_sources(
 
         total_size_of_c_structs += current_offset
 
-    if total_size_of_c_structs * attributes_data["max_num_harts_supported"] > (
-        attributes_data["jumpstart_privileged_data_page_counts"]["num_pages_for_c_structs"] * 4096
+    max_allowed_size_of_c_structs = (
+        attributes_data["jumpstart_supervisor_area"]["c_structs"]["num_pages"]
+        * attributes_data["jumpstart_supervisor_area"]["c_structs"]["page_size"]
+    )
+
+    if (
+        total_size_of_c_structs * attributes_data["max_num_harts_supported"]
+        > max_allowed_size_of_c_structs
     ):
         log.error(
-            f"Total size of C structs ({total_size_of_c_structs}) exceeds maximum size allocated for C structs {attributes_data['jumpstart_privileged_data_page_counts']['num_pages_for_c_structs'] * 4096}"
+            f"Total size of C structs ({total_size_of_c_structs}) exceeds maximum size allocated for C structs {max_allowed_size_of_c_structs}"
         )
         sys.exit(1)
 
-    stack_types = ["privileged", "umode"]
+    stack_types = ["supervisor", "umode"]
     for stack_type in stack_types:
         # Make sure we can equally distribute the number of total stack pages
         # among the harts.
         assert (
-            attributes_data[f"jumpstart_{stack_type}_data_page_counts"]["num_pages_for_stack"]
+            attributes_data[f"jumpstart_{stack_type}_area"]["stack"]["num_pages"]
             % attributes_data["max_num_harts_supported"]
             == 0
         )
         num_pages_per_hart_for_stack = int(
-            attributes_data[f"jumpstart_{stack_type}_data_page_counts"]["num_pages_for_stack"]
+            attributes_data[f"jumpstart_{stack_type}_area"]["stack"]["num_pages"]
             / attributes_data["max_num_harts_supported"]
         )
+        stack_page_size = attributes_data[f"jumpstart_{stack_type}_area"]["stack"]["page_size"]
 
         defines_file_fd.write(
             f"#define NUM_PAGES_PER_HART_FOR_{stack_type.upper()}_STACK {num_pages_per_hart_for_stack}\n\n"
         )
 
-        assembly_file_fd.write(f'.section .jumpstart.data.{stack_type}, "aw"\n')
+        defines_file_fd.write(f"#define {stack_type.upper()}_STACK_PAGE_SIZE {stack_page_size}\n\n")
+
+        assembly_file_fd.write(f'.section .jumpstart.stack.{stack_type}, "aw"\n')
         assembly_file_fd.write(".align 12\n")
         assembly_file_fd.write(f".global {stack_type}_stack_top\n")
         assembly_file_fd.write(f"{stack_type}_stack_top:\n")
         for i in range(attributes_data["max_num_harts_supported"]):
             assembly_file_fd.write(f".global {stack_type}_stack_top_hart_{i}\n")
             assembly_file_fd.write(f"{stack_type}_stack_top_hart_{i}:\n")
-            assembly_file_fd.write(f"  .zero {num_pages_per_hart_for_stack * 4096}\n")
+            assembly_file_fd.write(f"  .zero {num_pages_per_hart_for_stack * stack_page_size}\n")
         assembly_file_fd.write(f".global {stack_type}_stack_bottom\n")
         assembly_file_fd.write(f"{stack_type}_stack_bottom:\n\n")
 

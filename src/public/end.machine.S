@@ -83,7 +83,7 @@ just_wfi:
 .global jumpstart_machine_mode_end_point
 jumpstart_machine_mode_end_point:
 
-.section .jumpstart.data.privileged, "aw", @progbits
+.section .jumpstart.data.supervisor, "aw", @progbits
 
 .align 6
 .globl tohost
