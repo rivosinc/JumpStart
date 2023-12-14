@@ -64,6 +64,11 @@ option('qemu_additional_arguments',
        type : 'array',
        description : 'Additional arguments to pass to qemu when running the diag.')
 
+option('qemu_timeout',
+       type : 'integer',
+       value : 120,
+       description : 'meson test timeout when running the tests on QEMU.')
+
 option('rivos_internal_build',
        type : 'boolean',
        value : false,
