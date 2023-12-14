@@ -285,10 +285,9 @@ class DiagAttributes:
             in self.pt_attributes.mode_attributes
         )
 
-    def add_after_mapping(
+    def append_to_mappings(
         self,
         mappings,
-        previous_mapping_id,
         xwr,
         umode,
         num_pages,
@@ -297,13 +296,10 @@ class DiagAttributes:
         linker_script_section,
         no_pte_allocation=False,
     ):
-        # We only support adding mappings after the last mapping for now.
-        assert previous_mapping_id == (len(mappings) - 1)
         assert page_size in self.get_attribute("page_sizes")
 
-        # We expect that the mappings are sorted by the PAs.
+        previous_mapping_id = len(mappings) - 1
         previous_mapping = mappings[previous_mapping_id]
-        new_mapping = {}
 
         previous_mapping_size = previous_mapping["page_size"] * previous_mapping["num_pages"]
         if self.jumpstart_source_attributes["rivos_internal_build"] is True:
@@ -311,6 +307,9 @@ class DiagAttributes:
                 previous_mapping, pma_memory_type
             )
 
+        # We're going to start the PA of the new mapping after the PA range
+        # # of the last mapping.
+        new_mapping = {}
         new_mapping["pa"] = previous_mapping["pa"] + previous_mapping_size
 
         if (new_mapping["pa"] % page_size) != 0:
@@ -340,9 +339,8 @@ class DiagAttributes:
         ):
             xwr = "0b011"
 
-        self.add_after_mapping(
+        self.append_to_mappings(
             mappings,
-            len(mappings) - 1,
             xwr,
             "0b0",
             self.jumpstart_source_attributes["diag_attributes"]["max_num_pages_for_PT_allocation"],
@@ -354,9 +352,8 @@ class DiagAttributes:
 
     def add_jumpstart_heap_mapping(self, mappings):
         # TODO: Move this under the jumpstart_supervisor_area in the YAML.
-        self.add_after_mapping(
+        self.append_to_mappings(
             mappings,
-            len(mappings) - 1,
             None,
             None,
             2,
@@ -368,9 +365,8 @@ class DiagAttributes:
 
     def add_jumpstart_area_to_mappings(self, mappings, area_name):
         for section_name in self.jumpstart_source_attributes[area_name]:
-            self.add_after_mapping(
+            self.append_to_mappings(
                 mappings,
-                len(mappings) - 1,
                 self.jumpstart_source_attributes[area_name][section_name]["xwr"],
                 self.jumpstart_source_attributes[area_name][section_name]["umode"],
                 self.jumpstart_source_attributes[area_name][section_name]["num_pages"],
@@ -381,9 +377,8 @@ class DiagAttributes:
 
     def add_bss_and_rodata_sections_to_mappings(self, mappings):
         # TODO: Move this under the jumpstart_supervisor_area in the YAML.
-        self.add_after_mapping(
+        self.append_to_mappings(
             mappings,
-            len(mappings) - 1,
             "0b011",
             "0b0",
             self.jumpstart_source_attributes["diag_attributes"]["num_pages_for_bss_section"],
@@ -391,9 +386,8 @@ class DiagAttributes:
             "wb",
             ".bss",
         )
-        self.add_after_mapping(
+        self.append_to_mappings(
             mappings,
-            len(mappings) - 1,
             "0b001",
             "0b0",
             self.jumpstart_source_attributes["diag_attributes"]["num_pages_for_rodata_section"],
@@ -421,9 +415,8 @@ class DiagAttributes:
     def add_pa_guard_page_after_last_mapping(self, mappings):
         # Guard pages have no allocations in the page tables but
         # occupy space in the memory map.
-        self.add_after_mapping(
+        self.append_to_mappings(
             mappings,
-            len(mappings) - 1,
             None,
             None,
             1,
