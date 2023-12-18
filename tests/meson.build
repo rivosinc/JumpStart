@@ -86,9 +86,18 @@ foreach jumpstart_test : jumpstart_tests
           suite:'basic',
           should_fail: test_expected_to_fail)
   elif get_option('diag_target') == 'qemu' and test_disabled_on_qemu == false
+    qemu_args = default_qemu_args
+
+    if get_option('generate_trace') == true
+      qemu_args += [
+          '--var', 'ap-logfile:' + test_prefix + '.trace',
+          '--var', 'out:' + meson.current_build_dir()
+        ]
+    endif
+
     test(test_prefix + ' 🧪 ' + test_description,
           qemu,
-          args : [default_qemu_args, '--var', 'ap-payload:' + test_exe.full_path()],
+          args : [qemu_args, '--var', 'ap-payload:' + test_exe.full_path()],
           suite:'basic',
           timeout: get_option('qemu_timeout'),
           should_fail: test_expected_to_fail)

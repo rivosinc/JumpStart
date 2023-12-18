@@ -165,10 +165,19 @@ if diag_attributes_yaml != '' and diag_sources.length() > 0
                                # feedback and requires `reset` to be run to
                                # restore the terminal.
   elif get_option('diag_target') == 'qemu'
+    qemu_args = default_qemu_args
+
+    if get_option('generate_trace') == true
+      qemu_args += [
+          '--var', 'ap-logfile:' + diag_name + '.trace',
+          '--var', 'out:' + meson.current_build_dir()
+        ]
+    endif
+
     test('🧪 ' + diag_name,
           qemu,
           timeout: get_option('qemu_timeout'),
-          args : [default_qemu_args, '--var', 'ap-payload:' + diag_exe.full_path()])
+          args : [qemu_args, '--var', 'ap-payload:' + diag_exe.full_path()])
   endif
 
 else
