@@ -59,7 +59,7 @@ if get_option('diag_target') == 'spike'
 
   else
     if spike_isa_string == ''
-      spike_isa_string = 'rv64gch_zbs'
+      spike_isa_string = 'rv64gch_zbb_zbs'
     endif
 
   endif
@@ -100,7 +100,7 @@ if gcc_march_string == ''
   if get_option('rivos_internal_build') == true
     gcc_march_string = rivos_gcc_march_string
   else
-    gcc_march_string = 'rv64gc_zbs'
+    gcc_march_string = 'rv64gc_zbb_zbs'
   endif
 endif
 
