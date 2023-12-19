@@ -684,6 +684,9 @@ class DiagAttributes:
                     file.write(f"      *({section_name})\n")
                     defined_sections.append(section_name)
                 file.write("   }\n\n")
+                file.write(
+                    f"   . = {hex(entry['pa'] + entry['num_pages'] * entry['page_size'] - 1)};\n"
+                )
                 file.write(f"  {top_level_section_variable_name_prefix}_END = .;\n")
             file.write("\n}\n")
 
