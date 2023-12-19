@@ -11,5 +11,6 @@ jumpstart_common_sources = files(
                                 'trap_handler_functions.supervisor.c',
                                 'string_functions.supervisor.c',
                                 'uart_functions.supervisor.c',
-                                'heap_functions.supervisor.c'
+                                'heap_functions.supervisor.c',
+                                'lock_functions.supervisor.c'
                                 )
