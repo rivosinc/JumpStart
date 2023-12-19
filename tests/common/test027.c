@@ -12,9 +12,9 @@ extern uint64_t load_from_address(uint64_t address);
 uint8_t PA_access_faulted = 0;
 
 int main(void) {
-  const uint64_t rw_VA_alias = UINT64_C(0x80033000);
-  const uint64_t ro_VA_alias = UINT64_C(0x80053000);
-  const uint64_t PA = UINT64_C(0x80043000);
+  const uint64_t rw_VA_alias = UINT64_C(0xC0033000);
+  const uint64_t ro_VA_alias = UINT64_C(0xC0053000);
+  const uint64_t PA = UINT64_C(0xC0043000);
   uint64_t data_area_address = (uint64_t)&data_area;
   if (data_area_address != PA) {
     return DIAG_FAILED;

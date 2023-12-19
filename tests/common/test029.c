@@ -47,42 +47,42 @@ int test_mapping(uint64_t VA, uint64_t PA, uint8_t expected_xwr,
 }
 
 int main(void) {
-  if (test_mapping(UINT64_C(0x90000000), UINT64_C(0xA0000000), (PTE_R | PTE_W),
+  if (test_mapping(UINT64_C(0xD0000000), UINT64_C(0xE0000000), (PTE_R | PTE_W),
                    0, 0) == DIAG_FAILED) {
     return DIAG_FAILED;
   }
-  if (test_mapping(UINT64_C(0x90000000) + SIZE_2M,
-                   UINT64_C(0xA0000000) + SIZE_2M, (PTE_R | PTE_W), 0,
+  if (test_mapping(UINT64_C(0xD0000000) + SIZE_2M,
+                   UINT64_C(0xE0000000) + SIZE_2M, (PTE_R | PTE_W), 0,
                    0) == DIAG_FAILED) {
     return DIAG_FAILED;
   }
   // Test write
-  if (test_mapping(UINT64_C(0x90000000), UINT64_C(0xA0000000), (PTE_R | PTE_W),
+  if (test_mapping(UINT64_C(0xD0000000), UINT64_C(0xE0000000), (PTE_R | PTE_W),
                    0, MAGIC_VALUE) == DIAG_FAILED) {
     return DIAG_FAILED;
   }
   // Test Alias
-  if (test_mapping(UINT64_C(0x90400000), UINT64_C(0xA0000000), (PTE_R),
+  if (test_mapping(UINT64_C(0xD0400000), UINT64_C(0xE0000000), (PTE_R),
                    MAGIC_VALUE, 0) == DIAG_FAILED) {
     return DIAG_FAILED;
   }
 
-  if (test_mapping(UINT64_C(0xC0000000), UINT64_C(0x100000000), (PTE_R | PTE_W),
-                   0, 0) == DIAG_FAILED) {
+  if (test_mapping(UINT64_C(0x100000000), UINT64_C(0x100000000),
+                   (PTE_R | PTE_W), 0, 0) == DIAG_FAILED) {
     return DIAG_FAILED;
   }
-  if (test_mapping(UINT64_C(0xC0000000) + SIZE_1G,
+  if (test_mapping(UINT64_C(0x100000000) + SIZE_1G,
                    UINT64_C(0x100000000) + SIZE_1G, (PTE_R | PTE_W), 0,
                    0) == DIAG_FAILED) {
     return DIAG_FAILED;
   }
   // Test write
-  if (test_mapping(UINT64_C(0xC0000000), UINT64_C(0x100000000), (PTE_R | PTE_W),
-                   0, MAGIC_VALUE) == DIAG_FAILED) {
+  if (test_mapping(UINT64_C(0x100000000), UINT64_C(0x100000000),
+                   (PTE_R | PTE_W), 0, MAGIC_VALUE) == DIAG_FAILED) {
     return DIAG_FAILED;
   }
   // Test Alias
-  if (test_mapping(UINT64_C(0x140000000), UINT64_C(0x100000000), (PTE_R),
+  if (test_mapping(UINT64_C(0x180000000), UINT64_C(0x100000000), (PTE_R),
                    MAGIC_VALUE, 0) == DIAG_FAILED) {
     return DIAG_FAILED;
   }
@@ -90,7 +90,7 @@ int main(void) {
   disable_mmu_from_supervisor_mode();
 
   // PA access should now succeed with the MMU off.
-  uint64_t value_at_2M_PA = load_from_address(UINT64_C(0xA0000000));
+  uint64_t value_at_2M_PA = load_from_address(UINT64_C(0xE0000000));
   if (value_at_2M_PA != MAGIC_VALUE) {
     return DIAG_FAILED;
   }

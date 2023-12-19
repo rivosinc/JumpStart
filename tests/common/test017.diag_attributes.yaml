@@ -8,14 +8,14 @@ satp_mode: "sv39"
 
 mappings:
   -
-    pa: 0x80020000
+    pa: 0xC0020000
     page_size: 0x1000
     num_pages: 2
     pma_memory_type: "wb"
     no_pte_allocation: True
     linker_script_section: ".text"
   -
-    pa: 0x80022000
+    pa: 0xC0022000
     page_size: 0x1000
     num_pages: 1
     pma_memory_type: "wb"

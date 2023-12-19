@@ -6,18 +6,19 @@ satp_mode: "sv48"
 
 active_hart_mask: "0b1"
 max_num_pages_for_PT_allocation: 8
+
 mappings:
   -
-    va: 0x80020000
-    pa: 0x80020000
+    va: 0xC0020000
+    pa: 0xC0020000
     xwr: "0b101"
     page_size: 0x1000
     num_pages: 2
     pma_memory_type: "wb"
     linker_script_section: ".text"
   -
-    va: 0x80022000
-    pa: 0x80022000
+    va: 0xC0022000
+    pa: 0xC0022000
     xwr: "0b011"
     valid: "0b0"
     page_size: 0x1000
@@ -25,22 +26,22 @@ mappings:
     pma_memory_type: "wb"
     linker_script_section: ".data"
   -
-    va: 0x90000000
-    pa: 0xA0000000
+    va: 0xD0000000
+    pa: 0xE0000000
     xwr: "0b011"
     valid: "0b1"
     page_size: 0x200000
     num_pages: 2
     pma_memory_type: "wb"
   -
-    va: 0x90400000
-    pa: 0xA0000000
+    va: 0xD0400000
+    pa: 0xE0000000
     xwr: "0b001"
     page_size: 0x200000
     num_pages: 1
     alias: True
   -
-    va: 0xC0000000
+    va: 0x100000000
     pa: 0x100000000
     xwr: "0b011"
     valid: "0b1"
@@ -48,7 +49,7 @@ mappings:
     num_pages: 2
     pma_memory_type: "wb"
   -
-    va: 0x140000000
+    va: 0x180000000
     pa: 0x100000000
     xwr: "0b001"
     page_size: 0x40000000

@@ -31,6 +31,6 @@ common_jumpstart_tests = [
   ['test023', 'Handle S mode exceptions in M mode handlers.', false, '', true],
   ['test026', 'VA != PA mapping.', false, '', true],
   ['test027', 'VA aliasing test.', false, '', true],
-  ['test028', 'Super Pages (SATP.mode = sv39) VA translation test.', false, '-m0x80000000:0x20000,0x80020000:0x640000,0xA0000000:0x400000,0x100000000:0x80000000', false],
-  ['test029', 'Super Pages (SATP.mode = sv48) VA translation test.', false, '-m0x80000000:0x20000,0x80020000:0x640000,0xA0000000:0x400000,0x100000000:0x80000000', false],
+  ['test028', 'Super Pages (SATP.mode = sv39) VA translation test.', false, '-m0x80000000:0x40000000,0xC0000000:0x1000,0xC0020000:0x2000,0xC0022000:0x1000,0xD0000000:0x400000,0xE0000000:0x400000,0xD0400000:0x200000,0x100000000:0x4000000,0x140000000:0x40000000', false],
+  ['test029', 'Super Pages (SATP.mode = sv48) VA translation test.', false, '-m0x80000000:0x40000000,0xC0000000:0x1000,0xC0020000:0x2000,0xC0022000:0x1000,0xD0000000:0x400000,0xE0000000:0x400000,0xD0400000:0x200000,0x100000000:0x4000000,0x140000000:0x40000000', false],
 ]

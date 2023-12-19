@@ -13,7 +13,7 @@ int main(void) {
 
   struct translation_info xlate_info;
 
-  translate_VA(0x80021000, &xlate_info);
+  translate_VA(0xC0021000, &xlate_info);
 
   // the valid bit is not set for the leaf PTE so the translation
   // will be marked unsuccessful.
@@ -43,12 +43,12 @@ int main(void) {
   *((uint64_t *)xlate_info.pte_address[2]) = xlate_info.pte_value[2] | PTE_V;
   asm volatile("sfence.vma");
 
-  translate_VA(0x80021000, &xlate_info);
+  translate_VA(0xC0021000, &xlate_info);
   if (xlate_info.walk_successful != 1) {
     return DIAG_FAILED;
   }
 
-  if (xlate_info.pa != 0x80021000) {
+  if (xlate_info.pa != 0xC0021000) {
     return DIAG_FAILED;
   }
 
