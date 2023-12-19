@@ -146,7 +146,6 @@ class DiagAttributes:
         self, jumpstart_source_attributes_yaml, diag_attributes_yaml, override_diag_attributes
     ):
         self.diag_attributes_yaml = diag_attributes_yaml
-
         with open(diag_attributes_yaml) as f:
             diag_attributes = yaml.safe_load(f)
 
@@ -352,15 +351,17 @@ class DiagAttributes:
 
     def add_jumpstart_heap_mapping(self, mappings):
         # TODO: Move this under the jumpstart_supervisor_area in the YAML.
+        xwr = "0b011"
+        umode = "0b0"
+        num_heap_pages = 2
         self.append_to_mappings(
             mappings,
-            None,
-            None,
-            2,
-            0x200000,
+            xwr,
+            umode,
+            num_heap_pages,
+            PageSize.SIZE_2M,
             "wb",
             ".jumpstart.supervisor.heap",
-            True,
         )
 
     def add_jumpstart_area_to_mappings(self, mappings, area_name):

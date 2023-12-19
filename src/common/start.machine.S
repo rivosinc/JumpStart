@@ -54,6 +54,8 @@ _machine_mode_start:
 
   jal enable_mmu_from_machine_mode
 
+  jal setup_heap
+
   j jump_to_main
 
 .section .jumpstart.text.machine, "ax"
