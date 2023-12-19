@@ -20,6 +20,17 @@ option('diag_attribute_overrides',
        type : 'array',
        description : 'Overrides specified test attributes.')
 
+option('diag_generate_disassembly',
+       type : 'boolean',
+       value : false,
+       description : 'Generate diag disassembly.')
+
+option('diag_target',
+       type : 'combo',
+       choices: ['spike', 'qemu'],
+       value : 'spike',
+       description : 'Target to build the diag for.')
+
 option('gcc_march_string',
        type : 'string',
        value : '',
@@ -43,6 +54,15 @@ option('spike_generate_trace',
        type : 'boolean',
        value : false,
        description : 'Generate spike trace.')
+
+option('qemu_binary',
+       type : 'string',
+       value : '',
+       description : 'QEMU binary to use')
+
+option('qemu_additional_arguments',
+       type : 'array',
+       description : 'Additional arguments to pass to qemu when running the diag.')
 
 option('rivos_internal_build',
        type : 'boolean',

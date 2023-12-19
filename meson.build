@@ -45,48 +45,66 @@ diag_source_generator = files('scripts/generate_diag_sources.py')
 diag_sources = get_option('diag_sources')
 diag_attributes_yaml = get_option('diag_attributes_yaml')
 
+if get_option('diag_target') == 'spike'
+  spike = find_program(get_option('spike_binary'))
+  spike_isa_string = get_option('spike_isa_string')
 
-spike = find_program(get_option('spike_binary'))
+  default_spike_args = []
 
-spike_isa_string = get_option('spike_isa_string')
+  if get_option('rivos_internal_build') == true
+    default_spike_args += rivos_spike_args
+    if spike_isa_string == ''
+      spike_isa_string = rivos_spike_isa_string
+    endif
+
+  else
+    if spike_isa_string == ''
+      spike_isa_string = 'rv64gch_zbs'
+    endif
+
+  endif
+
+  if spike_isa_string != ''
+    default_spike_args += ['--isa=' + spike_isa_string ]
+  endif
+
+  if get_option('spike_generate_trace') == true
+    default_spike_args += ['-l', '--log-commits']
+  endif
+
+  if get_option('spike_additional_arguments').length() > 0
+    default_spike_args += get_option('spike_additional_arguments')
+  endif
+
+elif get_option('diag_target') == 'qemu'
+  qemu_binary = rivos_qemu_binary
+  if get_option('qemu_binary') != ''
+    qemu_binary = get_option('qemu_binary')
+  endif
+  qemu = find_program(qemu_binary)
+
+  default_qemu_args = rivos_qemu_args
+
+  if get_option('qemu_additional_arguments').length() > 0
+    default_qemu_args += get_option('qemu_additional_arguments')
+  endif
+endif
+
+objdump = find_program('objdump')
+
 gcc_march_string = get_option('gcc_march_string')
 
-default_spike_args = []
 default_c_args_list = []
 
-if get_option('rivos_internal_build') == true
-  default_spike_args += rivos_spike_args
-
-  if spike_isa_string == ''
-    spike_isa_string = rivos_spike_isa_string
-  endif
-
-  if gcc_march_string == ''
+if gcc_march_string == ''
+  if get_option('rivos_internal_build') == true
     gcc_march_string = rivos_gcc_march_string
-  endif
-else
-  if gcc_march_string == ''
+  else
     gcc_march_string = 'rv64gc_zbs'
-  endif
-
-  if spike_isa_string == ''
-    spike_isa_string = 'rv64gch_zbs'
   endif
 endif
 
 default_c_args_list += ['-march=' + gcc_march_string]
-
-if spike_isa_string != ''
-  default_spike_args += ['--isa=' + spike_isa_string ]
-endif
-
-if get_option('spike_generate_trace') == true
-  default_spike_args += ['-l', '--log-commits']
-endif
-
-if get_option('spike_additional_arguments').length() > 0
-  default_spike_args += get_option('spike_additional_arguments')
-endif
 
 diag_source_generator_common_inputs = [diag_source_generator, jumpstart_source_attributes_yaml]
 diag_source_generator_command = [prog_python,
@@ -101,6 +119,11 @@ if diag_attributes_yaml != '' and diag_sources.length() > 0
   diag_name = get_option('diag_name')
 
   diag_attribute_overrides = get_option('diag_attribute_overrides')
+
+  if get_option('diag_target') == 'qemu'
+    diag_attribute_overrides += ['in_qemu_mode=True']
+  endif
+
   if diag_attribute_overrides.length() > 0
     diag_source_generator_command += ['--override_diag_attributes']
 
@@ -125,9 +148,28 @@ if diag_attributes_yaml != '' and diag_sources.length() > 0
                         c_args: default_c_args_list,
                         link_args: ['-T' + linker_script, '-nostdlib'])
 
-  test('🧪 ' + diag_name,
-        spike,
-        args : [default_spike_args, diag_exe])
+  if get_option('diag_generate_disassembly') == true
+        custom_target('dump',
+                capture          : true,
+                output           : diag_name + '.dis',
+                build_by_default : true,
+                command          : [objdump, '-D', '-S', '-t', diag_exe],
+                depends          : [diag_exe])
+  endif
+
+  if get_option('diag_target') == 'spike'
+    test('🧪 ' + diag_name,
+          spike,
+          args : [default_spike_args, diag_exe],
+          is_parallel : false) # Parallel runs of the test turns off terminal
+                               # feedback and requires `reset` to be run to
+                               # restore the terminal.
+  elif get_option('diag_target') == 'qemu'
+    test('🧪 ' + diag_name,
+          qemu,
+          timeout: 60,
+          args : [default_qemu_args, '--var', 'ap-payload:' + diag_exe.full_path()])
+  endif
 
 else
 

@@ -29,24 +29,15 @@ mappings:
     pa: 0x80043000
     xwr: "0b011"
     page_size: 0x1000
-    num_pages: 1
+    num_pages: 2
     pma_memory_type: "wb"
     linker_script_section: ".data.1"
 
+  # Add a RO alias for the first page in the .data.1 section
   -
     va: 0x80053000
-    pa: 0x80063000
-    xwr: "0b011"
+    pa: 0x80043000
+    xwr: "0b001"
     page_size: 0x1000
     num_pages: 1
-    pma_memory_type: "wb"
-    linker_script_section: ".data.2"
-
-  -
-    va: 0x80063000
-    pa: 0x80053000
-    xwr: "0b011"
-    page_size: 0x1000
-    num_pages: 1
-    pma_memory_type: "wb"
-    linker_script_section: ".data.3"
+    alias: True

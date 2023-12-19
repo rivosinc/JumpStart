@@ -29,7 +29,7 @@ repos:
       - id: isort
 
   - repo: https://github.com/psf/black-pre-commit-mirror
-    rev: 23.9.1
+    rev: 23.11.0
     hooks:
       - id: black
 
@@ -50,7 +50,7 @@ repos:
 
   # pull mirror of https://github.com/fsfe/reuse-tool
   - repo: https://github.com/rivosinc/reuse-tool
-    rev: 'a6b70ad3db65b1686cd045499b655a1538a40624'
+    rev: 'd95c0e946ee0448420fb1417a0f98fc2eb87d94a'
     hooks:
       - id: reuse-annotate
         args:
