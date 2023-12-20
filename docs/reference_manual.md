@@ -65,7 +65,7 @@ The address at which the start of the M-mode section will be placed by the linke
 
 The maximum number of pages that can be used to allocate Page Tables.
 
-### `num_pages_for_bss_section` and `num_pages_for_rodata_section`
+### `num_pages_for_jumpstart_supervisor_area_bss_section` and `num_pages_for_jumpstart_supervisor_area_rodata_section`
 
 The number of pages allowed for the `.bss` and `.rodata` sections respectively.
 

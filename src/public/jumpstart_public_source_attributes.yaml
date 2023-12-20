@@ -82,8 +82,8 @@ jumpstart_umode_area:
 diag_attributes:
   start_test_in_machine_mode: false
   max_num_pages_for_PT_allocation: 5
-  num_pages_for_bss_section: 1
-  num_pages_for_rodata_section: 1
+  num_pages_for_jumpstart_supervisor_area_bss_section: 1
+  num_pages_for_jumpstart_supervisor_area_rodata_section: 1
   allow_page_table_modifications: false
   machine_mode_start_address: 0x80000000
   active_hart_mask: '0b1'

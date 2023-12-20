@@ -363,16 +363,25 @@ class DiagAttributes:
 
     def add_jumpstart_area_to_mappings(self, mappings, area_name):
         for section_name in self.jumpstart_source_attributes[area_name]:
-            num_pages = None
-            if "num_pages" in self.jumpstart_source_attributes[area_name][section_name]:
-                num_pages = self.jumpstart_source_attributes[area_name][section_name]["num_pages"]
-            elif (
-                f"num_pages_for_{section_name}_section"
+            num_pages_diag_attribute_name = f"num_pages_for_{area_name}_{section_name}_section"
+
+            if (
+                "num_pages" in self.jumpstart_source_attributes[area_name][section_name]
+                and num_pages_diag_attribute_name
                 in self.jumpstart_source_attributes["diag_attributes"]
             ):
+                log.error(
+                    f"num_pages specified for {section_name} in {area_name} and {num_pages_diag_attribute_name} specified in diag_attributes. Please specify only one."
+                )
+                sys.exit(1)
+
+            num_pages = None
+            if num_pages_diag_attribute_name in self.jumpstart_source_attributes["diag_attributes"]:
                 num_pages = self.jumpstart_source_attributes["diag_attributes"][
-                    f"num_pages_for_{section_name}_section"
+                    num_pages_diag_attribute_name
                 ]
+            elif "num_pages" in self.jumpstart_source_attributes[area_name][section_name]:
+                num_pages = self.jumpstart_source_attributes[area_name][section_name]["num_pages"]
             else:
                 log.error(f"num_pages not specified for {section_name} in {area_name}")
                 sys.exit(1)
