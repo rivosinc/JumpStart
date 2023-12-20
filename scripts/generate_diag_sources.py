@@ -259,9 +259,6 @@ class DiagAttributes:
             self.jumpstart_source_attributes["diag_attributes"]["mappings"],
             "jumpstart_supervisor_area",
         )
-        self.add_bss_and_rodata_sections_to_mappings(
-            self.jumpstart_source_attributes["diag_attributes"]["mappings"]
-        )
         self.add_jumpstart_area_to_mappings(
             self.jumpstart_source_attributes["diag_attributes"]["mappings"],
             "jumpstart_umode_area",
@@ -366,36 +363,29 @@ class DiagAttributes:
 
     def add_jumpstart_area_to_mappings(self, mappings, area_name):
         for section_name in self.jumpstart_source_attributes[area_name]:
+            num_pages = None
+            if "num_pages" in self.jumpstart_source_attributes[area_name][section_name]:
+                num_pages = self.jumpstart_source_attributes[area_name][section_name]["num_pages"]
+            elif (
+                f"num_pages_for_{section_name}_section"
+                in self.jumpstart_source_attributes["diag_attributes"]
+            ):
+                num_pages = self.jumpstart_source_attributes["diag_attributes"][
+                    f"num_pages_for_{section_name}_section"
+                ]
+            else:
+                log.error(f"num_pages not specified for {section_name} in {area_name}")
+                sys.exit(1)
+
             self.append_to_mappings(
                 mappings,
                 self.jumpstart_source_attributes[area_name][section_name]["xwr"],
                 self.jumpstart_source_attributes[area_name][section_name]["umode"],
-                self.jumpstart_source_attributes[area_name][section_name]["num_pages"],
+                num_pages,
                 self.jumpstart_source_attributes[area_name][section_name]["page_size"],
                 self.jumpstart_source_attributes[area_name][section_name]["pma_memory_type"],
                 self.jumpstart_source_attributes[area_name][section_name]["linker_script_section"],
             )
-
-    def add_bss_and_rodata_sections_to_mappings(self, mappings):
-        # TODO: Move this under the jumpstart_supervisor_area in the YAML.
-        self.append_to_mappings(
-            mappings,
-            "0b011",
-            "0b0",
-            self.jumpstart_source_attributes["diag_attributes"]["num_pages_for_bss_section"],
-            PageSize.SIZE_4K,
-            "wb",
-            ".bss",
-        )
-        self.append_to_mappings(
-            mappings,
-            "0b001",
-            "0b0",
-            self.jumpstart_source_attributes["diag_attributes"]["num_pages_for_rodata_section"],
-            PageSize.SIZE_4K,
-            "wb",
-            ".rodata",
-        )
 
     def get_jumpstart_machine_mode_section(self):
         machine_mode_mapping = {}

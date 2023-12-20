@@ -48,6 +48,18 @@ jumpstart_supervisor_area:
     umode: "0b0"
     pma_memory_type: "wb"
     linker_script_section: ".jumpstart.data.supervisor"
+  bss:
+    page_size: 0x1000
+    xwr: "0b011"
+    umode: "0b0"
+    pma_memory_type: "wb"
+    linker_script_section: ".bss"
+  rodata:
+    page_size: 0x1000
+    xwr: "0b001"
+    umode: "0b0"
+    pma_memory_type: "wb"
+    linker_script_section: ".rodata"
 jumpstart_umode_area:
   text:
     page_size: 0x1000
