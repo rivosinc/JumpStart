@@ -48,6 +48,13 @@ jumpstart_supervisor_area:
     umode: "0b0"
     pma_memory_type: "wb"
     linker_script_section: ".jumpstart.data.supervisor"
+  sdata:
+    page_size: 0x1000
+    num_pages: 1
+    xwr: "0b011"
+    umode: "0b0"
+    pma_memory_type: "wb"
+    linker_script_section: ".sdata"
   bss:
     page_size: 0x1000
     xwr: "0b011"
