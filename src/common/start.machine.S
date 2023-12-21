@@ -56,6 +56,8 @@ _machine_mode_start:
 
   jal setup_heap
 
+  jal setup_uart
+
   j jump_to_main
 
 .section .jumpstart.text.machine, "ax"

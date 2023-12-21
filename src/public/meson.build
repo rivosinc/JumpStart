@@ -4,6 +4,7 @@
 
 jumpstart_public_sources = files(
                           'jump_to_main.machine.S',
+                          'uart_functions.machine.c',
                           'end.machine.S'
                           )
 jumpstart_source_attributes_yaml = files('jumpstart_public_source_attributes.yaml')

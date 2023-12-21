@@ -9,5 +9,7 @@ jumpstart_common_sources = files(
                                 'jumpstart_functions.umode.S',
                                 'tablewalk_functions.supervisor.c',
                                 'trap_handler_functions.supervisor.c',
+                                'string_functions.supervisor.c',
+                                'uart_functions.supervisor.c',
                                 'heap_functions.supervisor.c'
                                 )
