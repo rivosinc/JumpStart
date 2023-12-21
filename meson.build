@@ -13,6 +13,9 @@ project('JumpStart', 'c',
 add_project_arguments('-Wno-c++-compat',
                       '-Wno-padded',
                       '-Wno-pedantic',
+                      # Let GCC know we are using our own malloc/calloc implementation. Otherwise
+                      # it makes assumptions about using it's own.
+                      '-fno-builtin',
                       '-mcmodel=medany',
                       language: 'c')
 

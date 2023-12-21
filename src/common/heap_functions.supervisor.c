@@ -150,7 +150,7 @@ memalign(size_t alignment, size_t size) {
 
     // The current chunk is already aligned so just allocate it
     if (start == aligned_start) {
-      aligned = 0;
+      aligned = 1;
       break;
     }
 
@@ -205,8 +205,8 @@ memalign(size_t alignment, size_t size) {
 __attribute__((section(".jumpstart.text.supervisor"))) void *
 memset(void *s, int c, size_t n) {
   uint8_t *p = s;
-  for (size_t i = 0; i < n; ++i) {
-    *p = (uint8_t)c;
+  for (size_t i = 0; i < n; i++) {
+    *(p++) = (uint8_t)c;
   }
   return s;
 }
