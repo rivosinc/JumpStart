@@ -28,6 +28,7 @@ foreach jumpstart_test : jumpstart_tests
   spike_additional_arguments = jumpstart_test.get(3, '')
 
   test_disabled_on_qemu = jumpstart_test.get(4, false)
+  test_disabled_on_spike = jumpstart_test.get(5, false)
 
   if fs.is_file(meson.current_source_dir() + '/' + 'common' + '/' + test_prefix + '.diag_attributes.yaml')
     diag_attributes_yaml = files('common' + '/' + test_prefix + '.diag_attributes.yaml')
@@ -73,7 +74,7 @@ foreach jumpstart_test : jumpstart_tests
                 depends          : [test_exe])
   endif
 
-  if get_option('diag_target') == 'spike'
+  if get_option('diag_target') == 'spike' and test_disabled_on_spike == false
     spike_args = default_spike_args
 
     if spike_additional_arguments != ''
