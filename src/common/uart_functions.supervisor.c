@@ -20,9 +20,11 @@ static int vprintk(const char *fmt, va_list args)
     __attribute__((section(".jumpstart.text.supervisor")));
 void enable_uart(void);
 
-static uint8_t uart_initialized = 0;
 __attribute__((
-    section(".jumpstart.data.supervisor"))) static spinlock_t uart_lock = 0;
+    section(".jumpstart.data.supervisor"))) static uint8_t uart_initialized = 0;
+
+__attribute__((
+    section(".jumpstart.data.supervisor"))) static spinlock_t printk_lock = 0;
 
 __attribute__((section(".jumpstart.text.machine"))) void enable_uart(void) {
   uart_initialized = 1;
@@ -70,13 +72,13 @@ printk(const char *fmt, ...) {
   va_list args;
   int rc;
 
-  acquire_lock(&uart_lock);
+  acquire_lock(&printk_lock);
 
   va_start(args, fmt);
   rc = vprintk(fmt, args);
   va_end(args);
 
-  release_lock(&uart_lock);
+  release_lock(&printk_lock);
 
   return rc;
 }
