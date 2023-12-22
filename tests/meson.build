@@ -23,9 +23,10 @@ endif
 foreach jumpstart_test : jumpstart_tests
   test_prefix = jumpstart_test.get(0)
   test_description = jumpstart_test.get(1)
-  test_expected_to_fail = jumpstart_test.get(2, false)
 
-  spike_additional_arguments = jumpstart_test.get(3, '')
+  spike_additional_arguments = jumpstart_test.get(2, '')
+
+  test_expected_to_fail = jumpstart_test.get(3, false)
 
   test_disabled_on_qemu = jumpstart_test.get(4, false)
   test_disabled_on_spike = jumpstart_test.get(5, false)
