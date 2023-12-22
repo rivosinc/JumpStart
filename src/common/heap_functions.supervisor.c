@@ -3,8 +3,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "heap_functions.supervisor.h"
-
 #include "jumpstart_defines.h"
+#include "jumpstart_functions.h"
+#include "lock_functions.supervisor.h"
 
 #include <stdint.h>
 
@@ -23,6 +24,8 @@ struct memchunk {
 typedef struct memchunk memchunk;
 
 __attribute__((section(".jumpstart.data.supervisor"))) static memchunk *head;
+__attribute__((
+    section(".jumpstart.data.supervisor"))) static spinlock_t heap_lock = 0;
 #define MEMCHUNK_USED     0x8000000000000000ULL
 #define MEMCHUNK_MAX_SIZE (MEMCHUNK_USED - 1)
 //------------------------------------------------------------------------------
@@ -33,7 +36,8 @@ malloc(size_t size) {
   if (head == 0 || size > MEMCHUNK_MAX_SIZE) {
     return 0;
   }
-
+  void *result = 0;
+  acquire_lock(&heap_lock);
   //----------------------------------------------------------------------------
   // Allocating anything less than 8 bytes is kind of pointless, the
   // book-keeping overhead is too big.
@@ -52,7 +56,7 @@ malloc(size_t size) {
   }
 
   if (!chunk) {
-    return 0;
+    goto exit_malloc;
   }
 
   //----------------------------------------------------------------------------
@@ -72,7 +76,10 @@ malloc(size_t size) {
   // Mark the chunk as used and return the memory
   //----------------------------------------------------------------------------
   chunk->size |= MEMCHUNK_USED;
-  return (void *)chunk + sizeof(memchunk);
+  result = (void *)chunk + sizeof(memchunk);
+exit_malloc:
+  release_lock(&heap_lock);
+  return result;
 }
 
 //------------------------------------------------------------------------------
@@ -82,22 +89,26 @@ __attribute__((section(".jumpstart.text.supervisor"))) void free(void *ptr) {
   if (!ptr) {
     return;
   }
-
+  acquire_lock(&heap_lock);
   memchunk *chunk = (memchunk *)((void *)ptr - sizeof(memchunk));
   chunk->size &= ~MEMCHUNK_USED;
+  release_lock(&heap_lock);
 }
 
 //------------------------------------------------------------------------------
 // Set up the heap
 //------------------------------------------------------------------------------
 __attribute__((section(".jumpstart.text.machine"))) void setup_heap(void) {
-  uint64_t *heap_start = (uint64_t *)&_JUMPSTART_SUPERVISOR_HEAP_START;
-  uint64_t *heap_end = (uint64_t *)&_JUMPSTART_SUPERVISOR_HEAP_END;
+  uint8_t hart_id = get_thread_attributes_hart_id_from_machine_mode();
+  if (hart_id == 0) {
+    uint64_t *heap_start = (uint64_t *)&_JUMPSTART_SUPERVISOR_HEAP_START;
+    uint64_t *heap_end = (uint64_t *)&_JUMPSTART_SUPERVISOR_HEAP_END;
 
-  head = (memchunk *)heap_start;
-  head->next = NULL;
-  head->size =
-      (uint64_t)heap_end - (uint64_t)heap_start - (uint64_t)sizeof(memchunk);
+    head = (memchunk *)heap_start;
+    head->next = NULL;
+    head->size =
+        (uint64_t)heap_end - (uint64_t)heap_start - (uint64_t)sizeof(memchunk);
+  }
 }
 
 __attribute__((section(".jumpstart.text.supervisor"))) void *
@@ -119,6 +130,8 @@ memalign(size_t alignment, size_t size) {
     return malloc(size);
   }
 
+  void *result = 0;
+  acquire_lock(&heap_lock);
   //----------------------------------------------------------------------------
   // Allocating anything less than 8 bytes is kind of pointless, the
   // book-keeping overhead is too big.
@@ -174,7 +187,7 @@ memalign(size_t alignment, size_t size) {
   }
 
   if (!chunk) {
-    return 0;
+    goto exit_memalign;
   }
 
   // If chunk is not aligned we need to allecate a new chunk just before it
@@ -198,7 +211,10 @@ memalign(size_t alignment, size_t size) {
     chunk->size = alloc_size;
   }
   chunk->size |= MEMCHUNK_USED;
-  return (void *)chunk + sizeof(memchunk);
+  result = (void *)chunk + sizeof(memchunk);
+exit_memalign:
+  release_lock(&heap_lock);
+  return result;
 }
 
 __attribute__((section(".jumpstart.text.supervisor"))) void *
