@@ -5,7 +5,7 @@
 satp_mode: "sv48"
 
 active_hart_mask: "0b1"
-num_pages_for_jumpstart_supervisor_pagetables: 8
+
 
 mappings:
   -
