@@ -263,9 +263,6 @@ class DiagAttributes:
             self.jumpstart_source_attributes["diag_attributes"]["mappings"],
             "jumpstart_umode_area",
         )
-        self.add_pagetable_section_to_mappings(
-            self.jumpstart_source_attributes["diag_attributes"]["mappings"]
-        )
         self.add_jumpstart_heap_mapping(
             self.jumpstart_source_attributes["diag_attributes"]["mappings"]
         )
@@ -326,26 +323,6 @@ class DiagAttributes:
 
         mappings.insert(previous_mapping_id + 1, new_mapping)
 
-    def add_pagetable_section_to_mappings(self, mappings):
-        xwr = "0b001"
-
-        if (
-            self.jumpstart_source_attributes["diag_attributes"]["allow_page_table_modifications"]
-            is True
-        ):
-            xwr = "0b011"
-
-        self.append_to_mappings(
-            mappings,
-            xwr,
-            "0b0",
-            self.jumpstart_source_attributes["diag_attributes"]["max_num_pages_for_PT_allocation"],
-            PageSize.SIZE_4K,
-            "wb",
-            ".jumpstart.rodata.pagetables",
-        )
-        self.PT_section_start_address = mappings[-1]["pa"]
-
     def add_jumpstart_heap_mapping(self, mappings):
         # TODO: Move this under the jumpstart_supervisor_area in the YAML.
         xwr = "0b011"
@@ -395,6 +372,16 @@ class DiagAttributes:
                 self.jumpstart_source_attributes[area_name][section_name]["pma_memory_type"],
                 self.jumpstart_source_attributes[area_name][section_name]["linker_script_section"],
             )
+
+            if section_name == "pagetables":
+                self.PT_section_start_address = mappings[len(mappings) - 1]["pa"]
+                if (
+                    self.jumpstart_source_attributes["diag_attributes"][
+                        "allow_page_table_modifications"
+                    ]
+                    is True
+                ):
+                    mappings[len(mappings) - 1]["xwr"] = "0b011"
 
     def get_jumpstart_machine_mode_section(self):
         machine_mode_mapping = {}
@@ -487,7 +474,7 @@ class DiagAttributes:
         if (
             len(self.PT_pages)
             == self.jumpstart_source_attributes["diag_attributes"][
-                "max_num_pages_for_PT_allocation"
+                "num_pages_for_jumpstart_supervisor_area_pagetables_section"
             ]
         ):
             # Can't create any more pagetable pages
@@ -530,7 +517,7 @@ class DiagAttributes:
                 current_level_PT_page = self.get_PT_page(entry["va"], current_level)
                 if current_level_PT_page is None:
                     log.error(
-                        f"Insufficient pagetable pages (max_num_pages_for_PT_allocation = {self.jumpstart_source_attributes['diag_attributes']['max_num_pages_for_PT_allocation']}) to create level {current_level + 1} pagetable for {entry}"
+                        f"Insufficient pagetable pages (num_pages_for_jumpstart_supervisor_area_pagetables_section = {self.jumpstart_source_attributes['diag_attributes']['num_pages_for_jumpstart_supervisor_area_pagetables_section']}) to create level {current_level + 1} pagetable for {entry}"
                     )
                     sys.exit(1)
 
@@ -543,7 +530,7 @@ class DiagAttributes:
                     next_level_pagetable = self.get_PT_page(entry["va"], current_level + 1)
                     if next_level_pagetable is None:
                         log.error(
-                            f"Insufficient pagetable pages (max_num_pages_for_PT_allocation = {self.jumpstart_source_attributes['diag_attributes']['max_num_pages_for_PT_allocation']}) to create next level {current_level + 1} pagetable for {entry}"
+                            f"Insufficient pagetable pages (num_pages_for_jumpstart_supervisor_area_pagetables_section = {self.jumpstart_source_attributes['diag_attributes']['num_pages_for_jumpstart_supervisor_area_pagetables_section']}) to create next level {current_level + 1} pagetable for {entry}"
                         )
                         sys.exit(1)
 

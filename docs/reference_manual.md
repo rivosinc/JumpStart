@@ -61,7 +61,7 @@ Example: [test009](../tests/common/test009.diag_attributes.yaml).
 
 The address at which the start of the M-mode section will be placed by the linker.
 
-### `max_num_pages_for_PT_allocation`
+### `num_pages_for_jumpstart_supervisor_area_pagetables_section`
 
 The maximum number of pages that can be used to allocate Page Tables.
 
