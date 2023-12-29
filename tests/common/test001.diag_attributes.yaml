@@ -4,7 +4,7 @@
 
 satp_mode: "sv48"
 
-num_pages_for_jumpstart_supervisor_area_pagetables_section: 8
+num_pages_for_jumpstart_supervisor_pagetables: 8
 
 mappings:
   -

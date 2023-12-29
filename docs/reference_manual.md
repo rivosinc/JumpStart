@@ -61,11 +61,11 @@ Example: [test009](../tests/common/test009.diag_attributes.yaml).
 
 The address at which the start of the M-mode section will be placed by the linker.
 
-### `num_pages_for_jumpstart_supervisor_area_pagetables_section`
+### `num_pages_for_jumpstart_supervisor_pagetables`
 
 The maximum number of pages that can be used to allocate Page Tables.
 
-### `num_pages_for_jumpstart_supervisor_area_bss_section` and `num_pages_for_jumpstart_supervisor_area_rodata_section`
+### `num_pages_for_jumpstart_supervisor_bss` and `num_pages_for_jumpstart_supervisor_rodata`
 
 The number of pages allowed for the `.bss` and `.rodata` sections respectively.
 

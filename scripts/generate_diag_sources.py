@@ -257,11 +257,11 @@ class DiagAttributes:
 
         self.add_jumpstart_area_to_mappings(
             self.jumpstart_source_attributes["diag_attributes"]["mappings"],
-            "jumpstart_supervisor_area",
+            "jumpstart_supervisor",
         )
         self.add_jumpstart_area_to_mappings(
             self.jumpstart_source_attributes["diag_attributes"]["mappings"],
-            "jumpstart_umode_area",
+            "jumpstart_umode",
         )
         self.add_jumpstart_heap_mapping(
             self.jumpstart_source_attributes["diag_attributes"]["mappings"]
@@ -324,7 +324,7 @@ class DiagAttributes:
         mappings.insert(previous_mapping_id + 1, new_mapping)
 
     def add_jumpstart_heap_mapping(self, mappings):
-        # TODO: Move this under the jumpstart_supervisor_area in the YAML.
+        # TODO: Move this under the jumpstart_supervisor in the YAML.
         xwr = "0b011"
         umode = "0b0"
         num_heap_pages = 2
@@ -340,7 +340,7 @@ class DiagAttributes:
 
     def add_jumpstart_area_to_mappings(self, mappings, area_name):
         for section_name in self.jumpstart_source_attributes[area_name]:
-            num_pages_diag_attribute_name = f"num_pages_for_{area_name}_{section_name}_section"
+            num_pages_diag_attribute_name = f"num_pages_for_{area_name}_{section_name}"
 
             if (
                 "num_pages" in self.jumpstart_source_attributes[area_name][section_name]
@@ -389,12 +389,10 @@ class DiagAttributes:
             "machine_mode_start_address"
         ]
 
-        for area_name in self.jumpstart_source_attributes["jumpstart_machine_area"]:
-            for attribute_name in self.jumpstart_source_attributes["jumpstart_machine_area"][
-                area_name
-            ]:
+        for area_name in self.jumpstart_source_attributes["jumpstart_mmode"]:
+            for attribute_name in self.jumpstart_source_attributes["jumpstart_mmode"][area_name]:
                 machine_mode_mapping[attribute_name] = self.jumpstart_source_attributes[
-                    "jumpstart_machine_area"
+                    "jumpstart_mmode"
                 ][area_name][attribute_name]
 
         return machine_mode_mapping
@@ -474,7 +472,7 @@ class DiagAttributes:
         if (
             len(self.PT_pages)
             == self.jumpstart_source_attributes["diag_attributes"][
-                "num_pages_for_jumpstart_supervisor_area_pagetables_section"
+                "num_pages_for_jumpstart_supervisor_pagetables"
             ]
         ):
             # Can't create any more pagetable pages
@@ -517,7 +515,7 @@ class DiagAttributes:
                 current_level_PT_page = self.get_PT_page(entry["va"], current_level)
                 if current_level_PT_page is None:
                     log.error(
-                        f"Insufficient pagetable pages (num_pages_for_jumpstart_supervisor_area_pagetables_section = {self.jumpstart_source_attributes['diag_attributes']['num_pages_for_jumpstart_supervisor_area_pagetables_section']}) to create level {current_level + 1} pagetable for {entry}"
+                        f"Insufficient pagetable pages (num_pages_for_jumpstart_supervisor_pagetables = {self.jumpstart_source_attributes['diag_attributes']['num_pages_for_jumpstart_supervisor_pagetables']}) to create level {current_level + 1} pagetable for {entry}"
                     )
                     sys.exit(1)
 
@@ -530,7 +528,7 @@ class DiagAttributes:
                     next_level_pagetable = self.get_PT_page(entry["va"], current_level + 1)
                     if next_level_pagetable is None:
                         log.error(
-                            f"Insufficient pagetable pages (num_pages_for_jumpstart_supervisor_area_pagetables_section = {self.jumpstart_source_attributes['diag_attributes']['num_pages_for_jumpstart_supervisor_area_pagetables_section']}) to create next level {current_level + 1} pagetable for {entry}"
+                            f"Insufficient pagetable pages (num_pages_for_jumpstart_supervisor_pagetables = {self.jumpstart_source_attributes['diag_attributes']['num_pages_for_jumpstart_supervisor_pagetables']}) to create next level {current_level + 1} pagetable for {entry}"
                         )
                         sys.exit(1)
 

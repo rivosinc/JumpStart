@@ -228,8 +228,8 @@ def generate_jumpstart_sources(
         total_size_of_c_structs += current_offset
 
     max_allowed_size_of_c_structs = (
-        attributes_data["jumpstart_supervisor_area"]["c_structs"]["num_pages"]
-        * attributes_data["jumpstart_supervisor_area"]["c_structs"]["page_size"]
+        attributes_data["jumpstart_supervisor"]["c_structs"]["num_pages"]
+        * attributes_data["jumpstart_supervisor"]["c_structs"]["page_size"]
     )
 
     if (
@@ -246,15 +246,15 @@ def generate_jumpstart_sources(
         # Make sure we can equally distribute the number of total stack pages
         # among the harts.
         assert (
-            attributes_data[f"jumpstart_{stack_type}_area"]["stack"]["num_pages"]
+            attributes_data[f"jumpstart_{stack_type}"]["stack"]["num_pages"]
             % attributes_data["max_num_harts_supported"]
             == 0
         )
         num_pages_per_hart_for_stack = int(
-            attributes_data[f"jumpstart_{stack_type}_area"]["stack"]["num_pages"]
+            attributes_data[f"jumpstart_{stack_type}"]["stack"]["num_pages"]
             / attributes_data["max_num_harts_supported"]
         )
-        stack_page_size = attributes_data[f"jumpstart_{stack_type}_area"]["stack"]["page_size"]
+        stack_page_size = attributes_data[f"jumpstart_{stack_type}"]["stack"]["page_size"]
 
         defines_file_fd.write(
             f"#define NUM_PAGES_PER_HART_FOR_{stack_type.upper()}_STACK {num_pages_per_hart_for_stack}\n\n"

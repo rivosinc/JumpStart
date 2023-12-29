@@ -12,14 +12,14 @@ max_num_harts_supported: 4
 # Allows us to keep track of infrastructure code size.
 # The test pages are not limited by these counts and are dependent on the
 # number of pages allocated in the test memory map.
-jumpstart_machine_area:
+jumpstart_mmode:
   text:
     page_size: 0x1000
     num_pages: 4
     linker_script_section: ".jumpstart.text.machine.init,.jumpstart.text.machine,.jumpstart.text.machine.end"
     pma_memory_type: "wb"
     no_pte_allocation: True
-jumpstart_supervisor_area:
+jumpstart_supervisor:
   text:
     page_size: 0x1000
     num_pages: 3
@@ -73,7 +73,7 @@ jumpstart_supervisor_area:
     umode: "0b0"
     pma_memory_type: "wb"
     linker_script_section: ".jumpstart.rodata.pagetables"
-jumpstart_umode_area:
+jumpstart_umode:
   text:
     page_size: 0x1000
     num_pages: 1
@@ -94,9 +94,9 @@ jumpstart_umode_area:
 # at build time.
 diag_attributes:
   start_test_in_machine_mode: false
-  num_pages_for_jumpstart_supervisor_area_pagetables_section: 5
-  num_pages_for_jumpstart_supervisor_area_bss_section: 1
-  num_pages_for_jumpstart_supervisor_area_rodata_section: 1
+  num_pages_for_jumpstart_supervisor_pagetables: 5
+  num_pages_for_jumpstart_supervisor_bss: 1
+  num_pages_for_jumpstart_supervisor_rodata: 1
   allow_page_table_modifications: false
   machine_mode_start_address: 0x80000000
   active_hart_mask: '0b1'
