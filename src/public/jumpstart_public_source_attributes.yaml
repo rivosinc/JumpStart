@@ -73,6 +73,13 @@ jumpstart_supervisor:
     umode: "0b0"
     pma_memory_type: "wb"
     linker_script_section: ".jumpstart.rodata.pagetables"
+  heap:
+    page_size: 0x200000
+    num_pages: 2
+    xwr: "0b011"
+    umode: "0b0"
+    pma_memory_type: "wb"
+    linker_script_section: ".jumpstart.supervisor.heap"
 jumpstart_umode:
   text:
     page_size: 0x1000

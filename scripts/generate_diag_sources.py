@@ -263,9 +263,6 @@ class DiagAttributes:
             self.jumpstart_source_attributes["diag_attributes"]["mappings"],
             "jumpstart_umode",
         )
-        self.add_jumpstart_heap_mapping(
-            self.jumpstart_source_attributes["diag_attributes"]["mappings"]
-        )
 
         self.add_pa_guard_page_after_last_mapping(
             self.jumpstart_source_attributes["diag_attributes"]["mappings"]
@@ -322,21 +319,6 @@ class DiagAttributes:
         new_mapping["linker_script_section"] = linker_script_section
 
         mappings.insert(previous_mapping_id + 1, new_mapping)
-
-    def add_jumpstart_heap_mapping(self, mappings):
-        # TODO: Move this under the jumpstart_supervisor in the YAML.
-        xwr = "0b011"
-        umode = "0b0"
-        num_heap_pages = 2
-        self.append_to_mappings(
-            mappings,
-            xwr,
-            umode,
-            num_heap_pages,
-            PageSize.SIZE_2M,
-            "wb",
-            ".jumpstart.supervisor.heap",
-        )
 
     def add_jumpstart_area_to_mappings(self, mappings, area_name):
         for section_name in self.jumpstart_source_attributes[area_name]:
