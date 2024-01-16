@@ -18,7 +18,7 @@ int toupper(int c);
 static int vprintk(const char *fmt, va_list args)
     __attribute__((format(printf, 1, 0)))
     __attribute__((section(".jumpstart.text.supervisor")));
-void enable_uart(void);
+void mark_uart_as_enabled(void);
 
 __attribute__((
     section(".jumpstart.data.supervisor"))) static uint8_t uart_initialized = 0;
@@ -26,7 +26,8 @@ __attribute__((
 __attribute__((
     section(".jumpstart.data.supervisor"))) static spinlock_t printk_lock = 0;
 
-__attribute__((section(".jumpstart.text.machine"))) void enable_uart(void) {
+__attribute__((section(".jumpstart.text.machine"))) void
+mark_uart_as_enabled(void) {
   uart_initialized = 1;
 }
 

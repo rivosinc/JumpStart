@@ -668,7 +668,7 @@ class DiagAttributes:
                 file_descriptor, self.jumpstart_source_attributes["diag_attributes"]
             )
 
-            boolean_attributes += ["in_qemu_mode"]
+            boolean_attributes += ["in_qemu_mode", "disable_uart"]
 
         self.generate_boolean_diag_attribute_functions(file_descriptor, boolean_attributes)
 

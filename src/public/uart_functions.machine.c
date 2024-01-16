@@ -6,7 +6,7 @@
 #include "jumpstart_functions.h"
 #include <inttypes.h>
 
-extern void enable_uart(void);
+extern void mark_uart_as_enabled(void);
 void setup_uart(void);
 void putch(char c);
 
