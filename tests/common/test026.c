@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2023 Rivos Inc.
+// SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -28,8 +28,8 @@ static void skip_instruction(void) {
 
 int main(void) {
   // The VA should map to the PA.
-  const uint64_t VA = UINT64_C(0x80033000);
-  const uint64_t PA = UINT64_C(0x80043000);
+  const uint64_t VA = UINT64_C(0xC0033000);
+  const uint64_t PA = UINT64_C(0xC0043000);
   uint64_t data_area_address = (uint64_t)&data_area;
   if (data_area_address != PA) {
     return DIAG_FAILED;
@@ -51,19 +51,19 @@ int main(void) {
   // PTE generation code requires that the mappings are sorted by VA.
   // This test has data.2 mapped to 0x80053000 and data.3 mapped to 0x80063000.
   // This will check that both these are functioning correctly.
-  translate_VA(0x80053000, &xlate_info);
-  if (xlate_info.pa != 0x80063000) {
+  translate_VA(0xC0053000, &xlate_info);
+  if (xlate_info.pa != 0xC0063000) {
     return DIAG_FAILED;
   }
-  if (load_from_address(0x80053000) != (magic_value + 1)) {
+  if (load_from_address(0xC0053000) != (magic_value + 1)) {
     return DIAG_FAILED;
   }
 
-  translate_VA(0x80063000, &xlate_info);
-  if (xlate_info.pa != 0x80053000) {
+  translate_VA(0xC0063000, &xlate_info);
+  if (xlate_info.pa != 0xC0053000) {
     return DIAG_FAILED;
   }
-  if (load_from_address(0x80063000) != (magic_value + 2)) {
+  if (load_from_address(0xC0063000) != (magic_value + 2)) {
     return DIAG_FAILED;
   }
 

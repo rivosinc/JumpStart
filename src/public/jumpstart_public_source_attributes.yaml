@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023 Rivos Inc.
+# SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -12,27 +12,98 @@ max_num_harts_supported: 4
 # Allows us to keep track of infrastructure code size.
 # The test pages are not limited by these counts and are dependent on the
 # number of pages allocated in the test memory map.
-jumpstart_machine_text_page_counts:
-  num_pages_for_all_text: 2
-jumpstart_supervisor_text_page_counts:
-  num_pages_for_all_text: 2
-jumpstart_privileged_data_page_counts:
-  num_pages_for_stack: 4
-  num_pages_for_c_structs: 2
-  num_pages_for_data_section: 2
-jumpstart_umode_text_page_counts:
-  num_pages_for_all_text: 1
-jumpstart_umode_data_page_counts:
-  num_pages_for_stack: 4
+jumpstart_mmode:
+  text:
+    page_size: 0x1000
+    num_pages: 4
+    linker_script_section: ".jumpstart.text.machine.init,.jumpstart.text.machine,.jumpstart.text.machine.end"
+    pma_memory_type: "wb"
+    no_pte_allocation: True
+jumpstart_supervisor:
+  text:
+    page_size: 0x1000
+    num_pages: 3
+    xwr: "0b101"
+    umode: "0b0"
+    pma_memory_type: "wb"
+    linker_script_section: ".jumpstart.text.supervisor"
+  stack:
+    page_size: 0x1000
+    num_pages: 4
+    xwr: "0b011"
+    umode: "0b0"
+    pma_memory_type: "wb"
+    linker_script_section: ".jumpstart.stack.supervisor"
+  c_structs:
+    page_size: 0x1000
+    num_pages: 2
+    xwr: "0b011"
+    umode: "0b0"
+    pma_memory_type: "wb"
+    linker_script_section: ".jumpstart.c_structs.supervisor"
+  data:
+    page_size: 0x1000
+    num_pages: 2
+    xwr: "0b011"
+    umode: "0b0"
+    pma_memory_type: "wb"
+    linker_script_section: ".jumpstart.data.supervisor"
+  sdata:
+    page_size: 0x1000
+    num_pages: 1
+    xwr: "0b011"
+    umode: "0b0"
+    pma_memory_type: "wb"
+    linker_script_section: ".sdata"
+  bss:
+    page_size: 0x1000
+    xwr: "0b011"
+    umode: "0b0"
+    pma_memory_type: "wb"
+    linker_script_section: ".bss"
+  rodata:
+    page_size: 0x1000
+    xwr: "0b001"
+    umode: "0b0"
+    pma_memory_type: "wb"
+    linker_script_section: ".rodata"
+  pagetables:
+    page_size: 0x1000
+    xwr: "0b001"
+    umode: "0b0"
+    pma_memory_type: "wb"
+    linker_script_section: ".jumpstart.rodata.pagetables"
+  heap:
+    page_size: 0x200000
+    num_pages: 2
+    xwr: "0b011"
+    umode: "0b0"
+    pma_memory_type: "wb"
+    linker_script_section: ".jumpstart.supervisor.heap"
+jumpstart_umode:
+  text:
+    page_size: 0x1000
+    num_pages: 1
+    xwr: "0b101"
+    umode: "0b1"
+    pma_memory_type: "wb"
+    linker_script_section: ".jumpstart.text.umode"
+  stack:
+    page_size: 0x1000
+    num_pages: 4
+    xwr: "0b011"
+    umode: "0b1"
+    pma_memory_type: "wb"
+    linker_script_section: ".jumpstart.stack.umode"
 
 
 # These attributes can be overriden by the test attributes file or
 # at build time.
 diag_attributes:
   start_test_in_machine_mode: false
-  max_num_pages_for_PT_allocation: 5
-  num_pages_for_bss_section: 1
-  num_pages_for_rodata_section: 1
+  num_pages_for_jumpstart_supervisor_pagetables: 30
+  num_pages_for_jumpstart_supervisor_bss: 7
+  num_pages_for_jumpstart_supervisor_rodata: 1
   allow_page_table_modifications: false
   machine_mode_start_address: 0x80000000
   active_hart_mask: '0b1'

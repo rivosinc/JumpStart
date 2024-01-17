@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: 2023 Rivos Inc.
+SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
 
 SPDX-License-Identifier: Apache-2.0
 -->
@@ -61,11 +61,11 @@ Example: [test009](../tests/common/test009.diag_attributes.yaml).
 
 The address at which the start of the M-mode section will be placed by the linker.
 
-### `max_num_pages_for_PT_allocation`
+### `num_pages_for_jumpstart_supervisor_pagetables`
 
 The maximum number of pages that can be used to allocate Page Tables.
 
-### `num_pages_for_bss_section` and `num_pages_for_rodata_section`
+### `num_pages_for_jumpstart_supervisor_bss` and `num_pages_for_jumpstart_supervisor_rodata`
 
 The number of pages allowed for the `.bss` and `.rodata` sections respectively.
 
@@ -231,10 +231,10 @@ Allows the diag to register a trap handler override function for S-mode traps. T
 meson test -C builddir -v
 ```
 
-To generate the execution trace, pass the `spike_generate_trace=true` option to `meson setup`.
+To generate the execution trace, pass the `generate_trace=true` option to `meson setup`.
 
 ```shell
-meson setup -C builddir -Dspike_generate_trace=true ...
+meson setup -C builddir -Dgenerate_trace=true ...
 ```
 
 If the diag requires additional arguments be passed to Spike, specify them with the `spike_additional_arguments` option to `meson setup`. `spike_additional_arguments` takes a list of arguments.

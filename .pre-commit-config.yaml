@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023 Rivos Inc.
+# SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -56,6 +56,7 @@ repos:
         args:
           - -c=Rivos Inc.
           - -l=Apache-2.0
+          - --merge-copyrights
           - --skip-unrecognised
       - id: reuse
 

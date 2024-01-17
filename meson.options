@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023 Rivos Inc.
+# SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -50,11 +50,6 @@ option('spike_additional_arguments',
        type : 'array',
        description : 'Additional arguments to pass to spike when running the diag.')
 
-option('spike_generate_trace',
-       type : 'boolean',
-       value : false,
-       description : 'Generate spike trace.')
-
 option('qemu_binary',
        type : 'string',
        value : '',
@@ -63,6 +58,16 @@ option('qemu_binary',
 option('qemu_additional_arguments',
        type : 'array',
        description : 'Additional arguments to pass to qemu when running the diag.')
+
+option('qemu_timeout',
+       type : 'integer',
+       value : 120,
+       description : 'meson test timeout when running the tests on QEMU.')
+
+option('generate_trace',
+       type : 'boolean',
+       value : false,
+       description : 'Generate trace on target.')
 
 option('rivos_internal_build',
        type : 'boolean',

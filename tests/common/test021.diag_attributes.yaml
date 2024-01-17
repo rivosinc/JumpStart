@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023 Rivos Inc.
+# SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -10,8 +10,8 @@ allow_page_table_modifications: true
 
 mappings:
   -
-    va: 0x80020000
-    pa: 0x80020000
+    va: 0xC0020000
+    pa: 0xC0020000
     xwr: "0b101"
     page_size: 0x1000
     num_pages: 2
@@ -20,8 +20,8 @@ mappings:
 
 
   -
-    va: 0x80024000
-    pa: 0x80024000
+    va: 0xC0024000
+    pa: 0xC0024000
     xwr: "0b101"
     page_size: 0x1000
     num_pages: 1
@@ -29,8 +29,8 @@ mappings:
     linker_script_section: ".data"
 
   -
-    va: 0x80026000
-    pa: 0x80026000
+    va: 0xC0026000
+    pa: 0xC0026000
     xwr: "0b001"
     valid: "0b0"
     page_size: 0x1000

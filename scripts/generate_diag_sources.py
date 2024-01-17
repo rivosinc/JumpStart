@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# SPDX-FileCopyrightText: 2023 Rivos Inc.
+# SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -15,6 +15,7 @@ import sys
 
 import public.lib as public
 import yaml
+from public.lib import PageSize
 
 try:
     import rivos_internal.lib as rivos_internal
@@ -92,7 +93,7 @@ class PageTableAttributes:
             "va_vpn_bits": [(38, 30), (29, 21), (20, 12)],
             "pa_ppn_bits": [(55, 30), (29, 21), (20, 12)],
             "pte_ppn_bits": [(53, 28), (27, 19), (18, 10)],
-            "page_sizes": [0x40000000, 0x200000, 0x1000],
+            "page_sizes": [PageSize.SIZE_1G, PageSize.SIZE_2M, PageSize.SIZE_4K],
         },
         "sv48": {
             "satp_mode": 9,
@@ -101,7 +102,12 @@ class PageTableAttributes:
             "va_vpn_bits": [(47, 39), (38, 30), (29, 21), (20, 12)],
             "pa_ppn_bits": [(55, 39), (38, 30), (29, 21), (20, 12)],
             "pte_ppn_bits": [(53, 37), (36, 28), (27, 19), (18, 10)],
-            "page_sizes": [0x8000000000, 0x40000000, 0x200000, 0x1000],
+            "page_sizes": [
+                PageSize.SIZE_512G,
+                PageSize.SIZE_1G,
+                PageSize.SIZE_2M,
+                PageSize.SIZE_4K,
+            ],
         },
     }
 
@@ -140,7 +146,6 @@ class DiagAttributes:
         self, jumpstart_source_attributes_yaml, diag_attributes_yaml, override_diag_attributes
     ):
         self.diag_attributes_yaml = diag_attributes_yaml
-
         with open(diag_attributes_yaml) as f:
             diag_attributes = yaml.safe_load(f)
 
@@ -235,56 +240,31 @@ class DiagAttributes:
         # the rest are just added on at locations immediately following
         # these sections.
         if self.jumpstart_source_attributes["rivos_internal_build"] is True:
-            self.jumpstart_source_attributes["diag_attributes"]["mappings"].append(
+            self.jumpstart_source_attributes["diag_attributes"]["mappings"].extend(
                 rivos_internal.get_rivos_specific_mappings(
                     self.get_attribute("page_offset"), self.jumpstart_source_attributes
                 )
             )
 
         self.jumpstart_source_attributes["diag_attributes"]["mappings"].append(
-            self.get_jumpstart_machine_mode_text_section_mapping()
+            self.get_jumpstart_machine_mode_section()
         )
 
         # Add a guard page mapping to catch linker script overruns of machine_mode
-        self.jumpstart_source_attributes["diag_attributes"][
-            "mappings"
-        ] = self.add_pa_guard_page_after_last_mapping(
+        self.add_pa_guard_page_after_last_mapping(
             self.jumpstart_source_attributes["diag_attributes"]["mappings"]
         )
 
-        self.jumpstart_source_attributes["diag_attributes"][
-            "mappings"
-        ] = self.add_jumpstart_supervisor_text_section_to_mappings(
-            self.jumpstart_source_attributes["diag_attributes"]["mappings"]
+        self.add_jumpstart_area_to_mappings(
+            self.jumpstart_source_attributes["diag_attributes"]["mappings"],
+            "jumpstart_supervisor",
         )
-        self.jumpstart_source_attributes["diag_attributes"][
-            "mappings"
-        ] = self.add_jumpstart_privileged_data_section_to_mappings(
-            self.jumpstart_source_attributes["diag_attributes"]["mappings"]
+        self.add_jumpstart_area_to_mappings(
+            self.jumpstart_source_attributes["diag_attributes"]["mappings"],
+            "jumpstart_umode",
         )
-        self.jumpstart_source_attributes["diag_attributes"][
-            "mappings"
-        ] = self.add_bss_and_rodata_sections_to_mappings(
-            self.jumpstart_source_attributes["diag_attributes"]["mappings"]
-        )
-        self.jumpstart_source_attributes["diag_attributes"][
-            "mappings"
-        ] = self.add_jumpstart_umode_text_section_to_mappings(
-            self.jumpstart_source_attributes["diag_attributes"]["mappings"]
-        )
-        self.jumpstart_source_attributes["diag_attributes"][
-            "mappings"
-        ] = self.add_jumpstart_umode_data_section_to_mappings(
-            self.jumpstart_source_attributes["diag_attributes"]["mappings"]
-        )
-        self.jumpstart_source_attributes["diag_attributes"][
-            "mappings"
-        ] = self.add_pagetable_section_to_mappings(
-            self.jumpstart_source_attributes["diag_attributes"]["mappings"]
-        )
-        self.jumpstart_source_attributes["diag_attributes"][
-            "mappings"
-        ] = self.add_pa_guard_page_after_last_mapping(
+
+        self.add_pa_guard_page_after_last_mapping(
             self.jumpstart_source_attributes["diag_attributes"]["mappings"]
         )
 
@@ -295,21 +275,21 @@ class DiagAttributes:
             in self.pt_attributes.mode_attributes
         )
 
-    def add_after_mapping(
+    def append_to_mappings(
         self,
         mappings,
-        previous_mapping_id,
         xwr,
         umode,
         num_pages,
+        page_size,
         pma_memory_type,
         linker_script_section,
         no_pte_allocation=False,
     ):
-        # We expect that the mappings are sorted by the PAs.
-        updated_mappings = mappings.copy()
-        previous_mapping = updated_mappings[previous_mapping_id]
-        new_mapping = {}
+        assert page_size in self.get_attribute("page_sizes")
+
+        previous_mapping_id = len(mappings) - 1
+        previous_mapping = mappings[previous_mapping_id]
 
         previous_mapping_size = previous_mapping["page_size"] * previous_mapping["num_pages"]
         if self.jumpstart_source_attributes["rivos_internal_build"] is True:
@@ -317,7 +297,14 @@ class DiagAttributes:
                 previous_mapping, pma_memory_type
             )
 
+        # We're going to start the PA of the new mapping after the PA range
+        # # of the last mapping.
+        new_mapping = {}
         new_mapping["pa"] = previous_mapping["pa"] + previous_mapping_size
+
+        if (new_mapping["pa"] % page_size) != 0:
+            # Align the PA to the page size.
+            new_mapping["pa"] = (math.floor(new_mapping["pa"] / page_size) + 1) * page_size
 
         new_mapping["no_pte_allocation"] = no_pte_allocation
 
@@ -326,165 +313,86 @@ class DiagAttributes:
             new_mapping["umode"] = umode
             new_mapping["va"] = new_mapping["pa"]
 
-        new_mapping["page_size"] = 1 << self.get_attribute("page_offset")
+        new_mapping["page_size"] = page_size
         new_mapping["num_pages"] = num_pages
         new_mapping["pma_memory_type"] = pma_memory_type
         new_mapping["linker_script_section"] = linker_script_section
 
-        # make sure that the new mapping doesn't overlap with the next
-        # one if it exists.
-        if (previous_mapping_id + 1) < len(updated_mappings):
-            next_mapping = updated_mappings[previous_mapping_id + 1]
-            assert (
-                new_mapping["pa"] + (new_mapping["page_size"] * new_mapping["num_pages"])
-            ) <= next_mapping["pa"]
+        mappings.insert(previous_mapping_id + 1, new_mapping)
 
-        updated_mappings.insert(previous_mapping_id + 1, new_mapping)
-        return updated_mappings
+    def add_jumpstart_area_to_mappings(self, mappings, area_name):
+        for section_name in self.jumpstart_source_attributes[area_name]:
+            num_pages_diag_attribute_name = f"num_pages_for_{area_name}_{section_name}"
 
-    def add_pagetable_section_to_mappings(self, mappings):
-        xwr = "0b001"
+            if (
+                "num_pages" in self.jumpstart_source_attributes[area_name][section_name]
+                and num_pages_diag_attribute_name
+                in self.jumpstart_source_attributes["diag_attributes"]
+            ):
+                log.error(
+                    f"num_pages specified for {section_name} in {area_name} and {num_pages_diag_attribute_name} specified in diag_attributes. Please specify only one."
+                )
+                sys.exit(1)
 
-        if (
-            self.jumpstart_source_attributes["diag_attributes"]["allow_page_table_modifications"]
-            is True
-        ):
-            xwr = "0b011"
+            num_pages = None
+            if num_pages_diag_attribute_name in self.jumpstart_source_attributes["diag_attributes"]:
+                num_pages = self.jumpstart_source_attributes["diag_attributes"][
+                    num_pages_diag_attribute_name
+                ]
+            elif "num_pages" in self.jumpstart_source_attributes[area_name][section_name]:
+                num_pages = self.jumpstart_source_attributes[area_name][section_name]["num_pages"]
+            else:
+                log.error(f"num_pages not specified for {section_name} in {area_name}")
+                sys.exit(1)
 
-        updated_mappings = self.add_after_mapping(
-            mappings,
-            len(mappings) - 1,
-            xwr,
-            "0b0",
-            self.jumpstart_source_attributes["diag_attributes"]["max_num_pages_for_PT_allocation"],
-            "wb",
-            ".jumpstart.rodata.pagetables",
-        )
-        self.PT_section_start_address = updated_mappings[-1]["pa"]
-        return updated_mappings
+            self.append_to_mappings(
+                mappings,
+                self.jumpstart_source_attributes[area_name][section_name]["xwr"],
+                self.jumpstart_source_attributes[area_name][section_name]["umode"],
+                num_pages,
+                self.jumpstart_source_attributes[area_name][section_name]["page_size"],
+                self.jumpstart_source_attributes[area_name][section_name]["pma_memory_type"],
+                self.jumpstart_source_attributes[area_name][section_name]["linker_script_section"],
+            )
 
-    def add_jumpstart_supervisor_text_section_to_mappings(self, mappings):
-        num_jumpstart_text_pages = 0
-        for page_count in self.jumpstart_source_attributes["jumpstart_supervisor_text_page_counts"]:
-            num_jumpstart_text_pages += self.jumpstart_source_attributes[
-                "jumpstart_supervisor_text_page_counts"
-            ][page_count]
-        updated_mappings = self.add_after_mapping(
-            mappings,
-            len(mappings) - 1,
-            "0b101",
-            "0b0",
-            num_jumpstart_text_pages,
-            "wb",
-            ".jumpstart.text.supervisor",
-        )
-        return updated_mappings
+            if section_name == "pagetables":
+                self.PT_section_start_address = mappings[len(mappings) - 1]["pa"]
+                if (
+                    self.jumpstart_source_attributes["diag_attributes"][
+                        "allow_page_table_modifications"
+                    ]
+                    is True
+                ):
+                    mappings[len(mappings) - 1]["xwr"] = "0b011"
 
-    def add_jumpstart_privileged_data_section_to_mappings(self, mappings):
-        num_jumpstart_data_pages = 0
-        for page_count in self.jumpstart_source_attributes["jumpstart_privileged_data_page_counts"]:
-            num_jumpstart_data_pages += self.jumpstart_source_attributes[
-                "jumpstart_privileged_data_page_counts"
-            ][page_count]
-
-        updated_mappings = self.add_after_mapping(
-            mappings,
-            len(mappings) - 1,
-            "0b011",
-            "0b0",
-            num_jumpstart_data_pages,
-            "wb",
-            ".jumpstart.data.privileged",
-        )
-        return updated_mappings
-
-    def add_bss_and_rodata_sections_to_mappings(self, mappings):
-        bss_pages = self.jumpstart_source_attributes["diag_attributes"]["num_pages_for_bss_section"]
-        rodata_pages = self.jumpstart_source_attributes["diag_attributes"][
-            "num_pages_for_rodata_section"
-        ]
-
-        updated_mappings = self.add_after_mapping(
-            mappings, len(mappings) - 1, "0b011", "0b0", bss_pages, "wb", ".bss"
-        )
-        updated_mappings = self.add_after_mapping(
-            updated_mappings,
-            len(updated_mappings) - 1,
-            "0b001",
-            "0b0",
-            rodata_pages,
-            "wb",
-            ".rodata",
-        )
-        return updated_mappings
-
-    def add_jumpstart_umode_text_section_to_mappings(self, mappings):
-        num_jumpstart_text_pages = 0
-        for page_count in self.jumpstart_source_attributes["jumpstart_umode_text_page_counts"]:
-            num_jumpstart_text_pages += self.jumpstart_source_attributes[
-                "jumpstart_umode_text_page_counts"
-            ][page_count]
-        updated_mappings = self.add_after_mapping(
-            mappings,
-            len(mappings) - 1,
-            "0b101",
-            "0b1",
-            num_jumpstart_text_pages,
-            "wb",
-            ".jumpstart.text.umode",
-        )
-        return updated_mappings
-
-    def add_jumpstart_umode_data_section_to_mappings(self, mappings):
-        num_jumpstart_data_pages = 0
-        for page_count in self.jumpstart_source_attributes["jumpstart_umode_data_page_counts"]:
-            num_jumpstart_data_pages += self.jumpstart_source_attributes[
-                "jumpstart_umode_data_page_counts"
-            ][page_count]
-
-        updated_mappings = self.add_after_mapping(
-            mappings,
-            len(mappings) - 1,
-            "0b011",
-            "0b1",
-            num_jumpstart_data_pages,
-            "wb",
-            ".jumpstart.data.umode",
-        )
-        return updated_mappings
-
-    def get_jumpstart_machine_mode_text_section_mapping(self):
+    def get_jumpstart_machine_mode_section(self):
         machine_mode_mapping = {}
         machine_mode_mapping["pa"] = self.jumpstart_source_attributes["diag_attributes"][
             "machine_mode_start_address"
         ]
-        machine_mode_mapping["page_size"] = 1 << self.get_attribute("page_offset")
-        machine_mode_mapping["num_pages"] = self.jumpstart_source_attributes[
-            "jumpstart_machine_text_page_counts"
-        ]["num_pages_for_all_text"]
-        machine_mode_mapping[
-            "linker_script_section"
-        ] = ".jumpstart.text.machine.init,.jumpstart.text.machine,.jumpstart.text.machine.end"
-        machine_mode_mapping["pma_memory_type"] = "wb"
-        machine_mode_mapping["no_pte_allocation"] = True
+
+        for area_name in self.jumpstart_source_attributes["jumpstart_mmode"]:
+            for attribute_name in self.jumpstart_source_attributes["jumpstart_mmode"][area_name]:
+                machine_mode_mapping[attribute_name] = self.jumpstart_source_attributes[
+                    "jumpstart_mmode"
+                ][area_name][attribute_name]
 
         return machine_mode_mapping
 
     def add_pa_guard_page_after_last_mapping(self, mappings):
         # Guard pages have no allocations in the page tables but
         # occupy space in the memory map.
-        updated_mappings = self.add_after_mapping(
+        self.append_to_mappings(
             mappings,
-            len(mappings) - 1,
             None,
             None,
             1,
+            PageSize.SIZE_4K,
             "wb",
             f".jumpstart.guard_page.{self.num_guard_pages_generated}",
             True,
         )
         self.num_guard_pages_generated += 1
-        return updated_mappings
 
     def split_mappings_at_page_granularity(self, mappings):
         split_mappings = []
@@ -546,13 +454,13 @@ class DiagAttributes:
         if (
             len(self.PT_pages)
             == self.jumpstart_source_attributes["diag_attributes"][
-                "max_num_pages_for_PT_allocation"
+                "num_pages_for_jumpstart_supervisor_pagetables"
             ]
         ):
             # Can't create any more pagetable pages
             return None
 
-        page_size = 1 << self.get_attribute("page_offset")
+        page_size = PageSize.SIZE_4K
         pte_start_va_lsb = self.get_attribute("va_vpn_bits")[level][0] + 1
         pte_start_va = (va >> pte_start_va_lsb) << pte_start_va_lsb
         pte_va_range = 1 << (self.get_attribute("va_vpn_bits")[level][0] + 1)
@@ -589,14 +497,12 @@ class DiagAttributes:
                 current_level_PT_page = self.get_PT_page(entry["va"], current_level)
                 if current_level_PT_page is None:
                     log.error(
-                        f"Insufficient pagetable pages (max_num_pages_for_PT_allocation = {self.jumpstart_source_attributes['diag_attributes']['max_num_pages_for_PT_allocation']}) to create level {current_level + 1} pagetable for {entry}"
+                        f"Insufficient pagetable pages (num_pages_for_jumpstart_supervisor_pagetables = {self.jumpstart_source_attributes['diag_attributes']['num_pages_for_jumpstart_supervisor_pagetables']}) to create level {current_level + 1} pagetable for {entry}"
                     )
                     sys.exit(1)
 
                 current_level_range_start = current_level_PT_page.get_sparse_memory_address()
-                current_level_range_end = current_level_range_start + (
-                    1 << self.get_attribute("page_offset")
-                )
+                current_level_range_end = current_level_range_start + (PageSize.SIZE_4K)
 
                 pte_value = place_bits(0, 1, self.pt_attributes.common_attributes["valid_bit"])
 
@@ -604,14 +510,12 @@ class DiagAttributes:
                     next_level_pagetable = self.get_PT_page(entry["va"], current_level + 1)
                     if next_level_pagetable is None:
                         log.error(
-                            f"Insufficient pagetable pages (max_num_pages_for_PT_allocation = {self.jumpstart_source_attributes['diag_attributes']['max_num_pages_for_PT_allocation']}) to create next level {current_level + 1} pagetable for {entry}"
+                            f"Insufficient pagetable pages (num_pages_for_jumpstart_supervisor_pagetables = {self.jumpstart_source_attributes['diag_attributes']['num_pages_for_jumpstart_supervisor_pagetables']}) to create next level {current_level + 1} pagetable for {entry}"
                         )
                         sys.exit(1)
 
                     next_level_range_start = next_level_pagetable.get_sparse_memory_address()
-                    next_level_range_end = next_level_range_start + (
-                        1 << self.get_attribute("page_offset")
-                    )
+                    next_level_range_end = next_level_range_start + (PageSize.SIZE_4K)
 
                     next_level_pa = next_level_range_start + extract_bits(
                         entry["va"], self.get_attribute("va_vpn_bits")[current_level]
@@ -679,7 +583,7 @@ class DiagAttributes:
         # page table section in the assembly file.
         assert self.PT_section_start_address == self.PT_pages[0].get_sparse_memory_address()
         pte_region_sparse_memory_start = self.PT_pages[0].get_sparse_memory_address()
-        page_size = 1 << self.get_attribute("page_offset")
+        page_size = PageSize.SIZE_4K
         pte_region_sparse_memory_end = (
             self.PT_pages[len(self.PT_pages) - 1].get_sparse_memory_address() + page_size
         )
@@ -747,6 +651,9 @@ class DiagAttributes:
                     file.write(f"      *({section_name})\n")
                     defined_sections.append(section_name)
                 file.write("   }\n\n")
+                file.write(
+                    f"   . = {hex(entry['pa'] + entry['num_pages'] * entry['page_size'] - 1)};\n"
+                )
                 file.write(f"  {top_level_section_variable_name_prefix}_END = .;\n")
             file.write("\n}\n")
 
@@ -761,7 +668,7 @@ class DiagAttributes:
                 file_descriptor, self.jumpstart_source_attributes["diag_attributes"]
             )
 
-            boolean_attributes += ["in_qemu_mode"]
+            boolean_attributes += ["in_qemu_mode", "disable_uart"]
 
         self.generate_boolean_diag_attribute_functions(file_descriptor, boolean_attributes)
 
@@ -947,7 +854,7 @@ sync_all_harts_from_{mode}_mode:
             )
             file_descriptor.write(f".global guard_page_{guard_page_id}\n")
             file_descriptor.write(f"guard_page_{guard_page_id}:\n")
-            file_descriptor.write(".zero 4096\n\n")
+            file_descriptor.write(f".zero {PageSize.SIZE_4K}\n\n")
 
     def generate_assembly_file(self, output_assembly_file):
         with open(output_assembly_file, "w") as file:

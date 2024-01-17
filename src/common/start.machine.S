@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023 Rivos Inc.
+# SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -29,10 +29,10 @@ _machine_mode_start:
   li t2, HART_RUNNING
   sb t2, 0(t1)
 
-  # Set up the stack for M-mode and S-mode.
-  li  t1, (NUM_PAGES_PER_HART_FOR_PRIVILEGED_STACK * 4096)
+  # S-mode and M-mode share the same stack.
+  li  t1, (NUM_PAGES_PER_HART_FOR_SUPERVISOR_STACK * SUPERVISOR_STACK_PAGE_SIZE)
   mul t0, t0, t1
-  la  t2, privileged_stack_top
+  la  t2, supervisor_stack_top
   add sp, t2, t0
   add sp, sp, t1 # We want the stack bottom.
 
@@ -53,6 +53,10 @@ _machine_mode_start:
   jal setup_supervisor_mode_trap_related_csrs
 
   jal enable_mmu_from_machine_mode
+
+  jal setup_heap
+
+  jal setup_uart
 
   j jump_to_main
 

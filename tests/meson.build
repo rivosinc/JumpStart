@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023 Rivos Inc.
+# SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -23,11 +23,13 @@ endif
 foreach jumpstart_test : jumpstart_tests
   test_prefix = jumpstart_test.get(0)
   test_description = jumpstart_test.get(1)
-  test_expected_to_fail = jumpstart_test.get(2, false)
 
-  spike_additional_arguments = jumpstart_test.get(3, '')
+  spike_additional_arguments = jumpstart_test.get(2, '')
+
+  test_expected_to_fail = jumpstart_test.get(3, false)
 
   test_disabled_on_qemu = jumpstart_test.get(4, false)
+  test_disabled_on_spike = jumpstart_test.get(5, false)
 
   if fs.is_file(meson.current_source_dir() + '/' + 'common' + '/' + test_prefix + '.diag_attributes.yaml')
     diag_attributes_yaml = files('common' + '/' + test_prefix + '.diag_attributes.yaml')
@@ -73,7 +75,7 @@ foreach jumpstart_test : jumpstart_tests
                 depends          : [test_exe])
   endif
 
-  if get_option('diag_target') == 'spike'
+  if get_option('diag_target') == 'spike' and test_disabled_on_spike == false
     spike_args = default_spike_args
 
     if spike_additional_arguments != ''
@@ -86,11 +88,20 @@ foreach jumpstart_test : jumpstart_tests
           suite:'basic',
           should_fail: test_expected_to_fail)
   elif get_option('diag_target') == 'qemu' and test_disabled_on_qemu == false
+    qemu_args = default_qemu_args
+
+    if get_option('generate_trace') == true
+      qemu_args += [
+          '--var', 'ap-logfile:' + test_prefix + '.trace',
+          '--var', 'out:' + meson.current_build_dir()
+        ]
+    endif
+
     test(test_prefix + ' 🧪 ' + test_description,
           qemu,
-          args : [default_qemu_args, '--var', 'ap-payload:' + test_exe.full_path()],
+          args : [qemu_args, '--var', 'ap-payload:' + test_exe.full_path()],
           suite:'basic',
-          timeout: 60,
+          timeout: get_option('qemu_timeout'),
           should_fail: test_expected_to_fail)
   endif
 

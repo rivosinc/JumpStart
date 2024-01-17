@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2023 Rivos Inc.
+// SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -7,7 +7,7 @@
 
 int main(void) {
   uint64_t main_function_address = (uint64_t)&main;
-  if (main_function_address != 0x80020000) {
+  if (main_function_address != 0xD0020000) {
     return DIAG_FAILED;
   }
 

@@ -1,9 +1,17 @@
-# SPDX-FileCopyrightText: 2023 Rivos Inc.
+# SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import enum
 import logging as log
 import sys
+
+
+class PageSize(enum.IntEnum):
+    SIZE_4K = 0x1000
+    SIZE_2M = 0x200000
+    SIZE_1G = 0x40000000
+    SIZE_512G = 0x8000000000
 
 
 def alias_mapping_overlaps_with_existing_mapping(alias_mapping, mappings):

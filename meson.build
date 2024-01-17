@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023 Rivos Inc.
+# SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -13,6 +13,9 @@ project('JumpStart', 'c',
 add_project_arguments('-Wno-c++-compat',
                       '-Wno-padded',
                       '-Wno-pedantic',
+                      # Let GCC know we are using our own malloc/calloc implementation. Otherwise
+                      # it makes assumptions about using it's own.
+                      '-fno-builtin',
                       '-mcmodel=medany',
                       language: 'c')
 
@@ -59,7 +62,7 @@ if get_option('diag_target') == 'spike'
 
   else
     if spike_isa_string == ''
-      spike_isa_string = 'rv64gch_zbs'
+      spike_isa_string = 'rv64gch_zbb_zbs'
     endif
 
   endif
@@ -68,7 +71,7 @@ if get_option('diag_target') == 'spike'
     default_spike_args += ['--isa=' + spike_isa_string ]
   endif
 
-  if get_option('spike_generate_trace') == true
+  if get_option('generate_trace') == true
     default_spike_args += ['-l', '--log-commits']
   endif
 
@@ -100,7 +103,7 @@ if gcc_march_string == ''
   if get_option('rivos_internal_build') == true
     gcc_march_string = rivos_gcc_march_string
   else
-    gcc_march_string = 'rv64gc_zbs'
+    gcc_march_string = 'rv64gc_zbb_zbs'
   endif
 endif
 
@@ -165,10 +168,19 @@ if diag_attributes_yaml != '' and diag_sources.length() > 0
                                # feedback and requires `reset` to be run to
                                # restore the terminal.
   elif get_option('diag_target') == 'qemu'
+    qemu_args = default_qemu_args
+
+    if get_option('generate_trace') == true
+      qemu_args += [
+          '--var', 'ap-logfile:' + diag_name + '.trace',
+          '--var', 'out:' + meson.current_build_dir()
+        ]
+    endif
+
     test('🧪 ' + diag_name,
           qemu,
-          timeout: 60,
-          args : [default_qemu_args, '--var', 'ap-payload:' + diag_exe.full_path()])
+          timeout: get_option('qemu_timeout'),
+          args : [qemu_args, '--var', 'ap-payload:' + diag_exe.full_path()])
   endif
 
 else
