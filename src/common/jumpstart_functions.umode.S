@@ -23,3 +23,9 @@ jump_to_function_in_umode:
 
   # We shouldn't come back here.
   wfi
+
+.global jumpstart_umode_fail
+jumpstart_umode_fail:
+  li a0, DIAG_FAILED
+  li  a7, SYSCALL_RUN_FUNC_IN_USER_MODE_COMPLETE
+  ecall
