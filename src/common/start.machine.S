@@ -240,6 +240,7 @@ handle_syscall_run_func_in_supervisor_mode_complete:
 # END syscall handlers
 
 # a0 contains the address of the function to run in supervisor mode.
+# a1-a7 contains the arguments to pass to the supervisor function.
 .global run_function_in_supervisor_mode
 run_function_in_supervisor_mode:
   addi  sp, sp, -16
