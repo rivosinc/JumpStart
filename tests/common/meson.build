@@ -9,8 +9,8 @@ source_suffixes = ['.S', '.c']
 common_jumpstart_tests = [
   # 0. prefix
   # 1. description
-  # 2. expected to fail
-  # 3. spike additional arguments
+  # 2. spike additional arguments
+  # 3. expected to fail
   # 4. disable on QEMU
   # 5. disable on spike
   ['test000', 'Enable MMU (SATP.mode = sv39), jump to main and exit.', '', false, true],
@@ -36,4 +36,5 @@ common_jumpstart_tests = [
   ['test029', 'Super Pages (SATP.mode = sv48) VA translation test.', '-m0x80000000:0x40000000,0xC0000000:0x1000,0xC0020000:0x2000,0xC0022000:0x1000,0xD0000000:0x400000,0xE0000000:0x400000,0xD0400000:0x200000,0x100000000:0x4000000,0x140000000:0x40000000'],
   ['test030', 'Heap malloc test.'],
   ['test031', 'Simple spinlock test with 4 harts', '-p4'],
+  ['test033', 'Exit with jumpstart_umode_fail() to test umode fail path.', '', true, true],
 ]
