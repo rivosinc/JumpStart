@@ -8,13 +8,24 @@
 .section .jumpstart.text.supervisor, "ax"
 
 # a0 contains the address of the function to jump to.
+# a1-a7 contains the arguments to pass to the smode function.
 .global jump_to_function_in_smode
 jump_to_function_in_smode:
   li  t0, PRV_S
   SET_THREAD_ATTRIBUTES_CURRENT_MODE(t0)
 
-  # A0 contains arg value passed by S mode.
-  jalr ra, a0
+  mv t0, a0
+
+  # Function arguments have to be passed in a0-a6.
+  mv a0, a1
+  mv a1, a2
+  mv a2, a3
+  mv a3, a4
+  mv a4, a5
+  mv a5, a6
+  mv a6, a7
+
+  jalr ra, t0
 
   # a0 contains the exit code.
   li  a7, SYSCALL_RUN_FUNC_IN_SUPERVISOR_MODE_COMPLETE
@@ -172,7 +183,7 @@ run_function_in_user_mode:
   SAVE_ALL_GPRS
 
   # Load U-mode context. We just need to set sepc, sstatus and a0 register.
-    la a1, jump_to_function_in_umode
+  la a1, jump_to_function_in_umode
   csrw sepc, a1
 
   li t0, (PRV_S << SSTATUS_SPP_SHIFT)
