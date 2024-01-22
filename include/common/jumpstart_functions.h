@@ -9,7 +9,9 @@
 #include "jumpstart_data_structures.h"
 #include "jumpstart_defines.h"
 
-#define __ASM_STR(x) #x
+#define __ASM_STR(x)  #x
+
+#define ARRAY_SIZE(a) (sizeof(a) / sizeof(*a))
 
 #define read_csr(reg)                                                          \
   ({                                                                           \
