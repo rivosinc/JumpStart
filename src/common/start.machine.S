@@ -202,7 +202,7 @@ jump_to_main:
   jal delegate_mmode_resources_to_smode
 
   la a0, main
-  jal run_function_in_supervisor_mode
+  jal run_function_in_smode
 
   j _machine_mode_end
 
@@ -217,14 +217,14 @@ handle_env_call_from_smode:
   j jumpstart_machine_fail
 
 handle_syscall_run_func_in_supervisor_mode_complete:
-  # This is the return to machine path for run_function_in_supervisor_mode().
+  # This is the return to machine path for run_function_in_smode().
 
-  # Re-enable interrupts that were disabled in run_function_in_supervisor_mode().
+  # Re-enable interrupts that were disabled in run_function_in_smode().
   # Set MPIE to 1, on mret this will set MIE to 1.
   li  t0, (PRV_M << MSTATUS_MPP_SHIFT) | MSTATUS_MPIE
   csrs  mstatus, t0
 
-  la  t0, run_function_in_supervisor_mode_return_point
+  la  t0, run_function_in_smode_return_point
   csrw mepc, t0
 
   # Restore M mode context
@@ -241,8 +241,8 @@ handle_syscall_run_func_in_supervisor_mode_complete:
 
 # a0 contains the address of the function to run in supervisor mode.
 # a1-a7 contains the arguments to pass to the supervisor function.
-.global run_function_in_supervisor_mode
-run_function_in_supervisor_mode:
+.global run_function_in_smode
+run_function_in_smode:
   addi  sp, sp, -16
   sd    ra, 8(sp)
   sd    fp, 0(sp)
@@ -273,7 +273,7 @@ run_function_in_supervisor_mode:
 
 # Inputs:
 #   a0: return status from S-mode function.
-run_function_in_supervisor_mode_return_point:
+run_function_in_smode_return_point:
   ld  ra, 8(sp)
   ld  fp, 0(sp)
   addi  sp, sp, 16

@@ -197,9 +197,9 @@ Returns the hart id of the hart calling the function. Can only be called from S-
 
 Operates on the specified CSR. The CSR names are passed to the RISC-V `csrr` and `csrw` instructions so the names should match what GCC expects.
 
-### `run_function_in_supervisor_mode()` and `run_function_in_user_mode()`
+### `run_function_in_smode()` and `run_function_in_umode()`
 
-Diags can use the `run_function_in_supervisor_mode()` and `run_function_in_user_mode()` functions to run functions in supervisor and user mode respectively.
+Diags can use the `run_function_in_smode()` and `run_function_in_umode()` functions to run functions in supervisor and user mode respectively.
 
 The modes cannot share the same code space so the functions belonging to each mode should be tagged with the corresponding linker script section name to place them in different sections.
 

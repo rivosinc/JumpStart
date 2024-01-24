@@ -29,8 +29,7 @@ int main(void) {
       RISCV_EXCP_ILLEGAL_INST, (uint64_t)(&mmode_illegal_instruction_handler));
 
   // Run an illegal instruction in smode that will be handled in mmode.
-  int ret = run_function_in_supervisor_mode(
-      (uint64_t)smode_illegal_instruction_function);
+  int ret = run_function_in_smode((uint64_t)smode_illegal_instruction_function);
   if (ret != DIAG_PASSED) {
     return DIAG_FAILED;
   }
@@ -38,7 +37,7 @@ int main(void) {
   // Run a ebreak instruction in smode that will be handled in smode.
   // The smode handler for the ebreak will run an illegal instruction which
   // will be handled in mmode. This tests nested trap handling.
-  ret = run_function_in_supervisor_mode(
+  ret = run_function_in_smode(
       (uint64_t)smode_breakpoint_and_illegal_instruction_function);
   if (ret != DIAG_PASSED) {
     return DIAG_FAILED;

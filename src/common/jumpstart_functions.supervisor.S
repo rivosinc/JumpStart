@@ -135,14 +135,14 @@ jumpstart_supervisor_fail:
   ecall
 
 handle_syscall_run_func_in_user_mode_complete:
-  # This is the return to supervisor path for run_function_in_user_mode().
+  # This is the return to supervisor path for run_function_in_umode().
 
-  # Re-enable interrupts that were disabled in run_function_in_user_mode().
+  # Re-enable interrupts that were disabled in run_function_in_umode().
   # Set SPIE to 1, on sret this will set SIE to 1.
   li  t0, (PRV_S << SSTATUS_SPP_SHIFT) | SSTATUS_SPIE
   csrs  sstatus, t0
 
-  la  t0, run_function_in_user_mode_return_point
+  la  t0, run_function_in_umode_return_point
   csrw sepc, t0
 
   # Restore S mode context.
@@ -159,8 +159,8 @@ handle_syscall_run_func_in_user_mode_complete:
 # Inputs:
 #   a0: address of the function to run in usermode.
 #   a1: arg0 to function to run in usermode.
-.global run_function_in_user_mode
-run_function_in_user_mode:
+.global run_function_in_umode
+run_function_in_umode:
   addi  sp, sp, -16
   sd    ra, 8(sp)
   sd    fp, 0(sp)
@@ -208,7 +208,7 @@ run_function_in_user_mode:
 
 # Inputs:
 #   a0: return status from U-mode function.
-run_function_in_user_mode_return_point:
+run_function_in_umode_return_point:
   ld  ra, 8(sp)
   ld  fp, 0(sp)
   addi  sp, sp, 16
