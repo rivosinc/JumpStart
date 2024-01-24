@@ -64,18 +64,17 @@ int main(void) {
     return DIAG_FAILED;
   }
 
-  if (run_function_in_supervisor_mode((uint64_t)asm_check_passed_in_arguments,
-                                      1, 2, 3, 4, 5, 6, 7) != DIAG_PASSED) {
+  if (run_function_in_smode((uint64_t)asm_check_passed_in_arguments, 1, 2, 3, 4,
+                            5, 6, 7) != DIAG_PASSED) {
     return DIAG_FAILED;
   }
 
-  if (run_function_in_supervisor_mode((uint64_t)c_check_passed_in_arguments, 1,
-                                      2, 3, 4, 5, 6, 7) != DIAG_PASSED) {
+  if (run_function_in_smode((uint64_t)c_check_passed_in_arguments, 1, 2, 3, 4,
+                            5, 6, 7) != DIAG_PASSED) {
     return DIAG_FAILED;
   }
 
-  int bytes_to_copy =
-      run_function_in_supervisor_mode((uint64_t)get_bytes_to_copy);
+  int bytes_to_copy = run_function_in_smode((uint64_t)get_bytes_to_copy);
   if (bytes_to_copy != 512) {
     return DIAG_FAILED;
   }
@@ -92,7 +91,7 @@ int main(void) {
       ++fill_value;
     }
 
-    if (run_function_in_supervisor_mode((uint64_t)copy_bytes) != 0) {
+    if (run_function_in_smode((uint64_t)copy_bytes) != 0) {
       return DIAG_FAILED;
     }
 
@@ -100,7 +99,7 @@ int main(void) {
       return DIAG_FAILED;
     }
 
-    if (run_function_in_supervisor_mode((uint64_t)compare_copied_bytes) != 0) {
+    if (run_function_in_smode((uint64_t)compare_copied_bytes) != 0) {
       return DIAG_FAILED;
     }
 
