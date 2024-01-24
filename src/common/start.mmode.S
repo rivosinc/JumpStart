@@ -78,7 +78,8 @@ setup_smode_trap_related_csrs:
             (1 << RISCV_EXCP_U_ECALL) | \
             (1 << RISCV_EXCP_INST_PAGE_FAULT) | \
             (1 << RISCV_EXCP_LOAD_PAGE_FAULT) | \
-            (1 << RISCV_EXCP_STORE_PAGE_FAULT)
+            (1 << RISCV_EXCP_STORE_PAGE_FAULT) | \
+            (1 << RISCV_EXCP_DATA_CORRUPTION_EXCEPTION)
   csrw medeleg, t0
 
   li t0, SIP_SEIP | SIP_STIP | SIP_SSIP
