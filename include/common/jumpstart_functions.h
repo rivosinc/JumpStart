@@ -66,7 +66,9 @@
 // Enables instruction by instruction checking when running on the simulator,
 #define enable_checktc()  __asm__ __volatile__(ADD_QUOTES(CHECKTC_ENABLE))
 
-int run_function_in_umode(uint64_t function_address, uint64_t arg);
+// The functions run through the run_function_in_*mode() functions can be
+// passed up to 6 arguments.
+int run_function_in_umode(uint64_t function_address, ...);
 int run_function_in_smode(uint64_t function_address, ...);
 
 void disable_mmu_from_supervisor_mode(void);

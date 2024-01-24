@@ -7,7 +7,7 @@
 int umode_main(void) __attribute__((section(".text.user"), noreturn));
 
 int main(void) {
-  return run_function_in_umode((uint64_t)umode_main, 0);
+  return run_function_in_umode((uint64_t)umode_main);
 }
 
 int umode_main(void) {
