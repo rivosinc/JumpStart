@@ -36,8 +36,7 @@ int main(void) {
   register_supervisor_mode_trap_handler_override(
       RISCV_EXCP_ILLEGAL_INST, (uint64_t)(&test011_exception_handler));
 
-  if (run_function_in_umode((uint64_t)test_illegal_instruction_in_umode, 0) !=
-      0) {
+  if (run_function_in_umode((uint64_t)test_illegal_instruction_in_umode) != 0) {
     return DIAG_FAILED;
   }
 
