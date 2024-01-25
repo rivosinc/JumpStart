@@ -28,7 +28,7 @@ common_jumpstart_tests = [
   ['test019', 'Sync 4P CPUs.', '-p4'],
   ['test020', 'translate_VA() and page table modification test.', '', false, true],
   ['test021', '2P translate_VA() and page table modification test.', '-p2', false, true],
-  ['test022', 'Exit with jumpstart_supervisor_fail() to test fail path.', '', true, true],
+  ['test022', 'Exit with jumpstart_smode_fail() to test fail path.', '', true, true],
   ['test023', 'Handle S mode exceptions in M mode handlers.', '', false, true],
   ['test026', 'VA != PA mapping.', '', false, true],
   ['test027', 'VA aliasing test.', '', false, true],

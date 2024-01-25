@@ -6,7 +6,7 @@
 
 #define BYTES_TO_COPY (64 * 8)
 
-.section .text.supervisor, "ax"
+.section .text.smode, "ax"
 
 # Inputs:
 # a0-a6
@@ -64,7 +64,7 @@ get_bytes_to_copy:
   li a0, BYTES_TO_COPY
   ret
 
-.section .data.supervisor, "aw"
+.section .data.smode, "aw"
 
 .global source_location
 source_location:

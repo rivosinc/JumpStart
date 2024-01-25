@@ -4,7 +4,7 @@
 
 satp_mode: "sv39"
 
-start_test_in_machine_mode: True
+start_test_in_mmode: True
 
 mappings:
   -
@@ -30,7 +30,7 @@ mappings:
     page_size: 0x1000
     num_pages: 2
     pma_memory_type: "wb"
-    linker_script_section: ".text.supervisor"
+    linker_script_section: ".text.smode"
   -
     va: 0xC0025000
     pa: 0xC0025000
@@ -38,4 +38,4 @@ mappings:
     page_size: 0x1000
     num_pages: 1
     pma_memory_type: "wb"
-    linker_script_section: ".data.supervisor"
+    linker_script_section: ".data.smode"

@@ -12,11 +12,11 @@
 int toupper(int c);
 
 static char *ksprintn(char *nbuf, uintmax_t num, int base, int *lenp, int upper)
-    __attribute__((section(".jumpstart.text.supervisor")));
+    __attribute__((section(".jumpstart.text.smode")));
 
-int islower(int c) __attribute__((section(".jumpstart.text.supervisor")));
-int isupper(int c) __attribute__((section(".jumpstart.text.supervisor")));
-int tolower(int c) __attribute__((section(".jumpstart.text.supervisor")));
+int islower(int c) __attribute__((section(".jumpstart.text.smode")));
+int isupper(int c) __attribute__((section(".jumpstart.text.smode")));
+int tolower(int c) __attribute__((section(".jumpstart.text.smode")));
 
 inline int islower(int c) {
   return c >= 'a' && c <= 'z';
@@ -32,12 +32,12 @@ inline int tolower(int c) {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsuggest-attribute=const"
-__attribute__((section(".jumpstart.text.supervisor"))) int toupper(int c) {
+__attribute__((section(".jumpstart.text.smode"))) int toupper(int c) {
   return islower(c) ? c + ('A' - 'a') : c;
 }
 #pragma GCC diagnostic pop
 
-__attribute__((section(".jumpstart.text.supervisor"))) size_t
+__attribute__((section(".jumpstart.text.smode"))) size_t
 strlen(const char *str) {
   size_t len = 0;
 
@@ -78,7 +78,7 @@ static char *ksprintn(char *nbuf, uintmax_t num, int base, int *lenp,
 /*
  * Scaled down version of printf(3).
  */
-__attribute__((section(".jumpstart.text.supervisor"))) int
+__attribute__((section(".jumpstart.text.smode"))) int
 vsnprintf(char *str, size_t size, char const *fmt, va_list ap) {
 #define PCHAR(c)                                                               \
   {                                                                            \
@@ -379,7 +379,7 @@ vsnprintf(char *str, size_t size, char const *fmt, va_list ap) {
 
 #pragma GCC diagnostic pop
 
-__attribute__((section(".jumpstart.text.supervisor"))) int
+__attribute__((section(".jumpstart.text.smode"))) int
 snprintf(char *buf, size_t size, const char *fmt, ...) {
   va_list args;
   int retval = 0;

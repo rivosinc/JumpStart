@@ -6,7 +6,7 @@
 
 # The supervisor data section is can be accessed from both
 # machine and supervisor mode.
-.section .jumpstart.data.supervisor, "aw"
+.section .jumpstart.data.smode, "aw"
 
 .global hart_status_tracker
 hart_status_tracker:

@@ -7,5 +7,5 @@
 __attribute__((const)) int main(void);
 
 int main(void) {
-  jumpstart_supervisor_fail();
+  jumpstart_smode_fail();
 }

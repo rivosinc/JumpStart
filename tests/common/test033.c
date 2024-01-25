@@ -4,7 +4,7 @@
 
 #include "jumpstart_functions.h"
 
-int umode_main(void) __attribute__((section(".text.user"), noreturn));
+int umode_main(void) __attribute__((section(".text.umode"), noreturn));
 
 int main(void) {
   return run_function_in_umode((uint64_t)umode_main);

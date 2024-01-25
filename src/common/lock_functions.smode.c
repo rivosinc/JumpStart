@@ -2,14 +2,14 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include "lock_functions.supervisor.h"
+#include "lock_functions.smode.h"
 
 typedef enum {
   AMOSWAP_ACQUIRE,
   AMOSWAP_RELEASE,
 } amoswapKind_t;
 
-__attribute__((section(".jumpstart.text.supervisor"))) static uint64_t
+__attribute__((section(".jumpstart.text.smode"))) static uint64_t
 swap_atomic(uint64_t *val, uint64_t new_value, amoswapKind_t kind) {
   uint64_t result;
   switch (kind) {
@@ -31,7 +31,7 @@ swap_atomic(uint64_t *val, uint64_t new_value, amoswapKind_t kind) {
   return result;
 }
 
-__attribute__((section(".jumpstart.text.supervisor"))) void
+__attribute__((section(".jumpstart.text.smode"))) void
 acquire_lock(spinlock_t *lock) {
   while (1) {
     if (*(volatile uint64_t *)lock) {
@@ -43,7 +43,7 @@ acquire_lock(spinlock_t *lock) {
   }
 }
 
-__attribute__((section(".jumpstart.text.supervisor"))) void
+__attribute__((section(".jumpstart.text.smode"))) void
 release_lock(spinlock_t *lock) {
   swap_atomic(lock, 0, AMOSWAP_RELEASE);
 }

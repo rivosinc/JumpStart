@@ -5,7 +5,7 @@
 #include "jumpstart_defines.h"
 #include "cpu_bits.h"
 
-.section .jumpstart.text.supervisor, "ax"
+.section .jumpstart.text.smode, "ax"
 
 # a0 contains the address of the function to jump to.
 # a1-a7 contains the arguments to pass to the smode function.
@@ -28,11 +28,11 @@ jump_to_function_in_smode:
   jalr ra, t0
 
   # a0 contains the exit code.
-  li  a7, SYSCALL_RUN_FUNC_IN_SUPERVISOR_MODE_COMPLETE
+  li  a7, SYSCALL_RUN_FUNC_IN_SMODE_COMPLETE
   ecall
 
-.global disable_mmu_from_supervisor_mode
-disable_mmu_from_supervisor_mode:
+.global disable_mmu_from_smode
+disable_mmu_from_smode:
   li  t0, 0
   csrw  satp, t0
   sfence.vma
@@ -49,10 +49,10 @@ stvec_trap_handler:
   andi  gp, gp, SSTATUS_SPP
   srli  gp, gp, SSTATUS_SPP_SHIFT
   addi  gp, gp, -PRV_S
-  beqz  gp, handle_trap_from_supervisor_mode
-  j  handle_trap_from_user_mode
+  beqz  gp, handle_trap_from_smode
+  j  handle_trap_from_umode
 
-handle_trap_from_supervisor_mode:
+handle_trap_from_smode:
   GET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
   SAVE_ALL_GPRS
 
@@ -61,7 +61,7 @@ handle_trap_from_supervisor_mode:
 
   j check_for_trap_handler_overrides
 
-handle_trap_from_user_mode:
+handle_trap_from_umode:
   # Save away the U-mode stack.
   GET_THREAD_ATTRIBUTES_UMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
   sd sp, SP_OFFSET_IN_SAVE_REGION(gp)
@@ -76,7 +76,7 @@ handle_trap_from_user_mode:
 check_for_trap_handler_overrides:
   # Check if the test has registered a trap handler for this trap.
   csrr a0, scause
-  call get_supervisor_mode_trap_handler_override
+  call get_smode_trap_handler_override
 
   beqz  a0, check_for_env_call_requests
 
@@ -89,9 +89,9 @@ check_for_trap_handler_overrides:
   andi  gp, gp, SSTATUS_SPP
   srli  gp, gp, SSTATUS_SPP_SHIFT
   addi  gp, gp, -PRV_S
-  bnez  gp, restore_user_mode_context
+  bnez  gp, restore_umode_context
 
-restore_supervisor_mode_context:
+restore_smode_context:
   GET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
 
   ld t0, HSTATUS_OFFSET_IN_SAVE_REGION(gp)
@@ -99,7 +99,7 @@ restore_supervisor_mode_context:
 
   j restore_context
 
-restore_user_mode_context:
+restore_umode_context:
   li  gp, PRV_U
   SET_THREAD_ATTRIBUTES_CURRENT_MODE(gp)
   GET_THREAD_ATTRIBUTES_UMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
@@ -118,23 +118,23 @@ check_for_env_call_requests:
   li t1, RISCV_EXCP_U_ECALL
   beq t0, t1, handle_env_call_from_umode
 
-  j jumpstart_supervisor_fail
+  j jumpstart_smode_fail
 
 handle_env_call_from_umode:
   # a7 will contain the syscall number
 
-  li t0, SYSCALL_RUN_FUNC_IN_USER_MODE_COMPLETE
-  beq a7, t0, handle_syscall_run_func_in_user_mode_complete
+  li t0, SYSCALL_RUN_FUNC_IN_UMODE_COMPLETE
+  beq a7, t0, handle_syscall_run_func_in_umode_complete
 
-  j jumpstart_supervisor_fail
+  j jumpstart_smode_fail
 
-.global jumpstart_supervisor_fail
-jumpstart_supervisor_fail:
+.global jumpstart_smode_fail
+jumpstart_smode_fail:
   li a0, DIAG_FAILED
-  li  a7, SYSCALL_RUN_FUNC_IN_SUPERVISOR_MODE_COMPLETE
+  li  a7, SYSCALL_RUN_FUNC_IN_SMODE_COMPLETE
   ecall
 
-handle_syscall_run_func_in_user_mode_complete:
+handle_syscall_run_func_in_umode_complete:
   # This is the return to supervisor path for run_function_in_umode().
 
   # Re-enable interrupts that were disabled in run_function_in_umode().
@@ -168,7 +168,7 @@ run_function_in_umode:
 
   GET_THREAD_ATTRIBUTES_CURRENT_MODE(t0)
   li  t1, PRV_S
-  bne t0, t1, jumpstart_supervisor_fail
+  bne t0, t1, jumpstart_smode_fail
 
   # Disable interrupts when switching modes to avoid clobbering any
   # state we set up if we encounter an interrupt.

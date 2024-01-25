@@ -4,10 +4,10 @@
 
 #include "jumpstart_defines.h"
 
-.section .jumpstart.text.machine.end, "ax"
+.section .jumpstart.text.mmode.end, "ax"
 
-.global _machine_mode_end
-_machine_mode_end:
+.global _mmode_end
+_mmode_end:
   # a0 will contain diag pass/fail status.
 
   # Store pass/fail status into the hart status tracker.
@@ -25,7 +25,7 @@ _machine_mode_end:
   # a0: Active hart mask. Gets shifted right as we check each hart.
   # t0: hart_status_tracker address
   # t1: Hart id of the current hart we're checking status of.
-  jal get_active_hart_mask_from_machine_mode
+  jal get_active_hart_mask_from_mmode
   la t0, hart_status_tracker
   li t1, 0x0
 
@@ -47,7 +47,7 @@ wait_for_running_hart_loop:
   beq t4, t6, wait_for_running_hart_loop
 
   li t6, DIAG_PASSED
-  bne t4, t6, jumpstart_machine_fail
+  bne t4, t6, jumpstart_mmode_fail
 
 done_with_current_hart:
   srli a0, a0, 1
@@ -56,14 +56,14 @@ done_with_current_hart:
 
   # All harts have passed, we're done.
   li t1, DIAG_PASSED
-  bne a0, t1, jumpstart_machine_fail
+  bne a0, t1, jumpstart_mmode_fail
 
   li a0, DIAG_PASSED
 
   j run_end_of_sim_sequence
 
-.global jumpstart_machine_fail
-jumpstart_machine_fail:
+.global jumpstart_mmode_fail
+jumpstart_mmode_fail:
   li a0, DIAG_FAILED
 
 run_end_of_sim_sequence:
@@ -80,10 +80,10 @@ just_wfi:
   wfi
 
 .align PAGE_OFFSET, 0x0
-.global jumpstart_machine_mode_end_point
-jumpstart_machine_mode_end_point:
+.global jumpstart_mmode_end_point
+jumpstart_mmode_end_point:
 
-.section .jumpstart.data.supervisor, "aw", @progbits
+.section .jumpstart.data.smode, "aw", @progbits
 
 .align 6
 .globl tohost

@@ -25,7 +25,7 @@ jump_to_function_in_umode:
   jalr ra, t0
 
   # a0 contains the exit code.
-  li  a7, SYSCALL_RUN_FUNC_IN_USER_MODE_COMPLETE
+  li  a7, SYSCALL_RUN_FUNC_IN_UMODE_COMPLETE
   ecall
 
   # We shouldn't come back here.
@@ -34,5 +34,5 @@ jump_to_function_in_umode:
 .global jumpstart_umode_fail
 jumpstart_umode_fail:
   li a0, DIAG_FAILED
-  li  a7, SYSCALL_RUN_FUNC_IN_USER_MODE_COMPLETE
+  li  a7, SYSCALL_RUN_FUNC_IN_UMODE_COMPLETE
   ecall

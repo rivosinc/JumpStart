@@ -10,14 +10,13 @@ extern void mark_uart_as_enabled(void);
 void setup_uart(void);
 void putch(char c);
 
-__attribute__((section(".jumpstart.text.machine"))) void setup_uart(void) {
+__attribute__((section(".jumpstart.text.mmode"))) void setup_uart(void) {
   // Implement Uart Setup code here
 }
 
-__attribute__((section(".jumpstart.text.supervisor")))
-__attribute__((noreturn)) void
+__attribute__((section(".jumpstart.text.smode"))) __attribute__((noreturn)) void
 putch(char c) {
   // Implement putch code here
   (void)c;
-  jumpstart_supervisor_fail();
+  jumpstart_smode_fail();
 }

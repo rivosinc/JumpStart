@@ -25,7 +25,7 @@ Machine, Supervisor and User mode cannot share code so the code for different mo
 
 JumpStart provides a set of basic API functions that the diag can use. Details [HERE](#jumpstart-apis).
 
-The diag exits by returning from `main()` with a `DIAG_PASSED` or `DIAG_FAILED` return code. Alternatively, the diag can call `jumpstart_machine_fail()` or `jumpstart_supervisor_fail()` functions if a clean return from `main()` is not possible. On return from the diag, JumpStart will exit the simulation with the appropriate exit code and exit sequence for the simulation environment.
+The diag exits by returning from `main()` with a `DIAG_PASSED` or `DIAG_FAILED` return code. Alternatively, the diag can call `jumpstart_mmode_fail()` or `jumpstart_smode_fail()` functions if a clean return from `main()` is not possible. On return from the diag, JumpStart will exit the simulation with the appropriate exit code and exit sequence for the simulation environment.
 
 **Diags are expected to follow the [RISC-V ABI Calling Convention](https://github.com/riscv-non-isa/riscv-elf-psabi-doc/blob/master/riscv-cc.adoc).**
 
@@ -49,7 +49,7 @@ Specifies the active harts in the diag. The default is `0b1` or 1 hart active.
 
 The MMU mode (SV39, SV48, SV57, SV64, ...) that the diag will run in.
 
-### `start_test_in_machine_mode`
+### `start_test_in_mmode`
 
 Controls whether the diag's `main()` will be called in M-mode or S-mode.
 
@@ -57,15 +57,15 @@ Default: `False`. The diag's `main()` will be called in S-mode.
 
 Example: [test009](../tests/common/test009.diag_attributes.yaml).
 
-### `machine_mode_start_address`
+### `mmode_start_address`
 
 The address at which the start of the M-mode section will be placed by the linker.
 
-### `num_pages_for_jumpstart_supervisor_pagetables`
+### `num_pages_for_jumpstart_smode_pagetables`
 
 The maximum number of pages that can be used to allocate Page Tables.
 
-### `num_pages_for_jumpstart_supervisor_bss` and `num_pages_for_jumpstart_supervisor_rodata`
+### `num_pages_for_jumpstart_smode_bss` and `num_pages_for_jumpstart_smode_rodata`
 
 The number of pages allowed for the `.bss` and `.rodata` sections respectively.
 
@@ -187,9 +187,9 @@ meson test -C builddir
 
 These are listed in [jumpstart_functions.h](../include/common/jumpstart_functions.h).
 
-Functions with names that end in `_from_supervisor_mode()` or `_from_machine_mode()` can only be called from the respective modes.
+Functions with names that end in `_from_smode()` or `_from_mmode()` can only be called from the respective modes.
 
-### `get_thread_attributes_hart_id_from_supervisor_mode()`
+### `get_thread_attributes_hart_id_from_smode()`
 
 Returns the hart id of the hart calling the function. Can only be called from S-mode.
 
@@ -205,19 +205,19 @@ The different modes cannot share the same pages so the functions belonging to ea
 
 Refer to Unit Tests `test002`, `test011` and `test018` for examples of how these functions can be called and how the memory map can be set up.
 
-### `disable_mmu_from_supervisor_mode()`
+### `disable_mmu_from_smode()`
 
 Disables the MMU. The page tables are set up and the MMU is enabled by default when the diag starts.
 
-### `sync_all_harts_from_supervisor_mode()`
+### `sync_all_harts_from_smode()`
 
 Synchronization point for all active harts in the diag.
 
-### `register_machine_mode_trap_handler_override()` and `get_machine_mode_trap_handler_override()`
+### `register_mmode_trap_handler_override()` and `get_mmode_trap_handler_override()`
 
 Allows the diag to register a trap handler override function for M-mode traps. The registered function will be called when the trap occurs in M-mode.
 
-### `register_supervisor_mode_trap_handler_override()` and `get_supervisor_mode_trap_handler_override()`
+### `register_smode_trap_handler_override()` and `get_smode_trap_handler_override()`
 
 Allows the diag to register a trap handler override function for S-mode traps. The registered function will be called when the trap occurs in S-mode.
 
