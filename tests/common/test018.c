@@ -6,7 +6,7 @@
 #include "jumpstart_functions.h"
 
 // Supervisor functions
-// The assembly functions are already tagged with the .text.supervisor section
+// The assembly functions are already tagged with the .text.smode section
 // attribute.
 uint8_t asm_check_passed_in_arguments(uint8_t a0, uint8_t a1, uint8_t a2,
                                       uint8_t a3, uint8_t a4, uint8_t a5,
@@ -14,10 +14,10 @@ uint8_t asm_check_passed_in_arguments(uint8_t a0, uint8_t a1, uint8_t a2,
 uint8_t c_check_passed_in_arguments(uint8_t a0, uint8_t a1, uint8_t a2,
                                     uint8_t a3, uint8_t a4, uint8_t a5,
                                     uint8_t a6)
-    __attribute__((section(".text.supervisor"))) __attribute__((const));
+    __attribute__((section(".text.smode"))) __attribute__((const));
 uint8_t get_bytes_to_copy(void);
 int copy_bytes(void);
-int compare_copied_bytes(void) __attribute__((section(".text.supervisor")))
+int compare_copied_bytes(void) __attribute__((section(".text.smode")))
 __attribute__((pure));
 
 extern uint64_t source_location;
@@ -51,16 +51,16 @@ uint8_t c_check_passed_in_arguments(uint8_t a0, uint8_t a1, uint8_t a2,
 }
 
 int main(void) {
-  if (get_thread_attributes_hart_id_from_machine_mode() != 0) {
+  if (get_thread_attributes_hart_id_from_mmode() != 0) {
     return DIAG_FAILED;
   }
 
-  if (get_thread_attributes_bookend_magic_number_from_machine_mode() !=
+  if (get_thread_attributes_bookend_magic_number_from_mmode() !=
       THREAD_ATTRIBUTES_BOOKEND_MAGIC_NUMBER_VALUE) {
     return DIAG_FAILED;
   }
 
-  if (get_thread_attributes_current_mode_from_machine_mode() != PRV_M) {
+  if (get_thread_attributes_current_mode_from_mmode() != PRV_M) {
     return DIAG_FAILED;
   }
 
@@ -95,7 +95,7 @@ int main(void) {
       return DIAG_FAILED;
     }
 
-    if (get_thread_attributes_current_mode_from_machine_mode() != PRV_M) {
+    if (get_thread_attributes_current_mode_from_mmode() != PRV_M) {
       return DIAG_FAILED;
     }
 
@@ -103,7 +103,7 @@ int main(void) {
       return DIAG_FAILED;
     }
 
-    if (get_thread_attributes_current_mode_from_machine_mode() != PRV_M) {
+    if (get_thread_attributes_current_mode_from_mmode() != PRV_M) {
       return DIAG_FAILED;
     }
   }
@@ -112,7 +112,7 @@ int main(void) {
 }
 
 int compare_copied_bytes(void) {
-  if (get_thread_attributes_current_mode_from_supervisor_mode() != PRV_S) {
+  if (get_thread_attributes_current_mode_from_smode() != PRV_S) {
     return DIAG_FAILED;
   }
 

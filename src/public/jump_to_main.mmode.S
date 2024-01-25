@@ -4,10 +4,10 @@
 
 #include "jumpstart_defines.h"
 
-.section .jumpstart.text.machine, "ax"
+.section .jumpstart.text.mmode, "ax"
 
-.global jump_to_main_in_machine_mode
-jump_to_main_in_machine_mode:
+.global jump_to_main_in_mmode
+jump_to_main_in_mmode:
   call main
 
-  j _machine_mode_end
+  j _mmode_end

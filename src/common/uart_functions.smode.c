@@ -2,10 +2,10 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include "uart_functions.supervisor.h"
+#include "uart_functions.smode.h"
 #include "jumpstart_defines.h"
 #include "jumpstart_functions.h"
-#include "lock_functions.supervisor.h"
+#include "lock_functions.smode.h"
 
 #include <inttypes.h>
 #include <stdarg.h>
@@ -17,24 +17,23 @@ extern void putch(char c);
 int toupper(int c);
 static int vprintk(const char *fmt, va_list args)
     __attribute__((format(printf, 1, 0)))
-    __attribute__((section(".jumpstart.text.supervisor")));
+    __attribute__((section(".jumpstart.text.smode")));
 void mark_uart_as_enabled(void);
 
 __attribute__((
-    section(".jumpstart.data.supervisor"))) static uint8_t uart_initialized = 0;
+    section(".jumpstart.data.smode"))) static uint8_t uart_initialized = 0;
 
 __attribute__((
-    section(".jumpstart.data.supervisor"))) static spinlock_t printk_lock = 0;
+    section(".jumpstart.data.smode"))) static spinlock_t printk_lock = 0;
 
-__attribute__((section(".jumpstart.text.machine"))) void
+__attribute__((section(".jumpstart.text.mmode"))) void
 mark_uart_as_enabled(void) {
   uart_initialized = 1;
 }
 
-__attribute__((section(".jumpstart.text.supervisor"))) int
-puts(const char *str) {
+__attribute__((section(".jumpstart.text.smode"))) int puts(const char *str) {
   if (uart_initialized == 0) {
-    jumpstart_supervisor_fail();
+    jumpstart_smode_fail();
   }
 
   int count = 0;
@@ -64,10 +63,10 @@ static int vprintk(const char *fmt, va_list args) {
   return puts(buf);
 }
 
-__attribute__((section(".jumpstart.text.supervisor"))) int
-printk(const char *fmt, ...) {
+__attribute__((section(".jumpstart.text.smode"))) int printk(const char *fmt,
+                                                             ...) {
   if (uart_initialized == 0) {
-    jumpstart_supervisor_fail();
+    jumpstart_smode_fail();
   }
 
   va_list args;

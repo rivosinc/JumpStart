@@ -6,7 +6,7 @@
 #include "jumpstart_functions.h"
 
 int main(void) {
-  if (get_thread_attributes_current_mode_from_supervisor_mode() != PRV_S) {
+  if (get_thread_attributes_current_mode_from_smode() != PRV_S) {
     return DIAG_FAILED;
   }
 

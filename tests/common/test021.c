@@ -24,7 +24,7 @@ Ved: Answer - No
 
 #include "cpu_bits.h"
 #include "jumpstart_functions.h"
-#include "tablewalk_functions.supervisor.h"
+#include "tablewalk_functions.smode.h"
 
 uint8_t is_load_allowed_to_data_area(void);
 
@@ -33,14 +33,14 @@ uint64_t data_area_address = (uint64_t)&data_area;
 
 void hart1_load_page_fault_handler(void);
 void hart1_load_page_fault_handler(void) {
-  uint8_t hart_id = get_thread_attributes_hart_id_from_supervisor_mode();
+  uint8_t hart_id = get_thread_attributes_hart_id_from_smode();
   if (hart_id != 1) {
-    jumpstart_supervisor_fail();
+    jumpstart_smode_fail();
   }
 
   uint64_t stval_value = read_csr(stval);
   if (stval_value != data_area_address) {
-    jumpstart_supervisor_fail();
+    jumpstart_smode_fail();
   }
 
   // skip over the faulting load
@@ -50,7 +50,7 @@ void hart1_load_page_fault_handler(void) {
 }
 
 int main(void) {
-  uint8_t hart_id = get_thread_attributes_hart_id_from_supervisor_mode();
+  uint8_t hart_id = get_thread_attributes_hart_id_from_smode();
   if (hart_id > 1) {
     return DIAG_FAILED;
   }
@@ -66,7 +66,7 @@ int main(void) {
   }
 
   if (hart_id == 1) {
-    register_supervisor_mode_trap_handler_override(
+    register_smode_trap_handler_override(
         RISCV_EXCP_LOAD_PAGE_FAULT, (uint64_t)(&hart1_load_page_fault_handler));
 
     if (is_load_allowed_to_data_area() == 1) {
@@ -74,7 +74,7 @@ int main(void) {
     }
   }
 
-  sync_all_harts_from_supervisor_mode();
+  sync_all_harts_from_smode();
 
   if (hart_id == 0) {
     *((uint64_t *)xlate_info.pte_address[2]) = xlate_info.pte_value[2] | PTE_V;

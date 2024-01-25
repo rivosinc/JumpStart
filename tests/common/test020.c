@@ -4,7 +4,7 @@
 
 #include "cpu_bits.h"
 #include "jumpstart_functions.h"
-#include "tablewalk_functions.supervisor.h"
+#include "tablewalk_functions.smode.h"
 
 int main(void) {
   if (get_field(read_csr(satp), SATP64_MODE) != VM_1_10_SV39) {

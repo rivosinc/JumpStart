@@ -67,17 +67,17 @@ def generate_getter_and_setter_methods_for_field(
         f"#define SET_{c_struct.upper()}_{field_name.upper()}(dest_reg) {get_memop_of_size(MemoryOp.STORE, field_size_in_bytes)}   dest_reg, {c_struct.upper()}_{field_name.upper()}_OFFSET(tp);\n\n"
     )
 
-    modes = ["supervisor", "machine"]
+    modes = ["smode", "mmode"]
     for mode in modes:
         assembly_file_fd.write(f'.section .jumpstart.text.{mode}, "ax"\n')
-        getter_method = f"get_{c_struct}_{field_name}_from_{mode}_mode"
+        getter_method = f"get_{c_struct}_{field_name}_from_{mode}"
         assembly_file_fd.write(f".global {getter_method}\n")
         assembly_file_fd.write(f"{getter_method}:\n")
         assembly_file_fd.write(f"    GET_{c_struct.upper()}_{field_name.upper()}(a0)\n")
         assembly_file_fd.write("    ret\n\n")
 
-        assembly_file_fd.write(f".global set_{c_struct}_{field_name}_from_{mode}_mode\n")
-        assembly_file_fd.write(f"set_{c_struct}_{field_name}_from_{mode}_mode:\n")
+        assembly_file_fd.write(f".global set_{c_struct}_{field_name}_from_{mode}\n")
+        assembly_file_fd.write(f"set_{c_struct}_{field_name}_from_{mode}:\n")
         assembly_file_fd.write(f"    SET_{c_struct.upper()}_{field_name.upper()}(a0)\n")
         assembly_file_fd.write("    ret\n\n")
 
@@ -117,7 +117,7 @@ def generate_reg_context_save_restore_code(attributes_data, defines_file_fd, ass
         )
     defines_file_fd.write("\n\n")
 
-    assembly_file_fd.write('\n\n.section .jumpstart.data.supervisor, "aw"\n')
+    assembly_file_fd.write('\n\n.section .jumpstart.data.smode, "aw"\n')
     modes = ["mmode", "lower_mode_in_mmode", "smode", "umode"]
     assembly_file_fd.write(
         f"\n# {modes} context saved registers: \n# {attributes_data['reg_context_to_save_across_modes']['registers']}\n"
@@ -215,7 +215,7 @@ def generate_jumpstart_sources(
             f"#define {c_struct.upper()}_STRUCT_SIZE_IN_BYTES {current_offset}\n\n"
         )
 
-        assembly_file_fd.write('.section .jumpstart.c_structs.supervisor, "aw"\n\n')
+        assembly_file_fd.write('.section .jumpstart.c_structs.smode, "aw"\n\n')
         assembly_file_fd.write(f".global {c_struct}_region\n")
         assembly_file_fd.write(f"{c_struct}_region:\n")
         for i in range(attributes_data["max_num_harts_supported"]):
@@ -228,8 +228,8 @@ def generate_jumpstart_sources(
         total_size_of_c_structs += current_offset
 
     max_allowed_size_of_c_structs = (
-        attributes_data["jumpstart_supervisor"]["c_structs"]["num_pages"]
-        * attributes_data["jumpstart_supervisor"]["c_structs"]["page_size"]
+        attributes_data["jumpstart_smode"]["c_structs"]["num_pages"]
+        * attributes_data["jumpstart_smode"]["c_structs"]["page_size"]
     )
 
     if (
@@ -241,7 +241,7 @@ def generate_jumpstart_sources(
         )
         sys.exit(1)
 
-    stack_types = ["supervisor", "umode"]
+    stack_types = ["smode", "umode"]
     for stack_type in stack_types:
         # Make sure we can equally distribute the number of total stack pages
         # among the harts.

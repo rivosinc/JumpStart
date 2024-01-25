@@ -6,7 +6,7 @@
 
 int main(void) {
   for (int i = 0; i < 10; ++i) {
-    sync_all_harts_from_supervisor_mode();
+    sync_all_harts_from_smode();
   }
 
   return DIAG_PASSED;

@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include "tablewalk_functions.supervisor.h"
+#include "tablewalk_functions.smode.h"
 #include "cpu_bits.h"
 #include "jumpstart_functions.h"
 
@@ -37,21 +37,21 @@ const struct mmu_mode_attribute mmu_mode_attributes[] = {
      .pte_ppn_bits = {{53, 37}, {36, 28}, {27, 19}, {18, 10}}},
 };
 
-__attribute__((section(".jumpstart.text.supervisor"))) static uint64_t
+__attribute__((section(".jumpstart.text.smode"))) static uint64_t
 extract_bits(uint64_t value, struct bit_range range) {
   uint8_t msb = range.msb;
   uint8_t lsb = range.lsb;
   return ((value >> lsb) & ((1ULL << (msb - lsb + 1)) - 1));
 }
 
-__attribute__((section(".jumpstart.text.supervisor"))) static uint64_t
+__attribute__((section(".jumpstart.text.smode"))) static uint64_t
 place_bits(uint64_t value, uint64_t bits, struct bit_range range) {
   uint8_t msb = range.msb;
   uint8_t lsb = range.lsb;
   return (value & ~(((1ULL << (msb - lsb + 1)) - 1) << lsb)) | (bits << lsb);
 }
 
-__attribute__((section(".jumpstart.text.supervisor"))) void
+__attribute__((section(".jumpstart.text.smode"))) void
 translate_VA(uint64_t va, struct translation_info *xlate_info) {
   // C reimplementation of the DiagAttributes.translate_VA() from
   // generate_diag_sources.py.
@@ -85,7 +85,7 @@ translate_VA(uint64_t va, struct translation_info *xlate_info) {
   }
 
   if (mmu_mode_attribute == 0) {
-    jumpstart_supervisor_fail();
+    jumpstart_smode_fail();
   }
 
   // Step 1
@@ -113,7 +113,7 @@ translate_VA(uint64_t va, struct translation_info *xlate_info) {
 
     if ((xwr & 0x3) == 0x2) {
       // PTE at pte_address has R=0 and W=1.
-      jumpstart_supervisor_fail();
+      jumpstart_smode_fail();
     }
 
     a = 0;
@@ -130,16 +130,16 @@ translate_VA(uint64_t va, struct translation_info *xlate_info) {
       break;
     } else if (get_field(pte_value, PTE_A) != 0) {
       // PTE has A=1 but is not a Leaf PTE.
-      jumpstart_supervisor_fail();
+      jumpstart_smode_fail();
     } else if (get_field(pte_value, PTE_D) != 0) {
       // PTE has D=1 but is not a Leaf PTE
-      jumpstart_supervisor_fail();
+      jumpstart_smode_fail();
     }
 
     ++current_level;
     if (current_level >= mmu_mode_attribute->num_levels) {
       // Ran out of levels
-      jumpstart_supervisor_fail();
+      jumpstart_smode_fail();
     }
   }
 

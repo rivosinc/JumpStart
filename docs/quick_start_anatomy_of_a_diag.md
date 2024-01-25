@@ -85,7 +85,7 @@ By default, the JumptStart boot code will start in machine mode, initialize the 
 [`test021.c`](../tests/common/test021.c) contains `main()` that the JumpStart boot code will jump to after initializing the system.
 
 ```c
-  uint8_t hart_id = get_thread_attributes_hart_id_from_supervisor_mode();
+  uint8_t hart_id = get_thread_attributes_hart_id_from_smode();
   if (hart_id > 1) {
     return DIAG_FAILED;
   }
@@ -132,13 +132,13 @@ The diag sanity checks that the valid bit is not set for the leaf page table ent
 
 ```c
   if (hart_id == 1) {
-    register_supervisor_mode_trap_handler_override(
+    register_smode_trap_handler_override(
         SCAUSE_EC_LOAD_PAGE_FAULT, (uint64_t)(&hart1_load_page_fault_handler));
 ..
 ..
 ```
 
-CPU1 registers a supervisor mode trap handler override (`hart1_load_page_fault_handler()`) for the load page fault exception using the `register_supervisor_mode_trap_handler_override()` API provided by JumpStart.
+CPU1 registers a supervisor mode trap handler override (`hart1_load_page_fault_handler()`) for the load page fault exception using the `register_smode_trap_handler_override()` API provided by JumpStart.
 
 ```c
     if (is_load_allowed_to_data_area() == 1) {
@@ -182,7 +182,7 @@ void hart1_load_page_fault_handler(void) {
 ```
 
 ```c
-  sync_all_harts_from_supervisor_mode();
+  sync_all_harts_from_smode();
 ```
 
 The diag syncs up the cores so that they both complete all the above steps before `CPU0` modifies the page table entry to mark it as valid.

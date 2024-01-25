@@ -4,7 +4,7 @@
 
 #include "cpu_bits.h"
 #include "jumpstart_functions.h"
-#include "lock_functions.supervisor.h"
+#include "lock_functions.smode.h"
 
 #define NUM_ITER 100
 
@@ -30,7 +30,7 @@ static void update_variables(uint8_t tid) {
 }
 
 int main(void) {
-  uint8_t tid = get_thread_attributes_hart_id_from_supervisor_mode();
+  uint8_t tid = get_thread_attributes_hart_id_from_smode();
   if (tid > 3) {
     return DIAG_FAILED;
   }
@@ -46,7 +46,7 @@ int main(void) {
     release_lock(&lock);
   }
 
-  sync_all_harts_from_supervisor_mode();
+  sync_all_harts_from_smode();
 
   // Check final value
   if (new != NUM_ITER * (0 + 1 + 2 + 3)) {

@@ -247,17 +247,17 @@ class DiagAttributes:
             )
 
         self.jumpstart_source_attributes["diag_attributes"]["mappings"].append(
-            self.get_jumpstart_machine_mode_section()
+            self.get_jumpstart_mmode_section()
         )
 
-        # Add a guard page mapping to catch linker script overruns of machine_mode
+        # Add a guard page mapping to catch linker script overruns of mmode
         self.add_pa_guard_page_after_last_mapping(
             self.jumpstart_source_attributes["diag_attributes"]["mappings"]
         )
 
         self.add_jumpstart_area_to_mappings(
             self.jumpstart_source_attributes["diag_attributes"]["mappings"],
-            "jumpstart_supervisor",
+            "jumpstart_smode",
         )
         self.add_jumpstart_area_to_mappings(
             self.jumpstart_source_attributes["diag_attributes"]["mappings"],
@@ -365,19 +365,19 @@ class DiagAttributes:
                 ):
                     mappings[len(mappings) - 1]["xwr"] = "0b011"
 
-    def get_jumpstart_machine_mode_section(self):
-        machine_mode_mapping = {}
-        machine_mode_mapping["pa"] = self.jumpstart_source_attributes["diag_attributes"][
-            "machine_mode_start_address"
+    def get_jumpstart_mmode_section(self):
+        mmode_mapping = {}
+        mmode_mapping["pa"] = self.jumpstart_source_attributes["diag_attributes"][
+            "mmode_start_address"
         ]
 
         for area_name in self.jumpstart_source_attributes["jumpstart_mmode"]:
             for attribute_name in self.jumpstart_source_attributes["jumpstart_mmode"][area_name]:
-                machine_mode_mapping[attribute_name] = self.jumpstart_source_attributes[
-                    "jumpstart_mmode"
-                ][area_name][attribute_name]
+                mmode_mapping[attribute_name] = self.jumpstart_source_attributes["jumpstart_mmode"][
+                    area_name
+                ][attribute_name]
 
-        return machine_mode_mapping
+        return mmode_mapping
 
     def add_pa_guard_page_after_last_mapping(self, mappings):
         # Guard pages have no allocations in the page tables but
@@ -454,7 +454,7 @@ class DiagAttributes:
         if (
             len(self.PT_pages)
             == self.jumpstart_source_attributes["diag_attributes"][
-                "num_pages_for_jumpstart_supervisor_pagetables"
+                "num_pages_for_jumpstart_smode_pagetables"
             ]
         ):
             # Can't create any more pagetable pages
@@ -497,7 +497,7 @@ class DiagAttributes:
                 current_level_PT_page = self.get_PT_page(entry["va"], current_level)
                 if current_level_PT_page is None:
                     log.error(
-                        f"Insufficient pagetable pages (num_pages_for_jumpstart_supervisor_pagetables = {self.jumpstart_source_attributes['diag_attributes']['num_pages_for_jumpstart_supervisor_pagetables']}) to create level {current_level + 1} pagetable for {entry}"
+                        f"Insufficient pagetable pages (num_pages_for_jumpstart_smode_pagetables = {self.jumpstart_source_attributes['diag_attributes']['num_pages_for_jumpstart_smode_pagetables']}) to create level {current_level + 1} pagetable for {entry}"
                     )
                     sys.exit(1)
 
@@ -510,7 +510,7 @@ class DiagAttributes:
                     next_level_pagetable = self.get_PT_page(entry["va"], current_level + 1)
                     if next_level_pagetable is None:
                         log.error(
-                            f"Insufficient pagetable pages (num_pages_for_jumpstart_supervisor_pagetables = {self.jumpstart_source_attributes['diag_attributes']['num_pages_for_jumpstart_supervisor_pagetables']}) to create next level {current_level + 1} pagetable for {entry}"
+                            f"Insufficient pagetable pages (num_pages_for_jumpstart_smode_pagetables = {self.jumpstart_source_attributes['diag_attributes']['num_pages_for_jumpstart_smode_pagetables']}) to create next level {current_level + 1} pagetable for {entry}"
                         )
                         sys.exit(1)
 
@@ -660,7 +660,7 @@ class DiagAttributes:
             file.close()
 
     def generate_diag_attribute_functions(self, file_descriptor):
-        boolean_attributes = ["start_test_in_machine_mode"]
+        boolean_attributes = ["start_test_in_mmode"]
 
         self.generate_get_active_hart_mask_function(file_descriptor)
         if self.jumpstart_source_attributes["rivos_internal_build"] is True:
@@ -674,7 +674,7 @@ class DiagAttributes:
 
     def generate_boolean_diag_attribute_functions(self, file_descriptor, boolean_attributes):
         for attribute in boolean_attributes:
-            file_descriptor.write('.section .jumpstart.text.machine, "ax"\n\n')
+            file_descriptor.write('.section .jumpstart.text.mmode, "ax"\n\n')
             file_descriptor.write(f".global {attribute}\n")
             file_descriptor.write(f"{attribute}:\n\n")
 
@@ -684,11 +684,11 @@ class DiagAttributes:
             file_descriptor.write("   ret\n\n\n")
 
     def generate_get_active_hart_mask_function(self, file_descriptor):
-        modes = ["machine", "supervisor"]
+        modes = ["mmode", "smode"]
         for mode in modes:
             file_descriptor.write(f'.section .jumpstart.text.{mode}, "ax"\n\n')
-            file_descriptor.write(f".global get_active_hart_mask_from_{mode}_mode\n")
-            file_descriptor.write(f"get_active_hart_mask_from_{mode}_mode:\n\n")
+            file_descriptor.write(f".global get_active_hart_mask_from_{mode}\n")
+            file_descriptor.write(f"get_active_hart_mask_from_{mode}:\n\n")
 
             active_hart_mask = int(
                 self.jumpstart_source_attributes["diag_attributes"]["active_hart_mask"], 2
@@ -707,7 +707,7 @@ class DiagAttributes:
             self.jumpstart_source_attributes["diag_attributes"]["active_hart_mask"], 2
         )
 
-        modes = ["machine", "supervisor"]
+        modes = ["mmode", "smode"]
         for mode in modes:
             file_descriptor.write(
                 f"""
@@ -717,8 +717,8 @@ class DiagAttributes:
 #   a1: hart mask of harts to sync.
 #   a2: hart id of primary hart for sync
 #   a3: sync point address (4 byte aligned)
-.global sync_harts_in_mask_from_{mode}_mode
-sync_harts_in_mask_from_{mode}_mode:
+.global sync_harts_in_mask_from_{mode}
+sync_harts_in_mask_from_{mode}:
   addi  sp, sp, -16
   sd  ra, 8(sp)
   sd  fp, 0(sp)
@@ -754,7 +754,7 @@ wait_for_all_harts_to_set_sync_point_bits_{mode}:
 
   bne t0, a1, jumpstart_{mode}_fail
 
-  j return_from_sync_harts_in_mask_from_{mode}_mode
+  j return_from_sync_harts_in_mask_from_{mode}
 
 wait_for_primary_hart_to_clear_sync_point_bits_{mode}:
   # non-primary harts wait for the primary hart to clear the sync point bits.
@@ -763,7 +763,7 @@ wait_for_primary_hart_to_clear_sync_point_bits_{mode}:
   andi t0, t0, 1
   bnez t0, wait_for_primary_hart_to_clear_sync_point_bits_{mode}
 
-return_from_sync_harts_in_mask_from_{mode}_mode:
+return_from_sync_harts_in_mask_from_{mode}:
   CHECKTC_ENABLE
 
   ld  ra, 8(sp)
@@ -771,19 +771,19 @@ return_from_sync_harts_in_mask_from_{mode}_mode:
   addi  sp, sp, 16
   ret
 
-.global sync_all_harts_from_{mode}_mode
-sync_all_harts_from_{mode}_mode:
+.global sync_all_harts_from_{mode}
+sync_all_harts_from_{mode}:
   addi  sp, sp, -16
   sd  ra, 8(sp)
   sd  fp, 0(sp)
   addi    fp, sp, 16
 
-  jal get_thread_attributes_hart_id_from_{mode}_mode
+  jal get_thread_attributes_hart_id_from_{mode}
   li a1, {active_hart_mask}
   li a2, PRIMARY_HART_ID
   la a3, hart_sync_point
 
-  jal sync_harts_in_mask_from_{mode}_mode
+  jal sync_harts_in_mask_from_{mode}
 
   ld  ra, 8(sp)
   ld  fp, 0(sp)
@@ -798,17 +798,17 @@ sync_all_harts_from_{mode}_mode:
         )
         file_descriptor.write(f"#define DIAG_SATP_MODE {self.get_attribute('satp_mode')}\n")
 
-        modes = ["machine", "supervisor"]
+        modes = ["mmode", "smode"]
         for mode in modes:
             file_descriptor.write(f'.section .jumpstart.text.{mode}, "ax"\n\n')
 
-            file_descriptor.write(f".global get_diag_satp_mode_from_{mode}_mode\n")
-            file_descriptor.write(f"get_diag_satp_mode_from_{mode}_mode:\n\n")
+            file_descriptor.write(f".global get_diag_satp_mode_from_{mode}\n")
+            file_descriptor.write(f"get_diag_satp_mode_from_{mode}:\n\n")
             file_descriptor.write("    li   a0, DIAG_SATP_MODE\n")
             file_descriptor.write("    ret\n\n\n")
 
-            file_descriptor.write(f".global enable_mmu_from_{mode}_mode\n")
-            file_descriptor.write(f"enable_mmu_from_{mode}_mode:\n\n")
+            file_descriptor.write(f".global enable_mmu_from_{mode}\n")
+            file_descriptor.write(f"enable_mmu_from_{mode}:\n\n")
             file_descriptor.write("    li   t0, DIAG_SATP_MODE\n")
             file_descriptor.write("    slli  t0, t0, SATP64_MODE_SHIFT\n")
             file_descriptor.write(f"    la t1, {self.pt_attributes.pt_start_label}\n")

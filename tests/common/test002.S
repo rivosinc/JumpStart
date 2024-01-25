@@ -6,7 +6,7 @@
 
 #define BYTES_TO_COPY (64 * 8)
 
-.section .text.user, "ax"
+.section .text.umode, "ax"
 
 # Inputs:
 # a0-a6
@@ -64,7 +64,7 @@ get_bytes_to_copy:
   li a0, BYTES_TO_COPY
   ret
 
-.section .data.user, "aw"
+.section .data.umode, "aw"
 
 .global source_location
 source_location:

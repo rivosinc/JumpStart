@@ -4,7 +4,7 @@
 
 #include "cpu_bits.h"
 #include "jumpstart_functions.h"
-#include "tablewalk_functions.supervisor.h"
+#include "tablewalk_functions.smode.h"
 
 extern uint64_t data_area;
 extern uint64_t load_from_address(uint64_t address);
@@ -78,17 +78,17 @@ int main(void) {
   *(uint64_t *)VA = new_magic_value;
 
   // An access to the PA should fault with the MMU on.
-  register_supervisor_mode_trap_handler_override(RISCV_EXCP_LOAD_PAGE_FAULT,
-                                                 (uint64_t)(&skip_instruction));
+  register_smode_trap_handler_override(RISCV_EXCP_LOAD_PAGE_FAULT,
+                                       (uint64_t)(&skip_instruction));
   uint64_t __attribute__((unused)) value_from_load_that_should_fault =
       load_from_address(PA);
-  deregister_supervisor_mode_trap_handler_override(RISCV_EXCP_LOAD_PAGE_FAULT);
+  deregister_smode_trap_handler_override(RISCV_EXCP_LOAD_PAGE_FAULT);
 
   if (PA_access_faulted == 0) {
     return DIAG_FAILED;
   }
 
-  disable_mmu_from_supervisor_mode();
+  disable_mmu_from_smode();
 
   // PA access should now succeed with the MMU off.
   uint64_t value_at_PA = load_from_address(PA);

@@ -3,14 +3,14 @@
 # SPDX-License-Identifier: Apache-2.0
 
 jumpstart_common_sources = files(
-                                'start.machine.S',
-                                'data.supervisor.S',
-                                'jumpstart_functions.supervisor.S',
+                                'start.mmode.S',
+                                'data.smode.S',
+                                'jumpstart_functions.smode.S',
                                 'jumpstart_functions.umode.S',
-                                'tablewalk_functions.supervisor.c',
-                                'trap_handler_functions.supervisor.c',
-                                'string_functions.supervisor.c',
-                                'uart_functions.supervisor.c',
-                                'heap_functions.supervisor.c',
-                                'lock_functions.supervisor.c'
+                                'tablewalk_functions.smode.c',
+                                'trap_handler_functions.smode.c',
+                                'string_functions.smode.c',
+                                'uart_functions.smode.c',
+                                'heap_functions.smode.c',
+                                'lock_functions.smode.c'
                                 )

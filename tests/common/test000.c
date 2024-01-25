@@ -11,20 +11,20 @@ int main(void) {
     return DIAG_FAILED;
   }
 
-  if (get_thread_attributes_hart_id_from_supervisor_mode() != 0) {
+  if (get_thread_attributes_hart_id_from_smode() != 0) {
     return DIAG_FAILED;
   }
 
-  if (get_thread_attributes_bookend_magic_number_from_supervisor_mode() !=
+  if (get_thread_attributes_bookend_magic_number_from_smode() !=
       THREAD_ATTRIBUTES_BOOKEND_MAGIC_NUMBER_VALUE) {
     return DIAG_FAILED;
   }
 
-  if (get_diag_satp_mode_from_supervisor_mode() != VM_1_10_SV39) {
+  if (get_diag_satp_mode_from_smode() != VM_1_10_SV39) {
     return DIAG_FAILED;
   }
 
-  if (get_thread_attributes_current_mode_from_supervisor_mode() != PRV_S) {
+  if (get_thread_attributes_current_mode_from_smode() != PRV_S) {
     return DIAG_FAILED;
   }
 
@@ -32,7 +32,7 @@ int main(void) {
     return DIAG_FAILED;
   }
 
-  disable_mmu_from_supervisor_mode();
+  disable_mmu_from_smode();
 
   return DIAG_PASSED;
 }

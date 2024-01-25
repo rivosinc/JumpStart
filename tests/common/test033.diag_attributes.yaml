@@ -32,7 +32,7 @@ mappings:
     page_size: 0x1000
     num_pages: 1
     pma_memory_type: "wb"
-    linker_script_section: ".text.user"
+    linker_script_section: ".text.umode"
   -
     va: 0xC0023000
     pa: 0xC0023000
@@ -41,4 +41,4 @@ mappings:
     page_size: 0x1000
     num_pages: 1
     pma_memory_type: "wb"
-    linker_script_section: ".data.user"
+    linker_script_section: ".data.umode"
