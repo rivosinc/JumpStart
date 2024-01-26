@@ -206,7 +206,7 @@ class DiagAttributes:
                 self.jumpstart_source_attributes["diag_attributes"][
                     attribute_name
                 ] = attribute_value
-                log.warning(f"Command line overriding {attribute_name} with {attribute_value}.")
+                log.debug(f"Command line overriding {attribute_name} with {attribute_value}.")
 
         self.sanity_check_diag_attributes()
 
