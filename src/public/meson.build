@@ -4,7 +4,12 @@
 
 jumpstart_public_sources = files(
                           'jump_to_main.mmode.S',
-                          'uart_functions.mmode.c',
                           'end.mmode.S'
                           )
+jumpstart_public_drivers = []
+
+subdir('uart')
+
+jumpstart_public_sources += jumpstart_public_drivers
+
 jumpstart_source_attributes_yaml = files('jumpstart_public_source_attributes.yaml')
