@@ -210,7 +210,7 @@ class DiagAttributes:
 
         self.sanity_check_diag_attributes()
 
-        self.append_jumpstart_sections_to_mappings()
+        self.add_jumpstart_sections_to_mappings()
 
         # Sort all the mappings by the PA.
         self.jumpstart_source_attributes["diag_attributes"]["mappings"] = sorted(
@@ -235,10 +235,11 @@ class DiagAttributes:
                 self.jumpstart_source_attributes["diag_attributes"]
             )
 
-    def append_jumpstart_sections_to_mappings(self):
-        # the rivos and machine mode sections are added at specific locations
-        # the rest are just added on at locations immediately following
-        # these sections.
+    def add_jumpstart_sections_to_mappings(self):
+        # The rivos internal sections are added at specific locations.
+        # The sections for the other jumpstart areas can be addded at
+        # specific locations or at locations immediately following the
+        # previous section using the *_start_address diag_attributes attribute.
         if self.jumpstart_source_attributes["rivos_internal_build"] is True:
             self.jumpstart_source_attributes["diag_attributes"]["mappings"].extend(
                 rivos_internal.get_rivos_specific_mappings(
@@ -246,22 +247,17 @@ class DiagAttributes:
                 )
             )
 
-        self.jumpstart_source_attributes["diag_attributes"]["mappings"].append(
-            self.get_jumpstart_mmode_section()
-        )
-
-        # Add a guard page mapping to catch linker script overruns of mmode
-        self.add_pa_guard_page_after_last_mapping(
-            self.jumpstart_source_attributes["diag_attributes"]["mappings"]
-        )
-
-        self.add_jumpstart_area_to_mappings(
+        self.add_mappings_for_jumpstart_mode(
             self.jumpstart_source_attributes["diag_attributes"]["mappings"],
-            "jumpstart_smode",
+            "mmode",
         )
-        self.add_jumpstart_area_to_mappings(
+        self.add_mappings_for_jumpstart_mode(
             self.jumpstart_source_attributes["diag_attributes"]["mappings"],
-            "jumpstart_umode",
+            "smode",
+        )
+        self.add_mappings_for_jumpstart_mode(
+            self.jumpstart_source_attributes["diag_attributes"]["mappings"],
+            "umode",
         )
 
         self.add_pa_guard_page_after_last_mapping(
@@ -285,7 +281,7 @@ class DiagAttributes:
         page_size,
         pma_memory_type,
         linker_script_section,
-        no_pte_allocation=False,
+        no_pte_allocation,
     ):
         assert page_size in self.get_attribute("page_sizes")
 
@@ -309,9 +305,6 @@ class DiagAttributes:
                 # Align the PA to the page size.
                 new_mapping["pa"] = (math.floor(new_mapping["pa"] / page_size) + 1) * page_size
         else:
-            # We expect that mappings are added in increasing PA order.
-            assert pa > previous_mapping["pa"] + previous_mapping_size
-
             new_mapping["pa"] = pa
 
         assert new_mapping["pa"] % page_size == 0
@@ -330,8 +323,33 @@ class DiagAttributes:
 
         mappings.insert(previous_mapping_id + 1, new_mapping)
 
-    def add_jumpstart_area_to_mappings(self, mappings, area_name):
+    def add_mappings_for_jumpstart_mode(self, mappings, mode):
+        area_name = f"jumpstart_{mode}"
+
+        # We pick up the start address of the area from the diag_attributes
+        #   Example: mmode_start_address, smode_start_address,
+        #            umode_start_address
+        # If this attribute is not null we use it to set up the address of the
+        # first section in the area. Every subsequent section will just follow
+        # the previous section in the PA space.
+        pa_for_first_section_in_area = None
+        area_start_address_attribute_name = f"{mode}_start_address"
+        if (
+            area_start_address_attribute_name in self.jumpstart_source_attributes["diag_attributes"]
+            and self.jumpstart_source_attributes["diag_attributes"][
+                area_start_address_attribute_name
+            ]
+            is not None
+        ):
+            pa_for_first_section_in_area = self.jumpstart_source_attributes["diag_attributes"][
+                area_start_address_attribute_name
+            ]
+
+        num_sections_added = 0
         for section_name in self.jumpstart_source_attributes[area_name]:
+            # This is where we pick up num_pages_for_jumpstart_*mode_* attributes from the diag_attributes
+            #   Example: num_pages_for_jumpstart_smode_pagetables, num_pages_for_jumpstart_smode_bss,
+            #            num_pages_for_jumpstart_smode_rodata, etc.
             num_pages_diag_attribute_name = f"num_pages_for_{area_name}_{section_name}"
 
             if (
@@ -355,18 +373,34 @@ class DiagAttributes:
                 log.error(f"num_pages not specified for {section_name} in {area_name}")
                 sys.exit(1)
 
-            section_pa = None
+            pa = None
+            if num_sections_added == 0:
+                pa = pa_for_first_section_in_area
+
+            xwr = None
+            if "xwr" in self.jumpstart_source_attributes[area_name][section_name]:
+                xwr = self.jumpstart_source_attributes[area_name][section_name]["xwr"]
+            umode = None
+            if "umode" in self.jumpstart_source_attributes[area_name][section_name]:
+                umode = self.jumpstart_source_attributes[area_name][section_name]["umode"]
+            no_pte_allocation = False
+            if "no_pte_allocation" in self.jumpstart_source_attributes[area_name][section_name]:
+                no_pte_allocation = self.jumpstart_source_attributes[area_name][section_name][
+                    "no_pte_allocation"
+                ]
 
             self.append_to_mappings(
                 mappings,
-                section_pa,
-                self.jumpstart_source_attributes[area_name][section_name]["xwr"],
-                self.jumpstart_source_attributes[area_name][section_name]["umode"],
+                pa,
+                xwr,
+                umode,
                 num_pages,
                 self.jumpstart_source_attributes[area_name][section_name]["page_size"],
                 self.jumpstart_source_attributes[area_name][section_name]["pma_memory_type"],
                 self.jumpstart_source_attributes[area_name][section_name]["linker_script_section"],
+                no_pte_allocation,
             )
+            num_sections_added += 1
 
             if section_name == "pagetables":
                 self.PT_section_start_address = mappings[len(mappings) - 1]["pa"]
@@ -377,20 +411,6 @@ class DiagAttributes:
                     is True
                 ):
                     mappings[len(mappings) - 1]["xwr"] = "0b011"
-
-    def get_jumpstart_mmode_section(self):
-        mmode_mapping = {}
-        mmode_mapping["pa"] = self.jumpstart_source_attributes["diag_attributes"][
-            "mmode_start_address"
-        ]
-
-        for area_name in self.jumpstart_source_attributes["jumpstart_mmode"]:
-            for attribute_name in self.jumpstart_source_attributes["jumpstart_mmode"][area_name]:
-                mmode_mapping[attribute_name] = self.jumpstart_source_attributes["jumpstart_mmode"][
-                    area_name
-                ][attribute_name]
-
-        return mmode_mapping
 
     def add_pa_guard_page_after_last_mapping(self, mappings):
         # Guard pages have no allocations in the page tables but
