@@ -19,6 +19,7 @@ common_jumpstart_tests = [
   ['test003', 'Register and run Supervisor mode illegal instruction exception handler.', '', false, true],
   ['test006', 'Read and Write CSRs.', '', false, true],
   ['test009', 'Jump to main() in machine mode and exit.', '', false, true],
+  ['test010', 'Override default M-mode, S-mode, U-mode start address.', '', false, true],
   ['test011', 'Handle user mode exceptions in supervisor mode.', '', false, true],
   ['test012', 'Exit with DIAG_FAILED to test fail path', '', true, true],
   ['test013', 'test000 with 4 harts.', '-p4'],
