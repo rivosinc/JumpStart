@@ -57,9 +57,9 @@ Default: `False`. The diag's `main()` will be called in S-mode.
 
 Example: [test009](../tests/common/test009.diag_attributes.yaml).
 
-### `mmode_start_address`
+### `mmode_start_address`, `smode_start_address` and `umode_start_address`
 
-The address at which the start of the M-mode section will be placed by the linker.
+The address at which the start of the Machine, Supervisor and User mode sections will be placed by the linker.
 
 ### `num_pages_for_jumpstart_smode_pagetables`
 
