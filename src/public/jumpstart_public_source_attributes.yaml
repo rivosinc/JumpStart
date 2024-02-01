@@ -106,6 +106,10 @@ diag_attributes:
   num_pages_for_jumpstart_smode_rodata: 1
   allow_page_table_modifications: false
   mmode_start_address: 0x80000000
+  # By default smode and umode areas will be placed after the mmode area
+  # unless given values by a diag.
+  smode_start_address: null
+  umode_start_address: null
   active_hart_mask: '0b1'
   allow_active_hart_mask_override: false
   satp_mode: 'sv39'
