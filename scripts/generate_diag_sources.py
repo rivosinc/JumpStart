@@ -278,6 +278,7 @@ class DiagAttributes:
     def append_to_mappings(
         self,
         mappings,
+        pa,
         xwr,
         umode,
         num_pages,
@@ -297,14 +298,23 @@ class DiagAttributes:
                 previous_mapping, pma_memory_type
             )
 
-        # We're going to start the PA of the new mapping after the PA range
-        # # of the last mapping.
         new_mapping = {}
-        new_mapping["pa"] = previous_mapping["pa"] + previous_mapping_size
 
-        if (new_mapping["pa"] % page_size) != 0:
-            # Align the PA to the page size.
-            new_mapping["pa"] = (math.floor(new_mapping["pa"] / page_size) + 1) * page_size
+        if pa is None:
+            # We're going to start the PA of the new mapping after the PA range
+            # # of the last mapping.
+            new_mapping["pa"] = previous_mapping["pa"] + previous_mapping_size
+
+            if (new_mapping["pa"] % page_size) != 0:
+                # Align the PA to the page size.
+                new_mapping["pa"] = (math.floor(new_mapping["pa"] / page_size) + 1) * page_size
+        else:
+            # We expect that mappings are added in increasing PA order.
+            assert pa > previous_mapping["pa"] + previous_mapping_size
+
+            new_mapping["pa"] = pa
+
+        assert new_mapping["pa"] % page_size == 0
 
         new_mapping["no_pte_allocation"] = no_pte_allocation
 
@@ -345,8 +355,11 @@ class DiagAttributes:
                 log.error(f"num_pages not specified for {section_name} in {area_name}")
                 sys.exit(1)
 
+            section_pa = None
+
             self.append_to_mappings(
                 mappings,
+                section_pa,
                 self.jumpstart_source_attributes[area_name][section_name]["xwr"],
                 self.jumpstart_source_attributes[area_name][section_name]["umode"],
                 num_pages,
@@ -384,6 +397,7 @@ class DiagAttributes:
         # occupy space in the memory map.
         self.append_to_mappings(
             mappings,
+            None,
             None,
             None,
             1,
