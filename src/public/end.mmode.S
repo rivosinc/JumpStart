@@ -78,6 +78,7 @@ run_end_of_sim_sequence:
 .global just_wfi
 just_wfi:
   wfi
+  j just_wfi
 
 .align PAGE_OFFSET, 0x0
 .global jumpstart_mmode_end_point
