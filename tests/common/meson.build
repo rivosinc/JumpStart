@@ -38,4 +38,5 @@ common_jumpstart_tests = [
   ['test030', 'Heap malloc test.'],
   ['test031', 'Simple spinlock test with 4 harts', '-p4'],
   ['test033', 'Exit with jumpstart_umode_fail() to test umode fail path.', '', true, true],
+  ['test034', 'Simple spinlock test with 4 active harts and 4 inactive ones.', '-p8'],
 ]

@@ -15,12 +15,11 @@ _mmode_start:
 
   csrr  t0, mhartid
 
-  # Make sure that this hart should be active.
   jal get_active_hart_mask_from_mmode
   li t1, 1
   sll t1, t1, t0
   and a0, a0, t1
-  # We don't know about this core. Move it to the wfi state
+  # Send all inactive harts to wfi.
   beqz a0, just_wfi
 
   # Have the hart mark itself as running.
