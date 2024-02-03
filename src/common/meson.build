@@ -5,12 +5,12 @@
 jumpstart_common_sources = files(
                                 'start.mmode.S',
                                 'data.smode.S',
-                                'jumpstart_functions.smode.S',
-                                'jumpstart_functions.umode.S',
-                                'tablewalk_functions.smode.c',
-                                'trap_handler_functions.smode.c',
-                                'string_functions.smode.c',
-                                'uart_functions.smode.c',
-                                'heap_functions.smode.c',
-                                'lock_functions.smode.c'
+                                'jumpstart.smode.S',
+                                'jumpstart.umode.S',
+                                'tablewalk.smode.c',
+                                'trap_handler.smode.c',
+                                'string.smode.c',
+                                'uart.smode.c',
+                                'heap.smode.c',
+                                'lock.smode.c'
                                 )

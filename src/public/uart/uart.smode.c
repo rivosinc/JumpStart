@@ -2,8 +2,8 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+#include "jumpstart.h"
 #include "jumpstart_defines.h"
-#include "jumpstart_functions.h"
 #include <inttypes.h>
 
 void putch(char c);

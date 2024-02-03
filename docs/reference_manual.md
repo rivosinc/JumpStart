@@ -185,7 +185,7 @@ meson test -C builddir
 
 ## JumpStart APIs
 
-These are listed in [jumpstart_functions.h](../include/common/jumpstart_functions.h).
+These are listed in [jumpstart.h](../include/common/jumpstart.h).
 
 Functions with names that end in `_from_smode()` or `_from_mmode()` can only be called from the respective modes.
 

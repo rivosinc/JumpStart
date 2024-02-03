@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "cpu_bits.h"
-#include "jumpstart_functions.h"
+#include "jumpstart.h"
 
 extern uint64_t _JUMPSTART_TEXT_MMODE_INIT_START;
 extern uint64_t _JUMPSTART_TEXT_SMODE_START;

@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "cpu_bits.h"
-#include "jumpstart_functions.h"
+#include "jumpstart.h"
 
 __attribute__((section(".jumpstart.text.smode"))) void
 register_smode_trap_handler_override(uint64_t mcause,

@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "cpu_bits.h"
-#include "jumpstart_functions.h"
+#include "jumpstart.h"
 
 int main(void) {
   uint64_t main_function_address = (uint64_t)&main;

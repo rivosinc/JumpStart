@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "cpu_bits.h"
-#include "jumpstart_functions.h"
-#include "tablewalk_functions.smode.h"
+#include "jumpstart.h"
+#include "tablewalk.smode.h"
 
 #define SIZE_2M     0x200000
 #define SIZE_1G     0x40000000

@@ -2,8 +2,8 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+#include "jumpstart.h"
 #include "jumpstart_defines.h"
-#include "jumpstart_functions.h"
 #include <inttypes.h>
 
 extern void mark_uart_as_enabled(void);

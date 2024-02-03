@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "cpu_bits.h"
-#include "jumpstart_functions.h"
+#include "jumpstart.h"
 
 int main(void) {
   uint8_t hart_id = get_thread_attributes_hart_id_from_smode();

@@ -2,9 +2,9 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include "tablewalk_functions.smode.h"
+#include "tablewalk.smode.h"
 #include "cpu_bits.h"
-#include "jumpstart_functions.h"
+#include "jumpstart.h"
 
 struct bit_range {
   uint8_t msb;

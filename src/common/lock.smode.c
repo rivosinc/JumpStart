@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include "lock_functions.smode.h"
+#include "lock.smode.h"
 
 typedef enum {
   AMOSWAP_ACQUIRE,

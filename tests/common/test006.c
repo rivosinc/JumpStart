@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "cpu_bits.h"
-#include "jumpstart_functions.h"
+#include "jumpstart.h"
 
 int main(void) {
   if (get_thread_attributes_current_mode_from_smode() != PRV_S) {

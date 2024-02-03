@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "cpu_bits.h"
-#include "jumpstart_functions.h"
-#include "lock_functions.smode.h"
+#include "jumpstart.h"
+#include "lock.smode.h"
 
 #define NUM_ITER 100
 

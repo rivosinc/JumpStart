@@ -3,9 +3,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "cpu_bits.h"
-#include "heap_functions.smode.h"
-#include "jumpstart_functions.h"
-#include "tablewalk_functions.smode.h"
+#include "heap.smode.h"
+#include "jumpstart.h"
+#include "tablewalk.smode.h"
 
 extern uint64_t _JUMPSTART_SMODE_HEAP_START;
 extern uint64_t _JUMPSTART_SMODE_HEAP_END;

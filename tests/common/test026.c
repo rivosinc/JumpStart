@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "cpu_bits.h"
-#include "jumpstart_functions.h"
-#include "tablewalk_functions.smode.h"
+#include "jumpstart.h"
+#include "tablewalk.smode.h"
 
 extern uint64_t data_area;
 extern uint64_t load_from_address(uint64_t address);

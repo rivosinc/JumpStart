@@ -23,8 +23,8 @@ Ved: Answer - No
 */
 
 #include "cpu_bits.h"
-#include "jumpstart_functions.h"
-#include "tablewalk_functions.smode.h"
+#include "jumpstart.h"
+#include "tablewalk.smode.h"
 
 uint8_t is_load_allowed_to_data_area(void);
 

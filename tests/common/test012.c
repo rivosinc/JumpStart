@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include "jumpstart_functions.h"
+#include "jumpstart.h"
 
 __attribute__((const)) int main(void);
 

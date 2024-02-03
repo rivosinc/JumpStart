@@ -2,10 +2,10 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include "uart_functions.smode.h"
+#include "uart.smode.h"
+#include "jumpstart.h"
 #include "jumpstart_defines.h"
-#include "jumpstart_functions.h"
-#include "lock_functions.smode.h"
+#include "lock.smode.h"
 
 #include <inttypes.h>
 #include <stdarg.h>
