@@ -189,6 +189,11 @@
 /* Machine-Level Window to Indirectly Accessed Registers (AIA) */
 #define CSR_MISELECT        0x350
 #define CSR_MIREG           0x351
+#define CSR_MIREG2          0x352
+#define CSR_MIREG3          0x353
+#define CSR_MIREG4          0x355
+#define CSR_MIREG5          0x356
+#define CSR_MIREG6          0x357
 
 /* Machine-Level Interrupts (AIA) */
 #define CSR_MTOPEI          0x35c
@@ -242,6 +247,10 @@
 #define CSR_SISELECT        0x150
 #define CSR_SIREG           0x151
 #define CSR_SIREG2          0x152
+#define CSR_SIREG3          0x153
+#define CSR_SIREG4          0x155
+#define CSR_SIREG5          0x156
+#define CSR_SIREG6          0x157
 
 /* Supervisor-Level Interrupts (AIA) */
 #define CSR_STOPEI          0x15c
