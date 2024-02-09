@@ -10,6 +10,7 @@ jumpstart_common_sources = files(
                                 'tablewalk.smode.c',
                                 'trap_handler.smode.c',
                                 'string.smode.c',
+                                'utils.smode.c',
                                 'uart.smode.c',
                                 'heap.smode.c',
                                 'lock.smode.c'

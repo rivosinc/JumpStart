@@ -5,11 +5,7 @@
 #include "tablewalk.smode.h"
 #include "cpu_bits.h"
 #include "jumpstart.h"
-
-struct bit_range {
-  uint8_t msb;
-  uint8_t lsb;
-};
+#include "utils.smode.h"
 
 struct mmu_mode_attribute {
   uint8_t satp_mode;
@@ -36,20 +32,6 @@ const struct mmu_mode_attribute mmu_mode_attributes[] = {
      .pa_ppn_bits = {{55, 39}, {38, 30}, {29, 21}, {20, 12}},
      .pte_ppn_bits = {{53, 37}, {36, 28}, {27, 19}, {18, 10}}},
 };
-
-__attribute__((section(".jumpstart.text.smode"))) static uint64_t
-extract_bits(uint64_t value, struct bit_range range) {
-  uint8_t msb = range.msb;
-  uint8_t lsb = range.lsb;
-  return ((value >> lsb) & ((1ULL << (msb - lsb + 1)) - 1));
-}
-
-__attribute__((section(".jumpstart.text.smode"))) static uint64_t
-place_bits(uint64_t value, uint64_t bits, struct bit_range range) {
-  uint8_t msb = range.msb;
-  uint8_t lsb = range.lsb;
-  return (value & ~(((1ULL << (msb - lsb + 1)) - 1) << lsb)) | (bits << lsb);
-}
 
 __attribute__((section(".jumpstart.text.smode"))) void
 translate_VA(uint64_t va, struct translation_info *xlate_info) {
