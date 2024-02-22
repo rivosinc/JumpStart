@@ -29,7 +29,7 @@ _mmode_start:
   sb t2, 0(t1)
 
   mv a0, t0
-  jal setup_thread_attributes
+  jal setup_thread_attributes_from_mmode
 
   # S-mode and M-mode share the same stack.
   GET_THREAD_ATTRIBUTES_HART_ID(t0)
@@ -79,64 +79,6 @@ setup_smode_trap_delegation:
 
   li t0, SIP_SEIP | SIP_STIP | SIP_SSIP
   csrw mideleg, t0
-
-  ret
-
-# Inputs:
-#   a0: hart id
-.global setup_thread_attributes
-setup_thread_attributes:
-  li t1, MAX_NUM_HARTS_SUPPORTED
-  bgeu a0, t1, jumpstart_mmode_fail
-
-  li  t2, THREAD_ATTRIBUTES_STRUCT_SIZE_IN_BYTES
-  mul t2, a0, t2
-  la  t1, thread_attributes_region
-  add tp, t1, t2
-
-  SET_THREAD_ATTRIBUTES_HART_ID(a0)
-
-  li t0, TRAP_OVERRIDE_ATTRIBUTES_STRUCT_SIZE_IN_BYTES
-  mul t0, a0, t0
-  la t1, trap_override_attributes_region
-  add t0, t1, t0
-  SET_THREAD_ATTRIBUTES_TRAP_OVERRIDE_STRUCT_ADDRESS(t0)
-
-  li t0, REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES
-  mul t0, a0, t0
-
-  la t1, mmode_reg_context_save_region
-  add t1, t1, t0
-  la t2, mmode_reg_context_save_region_end
-  bgeu t1, t2, jumpstart_mmode_fail
-  SET_THREAD_ATTRIBUTES_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(t1)
-
-  la t1, lower_mode_in_mmode_reg_context_save_region
-  add t1, t1, t0
-  la t2, lower_mode_in_mmode_reg_context_save_region_end
-  bgeu t1, t2, jumpstart_mmode_fail
-  SET_THREAD_ATTRIBUTES_LOWER_MODE_IN_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(t1)
-
-  la t1, smode_reg_context_save_region
-  add t1, t1, t0
-  la t2, smode_reg_context_save_region_end
-  bgeu t1, t2, jumpstart_mmode_fail
-  SET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(t1)
-
-  la t1, umode_reg_context_save_region
-  add t1, t1, t0
-  la t2, umode_reg_context_save_region_end
-  bgeu t1, t2, jumpstart_mmode_fail
-  SET_THREAD_ATTRIBUTES_UMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(t1)
-
-  li  t0, 0
-  SET_THREAD_ATTRIBUTES_SMODE_SETUP_DONE(t0)
-
-  li  t0, PRV_M
-  SET_THREAD_ATTRIBUTES_CURRENT_MODE(t0)
-
-  li  t0, THREAD_ATTRIBUTES_BOOKEND_MAGIC_NUMBER_VALUE
-  SET_THREAD_ATTRIBUTES_BOOKEND_MAGIC_NUMBER(t0)
 
   ret
 
