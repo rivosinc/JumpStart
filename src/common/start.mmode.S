@@ -20,7 +20,7 @@ _mmode_start:
   sll t1, t1, t0
   and a0, a0, t1
   # Send all inactive harts to wfi.
-  beqz a0, just_wfi
+  beqz a0, just_wfi_from_mmode
 
   # Have the hart mark itself as running.
   la t1, hart_status_tracker
