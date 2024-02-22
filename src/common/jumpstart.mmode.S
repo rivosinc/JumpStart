@@ -28,7 +28,11 @@ _mmode_start:
   li t2, HART_RUNNING
   sb t2, 0(t1)
 
+  mv a0, t0
+  jal setup_thread_attributes
+
   # S-mode and M-mode share the same stack.
+  GET_THREAD_ATTRIBUTES_HART_ID(t0)
   li  t1, (NUM_PAGES_PER_HART_FOR_SMODE_STACK * SMODE_STACK_PAGE_SIZE)
   mul t0, t0, t1
   la  t2, smode_stack_top
@@ -42,8 +46,6 @@ _mmode_start:
   csrs mstatus, t0
   li t0, MIP_MEIP
   csrw mie, t0
-
-  jal setup_thread_attributes
 
   jal program_menvcfg
 
@@ -96,9 +98,10 @@ setup_smode_trap_related_csrs:
 
   ret
 
+# Inputs:
+#   a0: hart id
 .global setup_thread_attributes
 setup_thread_attributes:
-  csrr a0, mhartid
   li t1, MAX_NUM_HARTS_SUPPORTED
   bgeu a0, t1, jumpstart_mmode_fail
 
