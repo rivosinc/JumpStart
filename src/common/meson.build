@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 jumpstart_common_sources = files(
-                                'start.mmode.S',
+                                'jumpstart.mmode.S',
                                 'data.smode.S',
                                 'jumpstart.smode.S',
                                 'jumpstart.umode.S',
