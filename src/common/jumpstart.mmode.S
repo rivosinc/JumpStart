@@ -98,11 +98,6 @@ setup_smode_trap_related_csrs:
 
 .global setup_thread_attributes
 setup_thread_attributes:
-  addi  sp, sp, -16
-  sd  ra, 8(sp)
-  sd  fp, 0(sp)
-  addi    fp, sp, 16
-
   csrr a0, mhartid
   li t1, MAX_NUM_HARTS_SUPPORTED
   bgeu a0, t1, jumpstart_mmode_fail
@@ -152,10 +147,6 @@ setup_thread_attributes:
 
   li  t0, PRV_M
   SET_THREAD_ATTRIBUTES_CURRENT_MODE(t0)
-
-  ld  ra, 8(sp)
-  ld  fp, 0(sp)
-  addi  sp, sp, 16
 
   ret
 
