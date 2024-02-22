@@ -51,6 +51,8 @@ _mmode_start:
 
   jal enable_float_and_vector_instructions
 
+  jal setup_smode_trap_delegation
+
   jal setup_smode_trap_related_csrs
 
   jal enable_mmu_from_mmode
@@ -68,6 +70,19 @@ setup_smode_trap_related_csrs:
   la t0, stvec_trap_handler
   csrw stvec, t0
 
+  # Enable interrupts in supervisor mode. Indicate that we're executing
+  # in a privileged mode before entering Supervisor mode.
+  li t0, SSTATUS_SIE | SSTATUS_SPP
+  csrs sstatus, t0
+
+  # Enable external interrupts in supervisor mode.
+  li t0, SIP_SEIP
+  csrw sie, t0
+
+  ret
+
+.global setup_smode_trap_delegation
+setup_smode_trap_delegation:
   # Enable trap delegation to supervisor mode.
   li t0, (1 << RISCV_EXCP_INST_ADDR_MIS) | \
             (1 << RISCV_EXCP_INST_ACCESS_FAULT) | \
@@ -86,15 +101,6 @@ setup_smode_trap_related_csrs:
 
   li t0, SIP_SEIP | SIP_STIP | SIP_SSIP
   csrw mideleg, t0
-
-  # Enable interrupts in supervisor mode. Indicate that we're executing
-  # in a privileged mode before entering Supervisor mode.
-  li t0, SSTATUS_SIE | SSTATUS_SPP
-  csrs sstatus, t0
-
-  # Enable external interrupts in supervisor mode.
-  li t0, SIP_SEIP
-  csrw sie, t0
 
   ret
 
