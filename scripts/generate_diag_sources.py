@@ -841,8 +841,8 @@ sync_all_harts_from_{mode}:
             file_descriptor.write("    li   a0, DIAG_SATP_MODE\n")
             file_descriptor.write("    ret\n\n\n")
 
-            file_descriptor.write(f".global enable_mmu_from_{mode}\n")
-            file_descriptor.write(f"enable_mmu_from_{mode}:\n\n")
+            file_descriptor.write(f".global setup_mmu_from_{mode}\n")
+            file_descriptor.write(f"setup_mmu_from_{mode}:\n\n")
             file_descriptor.write("    li   t0, DIAG_SATP_MODE\n")
             file_descriptor.write("    slli  t0, t0, SATP64_MODE_SHIFT\n")
             file_descriptor.write(f"    la t1, {self.pt_attributes.pt_start_label}\n")

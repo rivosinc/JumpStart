@@ -53,33 +53,11 @@ _mmode_start:
 
   jal setup_smode_trap_delegation
 
-  jal setup_smode_trap_related_csrs
-
-  jal enable_mmu_from_mmode
-
-  jal setup_heap
-
   jal setup_uart
 
   j jump_to_main
 
 .section .jumpstart.text.mmode, "ax"
-
-.global setup_smode_trap_related_csrs
-setup_smode_trap_related_csrs:
-  la t0, stvec_trap_handler
-  csrw stvec, t0
-
-  # Enable interrupts in supervisor mode. Indicate that we're executing
-  # in a privileged mode before entering Supervisor mode.
-  li t0, SSTATUS_SIE | SSTATUS_SPP
-  csrs sstatus, t0
-
-  # Enable external interrupts in supervisor mode.
-  li t0, SIP_SEIP
-  csrw sie, t0
-
-  ret
 
 .global setup_smode_trap_delegation
 setup_smode_trap_delegation:
@@ -151,11 +129,14 @@ setup_thread_attributes:
   bgeu t1, t2, jumpstart_mmode_fail
   SET_THREAD_ATTRIBUTES_UMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(t1)
 
-  li  t0, THREAD_ATTRIBUTES_BOOKEND_MAGIC_NUMBER_VALUE
-  SET_THREAD_ATTRIBUTES_BOOKEND_MAGIC_NUMBER(t0)
+  li  t0, 0
+  SET_THREAD_ATTRIBUTES_SMODE_SETUP_DONE(t0)
 
   li  t0, PRV_M
   SET_THREAD_ATTRIBUTES_CURRENT_MODE(t0)
+
+  li  t0, THREAD_ATTRIBUTES_BOOKEND_MAGIC_NUMBER_VALUE
+  SET_THREAD_ATTRIBUTES_BOOKEND_MAGIC_NUMBER(t0)
 
   ret
 

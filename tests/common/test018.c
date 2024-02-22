@@ -64,8 +64,18 @@ int main(void) {
     return DIAG_FAILED;
   }
 
+  // We haven't run any smode code so the smode setup should not be done.
+  if (get_thread_attributes_smode_setup_done_from_mmode() != 0) {
+    return DIAG_FAILED;
+  }
+
   if (run_function_in_smode((uint64_t)asm_check_passed_in_arguments, 1, 2, 3, 4,
                             5, 6, 7) != DIAG_PASSED) {
+    return DIAG_FAILED;
+  }
+
+  // smode setup should have been done now.
+  if (get_thread_attributes_smode_setup_done_from_mmode() != 1) {
     return DIAG_FAILED;
   }
 

@@ -97,8 +97,8 @@ __attribute__((section(".jumpstart.text.smode"))) void free(void *ptr) {
 //------------------------------------------------------------------------------
 // Set up the heap
 //------------------------------------------------------------------------------
-__attribute__((section(".jumpstart.text.mmode"))) void setup_heap(void) {
-  uint8_t hart_id = get_thread_attributes_hart_id_from_mmode();
+__attribute__((section(".jumpstart.text.smode"))) void setup_heap(void) {
+  uint8_t hart_id = get_thread_attributes_hart_id_from_smode();
   if (hart_id == 0) {
     uint64_t *heap_start = (uint64_t *)&_JUMPSTART_SMODE_HEAP_START;
     uint64_t *heap_end = (uint64_t *)&_JUMPSTART_SMODE_HEAP_END;

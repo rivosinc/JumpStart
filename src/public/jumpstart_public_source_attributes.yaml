@@ -120,6 +120,7 @@ c_structs:
     fields:
       hart_id: uint8_t
       current_mode: uint8_t
+      smode_setup_done: uint8_t
       trap_override_struct_address: uint64_t
       mmode_reg_context_save_region_address: uint64_t
       lower_mode_in_mmode_reg_context_save_region_address: uint64_t
