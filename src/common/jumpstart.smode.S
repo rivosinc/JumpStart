@@ -7,23 +7,85 @@
 
 .section .jumpstart.text.smode, "ax"
 
-# a0 contains the address of the function to jump to.
-# a1-a7 contains the arguments to pass to the smode function.
+.global setup_smode
+setup_smode:
+  GET_THREAD_ATTRIBUTES_SMODE_SETUP_DONE(t0)
+  bnez  t0, setup_smode_done
+
+  # This is the first time we're running S-mode.
+  addi  sp, sp, -16
+  sd    ra, 8(sp)
+  sd    fp, 0(sp)
+  addi  fp, sp, 16
+
+  jal setup_trap_vector
+
+  jal setup_interrupt_enables
+
+  jal setup_mmu_from_smode
+
+  jal setup_heap
+
+  li t0, 1
+  SET_THREAD_ATTRIBUTES_SMODE_SETUP_DONE(t0)
+
+  ld  ra, 8(sp)
+  ld  fp, 0(sp)
+  addi  sp, sp, 16
+
+setup_smode_done:
+  ret
+
+.global setup_trap_vector
+setup_trap_vector:
+  la t0, stvec_trap_handler
+  csrw stvec, t0
+
+  ret
+
+.global setup_interrupt_enables
+setup_interrupt_enables:
+  # Enable interrupts.
+  li t0, SSTATUS_SIE | SSTATUS_SPP
+  csrs sstatus, t0
+
+  # Enable external interrupts.
+  li t0, SIP_SEIP
+  csrw sie, t0
+
+  ret
+
+# a0: address of target function.
+# a1-a7: arguments to pass to the target function.
 .global jump_to_function_in_smode
 jump_to_function_in_smode:
   li  t0, PRV_S
   SET_THREAD_ATTRIBUTES_CURRENT_MODE(t0)
 
-  mv t0, a0
+  # Save away the target function address and it's arguments.
+  addi  sp, sp, -64
+  sd    a0, 0(sp) # target function address.
+  sd    a1, 8(sp) # target function arguments.
+  sd    a2, 16(sp)
+  sd    a3, 24(sp)
+  sd    a4, 32(sp)
+  sd    a5, 40(sp)
+  sd    a6, 48(sp)
+  sd    a7, 56(sp)
 
+  jal setup_smode
+
+  # Restore the target function address and it's arguments.
+  ld    t0, 0(sp)
   # Function arguments have to be passed in a0-a6.
-  mv a0, a1
-  mv a1, a2
-  mv a2, a3
-  mv a3, a4
-  mv a4, a5
-  mv a5, a6
-  mv a6, a7
+  ld    a0, 8(sp)
+  ld    a1, 16(sp)
+  ld    a2, 24(sp)
+  ld    a3, 32(sp)
+  ld    a4, 40(sp)
+  ld    a5, 48(sp)
+  ld    a6, 56(sp)
+  addi  sp, sp, 64
 
   jalr ra, t0
 
