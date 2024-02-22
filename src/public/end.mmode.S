@@ -19,7 +19,7 @@ _mmode_end:
   # Have all the secondary harts wait on the wfi.
   # the primary hart will go through the exit routine.
   li t1, PRIMARY_HART_ID
-  bne t0, t1, just_wfi
+  bne t0, t1, just_wfi_from_mmode
 
   # Check the status of all the active harts.
   # a0: Active hart mask. Gets shifted right as we check each hart.
@@ -75,10 +75,10 @@ run_end_of_sim_sequence:
 
   1: j 1b # wait for termination
 
-.global just_wfi
-just_wfi:
+.global just_wfi_from_mmode
+just_wfi_from_mmode:
   wfi
-  j just_wfi
+  j just_wfi_from_mmode
 
 .align PAGE_OFFSET, 0x0
 .global jumpstart_mmode_end_point
