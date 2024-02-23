@@ -31,6 +31,12 @@ foreach jumpstart_test : jumpstart_tests
   test_disabled_on_qemu = jumpstart_test.get(4, false)
   test_disabled_on_spike = jumpstart_test.get(5, false)
 
+  if get_option('diag_target') == 'spike' and test_disabled_on_spike == true
+    continue
+  elif get_option('diag_target') == 'qemu' and test_disabled_on_qemu == true
+    continue
+  endif
+
   if fs.is_file(meson.current_source_dir() + '/' + 'common' + '/' + test_prefix + '.diag_attributes.yaml')
     diag_attributes_yaml = files('common' + '/' + test_prefix + '.diag_attributes.yaml')
   elif get_option('rivos_internal_build') == true
@@ -75,7 +81,7 @@ foreach jumpstart_test : jumpstart_tests
                 depends          : [test_exe])
   endif
 
-  if get_option('diag_target') == 'spike' and test_disabled_on_spike == false
+  if get_option('diag_target') == 'spike'
     spike_args = default_spike_args
 
     if spike_additional_arguments != ''
@@ -87,7 +93,7 @@ foreach jumpstart_test : jumpstart_tests
           args : [spike_args, test_exe],
           suite:'basic',
           should_fail: test_expected_to_fail)
-  elif get_option('diag_target') == 'qemu' and test_disabled_on_qemu == false
+  elif get_option('diag_target') == 'qemu'
     qemu_args = default_qemu_args
 
     if get_option('generate_trace') == true
