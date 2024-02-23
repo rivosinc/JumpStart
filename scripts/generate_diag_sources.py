@@ -35,6 +35,18 @@ def place_bits(value, bits, bit_range):
     return (value & ~(((1 << (msb - lsb + 1)) - 1) << lsb)) | (bits << lsb)
 
 
+class BooleanDiagAttribute:
+    def __init__(self, attribute, modes):
+        self.name = attribute
+        self.modes = modes
+
+    def get_name(self):
+        return self.name
+
+    def get_modes(self):
+        return self.modes
+
+
 class PageTablePage:
     def __init__(self, sparse_memory_address, va, level, size):
         self.sparse_memory_address = sparse_memory_address
@@ -694,7 +706,7 @@ class DiagAttributes:
             file.close()
 
     def generate_diag_attribute_functions(self, file_descriptor):
-        boolean_attributes = ["start_test_in_mmode"]
+        boolean_attributes = [BooleanDiagAttribute("start_test_in_mmode", ["mmode"])]
 
         self.generate_get_active_hart_mask_function(file_descriptor)
         if self.jumpstart_source_attributes["rivos_internal_build"] is True:
@@ -702,20 +714,31 @@ class DiagAttributes:
                 file_descriptor, self.jumpstart_source_attributes["diag_attributes"]
             )
 
-            boolean_attributes += ["in_qemu_mode", "disable_uart"]
+            boolean_attributes += [
+                BooleanDiagAttribute("in_qemu_mode", ["mmode", "smode"]),
+                BooleanDiagAttribute("disable_uart", ["mmode"]),
+            ]
 
         self.generate_boolean_diag_attribute_functions(file_descriptor, boolean_attributes)
 
     def generate_boolean_diag_attribute_functions(self, file_descriptor, boolean_attributes):
         for attribute in boolean_attributes:
-            file_descriptor.write('.section .jumpstart.text.mmode, "ax"\n\n')
-            file_descriptor.write(f".global {attribute}\n")
-            file_descriptor.write(f"{attribute}:\n\n")
+            modes = attribute.get_modes()
+            for mode in modes:
+                file_descriptor.write(f'.section .jumpstart.text.{mode}, "ax"\n\n')
+                attribute_function_name = f"{attribute.get_name()}"
+                file_descriptor.write(f".global {attribute_function_name}_from_{mode}\n")
+                file_descriptor.write(f"{attribute_function_name}_from_{mode}:\n\n")
+                if len(modes) == 1:
+                    file_descriptor.write(f".global {attribute_function_name}\n")
+                    file_descriptor.write(f"{attribute_function_name}:\n\n")
 
-            attribute_value = int(self.jumpstart_source_attributes["diag_attributes"][attribute])
+                attribute_value = int(
+                    self.jumpstart_source_attributes["diag_attributes"][attribute.get_name()]
+                )
 
-            file_descriptor.write(f"   li a0, {attribute_value}\n")
-            file_descriptor.write("   ret\n\n\n")
+                file_descriptor.write(f"   li a0, {attribute_value}\n")
+                file_descriptor.write("   ret\n\n\n")
 
     def generate_get_active_hart_mask_function(self, file_descriptor):
         modes = ["mmode", "smode"]
