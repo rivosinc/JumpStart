@@ -6,13 +6,11 @@ fs = import('fs')
 
 source_suffixes = ['.S', '.c']
 
-common_jumpstart_tests = [
+common_tests = [
   # 0. prefix
   # 1. description
   # 2. spike additional arguments
   # 3. expected to fail
-  # 4. disable on QEMU
-  # 5. disable on spike
   ['test000', 'Enable MMU (SATP.mode = sv39), jump to main and exit.'],
   ['test001', 'Enable MMU (SATP.mode = sv48), jump to main and exit.'],
   ['test002', 'Run C/Assembly functions with run_function_in_umode() from supervisor mode.'],
@@ -40,3 +38,6 @@ common_jumpstart_tests = [
   ['test033', 'Exit with jumpstart_umode_fail() to test umode fail path.', '', true],
   ['test034', 'Simple spinlock test with 4 active harts and 4 inactive ones.', '-p8'],
 ]
+
+common_tests_disabled_on_qemu = []
+common_tests_disabled_on_spike = []
