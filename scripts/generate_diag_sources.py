@@ -200,6 +200,8 @@ class DiagAttributes:
                     attribute_value = True
                 elif attribute_value in ["False", "false"]:
                     attribute_value = False
+                elif attribute_value.isnumeric():
+                    attribute_value = int(attribute_value)
 
                 if (
                     attribute_name == "active_hart_mask"
