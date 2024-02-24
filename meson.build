@@ -118,22 +118,22 @@ diag_source_generator_command = [prog_python,
                                     '--output_linker_script', '@OUTPUT1@',
                                     ]
 
+diag_attribute_overrides = get_option('diag_attribute_overrides')
+
+if get_option('diag_target') == 'qemu'
+  diag_attribute_overrides += ['in_qemu_mode=True']
+endif
+
+if diag_attribute_overrides.length() > 0
+  diag_source_generator_command += ['--override_diag_attributes']
+
+  foreach override : diag_attribute_overrides
+    diag_source_generator_command += [override]
+  endforeach
+endif
+
 if diag_attributes_yaml != '' and diag_sources.length() > 0
   diag_name = get_option('diag_name')
-
-  diag_attribute_overrides = get_option('diag_attribute_overrides')
-
-  if get_option('diag_target') == 'qemu'
-    diag_attribute_overrides += ['in_qemu_mode=True']
-  endif
-
-  if diag_attribute_overrides.length() > 0
-    diag_source_generator_command += ['--override_diag_attributes']
-
-    foreach override : diag_attribute_overrides
-      diag_source_generator_command += [override]
-    endforeach
-  endif
 
   diag_source_generator_output = custom_target(
                                 'Generate diag attributes related source files for ' + diag_name,
