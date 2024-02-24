@@ -19,11 +19,6 @@ if get_option('rivos_internal_build') == true
   unit_tests_disabled_on_spike += rivos_internal_tests_disabled_on_spike
 endif
 
-if get_option('diag_target') == 'qemu'
-  diag_source_generator_command += ['--override_diag_attributes=in_qemu_mode=True']
-endif
-
-
 foreach unit_test : unit_tests
   test_name = unit_test.get(0)
   test_description = unit_test.get(1)
