@@ -187,11 +187,13 @@ class DiagSource:
 
         self.sanity_check_diag_attributes()
 
+        self.memory_map = self.jumpstart_source_attributes["diag_attributes"]["mappings"]
+
         self.add_jumpstart_sections_to_mappings()
 
         # Sort all the mappings by the PA.
-        self.jumpstart_source_attributes["diag_attributes"]["mappings"] = sorted(
-            self.jumpstart_source_attributes["diag_attributes"]["mappings"],
+        self.memory_map = sorted(
+            self.memory_map,
             key=lambda x: x["pa"],
             reverse=False,
         )
@@ -203,9 +205,7 @@ class DiagSource:
         self.sanity_check_memory_map()
 
     def sanity_check_memory_map(self):
-        public.sanity_check_memory_map(
-            self.jumpstart_source_attributes["diag_attributes"]["mappings"]
-        )
+        public.sanity_check_memory_map(self.memory_map)
 
         if self.jumpstart_source_attributes["rivos_internal_build"] is True:
             rivos_internal.sanity_check_memory_map(
@@ -218,28 +218,16 @@ class DiagSource:
         # specific locations or at locations immediately following the
         # previous section using the *_start_address diag_attributes attribute.
         if self.jumpstart_source_attributes["rivos_internal_build"] is True:
-            self.jumpstart_source_attributes["diag_attributes"]["mappings"].extend(
+            self.memory_map.extend(
                 rivos_internal.get_rivos_specific_mappings(
                     self.get_attribute("page_offset"), self.jumpstart_source_attributes
                 )
             )
 
-        self.add_mappings_for_jumpstart_mode(
-            self.jumpstart_source_attributes["diag_attributes"]["mappings"],
-            "mmode",
-        )
-        self.add_mappings_for_jumpstart_mode(
-            self.jumpstart_source_attributes["diag_attributes"]["mappings"],
-            "smode",
-        )
-        self.add_mappings_for_jumpstart_mode(
-            self.jumpstart_source_attributes["diag_attributes"]["mappings"],
-            "umode",
-        )
+        for mode in ["mmode", "smode", "umode"]:
+            self.add_mappings_for_jumpstart_mode(mode)
 
-        self.add_pa_guard_page_after_last_mapping(
-            self.jumpstart_source_attributes["diag_attributes"]["mappings"]
-        )
+        self.add_pa_guard_page_after_last_mapping()
 
     def sanity_check_diag_attributes(self):
         assert "satp_mode" in self.jumpstart_source_attributes["diag_attributes"]
@@ -250,7 +238,6 @@ class DiagSource:
 
     def append_to_mappings(
         self,
-        mappings,
         pa,
         xwr,
         umode,
@@ -262,8 +249,8 @@ class DiagSource:
     ):
         assert page_size in self.get_attribute("page_sizes")
 
-        previous_mapping_id = len(mappings) - 1
-        previous_mapping = mappings[previous_mapping_id]
+        previous_mapping_id = len(self.memory_map) - 1
+        previous_mapping = self.memory_map[previous_mapping_id]
 
         previous_mapping_size = previous_mapping["page_size"] * previous_mapping["num_pages"]
         if self.jumpstart_source_attributes["rivos_internal_build"] is True:
@@ -298,9 +285,9 @@ class DiagSource:
         new_mapping["pma_memory_type"] = pma_memory_type
         new_mapping["linker_script_section"] = linker_script_section
 
-        mappings.insert(previous_mapping_id + 1, new_mapping)
+        self.memory_map.insert(previous_mapping_id + 1, new_mapping)
 
-    def add_mappings_for_jumpstart_mode(self, mappings, mode):
+    def add_mappings_for_jumpstart_mode(self, mode):
         area_name = f"jumpstart_{mode}"
 
         # We pick up the start address of the area from the diag_attributes
@@ -367,7 +354,6 @@ class DiagSource:
                 ]
 
             self.append_to_mappings(
-                mappings,
                 pa,
                 xwr,
                 umode,
@@ -380,20 +366,22 @@ class DiagSource:
             num_sections_added += 1
 
             if section_name == "pagetables":
-                self.PT_section_start_address = mappings[len(mappings) - 1]["pa"]
+                num_mappings = len(self.memory_map)
+                self.PT_section_start_address = self.jumpstart_source_attributes["diag_attributes"][
+                    "mappings"
+                ][num_mappings - 1]["pa"]
                 if (
                     self.jumpstart_source_attributes["diag_attributes"][
                         "allow_page_table_modifications"
                     ]
                     is True
                 ):
-                    mappings[len(mappings) - 1]["xwr"] = "0b011"
+                    self.memory_map[num_mappings - 1]["xwr"] = "0b011"
 
-    def add_pa_guard_page_after_last_mapping(self, mappings):
+    def add_pa_guard_page_after_last_mapping(self):
         # Guard pages have no allocations in the page tables but
         # occupy space in the memory map.
         self.append_to_mappings(
-            mappings,
             None,
             None,
             None,
@@ -405,9 +393,9 @@ class DiagSource:
         )
         self.num_guard_pages_generated += 1
 
-    def split_mappings_at_page_granularity(self, mappings):
+    def split_mappings_at_page_granularity(self):
         split_mappings = []
-        for entry in mappings:
+        for entry in self.memory_map:
             if "no_pte_allocation" in entry and entry["no_pte_allocation"] is True:
                 continue
 
@@ -493,9 +481,7 @@ class DiagSource:
 
     # Populates the sparse memory with the pagetable entries
     def create_pagetables_in_memory_for_mappings(self):
-        for entry in self.split_mappings_at_page_granularity(
-            self.jumpstart_source_attributes["diag_attributes"]["mappings"]
-        ):
+        for entry in self.split_mappings_at_page_granularity():
             assert entry["page_size"] in self.get_attribute("page_sizes")
             leaf_level = self.get_attribute("page_sizes").index(entry["page_size"])
             assert leaf_level < self.get_attribute("num_levels")
@@ -624,7 +610,7 @@ class DiagSource:
 
             # The linker script lays out the diag in physical memory. The
             # mappings are already sorted by PA.
-            for entry in self.jumpstart_source_attributes["diag_attributes"]["mappings"]:
+            for entry in self.memory_map:
                 if "linker_script_section" not in entry:
                     # We don't generate linker script sections for entries
                     # that don't have a linker_script_section attribute.
@@ -896,9 +882,7 @@ sync_all_harts_from_{mode}:
             self.generate_hart_sync_functions(file)
 
             if self.jumpstart_source_attributes["rivos_internal_build"] is True:
-                rivos_internal.generate_rivos_internal_mmu_functions(
-                    file, self.jumpstart_source_attributes["diag_attributes"]["mappings"]
-                )
+                rivos_internal.generate_rivos_internal_mmu_functions(file, self.memory_map)
 
             self.generate_page_table_data(file)
 
