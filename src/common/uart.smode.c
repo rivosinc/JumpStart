@@ -11,7 +11,6 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-extern void setup_uart(void);
 extern void putch(char c);
 
 int toupper(int c);
@@ -26,7 +25,7 @@ __attribute__((
 __attribute__((
     section(".jumpstart.data.smode"))) static spinlock_t printk_lock = 0;
 
-__attribute__((section(".jumpstart.text.mmode"))) void
+__attribute__((section(".jumpstart.text.smode"))) void
 mark_uart_as_enabled(void) {
   uart_initialized = 1;
 }

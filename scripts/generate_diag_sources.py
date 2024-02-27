@@ -718,7 +718,7 @@ class DiagAttributes:
 
             boolean_attributes += [
                 BooleanDiagAttribute("in_qemu_mode", ["mmode", "smode"]),
-                BooleanDiagAttribute("disable_uart", ["mmode"]),
+                BooleanDiagAttribute("disable_uart", ["smode"]),
             ]
 
         self.generate_boolean_diag_attribute_functions(file_descriptor, boolean_attributes)
