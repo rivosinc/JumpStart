@@ -18,7 +18,15 @@ if get_option('rivos_internal_build') == true
   subdir('rivos_internal')
 endif
 
-unit_tests = start_in_mmode_tests + start_in_smode_tests
+unit_tests = []
+start_in_mmode_tests + start_in_smode_tests
+
+if 'mmode' in riscv_modes_in_build
+  unit_tests += start_in_mmode_tests
+endif
+if 'smode' in riscv_modes_in_build
+  unit_tests += start_in_smode_tests
+endif
 
 foreach unit_test : unit_tests
   test_name = unit_test.get(0)

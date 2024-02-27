@@ -35,6 +35,11 @@ option('jumpstart_source_attribute_overrides',
        type : 'array',
        description : 'Overrides specified JumpStart source attributes.')
 
+option('riscv_modes_in_build',
+       type : 'array',
+       value : ['mmode', 'smode', 'umode'],
+       description : 'RISC-V modes included in the build.')
+
 option('gcc_march_string',
        type : 'string',
        value : '',
