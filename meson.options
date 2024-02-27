@@ -18,7 +18,7 @@ option('diag_attributes_yaml',
 
 option('diag_attribute_overrides',
        type : 'array',
-       description : 'Overrides specified test attributes.')
+       description : 'Overrides specified diag attributes.')
 
 option('diag_generate_disassembly',
        type : 'boolean',
@@ -30,6 +30,10 @@ option('diag_target',
        choices: ['spike', 'qemu'],
        value : 'spike',
        description : 'Target to build the diag for.')
+
+option('jumpstart_source_attribute_overrides',
+       type : 'array',
+       description : 'Overrides specified JumpStart source attributes.')
 
 option('gcc_march_string',
        type : 'string',

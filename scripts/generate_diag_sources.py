@@ -144,7 +144,11 @@ class DiagSource:
     pte_region_sparse_memory = {}
 
     def __init__(
-        self, jumpstart_source_attributes_yaml, diag_attributes_yaml, override_diag_attributes
+        self,
+        jumpstart_source_attributes_yaml,
+        override_jumpstart_source_attributes,
+        diag_attributes_yaml,
+        override_diag_attributes,
     ):
         self.diag_attributes_yaml = diag_attributes_yaml
         with open(diag_attributes_yaml) as f:
@@ -171,15 +175,23 @@ class DiagSource:
                 f"rivos_internal.lib exists but rivos_internal_build is set to False in {jumpstart_source_attributes_yaml}"
             )
 
+        if override_jumpstart_source_attributes:
+            # Override the default jumpstart source attribute values with the values
+            # specified on the command line.
+            DictUtils.override_dict(
+                self.jumpstart_source_attributes,
+                DictUtils.create_dict(override_jumpstart_source_attributes),
+            )
+
         # Override the default diag attribute values with the values
         # specified by the diag.
         DictUtils.override_dict(
             self.jumpstart_source_attributes["diag_attributes"], diag_attributes
         )
 
-        # Override the diag attributes with the values specified on the
-        # command line.
         if override_diag_attributes is not None:
+            # Override the diag attributes with the values specified on the
+            # command line.
             DictUtils.override_dict(
                 self.jumpstart_source_attributes["diag_attributes"],
                 DictUtils.create_dict(override_diag_attributes),
@@ -974,6 +986,20 @@ def main():
         "--diag_attributes_yaml", help="Diag Attributes YAML file", required=True, type=str
     )
     parser.add_argument(
+        "--override_diag_attributes",
+        help="Overrides the specified diag attributes.",
+        required=False,
+        nargs="+",
+        default=None,
+    )
+    parser.add_argument(
+        "--override_jumpstart_source_attributes",
+        help="Overrides the JumpStart source attributes.",
+        required=False,
+        nargs="+",
+        default=None,
+    )
+    parser.add_argument(
         "--jumpstart_source_attributes_yaml",
         help="YAML containing the jumpstart attributes.",
         required=True,
@@ -987,13 +1013,6 @@ def main():
     )
     parser.add_argument(
         "--output_linker_script", help="Linker script to generate", required=False, type=str
-    )
-    parser.add_argument(
-        "--override_diag_attributes",
-        help="Overrides the specified diag attributes.",
-        required=False,
-        nargs="+",
-        default=None,
     )
     parser.add_argument(
         "--translate_VA",
@@ -1021,6 +1040,7 @@ def main():
 
     pagetables = DiagSource(
         args.jumpstart_source_attributes_yaml,
+        args.override_jumpstart_source_attributes,
         args.diag_attributes_yaml,
         args.override_diag_attributes,
     )
