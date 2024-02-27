@@ -77,14 +77,6 @@ Default: `False`. The page tables regions are marked Read Only in the page table
 
 Example: [test021](../tests/common/test021.diag_attributes.yaml).
 
-### `allow_active_hart_mask_override`
-
-Allows `active_hart_mask` to be overriden from the command line at `meson setup` time.
-
-Diags may be written to allow a fixed number of active harts or can be written to scale with the number of active harts. `meson compile` will fail if a command line override of `active_hart_mask` is attempted for a diag that does not allow it.
-
-Default: `False`.
-
 ### `mappings`
 
 Controls the memory layout and attributes of all the sections of the diag.
