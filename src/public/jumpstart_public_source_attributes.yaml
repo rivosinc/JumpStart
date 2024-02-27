@@ -111,7 +111,6 @@ diag_attributes:
   smode_start_address: null
   umode_start_address: null
   active_hart_mask: '0b1'
-  allow_active_hart_mask_override: false
   satp_mode: 'sv39'
   mappings: null
 

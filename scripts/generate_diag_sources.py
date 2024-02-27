@@ -203,20 +203,6 @@ class DiagAttributes:
                 elif attribute_value.isnumeric():
                     attribute_value = int(attribute_value)
 
-                if (
-                    attribute_name == "active_hart_mask"
-                    and self.jumpstart_source_attributes["diag_attributes"][
-                        "allow_active_hart_mask_override"
-                    ]
-                    is False
-                    and attribute_value
-                    != self.jumpstart_source_attributes["diag_attributes"]["active_hart_mask"]
-                ):
-                    log.error(
-                        "Command line override of active_hart_mask is not allowed for this diag. Set allow_active_hart_mask_override to True in the diag attributes file to allow this."
-                    )
-                    sys.exit(1)
-
                 self.jumpstart_source_attributes["diag_attributes"][
                     attribute_name
                 ] = attribute_value
