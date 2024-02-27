@@ -35,7 +35,7 @@ const struct mmu_mode_attribute mmu_mode_attributes[] = {
 
 __attribute__((section(".jumpstart.text.smode"))) void
 translate_VA(uint64_t va, struct translation_info *xlate_info) {
-  // C reimplementation of the DiagAttributes.translate_VA() from
+  // C reimplementation of the DiagSource.translate_VA() from
   // generate_diag_sources.py.
   uint64_t satp_value = read_csr(satp);
   xlate_info->satp_mode = (uint8_t)get_field(satp_value, SATP64_MODE);

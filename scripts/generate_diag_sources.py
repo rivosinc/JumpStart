@@ -16,23 +16,12 @@ import sys
 import public.lib as public
 import yaml
 from public.lib import PageSize
+from utils.lib import BitField, DictUtils
 
 try:
     import rivos_internal.lib as rivos_internal
 except ImportError:
     log.debug("rivos_internal Python module not present.")
-
-
-def extract_bits(value, bit_range):
-    msb = bit_range[0]
-    lsb = bit_range[1]
-    return (value >> lsb) & ((1 << (msb - lsb + 1)) - 1)
-
-
-def place_bits(value, bits, bit_range):
-    msb = bit_range[0]
-    lsb = bit_range[1]
-    return (value & ~(((1 << (msb - lsb + 1)) - 1) << lsb)) | (bits << lsb)
 
 
 class BooleanDiagAttribute:
@@ -146,7 +135,7 @@ class PageTableAttributes:
             sys.exit(1)
 
 
-class DiagAttributes:
+class DiagSource:
     pt_attributes = PageTableAttributes()
     num_guard_pages_generated = 0
 
@@ -184,29 +173,17 @@ class DiagAttributes:
 
         # Override the default diag attribute values with the values
         # specified by the diag.
-        for key in diag_attributes.keys():
-            if key not in self.jumpstart_source_attributes["diag_attributes"]:
-                log.error(f"Unknown diag attribute {key}")
-                sys.exit(1)
-            self.jumpstart_source_attributes["diag_attributes"][key] = diag_attributes[key]
+        DictUtils.override_dict(
+            self.jumpstart_source_attributes["diag_attributes"], diag_attributes
+        )
 
         # Override the diag attributes with the values specified on the
         # command line.
         if override_diag_attributes is not None:
-            for override in override_diag_attributes:
-                attribute_name = override.split("=")[0]
-                attribute_value = override.split("=")[1]
-                if attribute_value in ["True", "true"]:
-                    attribute_value = True
-                elif attribute_value in ["False", "false"]:
-                    attribute_value = False
-                elif attribute_value.isnumeric():
-                    attribute_value = int(attribute_value)
-
-                self.jumpstart_source_attributes["diag_attributes"][
-                    attribute_name
-                ] = attribute_value
-                log.debug(f"Command line overriding {attribute_name} with {attribute_value}.")
+            DictUtils.override_dict(
+                self.jumpstart_source_attributes["diag_attributes"],
+                DictUtils.create_dict(override_diag_attributes),
+            )
 
         self.sanity_check_diag_attributes()
 
@@ -538,7 +515,9 @@ class DiagAttributes:
                 current_level_range_start = current_level_PT_page.get_sparse_memory_address()
                 current_level_range_end = current_level_range_start + (PageSize.SIZE_4K)
 
-                pte_value = place_bits(0, 1, self.pt_attributes.common_attributes["valid_bit"])
+                pte_value = BitField.place_bits(
+                    0, 1, self.pt_attributes.common_attributes["valid_bit"]
+                )
 
                 if current_level < leaf_level:
                     next_level_pagetable = self.get_PT_page(entry["va"], current_level + 1)
@@ -551,7 +530,7 @@ class DiagAttributes:
                     next_level_range_start = next_level_pagetable.get_sparse_memory_address()
                     next_level_range_end = next_level_range_start + (PageSize.SIZE_4K)
 
-                    next_level_pa = next_level_range_start + extract_bits(
+                    next_level_pa = next_level_range_start + BitField.extract_bits(
                         entry["va"], self.get_attribute("va_vpn_bits")[current_level]
                     ) * self.get_attribute("pte_size_in_bytes")
 
@@ -559,20 +538,20 @@ class DiagAttributes:
                 else:
                     xwr_bits = int(entry["xwr"], 2)
                     assert xwr_bits != 0x2 and xwr_bits != 0x6
-                    pte_value = place_bits(
+                    pte_value = BitField.place_bits(
                         pte_value, xwr_bits, self.pt_attributes.common_attributes["xwr_bits"]
                     )
 
                     if "umode" in entry:
                         umode_bit = int(entry["umode"], 2)
-                        pte_value = place_bits(
+                        pte_value = BitField.place_bits(
                             pte_value, umode_bit, self.pt_attributes.common_attributes["umode_bit"]
                         )
 
-                    pte_value = place_bits(
+                    pte_value = BitField.place_bits(
                         pte_value, 1, self.pt_attributes.common_attributes["a_bit"]
                     )
-                    pte_value = place_bits(
+                    pte_value = BitField.place_bits(
                         pte_value, 1, self.pt_attributes.common_attributes["d_bit"]
                     )
 
@@ -580,26 +559,26 @@ class DiagAttributes:
                         pbmt_mode = self.pt_attributes.convert_pbmt_mode_string_to_mode(
                             entry["pbmt_mode"]
                         )
-                        pte_value = place_bits(
+                        pte_value = BitField.place_bits(
                             pte_value, pbmt_mode, self.pt_attributes.common_attributes["pbmt_bits"]
                         )
 
                     if "valid" in entry:
                         valid_bit = int(entry["valid"], 2)
-                        pte_value = place_bits(
+                        pte_value = BitField.place_bits(
                             pte_value, valid_bit, self.pt_attributes.common_attributes["valid_bit"]
                         )
 
                     next_level_pa = entry["pa"]
 
                 for ppn_id in range(len(self.get_attribute("pa_ppn_bits"))):
-                    ppn_value = extract_bits(
+                    ppn_value = BitField.extract_bits(
                         next_level_pa, self.get_attribute("pa_ppn_bits")[ppn_id]
                     )
-                    pte_value = place_bits(
+                    pte_value = BitField.place_bits(
                         pte_value, ppn_value, self.get_attribute("pte_ppn_bits")[ppn_id]
                     )
-                current_level_pt_offset = extract_bits(
+                current_level_pt_offset = BitField.extract_bits(
                     entry["va"], self.get_attribute("va_vpn_bits")[current_level]
                 )
                 pte_address = (
@@ -942,7 +921,7 @@ sync_all_harts_from_{mode}:
         # Step 2
         while True:
             log.info(f"    a = {hex(a)}; current_level = {current_level}")
-            pte_address = a + extract_bits(
+            pte_address = a + BitField.extract_bits(
                 va, self.get_attribute("va_vpn_bits")[current_level]
             ) * self.get_attribute("pte_size_in_bytes")
             pte_value = self.get_pte_region_sparse_memory_contents_at(pte_address)
@@ -952,28 +931,39 @@ sync_all_harts_from_{mode}:
 
             log.info(f"    level{current_level} PTE: [{hex(pte_address)}] = {hex(pte_value)}")
 
-            if extract_bits(pte_value, self.pt_attributes.common_attributes["valid_bit"]) == 0:
+            if (
+                BitField.extract_bits(pte_value, self.pt_attributes.common_attributes["valid_bit"])
+                == 0
+            ):
                 log.error(f"PTE at {hex(pte_address)} is not valid")
                 sys.exit(1)
 
-            xwr = extract_bits(pte_value, self.pt_attributes.common_attributes["xwr_bits"])
+            xwr = BitField.extract_bits(pte_value, self.pt_attributes.common_attributes["xwr_bits"])
             if (xwr & 0x3) == 0x2:
                 log.error(f"PTE at {hex(pte_address)} has R=0 and W=1")
                 sys.exit(1)
 
             a = 0
             for ppn_id in range(len(self.get_attribute("pte_ppn_bits"))):
-                ppn_value = extract_bits(pte_value, self.get_attribute("pte_ppn_bits")[ppn_id])
-                a = place_bits(a, ppn_value, self.get_attribute("pa_ppn_bits")[ppn_id])
+                ppn_value = BitField.extract_bits(
+                    pte_value, self.get_attribute("pte_ppn_bits")[ppn_id]
+                )
+                a = BitField.place_bits(a, ppn_value, self.get_attribute("pa_ppn_bits")[ppn_id])
 
             if (xwr & 0x6) or (xwr & 0x1):
                 log.info("    This is a Leaf PTE")
                 break
             else:
-                if extract_bits(pte_value, self.pt_attributes.common_attributes["a_bit"]) != 0:
+                if (
+                    BitField.extract_bits(pte_value, self.pt_attributes.common_attributes["a_bit"])
+                    != 0
+                ):
                     log.error("PTE has A=1 but is not a Leaf PTE")
                     sys.exit(1)
-                elif extract_bits(pte_value, self.pt_attributes.common_attributes["d_bit"]) != 0:
+                elif (
+                    BitField.extract_bits(pte_value, self.pt_attributes.common_attributes["d_bit"])
+                    != 0
+                ):
                     log.error("PTE has D=1 but is not a Leaf PTE")
                     sys.exit(1)
 
@@ -984,7 +974,9 @@ sync_all_harts_from_{mode}:
             continue
 
         pa = a
-        pa += extract_bits(va, (self.get_attribute("va_vpn_bits")[current_level][1] - 1, 0))
+        pa += BitField.extract_bits(
+            va, (self.get_attribute("va_vpn_bits")[current_level][1] - 1, 0)
+        )
 
         log.info(f"Translated PA = {hex(pa)}")
         log.info(f"    PTE value = {hex(pte_value)}")
@@ -1041,7 +1033,7 @@ def main():
             f"JumpStart Attributes file {args.jumpstart_source_attributes_yaml} not found"
         )
 
-    pagetables = DiagAttributes(
+    pagetables = DiagSource(
         args.jumpstart_source_attributes_yaml,
         args.diag_attributes_yaml,
         args.override_diag_attributes,
