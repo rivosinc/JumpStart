@@ -19,6 +19,8 @@ add_project_arguments('-Wno-c++-compat',
                       '-mcmodel=medany',
                       language: 'c')
 
+riscv_modes_in_build = get_option('riscv_modes_in_build')
+
 subdir('src')
 subdir('include')
 
@@ -33,6 +35,7 @@ jumpstart_source_generator_command = [prog_python,
                                               '--data_structures_file', '@OUTPUT1@',
                                               '--assembly_file', '@OUTPUT2@',
                                               '--jumpstart_source_attributes_yaml', '@INPUT1@',
+                                              '--supported_modes', riscv_modes_in_build
                                               ]
 
 jumpstart_source_attribute_overrides = get_option('jumpstart_source_attribute_overrides')
@@ -128,6 +131,7 @@ diag_source_generator_command = [prog_python,
                                     '--diag_attributes_yaml', '@INPUT2@',
                                     '--output_assembly_file', '@OUTPUT0@',
                                     '--output_linker_script', '@OUTPUT1@',
+                                    '--supported_modes', riscv_modes_in_build
                                     ]
 
 diag_attribute_overrides = get_option('diag_attribute_overrides')

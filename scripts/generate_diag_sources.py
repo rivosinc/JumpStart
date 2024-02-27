@@ -16,7 +16,7 @@ import sys
 import public.lib as public
 import yaml
 from public.lib import PageSize
-from utils.lib import BitField, DictUtils
+from utils.lib import BitField, DictUtils, ListUtils
 
 try:
     import rivos_internal.lib as rivos_internal
@@ -149,6 +149,7 @@ class DiagSource:
         override_jumpstart_source_attributes,
         diag_attributes_yaml,
         override_diag_attributes,
+        supported_modes,
     ):
         self.diag_attributes_yaml = diag_attributes_yaml
         with open(diag_attributes_yaml) as f:
@@ -156,6 +157,8 @@ class DiagSource:
 
         with open(jumpstart_source_attributes_yaml) as f:
             self.jumpstart_source_attributes = yaml.safe_load(f)
+
+        self.supported_modes = supported_modes
 
         rivos_internal_lib_dir = f"{os.path.dirname(os.path.realpath(__file__))}/rivos_internal"
 
@@ -676,7 +679,9 @@ class DiagSource:
         self.generate_get_active_hart_mask_function(file_descriptor)
         if self.jumpstart_source_attributes["rivos_internal_build"] is True:
             rivos_internal.generate_rivos_internal_diag_attribute_functions(
-                file_descriptor, self.jumpstart_source_attributes["diag_attributes"]
+                file_descriptor,
+                self.jumpstart_source_attributes["diag_attributes"],
+                self.supported_modes,
             )
 
             rivos_internal_boolean_attributes = rivos_internal.get_boolean_diag_attributes()
@@ -690,7 +695,7 @@ class DiagSource:
 
     def generate_boolean_diag_attribute_functions(self, file_descriptor, boolean_attributes):
         for attribute in boolean_attributes:
-            modes = attribute.get_modes()
+            modes = ListUtils.intersection(attribute.get_modes(), self.supported_modes)
             for mode in modes:
                 file_descriptor.write(f'.section .jumpstart.text.{mode}, "ax"\n\n')
                 attribute_function_name = f"{attribute.get_name()}"
@@ -708,7 +713,7 @@ class DiagSource:
                 file_descriptor.write("   ret\n\n\n")
 
     def generate_get_active_hart_mask_function(self, file_descriptor):
-        modes = ["mmode", "smode"]
+        modes = ListUtils.intersection(["mmode", "smode"], self.supported_modes)
         for mode in modes:
             file_descriptor.write(f'.section .jumpstart.text.{mode}, "ax"\n\n')
             file_descriptor.write(f".global get_active_hart_mask_from_{mode}\n")
@@ -731,7 +736,7 @@ class DiagSource:
             self.jumpstart_source_attributes["diag_attributes"]["active_hart_mask"], 2
         )
 
-        modes = ["mmode", "smode"]
+        modes = ListUtils.intersection(["mmode", "smode"], self.supported_modes)
         for mode in modes:
             file_descriptor.write(
                 f"""
@@ -822,7 +827,7 @@ sync_all_harts_from_{mode}:
         )
         file_descriptor.write(f"#define DIAG_SATP_MODE {self.get_attribute('satp_mode')}\n")
 
-        modes = ["mmode", "smode"]
+        modes = ListUtils.intersection(["mmode", "smode"], self.supported_modes)
         for mode in modes:
             file_descriptor.write(f'.section .jumpstart.text.{mode}, "ax"\n\n')
 
@@ -896,7 +901,9 @@ sync_all_harts_from_{mode}:
             self.generate_hart_sync_functions(file)
 
             if self.jumpstart_source_attributes["rivos_internal_build"] is True:
-                rivos_internal.generate_rivos_internal_mmu_functions(file, self.memory_map)
+                rivos_internal.generate_rivos_internal_mmu_functions(
+                    file, self.memory_map, self.supported_modes
+                )
 
             self.generate_page_table_data(file)
 
@@ -993,6 +1000,12 @@ def main():
         default=None,
     )
     parser.add_argument(
+        "--jumpstart_source_attributes_yaml",
+        help="YAML containing the jumpstart attributes.",
+        required=True,
+        type=str,
+    )
+    parser.add_argument(
         "--override_jumpstart_source_attributes",
         help="Overrides the JumpStart source attributes.",
         required=False,
@@ -1000,10 +1013,11 @@ def main():
         default=None,
     )
     parser.add_argument(
-        "--jumpstart_source_attributes_yaml",
-        help="YAML containing the jumpstart attributes.",
+        "--supported_modes",
+        help=".",
         required=True,
-        type=str,
+        nargs="+",
+        default=None,
     )
     parser.add_argument(
         "--output_assembly_file",
@@ -1043,6 +1057,7 @@ def main():
         args.override_jumpstart_source_attributes,
         args.diag_attributes_yaml,
         args.override_diag_attributes,
+        args.supported_modes,
     )
 
     if args.output_assembly_file is not None:

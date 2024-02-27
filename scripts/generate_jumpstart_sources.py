@@ -13,7 +13,9 @@ import sys
 from enum import Enum
 
 import yaml
-from utils.lib import DictUtils
+from utils.lib import DictUtils, ListUtils
+
+supported_modes = None
 
 
 class MemoryOp(Enum):
@@ -50,6 +52,7 @@ field_type_to_size_in_bytes = {
 
 
 def generate_getter_and_setter_methods_for_field(
+    attributes_data,
     defines_file_fd,
     assembly_file_fd,
     c_struct,
@@ -68,7 +71,7 @@ def generate_getter_and_setter_methods_for_field(
         f"#define SET_{c_struct.upper()}_{field_name.upper()}(dest_reg) {get_memop_of_size(MemoryOp.STORE, field_size_in_bytes)}   dest_reg, {c_struct.upper()}_{field_name.upper()}_OFFSET(tp);\n\n"
     )
 
-    modes = ["smode", "mmode"]
+    modes = ListUtils.intersection(["smode", "mmode"], supported_modes)
     for mode in modes:
         assembly_file_fd.write(f'.section .jumpstart.text.{mode}, "ax"\n')
         getter_method = f"get_{c_struct}_{field_name}_from_{mode}"
@@ -83,8 +86,8 @@ def generate_getter_and_setter_methods_for_field(
         assembly_file_fd.write("    ret\n\n")
 
 
-def generate_thread_attributes_setup_code(assembly_file_fd):
-    modes = ["smode", "mmode"]
+def generate_thread_attributes_setup_code(attributes_data, assembly_file_fd):
+    modes = ListUtils.intersection(["smode", "mmode"], supported_modes)
     mode_encodings = {"smode": "PRV_S", "mmode": "PRV_M"}
     for mode in modes:
         assembly_file_fd.write(f'.section .jumpstart.text.{mode}, "ax"\n')
@@ -111,22 +114,23 @@ def generate_thread_attributes_setup_code(assembly_file_fd):
         assembly_file_fd.write("  li t0, REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES\n")
         assembly_file_fd.write("  mul t0, a0, t0\n")
         assembly_file_fd.write("\n")
-        assembly_file_fd.write("  la t1, mmode_reg_context_save_region\n")
-        assembly_file_fd.write("  add t1, t1, t0\n")
-        assembly_file_fd.write("  la t2, mmode_reg_context_save_region_end\n")
-        assembly_file_fd.write(f"  bgeu t1, t2, jumpstart_{mode}_fail\n")
-        assembly_file_fd.write(
-            "  SET_THREAD_ATTRIBUTES_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(t1)\n"
-        )
-        assembly_file_fd.write("\n")
-        assembly_file_fd.write("  la t1, lower_mode_in_mmode_reg_context_save_region\n")
-        assembly_file_fd.write("  add t1, t1, t0\n")
-        assembly_file_fd.write("  la t2, lower_mode_in_mmode_reg_context_save_region_end\n")
-        assembly_file_fd.write(f"  bgeu t1, t2, jumpstart_{mode}_fail\n")
-        assembly_file_fd.write(
-            "  SET_THREAD_ATTRIBUTES_LOWER_MODE_IN_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(t1)\n"
-        )
-        assembly_file_fd.write("\n")
+        if "mmode" in modes:
+            assembly_file_fd.write("  la t1, mmode_reg_context_save_region\n")
+            assembly_file_fd.write("  add t1, t1, t0\n")
+            assembly_file_fd.write("  la t2, mmode_reg_context_save_region_end\n")
+            assembly_file_fd.write(f"  bgeu t1, t2, jumpstart_{mode}_fail\n")
+            assembly_file_fd.write(
+                "  SET_THREAD_ATTRIBUTES_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(t1)\n"
+            )
+            assembly_file_fd.write("\n")
+            assembly_file_fd.write("  la t1, lower_mode_in_mmode_reg_context_save_region\n")
+            assembly_file_fd.write("  add t1, t1, t0\n")
+            assembly_file_fd.write("  la t2, lower_mode_in_mmode_reg_context_save_region_end\n")
+            assembly_file_fd.write(f"  bgeu t1, t2, jumpstart_{mode}_fail\n")
+            assembly_file_fd.write(
+                "  SET_THREAD_ATTRIBUTES_LOWER_MODE_IN_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(t1)\n"
+            )
+            assembly_file_fd.write("\n")
         assembly_file_fd.write("  la t1, smode_reg_context_save_region\n")
         assembly_file_fd.write("  add t1, t1, t0\n")
         assembly_file_fd.write("  la t2, smode_reg_context_save_region_end\n")
@@ -191,7 +195,9 @@ def generate_reg_context_save_restore_code(attributes_data, defines_file_fd, ass
     defines_file_fd.write("\n\n")
 
     assembly_file_fd.write('\n\n.section .jumpstart.data.smode, "aw"\n')
-    modes = ["mmode", "lower_mode_in_mmode", "smode", "umode"]
+    modes = ListUtils.intersection(["mmode", "smode", "umode"], supported_modes)
+    if "mmode" in modes:
+        modes += ["lower_mode_in_mmode"]
     assembly_file_fd.write(
         f"\n# {modes} context saved registers: \n# {attributes_data['reg_context_to_save_across_modes']['registers']}\n"
     )
@@ -282,6 +288,7 @@ def generate_jumpstart_sources(
 
             if c_struct == "thread_attributes":
                 generate_getter_and_setter_methods_for_field(
+                    attributes_data,
                     defines_file_fd,
                     assembly_file_fd,
                     c_struct,
@@ -364,7 +371,7 @@ def generate_jumpstart_sources(
 
     generate_reg_context_save_restore_code(attributes_data, defines_file_fd, assembly_file_fd)
 
-    generate_thread_attributes_setup_code(assembly_file_fd)
+    generate_thread_attributes_setup_code(attributes_data, assembly_file_fd)
 
     defines_file_fd.write("\n")
     current_syscall_number = 0
@@ -378,6 +385,8 @@ def generate_jumpstart_sources(
 
 
 def main():
+    global supported_modes
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--jumpstart_source_attributes_yaml",
@@ -389,6 +398,13 @@ def main():
         "--override_jumpstart_source_attributes",
         help="Overrides the JumpStart source attributes.",
         required=False,
+        nargs="+",
+        default=None,
+    )
+    parser.add_argument(
+        "--supported_modes",
+        help=".",
+        required=True,
         nargs="+",
         default=None,
     )
@@ -413,6 +429,8 @@ def main():
         log.basicConfig(format="%(levelname)s: [%(threadName)s]: %(message)s", level=log.DEBUG)
     else:
         log.basicConfig(format="%(levelname)s: [%(threadName)s]: %(message)s", level=log.INFO)
+
+    supported_modes = args.supported_modes
 
     generate_jumpstart_sources(
         args.jumpstart_source_attributes_yaml,
