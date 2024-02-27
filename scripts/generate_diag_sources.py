@@ -667,10 +667,12 @@ class DiagSource:
                 file_descriptor, self.jumpstart_source_attributes["diag_attributes"]
             )
 
-            boolean_attributes += [
-                BooleanDiagAttribute("in_qemu_mode", ["mmode", "smode"]),
-                BooleanDiagAttribute("disable_uart", ["smode"]),
-            ]
+            rivos_internal_boolean_attributes = rivos_internal.get_boolean_diag_attributes()
+
+            for rivos_internal_attribute in rivos_internal_boolean_attributes:
+                boolean_attributes.append(
+                    BooleanDiagAttribute(rivos_internal_attribute[0], rivos_internal_attribute[1])
+                )
 
         self.generate_boolean_diag_attribute_functions(file_descriptor, boolean_attributes)
 
