@@ -2,14 +2,18 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-subdir('common')
+mmode_sources = []
+smode_sources = []
+umode_sources = []
 
-jumpstart_sources = jumpstart_common_sources
+jumpstart_sources = []
+
+subdir('common')
 
 if get_option('rivos_internal_build') == true
   subdir('rivos_internal')
-  jumpstart_sources += jumpstart_rivos_internal_sources
 else
   subdir('public')
-  jumpstart_sources += jumpstart_public_sources
 endif
+
+jumpstart_sources = mmode_sources + smode_sources + umode_sources
