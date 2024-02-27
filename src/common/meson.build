@@ -2,7 +2,8 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-mmode_sources += files('jumpstart.mmode.S')
+mmode_sources += files('jumpstart.mmode.S',
+                       'trap_handler.mmode.c')
 
 smode_sources += files('data.smode.S',
                               'jumpstart.smode.S',
