@@ -53,8 +53,6 @@ _mmode_start:
 
   jal setup_smode_trap_delegation
 
-  jal setup_uart
-
   j jump_to_main
 
 .section .jumpstart.text.mmode, "ax"

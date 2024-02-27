@@ -26,6 +26,8 @@ setup_smode:
 
   jal setup_heap
 
+  jal setup_uart
+
   li t0, 1
   SET_THREAD_ATTRIBUTES_SMODE_SETUP_DONE(t0)
 
