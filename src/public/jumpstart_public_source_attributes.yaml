@@ -26,7 +26,7 @@ jumpstart_smode:
     xwr: "0b101"
     umode: "0b0"
     pma_memory_type: "wb"
-    linker_script_section: ".jumpstart.text.smode"
+    linker_script_section: ".jumpstart.text.smode.init,.jumpstart.text.smode"
   stack:
     page_size: 0x1000
     num_pages: 4

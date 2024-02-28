@@ -277,3 +277,8 @@ run_function_in_umode_return_point:
   ld  fp, 0(sp)
   addi  sp, sp, 16
   ret
+
+.global just_wfi_from_smode
+just_wfi_from_smode:
+  wfi
+  j just_wfi_from_smode

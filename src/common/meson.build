@@ -15,4 +15,10 @@ smode_sources += files('data.smode.S',
                               'heap.smode.c',
                               'lock.smode.c')
 
+if get_option('smode_boot') == true
+  smode_sources += files(
+                          'smode_boot.smode.S',
+                        )
+endif
+
 umode_sources += files('jumpstart.umode.S')
