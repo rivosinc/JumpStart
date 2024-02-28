@@ -21,6 +21,15 @@ add_project_arguments('-Wno-c++-compat',
 
 riscv_modes_in_build = get_option('riscv_modes_in_build')
 
+jumpstart_source_attribute_overrides = get_option('jumpstart_source_attribute_overrides')
+diag_attribute_overrides = get_option('diag_attribute_overrides')
+
+if get_option('smode_boot') == true
+  riscv_modes_in_build = ['smode', 'umode']
+  jumpstart_source_attribute_overrides += ['diag_entry_label=setup_smode']
+  diag_attribute_overrides += ['smode_start_address=' + get_option('smode_boot_start_address')]
+endif
+
 subdir('src')
 subdir('include')
 
@@ -37,8 +46,6 @@ jumpstart_source_generator_command = [prog_python,
                                               '--jumpstart_source_attributes_yaml', '@INPUT1@',
                                               '--supported_modes', riscv_modes_in_build
                                               ]
-
-jumpstart_source_attribute_overrides = get_option('jumpstart_source_attribute_overrides')
 
 override_jumpstart_source_attributes_parameter = []
 if jumpstart_source_attribute_overrides.length() > 0
@@ -133,8 +140,6 @@ diag_source_generator_command = [prog_python,
                                     '--output_linker_script', '@OUTPUT1@',
                                     '--supported_modes', riscv_modes_in_build
                                     ]
-
-diag_attribute_overrides = get_option('diag_attribute_overrides')
 
 if get_option('diag_target') == 'qemu'
   diag_attribute_overrides += ['in_qemu_mode=True']

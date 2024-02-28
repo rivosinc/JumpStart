@@ -40,6 +40,16 @@ option('riscv_modes_in_build',
        value : ['mmode', 'smode', 'umode'],
        description : 'RISC-V modes included in the build.')
 
+option('smode_boot',
+       type : 'boolean',
+       value : false,
+       description : 'JumpStart run starts in smode (binary will not include higher privilege levels).')
+
+option('smode_boot_start_address',
+       type : 'string',
+       value : '0x90000000',
+       description : 'Address to place the smode code.')
+
 option('gcc_march_string',
        type : 'string',
        value : '',
