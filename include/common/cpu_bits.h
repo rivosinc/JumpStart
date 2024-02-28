@@ -189,6 +189,11 @@
 /* Machine-Level Window to Indirectly Accessed Registers (AIA) */
 #define CSR_MISELECT        0x350
 #define CSR_MIREG           0x351
+#define CSR_MIREG2          0x352
+#define CSR_MIREG3          0x353
+#define CSR_MIREG4          0x355
+#define CSR_MIREG5          0x356
+#define CSR_MIREG6          0x357
 
 /* Machine-Level Interrupts (AIA) */
 #define CSR_MTOPEI          0x35c
@@ -242,6 +247,10 @@
 #define CSR_SISELECT        0x150
 #define CSR_SIREG           0x151
 #define CSR_SIREG2          0x152
+#define CSR_SIREG3          0x153
+#define CSR_SIREG4          0x155
+#define CSR_SIREG5          0x156
+#define CSR_SIREG6          0x157
 
 /* Supervisor-Level Interrupts (AIA) */
 #define CSR_STOPEI          0x15c
@@ -700,6 +709,7 @@
 #define RISCV_EXCP_LOAD_PAGE_FAULT 		0xd /* since: priv-1.10.0 */
 #define RISCV_EXCP_STORE_PAGE_FAULT 		0xf /* since: priv-1.10.0 */
 #define RISCV_EXCP_SEMIHOST 			0x10
+#define RISCV_EXCP_DATA_CORRUPTION_EXCEPTION	0x13 /* Srastraps */
 #define RISCV_EXCP_INST_GUEST_PAGE_FAULT 	0x14
 #define RISCV_EXCP_LOAD_GUEST_ACCESS_FAULT 	0x15
 #define RISCV_EXCP_VIRT_INSTRUCTION_FAULT 	0x16

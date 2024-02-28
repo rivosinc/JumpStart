@@ -4,7 +4,7 @@
 
 #include "jumpstart_defines.h"
 
-.section .text.supervisor, "ax"
+.section .text.smode, "ax"
 
 .global smode_illegal_instruction_function
 smode_illegal_instruction_function:

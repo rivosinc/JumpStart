@@ -2,15 +2,15 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include "heap_functions.supervisor.h"
+#include "heap.smode.h"
+#include "jumpstart.h"
 #include "jumpstart_defines.h"
-#include "jumpstart_functions.h"
-#include "lock_functions.supervisor.h"
+#include "lock.smode.h"
 
 #include <stdint.h>
 
-extern uint64_t _JUMPSTART_SUPERVISOR_HEAP_START[];
-extern uint64_t _JUMPSTART_SUPERVISOR_HEAP_END[];
+extern uint64_t _JUMPSTART_SMODE_HEAP_START[];
+extern uint64_t _JUMPSTART_SMODE_HEAP_END[];
 
 void setup_heap(void);
 //------------------------------------------------------------------------------
@@ -23,16 +23,15 @@ struct memchunk {
 
 typedef struct memchunk memchunk;
 
-__attribute__((section(".jumpstart.data.supervisor"))) static memchunk *head;
-__attribute__((
-    section(".jumpstart.data.supervisor"))) static spinlock_t heap_lock = 0;
+__attribute__((section(".jumpstart.data.smode"))) static memchunk *head;
+__attribute__((section(".jumpstart.data.smode"))) static spinlock_t heap_lock =
+    0;
 #define MEMCHUNK_USED     0x8000000000000000ULL
 #define MEMCHUNK_MAX_SIZE (MEMCHUNK_USED - 1)
 //------------------------------------------------------------------------------
 // Allocate memory on the heap
 //------------------------------------------------------------------------------
-__attribute__((section(".jumpstart.text.supervisor"))) void *
-malloc(size_t size) {
+__attribute__((section(".jumpstart.text.smode"))) void *malloc(size_t size) {
   if (head == 0 || size > MEMCHUNK_MAX_SIZE) {
     return 0;
   }
@@ -85,7 +84,7 @@ exit_malloc:
 //------------------------------------------------------------------------------
 // Free the memory
 //------------------------------------------------------------------------------
-__attribute__((section(".jumpstart.text.supervisor"))) void free(void *ptr) {
+__attribute__((section(".jumpstart.text.smode"))) void free(void *ptr) {
   if (!ptr) {
     return;
   }
@@ -98,11 +97,11 @@ __attribute__((section(".jumpstart.text.supervisor"))) void free(void *ptr) {
 //------------------------------------------------------------------------------
 // Set up the heap
 //------------------------------------------------------------------------------
-__attribute__((section(".jumpstart.text.machine"))) void setup_heap(void) {
-  uint8_t hart_id = get_thread_attributes_hart_id_from_machine_mode();
+__attribute__((section(".jumpstart.text.mmode"))) void setup_heap(void) {
+  uint8_t hart_id = get_thread_attributes_hart_id_from_mmode();
   if (hart_id == 0) {
-    uint64_t *heap_start = (uint64_t *)&_JUMPSTART_SUPERVISOR_HEAP_START;
-    uint64_t *heap_end = (uint64_t *)&_JUMPSTART_SUPERVISOR_HEAP_END;
+    uint64_t *heap_start = (uint64_t *)&_JUMPSTART_SMODE_HEAP_START;
+    uint64_t *heap_end = (uint64_t *)&_JUMPSTART_SMODE_HEAP_END;
 
     head = (memchunk *)heap_start;
     head->next = NULL;
@@ -111,8 +110,8 @@ __attribute__((section(".jumpstart.text.machine"))) void setup_heap(void) {
   }
 }
 
-__attribute__((section(".jumpstart.text.supervisor"))) void *
-calloc(size_t nmemb, size_t size) {
+__attribute__((section(".jumpstart.text.smode"))) void *calloc(size_t nmemb,
+                                                               size_t size) {
   uint8_t *data = malloc(nmemb * size);
   for (size_t i = 0; i < nmemb * size; ++i) {
     data[i] = 0;
@@ -120,7 +119,7 @@ calloc(size_t nmemb, size_t size) {
   return data;
 }
 
-__attribute__((section(".jumpstart.text.supervisor"))) void *
+__attribute__((section(".jumpstart.text.smode"))) void *
 memalign(size_t alignment, size_t size) {
   if (head == 0 || size > MEMCHUNK_MAX_SIZE) {
     return 0;
@@ -217,8 +216,8 @@ exit_memalign:
   return result;
 }
 
-__attribute__((section(".jumpstart.text.supervisor"))) void *
-memset(void *s, int c, size_t n) {
+__attribute__((section(".jumpstart.text.smode"))) void *memset(void *s, int c,
+                                                               size_t n) {
   uint8_t *p = s;
   for (size_t i = 0; i < n; i++) {
     *(p++) = (uint8_t)c;
@@ -226,7 +225,7 @@ memset(void *s, int c, size_t n) {
   return s;
 }
 
-__attribute__((section(".jumpstart.text.supervisor"))) void *
+__attribute__((section(".jumpstart.text.smode"))) void *
 memcpy(void *dest, const void *src, size_t n) {
   size_t numQwords = n / 8;
   size_t remindingBytes = n % 8;

@@ -5,23 +5,34 @@
 #include "jumpstart_defines.h"
 #include "cpu_bits.h"
 
-.section .jumpstart.text.supervisor, "ax"
+.section .jumpstart.text.smode, "ax"
 
 # a0 contains the address of the function to jump to.
+# a1-a7 contains the arguments to pass to the smode function.
 .global jump_to_function_in_smode
 jump_to_function_in_smode:
   li  t0, PRV_S
   SET_THREAD_ATTRIBUTES_CURRENT_MODE(t0)
 
-  # A0 contains arg value passed by S mode.
-  jalr ra, a0
+  mv t0, a0
+
+  # Function arguments have to be passed in a0-a6.
+  mv a0, a1
+  mv a1, a2
+  mv a2, a3
+  mv a3, a4
+  mv a4, a5
+  mv a5, a6
+  mv a6, a7
+
+  jalr ra, t0
 
   # a0 contains the exit code.
-  li  a7, SYSCALL_RUN_FUNC_IN_SUPERVISOR_MODE_COMPLETE
+  li  a7, SYSCALL_RUN_FUNC_IN_SMODE_COMPLETE
   ecall
 
-.global disable_mmu_from_supervisor_mode
-disable_mmu_from_supervisor_mode:
+.global disable_mmu_from_smode
+disable_mmu_from_smode:
   li  t0, 0
   csrw  satp, t0
   sfence.vma
@@ -38,10 +49,10 @@ stvec_trap_handler:
   andi  gp, gp, SSTATUS_SPP
   srli  gp, gp, SSTATUS_SPP_SHIFT
   addi  gp, gp, -PRV_S
-  beqz  gp, handle_trap_from_supervisor_mode
-  j  handle_trap_from_user_mode
+  beqz  gp, handle_trap_from_smode
+  j  handle_trap_from_umode
 
-handle_trap_from_supervisor_mode:
+handle_trap_from_smode:
   GET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
   SAVE_ALL_GPRS
 
@@ -50,7 +61,7 @@ handle_trap_from_supervisor_mode:
 
   j check_for_trap_handler_overrides
 
-handle_trap_from_user_mode:
+handle_trap_from_umode:
   # Save away the U-mode stack.
   GET_THREAD_ATTRIBUTES_UMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
   sd sp, SP_OFFSET_IN_SAVE_REGION(gp)
@@ -65,7 +76,7 @@ handle_trap_from_user_mode:
 check_for_trap_handler_overrides:
   # Check if the test has registered a trap handler for this trap.
   csrr a0, scause
-  call get_supervisor_mode_trap_handler_override
+  call get_smode_trap_handler_override
 
   beqz  a0, check_for_env_call_requests
 
@@ -78,9 +89,9 @@ check_for_trap_handler_overrides:
   andi  gp, gp, SSTATUS_SPP
   srli  gp, gp, SSTATUS_SPP_SHIFT
   addi  gp, gp, -PRV_S
-  bnez  gp, restore_user_mode_context
+  bnez  gp, restore_umode_context
 
-restore_supervisor_mode_context:
+restore_smode_context:
   GET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
 
   ld t0, HSTATUS_OFFSET_IN_SAVE_REGION(gp)
@@ -88,7 +99,7 @@ restore_supervisor_mode_context:
 
   j restore_context
 
-restore_user_mode_context:
+restore_umode_context:
   li  gp, PRV_U
   SET_THREAD_ATTRIBUTES_CURRENT_MODE(gp)
   GET_THREAD_ATTRIBUTES_UMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
@@ -107,31 +118,31 @@ check_for_env_call_requests:
   li t1, RISCV_EXCP_U_ECALL
   beq t0, t1, handle_env_call_from_umode
 
-  j jumpstart_supervisor_fail
+  j jumpstart_smode_fail
 
 handle_env_call_from_umode:
   # a7 will contain the syscall number
 
-  li t0, SYSCALL_RUN_FUNC_IN_USER_MODE_COMPLETE
-  beq a7, t0, handle_syscall_run_func_in_user_mode_complete
+  li t0, SYSCALL_RUN_FUNC_IN_UMODE_COMPLETE
+  beq a7, t0, handle_syscall_run_func_in_umode_complete
 
-  j jumpstart_supervisor_fail
+  j jumpstart_smode_fail
 
-.global jumpstart_supervisor_fail
-jumpstart_supervisor_fail:
+.global jumpstart_smode_fail
+jumpstart_smode_fail:
   li a0, DIAG_FAILED
-  li  a7, SYSCALL_RUN_FUNC_IN_SUPERVISOR_MODE_COMPLETE
+  li  a7, SYSCALL_RUN_FUNC_IN_SMODE_COMPLETE
   ecall
 
-handle_syscall_run_func_in_user_mode_complete:
-  # This is the return to supervisor path for run_function_in_user_mode().
+handle_syscall_run_func_in_umode_complete:
+  # This is the return to supervisor path for run_function_in_umode().
 
-  # Re-enable interrupts that were disabled in run_function_in_user_mode().
+  # Re-enable interrupts that were disabled in run_function_in_umode().
   # Set SPIE to 1, on sret this will set SIE to 1.
   li  t0, (PRV_S << SSTATUS_SPP_SHIFT) | SSTATUS_SPIE
   csrs  sstatus, t0
 
-  la  t0, run_function_in_user_mode_return_point
+  la  t0, run_function_in_umode_return_point
   csrw sepc, t0
 
   # Restore S mode context.
@@ -148,8 +159,8 @@ handle_syscall_run_func_in_user_mode_complete:
 # Inputs:
 #   a0: address of the function to run in usermode.
 #   a1: arg0 to function to run in usermode.
-.global run_function_in_user_mode
-run_function_in_user_mode:
+.global run_function_in_umode
+run_function_in_umode:
   addi  sp, sp, -16
   sd    ra, 8(sp)
   sd    fp, 0(sp)
@@ -157,7 +168,7 @@ run_function_in_user_mode:
 
   GET_THREAD_ATTRIBUTES_CURRENT_MODE(t0)
   li  t1, PRV_S
-  bne t0, t1, jumpstart_supervisor_fail
+  bne t0, t1, jumpstart_smode_fail
 
   # Disable interrupts when switching modes to avoid clobbering any
   # state we set up if we encounter an interrupt.
@@ -172,7 +183,7 @@ run_function_in_user_mode:
   SAVE_ALL_GPRS
 
   # Load U-mode context. We just need to set sepc, sstatus and a0 register.
-    la a1, jump_to_function_in_umode
+  la a1, jump_to_function_in_umode
   csrw sepc, a1
 
   li t0, (PRV_S << SSTATUS_SPP_SHIFT)
@@ -197,7 +208,7 @@ run_function_in_user_mode:
 
 # Inputs:
 #   a0: return status from U-mode function.
-run_function_in_user_mode_return_point:
+run_function_in_umode_return_point:
   ld  ra, 8(sp)
   ld  fp, 0(sp)
   addi  sp, sp, 16

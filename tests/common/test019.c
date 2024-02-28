@@ -2,11 +2,11 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include "jumpstart_functions.h"
+#include "jumpstart.h"
 
 int main(void) {
   for (int i = 0; i < 10; ++i) {
-    sync_all_harts_from_supervisor_mode();
+    sync_all_harts_from_smode();
   }
 
   return DIAG_PASSED;

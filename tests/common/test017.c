@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "cpu_bits.h"
-#include "jumpstart_functions.h"
+#include "jumpstart.h"
 
 void test017_illegal_instruction_handler(void);
 int test017_illegal_instruction_function(void);
@@ -17,20 +17,20 @@ int test016_main(void) {
     return DIAG_FAILED;
   }
 
-  if (get_thread_attributes_hart_id_from_machine_mode() != 0) {
+  if (get_thread_attributes_hart_id_from_mmode() != 0) {
     return DIAG_FAILED;
   }
 
-  if (get_thread_attributes_bookend_magic_number_from_machine_mode() !=
+  if (get_thread_attributes_bookend_magic_number_from_mmode() !=
       THREAD_ATTRIBUTES_BOOKEND_MAGIC_NUMBER_VALUE) {
     return DIAG_FAILED;
   }
 
-  if (get_thread_attributes_current_mode_from_machine_mode() != PRV_M) {
+  if (get_thread_attributes_current_mode_from_mmode() != PRV_M) {
     return DIAG_FAILED;
   }
 
-  register_machine_mode_trap_handler_override(
+  register_mmode_trap_handler_override(
       RISCV_EXCP_ILLEGAL_INST,
       (uint64_t)(&test017_illegal_instruction_handler));
 
@@ -38,9 +38,9 @@ int test016_main(void) {
     return DIAG_FAILED;
   }
 
-  deregister_machine_mode_trap_handler_override(RISCV_EXCP_ILLEGAL_INST);
+  deregister_mmode_trap_handler_override(RISCV_EXCP_ILLEGAL_INST);
 
-  if (get_machine_mode_trap_handler_override(RISCV_EXCP_ILLEGAL_INST) != 0x0) {
+  if (get_mmode_trap_handler_override(RISCV_EXCP_ILLEGAL_INST) != 0x0) {
     return DIAG_FAILED;
   }
 

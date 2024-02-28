@@ -3,14 +3,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "cpu_bits.h"
-#include "jumpstart_functions.h"
+#include "jumpstart.h"
 
 void test003_illegal_instruction_handler(void);
 int test003_illegal_instruction_function(void);
 
 int main(void) {
 
-  register_supervisor_mode_trap_handler_override(
+  register_smode_trap_handler_override(
       RISCV_EXCP_ILLEGAL_INST,
       (uint64_t)(&test003_illegal_instruction_handler));
 
@@ -18,10 +18,9 @@ int main(void) {
     return DIAG_FAILED;
   }
 
-  deregister_supervisor_mode_trap_handler_override(RISCV_EXCP_ILLEGAL_INST);
+  deregister_smode_trap_handler_override(RISCV_EXCP_ILLEGAL_INST);
 
-  if (get_supervisor_mode_trap_handler_override(RISCV_EXCP_ILLEGAL_INST) !=
-      0x0) {
+  if (get_smode_trap_handler_override(RISCV_EXCP_ILLEGAL_INST) != 0x0) {
     return DIAG_FAILED;
   }
 

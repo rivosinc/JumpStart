@@ -4,7 +4,9 @@
 
 satp_mode: "sv39"
 
-start_test_in_mmode: True
+mmode_start_address: 0x81000000
+smode_start_address: 0x82000000
+umode_start_address: 0x83000000
 
 mappings:
   -
@@ -12,7 +14,7 @@ mappings:
     pa: 0xC0020000
     xwr: "0b101"
     page_size: 0x1000
-    num_pages: 1
+    num_pages: 2
     pma_memory_type: "wb"
     linker_script_section: ".text"
   -
@@ -23,19 +25,3 @@ mappings:
     num_pages: 1
     pma_memory_type: "wb"
     linker_script_section: ".data"
-  -
-    va: 0xC0023000
-    pa: 0xC0023000
-    xwr: "0b101"
-    page_size: 0x1000
-    num_pages: 2
-    pma_memory_type: "wb"
-    linker_script_section: ".text.smode"
-  -
-    va: 0xC0025000
-    pa: 0xC0025000
-    xwr: "0b011"
-    page_size: 0x1000
-    num_pages: 1
-    pma_memory_type: "wb"
-    linker_script_section: ".data.smode"

@@ -206,11 +206,11 @@ class DiagAttributes:
                 self.jumpstart_source_attributes["diag_attributes"][
                     attribute_name
                 ] = attribute_value
-                log.warning(f"Command line overriding {attribute_name} with {attribute_value}.")
+                log.debug(f"Command line overriding {attribute_name} with {attribute_value}.")
 
         self.sanity_check_diag_attributes()
 
-        self.append_jumpstart_sections_to_mappings()
+        self.add_jumpstart_sections_to_mappings()
 
         # Sort all the mappings by the PA.
         self.jumpstart_source_attributes["diag_attributes"]["mappings"] = sorted(
@@ -235,10 +235,11 @@ class DiagAttributes:
                 self.jumpstart_source_attributes["diag_attributes"]
             )
 
-    def append_jumpstart_sections_to_mappings(self):
-        # the rivos and machine mode sections are added at specific locations
-        # the rest are just added on at locations immediately following
-        # these sections.
+    def add_jumpstart_sections_to_mappings(self):
+        # The rivos internal sections are added at specific locations.
+        # The sections for the other jumpstart areas can be addded at
+        # specific locations or at locations immediately following the
+        # previous section using the *_start_address diag_attributes attribute.
         if self.jumpstart_source_attributes["rivos_internal_build"] is True:
             self.jumpstart_source_attributes["diag_attributes"]["mappings"].extend(
                 rivos_internal.get_rivos_specific_mappings(
@@ -246,22 +247,17 @@ class DiagAttributes:
                 )
             )
 
-        self.jumpstart_source_attributes["diag_attributes"]["mappings"].append(
-            self.get_jumpstart_machine_mode_section()
-        )
-
-        # Add a guard page mapping to catch linker script overruns of machine_mode
-        self.add_pa_guard_page_after_last_mapping(
-            self.jumpstart_source_attributes["diag_attributes"]["mappings"]
-        )
-
-        self.add_jumpstart_area_to_mappings(
+        self.add_mappings_for_jumpstart_mode(
             self.jumpstart_source_attributes["diag_attributes"]["mappings"],
-            "jumpstart_supervisor",
+            "mmode",
         )
-        self.add_jumpstart_area_to_mappings(
+        self.add_mappings_for_jumpstart_mode(
             self.jumpstart_source_attributes["diag_attributes"]["mappings"],
-            "jumpstart_umode",
+            "smode",
+        )
+        self.add_mappings_for_jumpstart_mode(
+            self.jumpstart_source_attributes["diag_attributes"]["mappings"],
+            "umode",
         )
 
         self.add_pa_guard_page_after_last_mapping(
@@ -278,13 +274,14 @@ class DiagAttributes:
     def append_to_mappings(
         self,
         mappings,
+        pa,
         xwr,
         umode,
         num_pages,
         page_size,
         pma_memory_type,
         linker_script_section,
-        no_pte_allocation=False,
+        no_pte_allocation,
     ):
         assert page_size in self.get_attribute("page_sizes")
 
@@ -297,14 +294,20 @@ class DiagAttributes:
                 previous_mapping, pma_memory_type
             )
 
-        # We're going to start the PA of the new mapping after the PA range
-        # # of the last mapping.
         new_mapping = {}
-        new_mapping["pa"] = previous_mapping["pa"] + previous_mapping_size
 
-        if (new_mapping["pa"] % page_size) != 0:
-            # Align the PA to the page size.
-            new_mapping["pa"] = (math.floor(new_mapping["pa"] / page_size) + 1) * page_size
+        if pa is None:
+            # We're going to start the PA of the new mapping after the PA range
+            # # of the last mapping.
+            new_mapping["pa"] = previous_mapping["pa"] + previous_mapping_size
+
+            if (new_mapping["pa"] % page_size) != 0:
+                # Align the PA to the page size.
+                new_mapping["pa"] = (math.floor(new_mapping["pa"] / page_size) + 1) * page_size
+        else:
+            new_mapping["pa"] = pa
+
+        assert new_mapping["pa"] % page_size == 0
 
         new_mapping["no_pte_allocation"] = no_pte_allocation
 
@@ -320,8 +323,33 @@ class DiagAttributes:
 
         mappings.insert(previous_mapping_id + 1, new_mapping)
 
-    def add_jumpstart_area_to_mappings(self, mappings, area_name):
+    def add_mappings_for_jumpstart_mode(self, mappings, mode):
+        area_name = f"jumpstart_{mode}"
+
+        # We pick up the start address of the area from the diag_attributes
+        #   Example: mmode_start_address, smode_start_address,
+        #            umode_start_address
+        # If this attribute is not null we use it to set up the address of the
+        # first section in the area. Every subsequent section will just follow
+        # the previous section in the PA space.
+        pa_for_first_section_in_area = None
+        area_start_address_attribute_name = f"{mode}_start_address"
+        if (
+            area_start_address_attribute_name in self.jumpstart_source_attributes["diag_attributes"]
+            and self.jumpstart_source_attributes["diag_attributes"][
+                area_start_address_attribute_name
+            ]
+            is not None
+        ):
+            pa_for_first_section_in_area = self.jumpstart_source_attributes["diag_attributes"][
+                area_start_address_attribute_name
+            ]
+
+        num_sections_added = 0
         for section_name in self.jumpstart_source_attributes[area_name]:
+            # This is where we pick up num_pages_for_jumpstart_*mode_* attributes from the diag_attributes
+            #   Example: num_pages_for_jumpstart_smode_pagetables, num_pages_for_jumpstart_smode_bss,
+            #            num_pages_for_jumpstart_smode_rodata, etc.
             num_pages_diag_attribute_name = f"num_pages_for_{area_name}_{section_name}"
 
             if (
@@ -345,15 +373,34 @@ class DiagAttributes:
                 log.error(f"num_pages not specified for {section_name} in {area_name}")
                 sys.exit(1)
 
+            pa = None
+            if num_sections_added == 0:
+                pa = pa_for_first_section_in_area
+
+            xwr = None
+            if "xwr" in self.jumpstart_source_attributes[area_name][section_name]:
+                xwr = self.jumpstart_source_attributes[area_name][section_name]["xwr"]
+            umode = None
+            if "umode" in self.jumpstart_source_attributes[area_name][section_name]:
+                umode = self.jumpstart_source_attributes[area_name][section_name]["umode"]
+            no_pte_allocation = False
+            if "no_pte_allocation" in self.jumpstart_source_attributes[area_name][section_name]:
+                no_pte_allocation = self.jumpstart_source_attributes[area_name][section_name][
+                    "no_pte_allocation"
+                ]
+
             self.append_to_mappings(
                 mappings,
-                self.jumpstart_source_attributes[area_name][section_name]["xwr"],
-                self.jumpstart_source_attributes[area_name][section_name]["umode"],
+                pa,
+                xwr,
+                umode,
                 num_pages,
                 self.jumpstart_source_attributes[area_name][section_name]["page_size"],
                 self.jumpstart_source_attributes[area_name][section_name]["pma_memory_type"],
                 self.jumpstart_source_attributes[area_name][section_name]["linker_script_section"],
+                no_pte_allocation,
             )
+            num_sections_added += 1
 
             if section_name == "pagetables":
                 self.PT_section_start_address = mappings[len(mappings) - 1]["pa"]
@@ -365,25 +412,12 @@ class DiagAttributes:
                 ):
                     mappings[len(mappings) - 1]["xwr"] = "0b011"
 
-    def get_jumpstart_machine_mode_section(self):
-        machine_mode_mapping = {}
-        machine_mode_mapping["pa"] = self.jumpstart_source_attributes["diag_attributes"][
-            "machine_mode_start_address"
-        ]
-
-        for area_name in self.jumpstart_source_attributes["jumpstart_mmode"]:
-            for attribute_name in self.jumpstart_source_attributes["jumpstart_mmode"][area_name]:
-                machine_mode_mapping[attribute_name] = self.jumpstart_source_attributes[
-                    "jumpstart_mmode"
-                ][area_name][attribute_name]
-
-        return machine_mode_mapping
-
     def add_pa_guard_page_after_last_mapping(self, mappings):
         # Guard pages have no allocations in the page tables but
         # occupy space in the memory map.
         self.append_to_mappings(
             mappings,
+            None,
             None,
             None,
             1,
@@ -454,7 +488,7 @@ class DiagAttributes:
         if (
             len(self.PT_pages)
             == self.jumpstart_source_attributes["diag_attributes"][
-                "num_pages_for_jumpstart_supervisor_pagetables"
+                "num_pages_for_jumpstart_smode_pagetables"
             ]
         ):
             # Can't create any more pagetable pages
@@ -497,7 +531,7 @@ class DiagAttributes:
                 current_level_PT_page = self.get_PT_page(entry["va"], current_level)
                 if current_level_PT_page is None:
                     log.error(
-                        f"Insufficient pagetable pages (num_pages_for_jumpstart_supervisor_pagetables = {self.jumpstart_source_attributes['diag_attributes']['num_pages_for_jumpstart_supervisor_pagetables']}) to create level {current_level + 1} pagetable for {entry}"
+                        f"Insufficient pagetable pages (num_pages_for_jumpstart_smode_pagetables = {self.jumpstart_source_attributes['diag_attributes']['num_pages_for_jumpstart_smode_pagetables']}) to create level {current_level + 1} pagetable for {entry}"
                     )
                     sys.exit(1)
 
@@ -510,7 +544,7 @@ class DiagAttributes:
                     next_level_pagetable = self.get_PT_page(entry["va"], current_level + 1)
                     if next_level_pagetable is None:
                         log.error(
-                            f"Insufficient pagetable pages (num_pages_for_jumpstart_supervisor_pagetables = {self.jumpstart_source_attributes['diag_attributes']['num_pages_for_jumpstart_supervisor_pagetables']}) to create next level {current_level + 1} pagetable for {entry}"
+                            f"Insufficient pagetable pages (num_pages_for_jumpstart_smode_pagetables = {self.jumpstart_source_attributes['diag_attributes']['num_pages_for_jumpstart_smode_pagetables']}) to create next level {current_level + 1} pagetable for {entry}"
                         )
                         sys.exit(1)
 
@@ -660,7 +694,7 @@ class DiagAttributes:
             file.close()
 
     def generate_diag_attribute_functions(self, file_descriptor):
-        boolean_attributes = ["start_test_in_machine_mode"]
+        boolean_attributes = ["start_test_in_mmode"]
 
         self.generate_get_active_hart_mask_function(file_descriptor)
         if self.jumpstart_source_attributes["rivos_internal_build"] is True:
@@ -674,7 +708,7 @@ class DiagAttributes:
 
     def generate_boolean_diag_attribute_functions(self, file_descriptor, boolean_attributes):
         for attribute in boolean_attributes:
-            file_descriptor.write('.section .jumpstart.text.machine, "ax"\n\n')
+            file_descriptor.write('.section .jumpstart.text.mmode, "ax"\n\n')
             file_descriptor.write(f".global {attribute}\n")
             file_descriptor.write(f"{attribute}:\n\n")
 
@@ -684,11 +718,11 @@ class DiagAttributes:
             file_descriptor.write("   ret\n\n\n")
 
     def generate_get_active_hart_mask_function(self, file_descriptor):
-        modes = ["machine", "supervisor"]
+        modes = ["mmode", "smode"]
         for mode in modes:
             file_descriptor.write(f'.section .jumpstart.text.{mode}, "ax"\n\n')
-            file_descriptor.write(f".global get_active_hart_mask_from_{mode}_mode\n")
-            file_descriptor.write(f"get_active_hart_mask_from_{mode}_mode:\n\n")
+            file_descriptor.write(f".global get_active_hart_mask_from_{mode}\n")
+            file_descriptor.write(f"get_active_hart_mask_from_{mode}:\n\n")
 
             active_hart_mask = int(
                 self.jumpstart_source_attributes["diag_attributes"]["active_hart_mask"], 2
@@ -707,7 +741,7 @@ class DiagAttributes:
             self.jumpstart_source_attributes["diag_attributes"]["active_hart_mask"], 2
         )
 
-        modes = ["machine", "supervisor"]
+        modes = ["mmode", "smode"]
         for mode in modes:
             file_descriptor.write(
                 f"""
@@ -717,8 +751,8 @@ class DiagAttributes:
 #   a1: hart mask of harts to sync.
 #   a2: hart id of primary hart for sync
 #   a3: sync point address (4 byte aligned)
-.global sync_harts_in_mask_from_{mode}_mode
-sync_harts_in_mask_from_{mode}_mode:
+.global sync_harts_in_mask_from_{mode}
+sync_harts_in_mask_from_{mode}:
   addi  sp, sp, -16
   sd  ra, 8(sp)
   sd  fp, 0(sp)
@@ -754,7 +788,7 @@ wait_for_all_harts_to_set_sync_point_bits_{mode}:
 
   bne t0, a1, jumpstart_{mode}_fail
 
-  j return_from_sync_harts_in_mask_from_{mode}_mode
+  j return_from_sync_harts_in_mask_from_{mode}
 
 wait_for_primary_hart_to_clear_sync_point_bits_{mode}:
   # non-primary harts wait for the primary hart to clear the sync point bits.
@@ -763,7 +797,7 @@ wait_for_primary_hart_to_clear_sync_point_bits_{mode}:
   andi t0, t0, 1
   bnez t0, wait_for_primary_hart_to_clear_sync_point_bits_{mode}
 
-return_from_sync_harts_in_mask_from_{mode}_mode:
+return_from_sync_harts_in_mask_from_{mode}:
   CHECKTC_ENABLE
 
   ld  ra, 8(sp)
@@ -771,19 +805,19 @@ return_from_sync_harts_in_mask_from_{mode}_mode:
   addi  sp, sp, 16
   ret
 
-.global sync_all_harts_from_{mode}_mode
-sync_all_harts_from_{mode}_mode:
+.global sync_all_harts_from_{mode}
+sync_all_harts_from_{mode}:
   addi  sp, sp, -16
   sd  ra, 8(sp)
   sd  fp, 0(sp)
   addi    fp, sp, 16
 
-  jal get_thread_attributes_hart_id_from_{mode}_mode
+  jal get_thread_attributes_hart_id_from_{mode}
   li a1, {active_hart_mask}
   li a2, PRIMARY_HART_ID
   la a3, hart_sync_point
 
-  jal sync_harts_in_mask_from_{mode}_mode
+  jal sync_harts_in_mask_from_{mode}
 
   ld  ra, 8(sp)
   ld  fp, 0(sp)
@@ -798,17 +832,17 @@ sync_all_harts_from_{mode}_mode:
         )
         file_descriptor.write(f"#define DIAG_SATP_MODE {self.get_attribute('satp_mode')}\n")
 
-        modes = ["machine", "supervisor"]
+        modes = ["mmode", "smode"]
         for mode in modes:
             file_descriptor.write(f'.section .jumpstart.text.{mode}, "ax"\n\n')
 
-            file_descriptor.write(f".global get_diag_satp_mode_from_{mode}_mode\n")
-            file_descriptor.write(f"get_diag_satp_mode_from_{mode}_mode:\n\n")
+            file_descriptor.write(f".global get_diag_satp_mode_from_{mode}\n")
+            file_descriptor.write(f"get_diag_satp_mode_from_{mode}:\n\n")
             file_descriptor.write("    li   a0, DIAG_SATP_MODE\n")
             file_descriptor.write("    ret\n\n\n")
 
-            file_descriptor.write(f".global enable_mmu_from_{mode}_mode\n")
-            file_descriptor.write(f"enable_mmu_from_{mode}_mode:\n\n")
+            file_descriptor.write(f".global enable_mmu_from_{mode}\n")
+            file_descriptor.write(f"enable_mmu_from_{mode}:\n\n")
             file_descriptor.write("    li   t0, DIAG_SATP_MODE\n")
             file_descriptor.write("    slli  t0, t0, SATP64_MODE_SHIFT\n")
             file_descriptor.write(f"    la t1, {self.pt_attributes.pt_start_label}\n")

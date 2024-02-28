@@ -3,8 +3,13 @@
 # SPDX-License-Identifier: Apache-2.0
 
 jumpstart_public_sources = files(
-                          'jump_to_main.machine.S',
-                          'uart_functions.machine.c',
-                          'end.machine.S'
+                          'jump_to_main.mmode.S',
+                          'end.mmode.S'
                           )
+jumpstart_public_drivers = []
+
+subdir('uart')
+
+jumpstart_public_sources += jumpstart_public_drivers
+
 jumpstart_source_attributes_yaml = files('jumpstart_public_source_attributes.yaml')

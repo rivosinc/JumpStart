@@ -5,11 +5,14 @@
 #pragma once
 
 #include <inttypes.h>
+#include <stdarg.h>
 
 #include "jumpstart_data_structures.h"
 #include "jumpstart_defines.h"
 
-#define __ASM_STR(x) #x
+#define __ASM_STR(x)  #x
+
+#define ARRAY_SIZE(a) (sizeof(a) / sizeof(*a))
 
 #define read_csr(reg)                                                          \
   ({                                                                           \
@@ -63,40 +66,41 @@
 // Enables instruction by instruction checking when running on the simulator,
 #define enable_checktc()  __asm__ __volatile__(ADD_QUOTES(CHECKTC_ENABLE))
 
-int run_function_in_user_mode(uint64_t function_address, uint64_t arg);
-int run_function_in_supervisor_mode(uint64_t function_address);
+// The functions run through the run_function_in_*mode() functions can be
+// passed up to 6 arguments.
+int run_function_in_umode(uint64_t function_address, ...);
+int run_function_in_smode(uint64_t function_address, ...);
 
-void disable_mmu_from_supervisor_mode(void);
+void disable_mmu_from_smode(void);
 
-uint64_t get_machine_mode_trap_handler_override(uint64_t mcause);
-void register_machine_mode_trap_handler_override(uint64_t mcause,
-                                                 uint64_t handler_address);
-void deregister_machine_mode_trap_handler_override(uint64_t mcause);
+uint64_t get_mmode_trap_handler_override(uint64_t mcause);
+void register_mmode_trap_handler_override(uint64_t mcause,
+                                          uint64_t handler_address);
+void deregister_mmode_trap_handler_override(uint64_t mcause);
 
-uint64_t get_supervisor_mode_trap_handler_override(uint64_t mcause);
-void register_supervisor_mode_trap_handler_override(uint64_t mcause,
-                                                    uint64_t handler_address);
-void deregister_supervisor_mode_trap_handler_override(uint64_t mcause);
+uint64_t get_smode_trap_handler_override(uint64_t mcause);
+void register_smode_trap_handler_override(uint64_t mcause,
+                                          uint64_t handler_address);
+void deregister_smode_trap_handler_override(uint64_t mcause);
 
-uint64_t get_thread_attributes_bookend_magic_number_from_supervisor_mode(void);
-uint64_t
-get_thread_attributes_trap_override_struct_address_from_supervisor_mode(void);
-uint8_t get_thread_attributes_current_mode_from_supervisor_mode(void);
-uint8_t get_thread_attributes_hart_id_from_supervisor_mode(void);
+uint64_t get_thread_attributes_bookend_magic_number_from_smode(void);
+uint64_t get_thread_attributes_trap_override_struct_address_from_smode(void);
+uint8_t get_thread_attributes_current_mode_from_smode(void);
+uint8_t get_thread_attributes_hart_id_from_smode(void);
 
-uint64_t get_thread_attributes_bookend_magic_number_from_machine_mode(void);
-uint64_t
-get_thread_attributes_trap_override_struct_address_from_machine_mode(void);
-uint8_t get_thread_attributes_current_mode_from_machine_mode(void);
-uint8_t get_thread_attributes_hart_id_from_machine_mode(void);
+uint64_t get_thread_attributes_bookend_magic_number_from_mmode(void);
+uint64_t get_thread_attributes_trap_override_struct_address_from_mmode(void);
+uint8_t get_thread_attributes_current_mode_from_mmode(void);
+uint8_t get_thread_attributes_hart_id_from_mmode(void);
 
-uint8_t get_diag_satp_mode_from_supervisor_mode(void);
+uint8_t get_diag_satp_mode_from_smode(void);
 
-uint64_t get_active_hart_mask_from_supervisor_mode(void);
-uint64_t get_active_hart_mask_from_machine_mode(void);
+uint64_t get_active_hart_mask_from_smode(void);
+uint64_t get_active_hart_mask_from_mmode(void);
 
-void sync_all_harts_from_supervisor_mode(void);
-void sync_all_harts_from_machine_mode(void);
+void sync_all_harts_from_smode(void);
+void sync_all_harts_from_mmode(void);
 
-void jumpstart_supervisor_fail(void) __attribute__((noreturn));
-void jumpstart_machine_fail(void) __attribute__((noreturn));
+void jumpstart_umode_fail(void) __attribute__((noreturn));
+void jumpstart_smode_fail(void) __attribute__((noreturn));
+void jumpstart_mmode_fail(void) __attribute__((noreturn));

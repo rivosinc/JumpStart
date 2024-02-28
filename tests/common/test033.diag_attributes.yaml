@@ -4,7 +4,7 @@
 
 satp_mode: "sv39"
 
-start_test_in_mmode: True
+active_hart_mask: "0b1"
 
 mappings:
   -
@@ -16,26 +16,29 @@ mappings:
     pma_memory_type: "wb"
     linker_script_section: ".text"
   -
-    va: 0xC0022000
-    pa: 0xC0022000
+    va: 0xC0021000
+    pa: 0xC0021000
     xwr: "0b011"
     page_size: 0x1000
     num_pages: 1
     pma_memory_type: "wb"
     linker_script_section: ".data"
   -
-    va: 0xC0023000
-    pa: 0xC0023000
+    va: 0xC0022000
+    pa: 0xC0022000
     xwr: "0b101"
-    page_size: 0x1000
-    num_pages: 2
-    pma_memory_type: "wb"
-    linker_script_section: ".text.smode"
-  -
-    va: 0xC0025000
-    pa: 0xC0025000
-    xwr: "0b011"
+    umode: "0b1"
+    valid: "0b1"
     page_size: 0x1000
     num_pages: 1
     pma_memory_type: "wb"
-    linker_script_section: ".data.smode"
+    linker_script_section: ".text.umode"
+  -
+    va: 0xC0023000
+    pa: 0xC0023000
+    xwr: "0b011"
+    umode: "0b1"
+    page_size: 0x1000
+    num_pages: 1
+    pma_memory_type: "wb"
+    linker_script_section: ".data.umode"

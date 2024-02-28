@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-diag_entry_label: _machine_mode_start
+diag_entry_label: _mmode_start
 
 rivos_internal_build: false
 
@@ -16,38 +16,38 @@ jumpstart_mmode:
   text:
     page_size: 0x1000
     num_pages: 4
-    linker_script_section: ".jumpstart.text.machine.init,.jumpstart.text.machine,.jumpstart.text.machine.end"
+    linker_script_section: ".jumpstart.text.mmode.init,.jumpstart.text.mmode,.jumpstart.text.mmode.end"
     pma_memory_type: "wb"
     no_pte_allocation: True
-jumpstart_supervisor:
+jumpstart_smode:
   text:
     page_size: 0x1000
     num_pages: 3
     xwr: "0b101"
     umode: "0b0"
     pma_memory_type: "wb"
-    linker_script_section: ".jumpstart.text.supervisor"
+    linker_script_section: ".jumpstart.text.smode"
   stack:
     page_size: 0x1000
     num_pages: 4
     xwr: "0b011"
     umode: "0b0"
     pma_memory_type: "wb"
-    linker_script_section: ".jumpstart.stack.supervisor"
+    linker_script_section: ".jumpstart.stack.smode"
   c_structs:
     page_size: 0x1000
     num_pages: 2
     xwr: "0b011"
     umode: "0b0"
     pma_memory_type: "wb"
-    linker_script_section: ".jumpstart.c_structs.supervisor"
+    linker_script_section: ".jumpstart.c_structs.smode"
   data:
     page_size: 0x1000
     num_pages: 2
     xwr: "0b011"
     umode: "0b0"
     pma_memory_type: "wb"
-    linker_script_section: ".jumpstart.data.supervisor"
+    linker_script_section: ".jumpstart.data.smode"
   sdata:
     page_size: 0x1000
     num_pages: 1
@@ -79,7 +79,7 @@ jumpstart_supervisor:
     xwr: "0b011"
     umode: "0b0"
     pma_memory_type: "wb"
-    linker_script_section: ".jumpstart.supervisor.heap"
+    linker_script_section: ".jumpstart.smode.heap"
 jumpstart_umode:
   text:
     page_size: 0x1000
@@ -100,12 +100,16 @@ jumpstart_umode:
 # These attributes can be overriden by the test attributes file or
 # at build time.
 diag_attributes:
-  start_test_in_machine_mode: false
-  num_pages_for_jumpstart_supervisor_pagetables: 30
-  num_pages_for_jumpstart_supervisor_bss: 7
-  num_pages_for_jumpstart_supervisor_rodata: 1
+  start_test_in_mmode: false
+  num_pages_for_jumpstart_smode_pagetables: 30
+  num_pages_for_jumpstart_smode_bss: 7
+  num_pages_for_jumpstart_smode_rodata: 1
   allow_page_table_modifications: false
-  machine_mode_start_address: 0x80000000
+  mmode_start_address: 0x80000000
+  # By default smode and umode areas will be placed after the mmode area
+  # unless given values by a diag.
+  smode_start_address: null
+  umode_start_address: null
   active_hart_mask: '0b1'
   allow_active_hart_mask_override: false
   satp_mode: 'sv39'
@@ -124,10 +128,10 @@ c_structs:
       bookend_magic_number: uint64_t
   trap_override_attributes:
     fields:
-      supervisor_mode_interrupt_handler_overrides: uint64_t,46
-      supervisor_mode_exception_handler_overrides: uint64_t,16
-      machine_mode_interrupt_handler_overrides: uint64_t,46
-      machine_mode_exception_handler_overrides: uint64_t,16
+      smode_interrupt_handler_overrides: uint64_t,46
+      smode_exception_handler_overrides: uint64_t,20
+      mmode_interrupt_handler_overrides: uint64_t,46
+      mmode_exception_handler_overrides: uint64_t,20
 
 defines:
   THREAD_ATTRIBUTES_BOOKEND_MAGIC_NUMBER_VALUE: 0x3317150533171505
@@ -142,8 +146,8 @@ defines:
   CHECKTC_ENABLE: nop
 
 syscall_numbers:
-  - SYSCALL_RUN_FUNC_IN_USER_MODE_COMPLETE
-  - SYSCALL_RUN_FUNC_IN_SUPERVISOR_MODE_COMPLETE
+  - SYSCALL_RUN_FUNC_IN_UMODE_COMPLETE
+  - SYSCALL_RUN_FUNC_IN_SMODE_COMPLETE
 
 # These are the registers that need to be saved/restored when moving
 # between U-mode and S-mode. We will generate S and U mode regions to

@@ -3,35 +3,78 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "cpu_bits.h"
-#include "jumpstart_functions.h"
+#include "jumpstart.h"
 
 // Supervisor functions
-// The assembly functions are already tagged with the .text.supervisor section
+// The assembly functions are already tagged with the .text.smode section
 // attribute.
+uint8_t asm_check_passed_in_arguments(uint8_t a0, uint8_t a1, uint8_t a2,
+                                      uint8_t a3, uint8_t a4, uint8_t a5,
+                                      uint8_t a6);
+uint8_t c_check_passed_in_arguments(uint8_t a0, uint8_t a1, uint8_t a2,
+                                    uint8_t a3, uint8_t a4, uint8_t a5,
+                                    uint8_t a6)
+    __attribute__((section(".text.smode"))) __attribute__((const));
 uint8_t get_bytes_to_copy(void);
 int copy_bytes(void);
-int compare_copied_bytes(void) __attribute__((section(".text.supervisor")))
+int compare_copied_bytes(void) __attribute__((section(".text.smode")))
 __attribute__((pure));
 
 extern uint64_t source_location;
 extern uint64_t destination_location;
 
+uint8_t c_check_passed_in_arguments(uint8_t a0, uint8_t a1, uint8_t a2,
+                                    uint8_t a3, uint8_t a4, uint8_t a5,
+                                    uint8_t a6) {
+  if (a0 != 1) {
+    return DIAG_FAILED;
+  }
+  if (a1 != 2) {
+    return DIAG_FAILED;
+  }
+  if (a2 != 3) {
+    return DIAG_FAILED;
+  }
+  if (a3 != 4) {
+    return DIAG_FAILED;
+  }
+  if (a4 != 5) {
+    return DIAG_FAILED;
+  }
+  if (a5 != 6) {
+    return DIAG_FAILED;
+  }
+  if (a6 != 7) {
+    return DIAG_FAILED;
+  }
+  return DIAG_PASSED;
+}
+
 int main(void) {
-  if (get_thread_attributes_hart_id_from_machine_mode() != 0) {
+  if (get_thread_attributes_hart_id_from_mmode() != 0) {
     return DIAG_FAILED;
   }
 
-  if (get_thread_attributes_bookend_magic_number_from_machine_mode() !=
+  if (get_thread_attributes_bookend_magic_number_from_mmode() !=
       THREAD_ATTRIBUTES_BOOKEND_MAGIC_NUMBER_VALUE) {
     return DIAG_FAILED;
   }
 
-  if (get_thread_attributes_current_mode_from_machine_mode() != PRV_M) {
+  if (get_thread_attributes_current_mode_from_mmode() != PRV_M) {
     return DIAG_FAILED;
   }
 
-  int bytes_to_copy =
-      run_function_in_supervisor_mode((uint64_t)get_bytes_to_copy);
+  if (run_function_in_smode((uint64_t)asm_check_passed_in_arguments, 1, 2, 3, 4,
+                            5, 6, 7) != DIAG_PASSED) {
+    return DIAG_FAILED;
+  }
+
+  if (run_function_in_smode((uint64_t)c_check_passed_in_arguments, 1, 2, 3, 4,
+                            5, 6, 7) != DIAG_PASSED) {
+    return DIAG_FAILED;
+  }
+
+  int bytes_to_copy = run_function_in_smode((uint64_t)get_bytes_to_copy);
   if (bytes_to_copy != 512) {
     return DIAG_FAILED;
   }
@@ -48,19 +91,19 @@ int main(void) {
       ++fill_value;
     }
 
-    if (run_function_in_supervisor_mode((uint64_t)copy_bytes) != 0) {
+    if (run_function_in_smode((uint64_t)copy_bytes) != 0) {
       return DIAG_FAILED;
     }
 
-    if (get_thread_attributes_current_mode_from_machine_mode() != PRV_M) {
+    if (get_thread_attributes_current_mode_from_mmode() != PRV_M) {
       return DIAG_FAILED;
     }
 
-    if (run_function_in_supervisor_mode((uint64_t)compare_copied_bytes) != 0) {
+    if (run_function_in_smode((uint64_t)compare_copied_bytes) != 0) {
       return DIAG_FAILED;
     }
 
-    if (get_thread_attributes_current_mode_from_machine_mode() != PRV_M) {
+    if (get_thread_attributes_current_mode_from_mmode() != PRV_M) {
       return DIAG_FAILED;
     }
   }
@@ -69,7 +112,7 @@ int main(void) {
 }
 
 int compare_copied_bytes(void) {
-  if (get_thread_attributes_current_mode_from_supervisor_mode() != PRV_S) {
+  if (get_thread_attributes_current_mode_from_smode() != PRV_S) {
     return DIAG_FAILED;
   }
 
