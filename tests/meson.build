@@ -6,18 +6,19 @@ fs = import('fs')
 
 source_suffixes = ['.S', '.c']
 
-subdir('common')
+start_in_mmode_tests = [] # diag main() is in mmode
+start_in_smode_tests = [] # diag main() is in smode
 
-unit_tests = common_tests
-unit_tests_disabled_on_qemu = common_tests_disabled_on_qemu
-unit_tests_disabled_on_spike = common_tests_disabled_on_spike
+tests_disabled_on_qemu = []
+tests_disabled_on_spike = []
+
+subdir('common')
 
 if get_option('rivos_internal_build') == true
   subdir('rivos_internal')
-  unit_tests += rivos_internal_tests
-  unit_tests_disabled_on_qemu += rivos_internal_tests_disabled_on_qemu
-  unit_tests_disabled_on_spike += rivos_internal_tests_disabled_on_spike
 endif
+
+unit_tests = start_in_mmode_tests + start_in_smode_tests
 
 foreach unit_test : unit_tests
   test_name = unit_test.get(0)
@@ -27,8 +28,8 @@ foreach unit_test : unit_tests
 
   test_expected_to_fail = unit_test.get(3, false)
 
-  test_disabled_on_qemu = test_name in unit_tests_disabled_on_qemu
-  test_disabled_on_spike = test_name in unit_tests_disabled_on_spike
+  test_disabled_on_qemu = test_name in tests_disabled_on_qemu
+  test_disabled_on_spike = test_name in tests_disabled_on_spike
 
   if get_option('diag_target') == 'spike' and test_disabled_on_spike == true
     continue
