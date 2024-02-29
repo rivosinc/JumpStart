@@ -478,6 +478,24 @@ sync_all_harts_from_{mode}:
         """
             )
 
+    def generate_smode_fail_functions(self, file_descriptor):
+        if "smode" in self.priv_modes_enabled:
+            file_descriptor.write('.section .jumpstart.text.smode, "ax"\n\n')
+            file_descriptor.write(".global jumpstart_smode_fail\n")
+            file_descriptor.write("jumpstart_smode_fail:\n")
+
+            if "mmode" in self.priv_modes_enabled:
+                # use jumpstart mmode env call
+                file_descriptor.write("  li  a0, DIAG_FAILED\n")
+                file_descriptor.write("  li  a7, SYSCALL_RUN_FUNC_IN_SMODE_COMPLETE\n")
+                file_descriptor.write("  ecall\n")
+            else:
+                # We expect to be running in smode_boot mode.
+                # Use sbi call to request mmode fw to shutdown system.
+                file_descriptor.write("  li  a0, 0\n")
+                file_descriptor.write("  li  a1, DIAG_FAILED\n")
+                file_descriptor.write("  jal sbi_system_reset\n")
+
     def generate_mmu_functions(self, file_descriptor):
         file_descriptor.write(
             f"# SATP.Mode is {self.jumpstart_source_attributes['diag_attributes']['satp_mode']}\n\n"
@@ -554,6 +572,8 @@ sync_all_harts_from_{mode}:
             self.generate_diag_attribute_functions(file)
 
             self.generate_mmu_functions(file)
+
+            self.generate_smode_fail_functions(file)
 
             self.generate_hart_sync_functions(file)
 

@@ -7,12 +7,6 @@ mmode_sources += files(
                           'end.mmode.S'
                           )
 
-if get_option('smode_boot') == true
-  smode_sources += files(
-                          'smode_boot_end.smode.S'
-                        )
-endif
-
 subdir('uart')
 
 jumpstart_source_attributes_yaml = files('jumpstart_public_source_attributes.yaml')

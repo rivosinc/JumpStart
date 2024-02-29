@@ -201,12 +201,6 @@ handle_env_call_from_umode:
 
   j jumpstart_smode_fail
 
-.global jumpstart_smode_fail
-jumpstart_smode_fail:
-  li a0, DIAG_FAILED
-  li  a7, SYSCALL_RUN_FUNC_IN_SMODE_COMPLETE
-  ecall
-
 handle_syscall_run_func_in_umode_complete:
   # This is the return to supervisor path for run_function_in_umode().
 

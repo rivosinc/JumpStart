@@ -9,6 +9,61 @@
 
 # In smode_boot mode, other firmwares run in M-mode and drop hand over control
 # to JumpStart in S-mode. This code is the entry point for such environments.
+# We expect that only one hart is running at this point and all the other
+# harts are in STOPPED state. The running hart will make SBI HSM calls to
+# wake up the other harts and start them running in S-mode.
+# Inputs:
+#   a0: This hart's hartid.
+.global sbi_trampoline
+sbi_trampoline:
+  mv t0, a0
+  li t1, 0  # hid = 0
+  jal get_active_hart_mask_from_smode
+  mv t2, a0 # active_hart_mask
+
+start_active_harts_loop:
+  beq  t1, t0, invoke_sbi_start_hart_done # Don't run sbi_hart_start on self.
+
+  andi t3, t2, 1    # t3 = active_hart_mask & 1
+  bnez t3, invoke_sbi_start_hart # Run sbi_hart_start on this active hart.
+
+  j invoke_sbi_start_hart_done
+
+invoke_sbi_start_hart:
+  mv a0, t1               # param1: hartid of hart to start.
+  la a1, smode_boot_start # param2: start_address at which to start the hart.
+  li a2, 0                # param3: opaque
+  jal sbi_hart_start
+  bnez a0, jumpstart_smode_fail # Fail if sbi_hart_start returns non-zero
+
+invoke_sbi_hart_status:
+  mv a0, t1
+  jal sbi_hart_get_status
+  bnez a0, jumpstart_smode_fail # Fail if sbi_hart_get_status returns non-zero
+
+  # the hart status is returned in a1.
+  # SBI HART status is 0 if the hart is running. Wait till the hart is running.
+  bnez a1, invoke_sbi_hart_status
+
+invoke_sbi_start_hart_done:
+  srli t2, t2, 1    # active_hart_mask >> 1
+  beqz t2, start_active_harts_loop_end # if active_hart_mask == 0, done.
+
+  addi t1, t1, 1    # hid++
+  j start_active_harts_loop
+
+start_active_harts_loop_end:
+  jal  get_active_hart_mask_from_smode
+  mv   t1, a0 # active_hart_mask
+  mv   a0, t0  # $a0 = my_hart_id
+  srl  t1, t1, a0
+  andi t1, t1, 1
+  bnez t1, smode_boot_start # go to smode_boot_start if active thread
+                            # or else stop this hart and wfi
+  jal sbi_hart_stop
+
+  j just_wfi_from_smode # should never get here.
+
 # Inputs:
 #   a0: hart id.
 .global smode_boot_start
@@ -45,4 +100,98 @@ smode_boot_start:
 
   call main
 
-  j smode_boot_end
+.global smode_boot_end
+smode_boot_end:
+  # a0 will contain diag pass/fail status.
+
+  # Store pass/fail status into the hart status tracker.
+  GET_THREAD_ATTRIBUTES_HART_ID(t0)
+  la t1, hart_status_tracker
+  add t1, t1, t0
+  sb a0, 0(t1)
+
+  # Have all the secondary harts wait on the wfi.
+  # the primary hart will go through the exit routine.
+  li t1, PRIMARY_HART_ID
+  bne t0, t1, just_wfi_from_smode
+
+  CHECKTC_DISABLE
+
+  # Check the status of all the active harts.
+  # a0: Active hart mask. Gets shifted right as we check each hart.
+  # t0: hart_status_tracker address
+  # t1: Hart id of the current hart we're checking status of.
+  jal get_active_hart_mask_from_smode
+  la t0, hart_status_tracker
+  li t1, 0x0
+
+check_hart_status_loop:
+  andi t6, a0, 0x1
+  beqz t6, done_with_current_hart
+
+  # Active core, check it's pass/fail status.
+  add t5, t0, t1 # pointer to the hart's status
+
+  li t6, HART_INACTIVE
+wait_for_inactive_hart_loop:
+  lb t4, 0(t5)
+  beq t4, t6, wait_for_inactive_hart_loop
+
+  li t6, HART_RUNNING
+wait_for_running_hart_loop:
+  lb t4, 0(t5)
+  beq t4, t6, wait_for_running_hart_loop
+
+  li t6, DIAG_PASSED
+  bne t4, t6, jumpstart_smode_boot_fail
+
+done_with_current_hart:
+  srli a0, a0, 1
+  addi t1, t1, 1
+  bnez a0, check_hart_status_loop
+
+  CHECKTC_ENABLE
+
+  # All harts have passed, we're done.
+  li t1, DIAG_PASSED
+  bne a0, t1, jumpstart_smode_boot_fail
+
+  li a0, DIAG_PASSED
+
+  j run_end_of_sim_sequence
+
+.global jumpstart_smode_boot_fail
+jumpstart_smode_boot_fail:
+  li a0, DIAG_FAILED
+
+run_end_of_sim_sequence:
+  # NOTE: this will not work on RTL simulation.
+  mv t0, a0 # save diag pass/fail in a1
+  jal in_qemu_mode_from_smode
+  mv t1, a0
+  mv a0, t0
+  bnez t1, invoke_sbi_reset
+  slli t1, t0, 1
+  ori t1, t1, 1
+
+  la t0, tohost
+  sd t1, 0(t0)
+
+  1: j 1b # wait for termination
+
+invoke_sbi_reset:
+  mv a1, a0
+  li a0, 0 # sbi_system_reset: param1(a0): SHUTDOWN
+           # sbi_system_reset: param2(a1): DIAG_PASS(0)/DIAG_FAIL(1)
+  jal sbi_system_reset
+  j just_wfi_from_smode
+
+.section .jumpstart.data.smode, "aw", @progbits
+
+.align 6
+.globl tohost
+tohost: .dword 0
+
+.align 6
+.globl fromhost
+fromhost: .dword 0

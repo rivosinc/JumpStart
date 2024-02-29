@@ -26,7 +26,7 @@ diag_attribute_overrides = get_option('diag_attribute_overrides')
 
 if get_option('smode_boot') == true
   riscv_priv_modes_enabled = ['smode', 'umode']
-  jumpstart_source_attribute_overrides += ['diag_entry_label=smode_boot_start']
+  jumpstart_source_attribute_overrides += ['diag_entry_label=sbi_trampoline']
   diag_attribute_overrides += ['smode_start_address=' + get_option('smode_boot_start_address')]
 endif
 

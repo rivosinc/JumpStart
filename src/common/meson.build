@@ -18,6 +18,7 @@ smode_sources += files('data.smode.S',
 if get_option('smode_boot') == true
   smode_sources += files(
                           'smode_boot.smode.S',
+                          'sbi.smode.S'
                         )
 endif
 
