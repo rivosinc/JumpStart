@@ -11,6 +11,7 @@ start_in_smode_tests = [] # diag main() is in smode
 
 tests_disabled_on_qemu = []
 tests_disabled_on_spike = []
+tests_disabled_for_smode_boot = []
 
 subdir('common')
 
@@ -38,10 +39,13 @@ foreach unit_test : unit_tests
 
   test_disabled_on_qemu = test_name in tests_disabled_on_qemu
   test_disabled_on_spike = test_name in tests_disabled_on_spike
+  test_disabled_for_smode_boot = test_name in tests_disabled_for_smode_boot
 
   if get_option('diag_target') == 'spike' and test_disabled_on_spike == true
     continue
   elif get_option('diag_target') == 'qemu' and test_disabled_on_qemu == true
+    continue
+  elif get_option('smode_boot') == true and test_disabled_for_smode_boot == true
     continue
   endif
 

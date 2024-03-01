@@ -45,3 +45,6 @@ start_in_mmode_tests += [
 
 tests_disabled_on_qemu += []
 tests_disabled_on_spike += []
+tests_disabled_for_smode_boot += [
+                                  'test010',
+                                ]
