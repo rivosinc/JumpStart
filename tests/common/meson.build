@@ -44,6 +44,8 @@ start_in_mmode_tests += [
   ['test023', 'Handle S mode exceptions in M mode handlers.'],
 ]
 
+smode_boot_tests += []
+
 tests_disabled_on_qemu += []
 tests_disabled_on_spike += []
 tests_disabled_for_smode_boot += [

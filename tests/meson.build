@@ -8,6 +8,7 @@ source_suffixes = ['.S', '.c']
 
 start_in_mmode_tests = [] # diag main() is in mmode
 start_in_smode_tests = [] # diag main() is in smode
+smode_boot_tests     = [] # diag needs smode_boot=true.
 
 tests_disabled_on_qemu = []
 tests_disabled_on_spike = []
@@ -27,6 +28,10 @@ if 'mmode' in riscv_priv_modes_enabled
 endif
 if 'smode' in riscv_priv_modes_enabled
   unit_tests += start_in_smode_tests
+endif
+
+if get_option('smode_boot') == true
+  unit_tests += smode_boot_tests
 endif
 
 foreach unit_test : unit_tests
