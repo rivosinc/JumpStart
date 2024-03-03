@@ -7,7 +7,7 @@ import logging as log
 import math
 import sys
 
-from public.lib import PageSize
+from memory_mapping.lib import PageSize
 from utils.lib import BitField
 
 
@@ -135,11 +135,10 @@ class PageTables:
 
         self.start_address = None
         for mapping in memory_mappings:
-            if (
-                "linker_script_section" in mapping
-                and "pagetables" in mapping["linker_script_section"]
-            ):
-                self.start_address = mapping["pa"]
+            if mapping.get_field(
+                "linker_script_section"
+            ) is not None and "pagetables" in mapping.get_field("linker_script_section"):
+                self.start_address = mapping.get_field("pa")
                 break
 
         if self.start_address is None:
@@ -265,20 +264,20 @@ class PageTables:
     def split_mappings_at_page_granularity(self, memory_mappings):
         split_mappings = []
         for entry in memory_mappings:
-            if "no_pte_allocation" in entry and entry["no_pte_allocation"] is True:
+            if entry.get_field("no_pte_allocation") is True:
                 continue
 
-            va = entry["va"]
-            pa = entry["pa"]
-            for _ in range(entry["num_pages"]):
+            va = entry.get_field("va")
+            pa = entry.get_field("pa")
+            for _ in range(entry.get_field("num_pages")):
                 new_entry = entry.copy()
-                new_entry["va"] = va
-                new_entry["pa"] = pa
-                new_entry["num_pages"] = 1
+                new_entry.set_field("va", va)
+                new_entry.set_field("pa", pa)
+                new_entry.set_field("num_pages", 1)
                 split_mappings.append(new_entry)
 
-                va += entry["page_size"]
-                pa += entry["page_size"]
+                va += entry.get_field("page_size")
+                pa += entry.get_field("page_size")
 
         return split_mappings
 
@@ -302,8 +301,8 @@ class PageTables:
     # Populates the sparse memory with the pagetable entries
     def create_pagetables_for_mappings(self, memory_mappings):
         for entry in self.split_mappings_at_page_granularity(memory_mappings):
-            assert entry["page_size"] in self.get_attribute("page_sizes")
-            leaf_level = self.get_attribute("page_sizes").index(entry["page_size"])
+            assert entry.get_field("page_size") in self.get_attribute("page_sizes")
+            leaf_level = self.get_attribute("page_sizes").index(entry.get_field("page_size"))
             assert leaf_level < self.get_attribute("num_levels")
             log.debug("\n")
             log.debug(f"Generating PTEs for {entry}")
@@ -311,7 +310,7 @@ class PageTables:
             current_level = 0
 
             while current_level <= leaf_level:
-                current_level_PT_page = self.get_page(entry["va"], current_level)
+                current_level_PT_page = self.get_page(entry.get_field("va"), current_level)
 
                 current_level_range_start = current_level_PT_page.get_page_pa()
                 current_level_range_end = current_level_range_start + (PageSize.SIZE_4K)
@@ -321,27 +320,28 @@ class PageTables:
                 )
 
                 if current_level < leaf_level:
-                    next_level_pagetable = self.get_page(entry["va"], current_level + 1)
+                    next_level_pagetable = self.get_page(entry.get_field("va"), current_level + 1)
 
                     next_level_range_start = next_level_pagetable.get_page_pa()
                     next_level_range_end = next_level_range_start + (PageSize.SIZE_4K)
 
                     next_level_pa = next_level_range_start + BitField.extract_bits(
-                        entry["va"], self.get_attribute("va_vpn_bits")[current_level]
+                        entry.get_field("va"), self.get_attribute("va_vpn_bits")[current_level]
                     ) * self.get_attribute("pte_size_in_bytes")
 
                     assert next_level_pa < next_level_range_end
                 else:
-                    xwr_bits = int(entry["xwr"], 2)
+                    xwr_bits = entry.get_field("xwr")
                     assert xwr_bits != 0x2 and xwr_bits != 0x6
                     pte_value = BitField.place_bits(
                         pte_value, xwr_bits, self.attributes.common_attributes["xwr_bits"]
                     )
 
-                    if "umode" in entry:
-                        umode_bit = int(entry["umode"], 2)
+                    if entry.get_field("umode") is not None:
                         pte_value = BitField.place_bits(
-                            pte_value, umode_bit, self.attributes.common_attributes["umode_bit"]
+                            pte_value,
+                            entry.get_field("umode"),
+                            self.attributes.common_attributes["umode_bit"],
                         )
 
                     pte_value = BitField.place_bits(
@@ -351,21 +351,21 @@ class PageTables:
                         pte_value, 1, self.attributes.common_attributes["d_bit"]
                     )
 
-                    if "pbmt_mode" in entry:
+                    if entry.get_field("pbmt_mode") is not None:
                         pbmt_mode = self.attributes.convert_pbmt_mode_string_to_mode(
-                            entry["pbmt_mode"]
+                            entry.get_field("pbmt_mode")
                         )
                         pte_value = BitField.place_bits(
                             pte_value, pbmt_mode, self.attributes.common_attributes["pbmt_bits"]
                         )
 
-                    if "valid" in entry:
-                        valid_bit = int(entry["valid"], 2)
-                        pte_value = BitField.place_bits(
-                            pte_value, valid_bit, self.attributes.common_attributes["valid_bit"]
-                        )
+                    pte_value = BitField.place_bits(
+                        pte_value,
+                        entry.get_field("valid"),
+                        self.attributes.common_attributes["valid_bit"],
+                    )
 
-                    next_level_pa = entry["pa"]
+                    next_level_pa = entry.get_field("pa")
 
                 for ppn_id in range(len(self.get_attribute("pa_ppn_bits"))):
                     ppn_value = BitField.extract_bits(
@@ -375,7 +375,7 @@ class PageTables:
                         pte_value, ppn_value, self.get_attribute("pte_ppn_bits")[ppn_id]
                     )
                 current_level_pt_offset = BitField.extract_bits(
-                    entry["va"], self.get_attribute("va_vpn_bits")[current_level]
+                    entry.get_field("va"), self.get_attribute("va_vpn_bits")[current_level]
                 )
                 pte_address = (
                     current_level_range_start
