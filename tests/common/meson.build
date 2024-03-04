@@ -26,13 +26,14 @@ start_in_smode_tests += [
   ['test021', '2P translate_VA() and page table modification test.', '-p2', false],
   ['test022', 'Exit with jumpstart_smode_fail() to test fail path.', '', true],
   ['test026', 'VA != PA mapping.'],
-  ['test027', 'VA aliasing test.'],
+  ['test027', 'sv39 VA aliasing test.'],
   ['test028', 'Super Pages (SATP.mode = sv39) VA translation test.', '-m0x80000000:0x40000000,0xC0000000:0x1000,0xC0020000:0x2000,0xC0022000:0x1000,0xD0000000:0x400000,0xE0000000:0x400000,0xD0400000:0x200000,0x100000000:0x4000000,0x140000000:0x40000000'],
   ['test029', 'Super Pages (SATP.mode = sv48) VA translation test.', '-m0x80000000:0x40000000,0xC0000000:0x1000,0xC0020000:0x2000,0xC0022000:0x1000,0xD0000000:0x400000,0xE0000000:0x400000,0xD0400000:0x200000,0x100000000:0x4000000,0x140000000:0x40000000'],
   ['test030', 'Heap malloc test.'],
   ['test031', 'Simple spinlock test with 4 harts', '-p4'],
   ['test033', 'Exit with jumpstart_umode_fail() to test umode fail path.', '', true],
   ['test034', 'Simple spinlock test with 4 active harts and 4 inactive ones.', '-p8'],
+  ['test036', 'sv48 VA aliasing test.'],
 ]
 
 start_in_mmode_tests += [

@@ -599,15 +599,15 @@ class DiagSource:
         pte_region_sparse_memory_start = self.PT_pages[0].get_sparse_memory_address()
         page_size = PageSize.SIZE_4K
         pte_region_sparse_memory_end = (
-            self.PT_pages[len(self.PT_pages) - 1].get_sparse_memory_address() + page_size
+            self.PT_pages[len(self.PT_pages) - 1].get_sparse_memory_address()
+            + page_size
+            - self.get_attribute("pte_size_in_bytes")
         )
 
         if pte_region_sparse_memory_start not in self.pte_region_sparse_memory:
             self.pte_region_sparse_memory[pte_region_sparse_memory_start] = 0
         if pte_region_sparse_memory_end not in self.pte_region_sparse_memory:
-            self.pte_region_sparse_memory[
-                pte_region_sparse_memory_end - self.get_attribute("pte_size_in_bytes")
-            ] = 0
+            self.pte_region_sparse_memory[pte_region_sparse_memory_end] = 0
 
     def generate_linker_script(self, output_linker_script):
         with open(output_linker_script, "w") as file:
