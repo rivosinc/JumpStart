@@ -7,7 +7,6 @@
 # Generates the diag source files based on the diag attributes file.
 
 import argparse
-import enum
 import logging as log
 import math
 import os
@@ -15,8 +14,9 @@ import sys
 
 import public.lib as public
 import yaml
+from pagetables.lib import PageTableAttributes, PageTables
 from public.lib import PageSize
-from utils.lib import BitField, DictUtils, ListUtils
+from utils.lib import DictUtils, ListUtils
 
 try:
     import rivos_internal.lib as rivos_internal
@@ -36,113 +36,7 @@ class BooleanDiagAttribute:
         return self.modes
 
 
-class PageTablePage:
-    def __init__(self, sparse_memory_address, va, level, size):
-        self.sparse_memory_address = sparse_memory_address
-        self.va = va
-        self.level = level
-        self.size = size
-
-    def __str__(self):
-        return f"PageTablePage: sparse_memory_address={hex(self.sparse_memory_address)}, va={hex(self.va)}, level={hex(self.level)}, size={hex(self.size)}"
-
-    def get_sparse_memory_address(self):
-        return self.sparse_memory_address
-
-    def get_va(self):
-        return self.va
-
-    def get_level(self):
-        return self.level
-
-    def get_size(self):
-        return self.size
-
-    def contains(self, va, level):
-        if level != self.level:
-            return False
-        if va >= self.va and va < (self.va + self.size):
-            return True
-        return False
-
-
-class PbmtMode(enum.IntEnum):
-    PMA = 0
-    NC = 1
-    IO = 2
-
-
-class PageTableAttributes:
-    pt_start_label = "pagetables_start"
-
-    common_attributes = {
-        "page_offset": 12,
-        "valid_bit": (0, 0),
-        "xwr_bits": (3, 1),
-        "umode_bit": (4, 4),
-        "global_bit": (5, 5),
-        "a_bit": (6, 6),
-        "d_bit": (7, 7),
-        "pbmt_bits": (62, 61),
-    }
-
-    mode_attributes = {
-        "sv39": {
-            "satp_mode": 8,
-            "pte_size_in_bytes": 8,
-            "num_levels": 3,
-            "va_vpn_bits": [(38, 30), (29, 21), (20, 12)],
-            "pa_ppn_bits": [(55, 30), (29, 21), (20, 12)],
-            "pte_ppn_bits": [(53, 28), (27, 19), (18, 10)],
-            "page_sizes": [PageSize.SIZE_1G, PageSize.SIZE_2M, PageSize.SIZE_4K],
-        },
-        "sv48": {
-            "satp_mode": 9,
-            "pte_size_in_bytes": 8,
-            "num_levels": 4,
-            "va_vpn_bits": [(47, 39), (38, 30), (29, 21), (20, 12)],
-            "pa_ppn_bits": [(55, 39), (38, 30), (29, 21), (20, 12)],
-            "pte_ppn_bits": [(53, 37), (36, 28), (27, 19), (18, 10)],
-            "page_sizes": [
-                PageSize.SIZE_512G,
-                PageSize.SIZE_1G,
-                PageSize.SIZE_2M,
-                PageSize.SIZE_4K,
-            ],
-        },
-    }
-
-    def convert_pbmt_mode_string_to_mode(self, mode_string):
-        if mode_string == "pma":
-            return PbmtMode.PMA
-        elif mode_string == "nc":
-            return PbmtMode.NC
-        elif mode_string == "io":
-            return PbmtMode.IO
-        else:
-            log.error(f"Unknown pbmt mode {mode_string}")
-            sys.exit(1)
-
-    def convert_pbmt_mode_to_string(self, mode):
-        if mode == PbmtMode.PMA:
-            return "pma"
-        elif mode == PbmtMode.NC:
-            return "nc"
-        elif mode == PbmtMode.IO:
-            return "io"
-        else:
-            log.error(f"Unknown pbmt mode {mode}")
-            sys.exit(1)
-
-
 class DiagSource:
-    pt_attributes = PageTableAttributes()
-    num_guard_pages_generated = 0
-
-    PT_section_start_address = None
-    PT_pages = []
-    pte_region_sparse_memory = {}
-
     def __init__(
         self,
         jumpstart_source_attributes_yaml,
@@ -151,6 +45,8 @@ class DiagSource:
         override_diag_attributes,
         supported_modes,
     ):
+        self.num_guard_pages_generated = 0
+
         self.diag_attributes_yaml = diag_attributes_yaml
         with open(diag_attributes_yaml) as f:
             diag_attributes = yaml.safe_load(f)
@@ -215,9 +111,13 @@ class DiagSource:
 
         self.sanity_check_memory_map()
 
-        self.create_pagetables_in_memory_for_mappings()
-
-        self.sanity_check_memory_map()
+        self.page_tables = PageTables(
+            self.jumpstart_source_attributes["diag_attributes"]["satp_mode"],
+            self.jumpstart_source_attributes["diag_attributes"][
+                "num_pages_for_jumpstart_smode_pagetables"
+            ],
+            self.memory_map,
+        )
 
     def sanity_check_memory_map(self):
         public.sanity_check_memory_map(self.memory_map)
@@ -235,7 +135,8 @@ class DiagSource:
         if self.jumpstart_source_attributes["rivos_internal_build"] is True:
             self.memory_map.extend(
                 rivos_internal.get_rivos_specific_mappings(
-                    self.get_attribute("page_offset"), self.jumpstart_source_attributes
+                    PageTableAttributes.common_attributes["page_offset"],
+                    self.jumpstart_source_attributes,
                 )
             )
 
@@ -248,7 +149,7 @@ class DiagSource:
         assert "satp_mode" in self.jumpstart_source_attributes["diag_attributes"]
         assert (
             self.jumpstart_source_attributes["diag_attributes"]["satp_mode"]
-            in self.pt_attributes.mode_attributes
+            in PageTableAttributes.mode_attributes
         )
 
     def append_to_mappings(
@@ -262,7 +163,12 @@ class DiagSource:
         linker_script_section,
         no_pte_allocation,
     ):
-        assert page_size in self.get_attribute("page_sizes")
+        assert (
+            page_size
+            in PageTableAttributes.mode_attributes[
+                self.jumpstart_source_attributes["diag_attributes"]["satp_mode"]
+            ]["page_sizes"]
+        )
 
         previous_mapping_id = len(self.memory_map) - 1
         previous_mapping = self.memory_map[previous_mapping_id]
@@ -382,9 +288,7 @@ class DiagSource:
 
             if section_name == "pagetables":
                 num_mappings = len(self.memory_map)
-                self.PT_section_start_address = self.jumpstart_source_attributes["diag_attributes"][
-                    "mappings"
-                ][num_mappings - 1]["pa"]
+
                 if (
                     self.jumpstart_source_attributes["diag_attributes"][
                         "allow_page_table_modifications"
@@ -407,207 +311,6 @@ class DiagSource:
             True,
         )
         self.num_guard_pages_generated += 1
-
-    def split_mappings_at_page_granularity(self):
-        split_mappings = []
-        for entry in self.memory_map:
-            if "no_pte_allocation" in entry and entry["no_pte_allocation"] is True:
-                continue
-
-            va = entry["va"]
-            pa = entry["pa"]
-            for _ in range(entry["num_pages"]):
-                new_entry = entry.copy()
-                new_entry["va"] = va
-                new_entry["pa"] = pa
-                new_entry["num_pages"] = 1
-                split_mappings.append(new_entry)
-
-                va += entry["page_size"]
-                pa += entry["page_size"]
-
-        return split_mappings
-
-    def get_attribute(self, attribute):
-        if attribute in self.pt_attributes.common_attributes:
-            return self.pt_attributes.common_attributes[attribute]
-        assert (
-            attribute
-            in self.pt_attributes.mode_attributes[
-                self.jumpstart_source_attributes["diag_attributes"]["satp_mode"]
-            ]
-        )
-        return self.pt_attributes.mode_attributes[
-            self.jumpstart_source_attributes["diag_attributes"]["satp_mode"]
-        ][attribute]
-
-    def update_pte_region_sparse_memory(self, address, value):
-        if address in self.pte_region_sparse_memory:
-            assert self.pte_region_sparse_memory[address] == value
-            log.debug(f"[{hex(address)}] already contains {hex(value)}. No update needed.")
-        else:
-            self.pte_region_sparse_memory[address] = value
-            log.debug(f"[{hex(address)}] = {hex(value)}")
-
-    def get_pte_region_sparse_memory_contents_at(self, address):
-        if address in self.pte_region_sparse_memory:
-            return self.pte_region_sparse_memory[address]
-        return None
-
-    def get_PT_page(self, va, level):
-        log.debug(f"get_PT_page({hex(va)}, {level})")
-        # look for an existing pagetable page that contains the given VA
-        for page in self.PT_pages:
-            if page.contains(va, level):
-                log.debug(f"Found existing pagetable page {page}")
-                return page
-
-        # else allocate a new page
-        log.debug(f"Allocating new pagetable page for VA {hex(va)} at level {level}")
-
-        if (
-            len(self.PT_pages)
-            == self.jumpstart_source_attributes["diag_attributes"][
-                "num_pages_for_jumpstart_smode_pagetables"
-            ]
-        ):
-            # Can't create any more pagetable pages
-            return None
-
-        page_size = PageSize.SIZE_4K
-        pte_start_va_lsb = self.get_attribute("va_vpn_bits")[level][0] + 1
-        pte_start_va = (va >> pte_start_va_lsb) << pte_start_va_lsb
-        pte_va_range = 1 << (self.get_attribute("va_vpn_bits")[level][0] + 1)
-        # The start VA for the address range covered by this PTE should
-        # be a multiple of the size of the area it covers.
-        assert pte_start_va == (math.floor(va / pte_va_range)) * pte_va_range
-        new_PT_page = PageTablePage(
-            self.PT_section_start_address + page_size * len(self.PT_pages),
-            pte_start_va,
-            level,
-            pte_va_range,
-        )
-
-        log.debug(f"Allocated new pagetable page {new_PT_page}")
-
-        self.PT_pages.append(new_PT_page)
-
-        return new_PT_page
-
-    # Populates the sparse memory with the pagetable entries
-    def create_pagetables_in_memory_for_mappings(self):
-        for entry in self.split_mappings_at_page_granularity():
-            assert entry["page_size"] in self.get_attribute("page_sizes")
-            leaf_level = self.get_attribute("page_sizes").index(entry["page_size"])
-            assert leaf_level < self.get_attribute("num_levels")
-            log.debug("\n")
-            log.debug(f"Generating PTEs for {entry}")
-            log.debug(f"Leaf Level: {leaf_level}")
-            current_level = 0
-
-            while current_level <= leaf_level:
-                current_level_PT_page = self.get_PT_page(entry["va"], current_level)
-                if current_level_PT_page is None:
-                    log.error(
-                        f"Insufficient pagetable pages (num_pages_for_jumpstart_smode_pagetables = {self.jumpstart_source_attributes['diag_attributes']['num_pages_for_jumpstart_smode_pagetables']}) to create level {current_level + 1} pagetable for {entry}"
-                    )
-                    sys.exit(1)
-
-                current_level_range_start = current_level_PT_page.get_sparse_memory_address()
-                current_level_range_end = current_level_range_start + (PageSize.SIZE_4K)
-
-                pte_value = BitField.place_bits(
-                    0, 1, self.pt_attributes.common_attributes["valid_bit"]
-                )
-
-                if current_level < leaf_level:
-                    next_level_pagetable = self.get_PT_page(entry["va"], current_level + 1)
-                    if next_level_pagetable is None:
-                        log.error(
-                            f"Insufficient pagetable pages (num_pages_for_jumpstart_smode_pagetables = {self.jumpstart_source_attributes['diag_attributes']['num_pages_for_jumpstart_smode_pagetables']}) to create next level {current_level + 1} pagetable for {entry}"
-                        )
-                        sys.exit(1)
-
-                    next_level_range_start = next_level_pagetable.get_sparse_memory_address()
-                    next_level_range_end = next_level_range_start + (PageSize.SIZE_4K)
-
-                    next_level_pa = next_level_range_start + BitField.extract_bits(
-                        entry["va"], self.get_attribute("va_vpn_bits")[current_level]
-                    ) * self.get_attribute("pte_size_in_bytes")
-
-                    assert next_level_pa < next_level_range_end
-                else:
-                    xwr_bits = int(entry["xwr"], 2)
-                    assert xwr_bits != 0x2 and xwr_bits != 0x6
-                    pte_value = BitField.place_bits(
-                        pte_value, xwr_bits, self.pt_attributes.common_attributes["xwr_bits"]
-                    )
-
-                    if "umode" in entry:
-                        umode_bit = int(entry["umode"], 2)
-                        pte_value = BitField.place_bits(
-                            pte_value, umode_bit, self.pt_attributes.common_attributes["umode_bit"]
-                        )
-
-                    pte_value = BitField.place_bits(
-                        pte_value, 1, self.pt_attributes.common_attributes["a_bit"]
-                    )
-                    pte_value = BitField.place_bits(
-                        pte_value, 1, self.pt_attributes.common_attributes["d_bit"]
-                    )
-
-                    if "pbmt_mode" in entry:
-                        pbmt_mode = self.pt_attributes.convert_pbmt_mode_string_to_mode(
-                            entry["pbmt_mode"]
-                        )
-                        pte_value = BitField.place_bits(
-                            pte_value, pbmt_mode, self.pt_attributes.common_attributes["pbmt_bits"]
-                        )
-
-                    if "valid" in entry:
-                        valid_bit = int(entry["valid"], 2)
-                        pte_value = BitField.place_bits(
-                            pte_value, valid_bit, self.pt_attributes.common_attributes["valid_bit"]
-                        )
-
-                    next_level_pa = entry["pa"]
-
-                for ppn_id in range(len(self.get_attribute("pa_ppn_bits"))):
-                    ppn_value = BitField.extract_bits(
-                        next_level_pa, self.get_attribute("pa_ppn_bits")[ppn_id]
-                    )
-                    pte_value = BitField.place_bits(
-                        pte_value, ppn_value, self.get_attribute("pte_ppn_bits")[ppn_id]
-                    )
-                current_level_pt_offset = BitField.extract_bits(
-                    entry["va"], self.get_attribute("va_vpn_bits")[current_level]
-                )
-                pte_address = (
-                    current_level_range_start
-                    + current_level_pt_offset * self.get_attribute("pte_size_in_bytes")
-                )
-                assert pte_address < current_level_range_end
-                log.debug(f"PTE address:{hex(pte_address)}, PTE value:{hex(pte_value)}")
-                self.update_pte_region_sparse_memory(pte_address, pte_value)
-
-                current_level += 1
-
-        # Make sure that we have the first and last addresses set so that we
-        # know the range of the page table memory when generating the
-        # page table section in the assembly file.
-        assert self.PT_section_start_address == self.PT_pages[0].get_sparse_memory_address()
-        pte_region_sparse_memory_start = self.PT_pages[0].get_sparse_memory_address()
-        page_size = PageSize.SIZE_4K
-        pte_region_sparse_memory_end = (
-            self.PT_pages[len(self.PT_pages) - 1].get_sparse_memory_address()
-            + page_size
-            - self.get_attribute("pte_size_in_bytes")
-        )
-
-        if pte_region_sparse_memory_start not in self.pte_region_sparse_memory:
-            self.pte_region_sparse_memory[pte_region_sparse_memory_start] = 0
-        if pte_region_sparse_memory_end not in self.pte_region_sparse_memory:
-            self.pte_region_sparse_memory[pte_region_sparse_memory_end] = 0
 
     def generate_linker_script(self, output_linker_script):
         with open(output_linker_script, "w") as file:
@@ -825,7 +528,9 @@ sync_all_harts_from_{mode}:
         file_descriptor.write(
             f"# SATP.Mode is {self.jumpstart_source_attributes['diag_attributes']['satp_mode']}\n\n"
         )
-        file_descriptor.write(f"#define DIAG_SATP_MODE {self.get_attribute('satp_mode')}\n")
+        file_descriptor.write(
+            f"#define DIAG_SATP_MODE {self.page_tables.get_attribute('satp_mode')}\n"
+        )
 
         modes = ListUtils.intersection(["mmode", "smode"], self.supported_modes)
         for mode in modes:
@@ -840,7 +545,7 @@ sync_all_harts_from_{mode}:
             file_descriptor.write(f"setup_mmu_from_{mode}:\n\n")
             file_descriptor.write("    li   t0, DIAG_SATP_MODE\n")
             file_descriptor.write("    slli  t0, t0, SATP64_MODE_SHIFT\n")
-            file_descriptor.write(f"    la t1, {self.pt_attributes.pt_start_label}\n")
+            file_descriptor.write(f"    la t1, {self.page_tables.get_asm_label()}\n")
             file_descriptor.write("    srai t1, t1, PAGE_OFFSET\n")
             file_descriptor.write("    add  t1, t1, t0\n")
             file_descriptor.write("    csrw  satp, t1\n")
@@ -849,14 +554,12 @@ sync_all_harts_from_{mode}:
 
     def generate_page_table_data(self, file_descriptor):
         file_descriptor.write('.section .jumpstart.rodata.pagetables, "a"\n\n')
-        file_descriptor.write(f".global {self.pt_attributes.pt_start_label}\n")
-        file_descriptor.write(f"{self.pt_attributes.pt_start_label}:\n\n")
+        file_descriptor.write(f".global {self.page_tables.get_asm_label()}\n")
+        file_descriptor.write(f"{self.page_tables.get_asm_label()}:\n\n")
 
-        pagetable_filled_memory_addresses = list(sorted(self.pte_region_sparse_memory.keys()))
+        pagetable_filled_memory_addresses = list(sorted(self.page_tables.get_pte_addresses()))
 
-        pte_size_in_bytes = self.pt_attributes.mode_attributes[
-            self.jumpstart_source_attributes["diag_attributes"]["satp_mode"]
-        ]["pte_size_in_bytes"]
+        pte_size_in_bytes = self.page_tables.get_attribute("pte_size_in_bytes")
         last_filled_address = None
         for address in pagetable_filled_memory_addresses:
             if last_filled_address is not None and address != (
@@ -865,10 +568,10 @@ sync_all_harts_from_{mode}:
                 file_descriptor.write(
                     f".skip {hex(address - (last_filled_address + pte_size_in_bytes))}\n"
                 )
-            log.debug(f"Writing [{hex(address)}] = {hex(self.pte_region_sparse_memory[address])}")
+            log.debug(f"Writing [{hex(address)}] = {hex(self.page_tables.get_pte(address))}")
             file_descriptor.write(f"\n# [{hex(address)}]\n")
             file_descriptor.write(
-                f".{pte_size_in_bytes}byte {hex(self.pte_region_sparse_memory[address])}\n"
+                f".{pte_size_in_bytes}byte {hex(self.page_tables.get_pte(address))}\n"
             )
 
             last_filled_address = address
@@ -910,81 +613,6 @@ sync_all_harts_from_{mode}:
             self.generate_guard_pages(file)
 
             file.close()
-
-    def translate_VA(self, va):
-        log.info(
-            f"Translating VA {hex(va)}. SATP.Mode = {self.jumpstart_source_attributes['diag_attributes']['satp_mode']}"
-        )
-
-        # Step 1
-        assert self.PT_section_start_address == self.PT_pages[0].get_sparse_memory_address()
-        a = self.PT_pages[0].get_sparse_memory_address()
-
-        current_level = 0
-        pte_value = 0
-
-        # Step 2
-        while True:
-            log.info(f"    a = {hex(a)}; current_level = {current_level}")
-            pte_address = a + BitField.extract_bits(
-                va, self.get_attribute("va_vpn_bits")[current_level]
-            ) * self.get_attribute("pte_size_in_bytes")
-            pte_value = self.get_pte_region_sparse_memory_contents_at(pte_address)
-            if pte_value is None:
-                log.error(f"Expected PTE at {hex(pte_address)} is not present")
-                sys.exit(1)
-
-            log.info(f"    level{current_level} PTE: [{hex(pte_address)}] = {hex(pte_value)}")
-
-            if (
-                BitField.extract_bits(pte_value, self.pt_attributes.common_attributes["valid_bit"])
-                == 0
-            ):
-                log.error(f"PTE at {hex(pte_address)} is not valid")
-                sys.exit(1)
-
-            xwr = BitField.extract_bits(pte_value, self.pt_attributes.common_attributes["xwr_bits"])
-            if (xwr & 0x3) == 0x2:
-                log.error(f"PTE at {hex(pte_address)} has R=0 and W=1")
-                sys.exit(1)
-
-            a = 0
-            for ppn_id in range(len(self.get_attribute("pte_ppn_bits"))):
-                ppn_value = BitField.extract_bits(
-                    pte_value, self.get_attribute("pte_ppn_bits")[ppn_id]
-                )
-                a = BitField.place_bits(a, ppn_value, self.get_attribute("pa_ppn_bits")[ppn_id])
-
-            if (xwr & 0x6) or (xwr & 0x1):
-                log.info("    This is a Leaf PTE")
-                break
-            else:
-                if (
-                    BitField.extract_bits(pte_value, self.pt_attributes.common_attributes["a_bit"])
-                    != 0
-                ):
-                    log.error("PTE has A=1 but is not a Leaf PTE")
-                    sys.exit(1)
-                elif (
-                    BitField.extract_bits(pte_value, self.pt_attributes.common_attributes["d_bit"])
-                    != 0
-                ):
-                    log.error("PTE has D=1 but is not a Leaf PTE")
-                    sys.exit(1)
-
-            current_level += 1
-            if current_level >= self.get_attribute("num_levels"):
-                log.error("Ran out of levels")
-                sys.exit(1)
-            continue
-
-        pa = a
-        pa += BitField.extract_bits(
-            va, (self.get_attribute("va_vpn_bits")[current_level][1] - 1, 0)
-        )
-
-        log.info(f"Translated PA = {hex(pa)}")
-        log.info(f"    PTE value = {hex(pte_value)}")
 
 
 def main():
@@ -1052,7 +680,7 @@ def main():
             f"JumpStart Attributes file {args.jumpstart_source_attributes_yaml} not found"
         )
 
-    pagetables = DiagSource(
+    diag_source = DiagSource(
         args.jumpstart_source_attributes_yaml,
         args.override_jumpstart_source_attributes,
         args.diag_attributes_yaml,
@@ -1061,12 +689,12 @@ def main():
     )
 
     if args.output_assembly_file is not None:
-        pagetables.generate_assembly_file(args.output_assembly_file)
+        diag_source.generate_assembly_file(args.output_assembly_file)
     if args.output_linker_script is not None:
-        pagetables.generate_linker_script(args.output_linker_script)
+        diag_source.generate_linker_script(args.output_linker_script)
 
     if args.translate_VA is not None:
-        pagetables.translate_VA(args.translate_VA)
+        diag_source.page_tables.translate_VA(args.translate_VA)
 
 
 if __name__ == "__main__":
