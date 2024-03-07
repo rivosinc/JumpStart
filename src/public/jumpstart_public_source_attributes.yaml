@@ -8,6 +8,8 @@ rivos_internal_build: false
 
 max_num_harts_supported: 4
 
+valid_modes: [mmode, smode, umode]
+
 # Hard limits on how many pages the jumsptart infrastructure itself will occupy.
 # Allows us to keep track of infrastructure code size.
 # The test pages are not limited by these counts and are dependent on the

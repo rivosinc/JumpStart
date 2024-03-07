@@ -128,21 +128,19 @@ class DiagSource:
             rivos_internal.sanity_check_memory_map(self.memory_map)
 
     def add_jumpstart_sections_to_mappings(self):
-        # The rivos internal sections are added at specific locations.
-        # The sections for the other jumpstart areas can be addded at
-        # specific locations or at locations immediately following the
-        # previous section using the *_start_address diag_attributes attribute.
-        if self.jumpstart_source_attributes["rivos_internal_build"] is True:
-            self.memory_map.extend(
-                rivos_internal.get_rivos_specific_mappings(
-                    self.jumpstart_source_attributes,
-                )
-            )
-
-        for mode in ListUtils.intersection(["mmode", "smode", "umode"], self.supported_modes):
+        for mode in ListUtils.intersection(
+            self.jumpstart_source_attributes["valid_modes"], self.supported_modes
+        ):
             self.add_mappings_for_jumpstart_mode(mode)
 
         self.add_pa_guard_page_after_last_mapping()
+
+        if self.jumpstart_source_attributes["rivos_internal_build"] is True:
+            self.memory_map.extend(
+                rivos_internal.get_additional_mappings(
+                    self.jumpstart_source_attributes,
+                )
+            )
 
     def sanity_check_diag_attributes(self):
         assert "satp_mode" in self.jumpstart_source_attributes["diag_attributes"]
