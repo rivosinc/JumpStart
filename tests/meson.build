@@ -22,10 +22,10 @@ endif
 unit_tests = []
 start_in_mmode_tests + start_in_smode_tests
 
-if 'mmode' in riscv_modes_in_build
+if 'mmode' in riscv_priv_modes_enabled
   unit_tests += start_in_mmode_tests
 endif
-if 'smode' in riscv_modes_in_build
+if 'smode' in riscv_priv_modes_enabled
   unit_tests += start_in_smode_tests
 endif
 

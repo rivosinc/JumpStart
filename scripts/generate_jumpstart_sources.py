@@ -15,7 +15,7 @@ from enum import Enum
 import yaml
 from utils.lib import DictUtils, ListUtils
 
-supported_modes = None
+priv_modes_enabled = None
 
 
 class MemoryOp(Enum):
@@ -71,7 +71,7 @@ def generate_getter_and_setter_methods_for_field(
         f"#define SET_{c_struct.upper()}_{field_name.upper()}(dest_reg) {get_memop_of_size(MemoryOp.STORE, field_size_in_bytes)}   dest_reg, {c_struct.upper()}_{field_name.upper()}_OFFSET(tp);\n\n"
     )
 
-    modes = ListUtils.intersection(["smode", "mmode"], supported_modes)
+    modes = ListUtils.intersection(["smode", "mmode"], priv_modes_enabled)
     for mode in modes:
         assembly_file_fd.write(f'.section .jumpstart.text.{mode}, "ax"\n')
         getter_method = f"get_{c_struct}_{field_name}_from_{mode}"
@@ -87,7 +87,7 @@ def generate_getter_and_setter_methods_for_field(
 
 
 def generate_thread_attributes_setup_code(attributes_data, assembly_file_fd):
-    modes = ListUtils.intersection(["smode", "mmode"], supported_modes)
+    modes = ListUtils.intersection(["smode", "mmode"], priv_modes_enabled)
     mode_encodings = {"smode": "PRV_S", "mmode": "PRV_M"}
     for mode in modes:
         assembly_file_fd.write(f'.section .jumpstart.text.{mode}, "ax"\n')
@@ -195,7 +195,7 @@ def generate_reg_context_save_restore_code(attributes_data, defines_file_fd, ass
     defines_file_fd.write("\n\n")
 
     assembly_file_fd.write('\n\n.section .jumpstart.data.smode, "aw"\n')
-    modes = ListUtils.intersection(["mmode", "smode", "umode"], supported_modes)
+    modes = ListUtils.intersection(["mmode", "smode", "umode"], priv_modes_enabled)
     if "mmode" in modes:
         modes += ["lower_mode_in_mmode"]
     assembly_file_fd.write(
@@ -385,7 +385,7 @@ def generate_jumpstart_sources(
 
 
 def main():
-    global supported_modes
+    global priv_modes_enabled
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -402,7 +402,7 @@ def main():
         default=None,
     )
     parser.add_argument(
-        "--supported_modes",
+        "--priv_modes_enabled",
         help=".",
         required=True,
         nargs="+",
@@ -430,7 +430,7 @@ def main():
     else:
         log.basicConfig(format="%(levelname)s: [%(threadName)s]: %(message)s", level=log.INFO)
 
-    supported_modes = args.supported_modes
+    priv_modes_enabled = args.priv_modes_enabled
 
     generate_jumpstart_sources(
         args.jumpstart_source_attributes_yaml,

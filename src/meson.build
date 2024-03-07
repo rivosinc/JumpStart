@@ -17,12 +17,12 @@ endif
 
 jumpstart_sources = []
 
-if 'mmode' in riscv_modes_in_build
+if 'mmode' in riscv_priv_modes_enabled
   jumpstart_sources += mmode_sources
 endif
-if 'smode' in riscv_modes_in_build
+if 'smode' in riscv_priv_modes_enabled
   jumpstart_sources += smode_sources
 endif
-if 'umode' in riscv_modes_in_build
+if 'umode' in riscv_priv_modes_enabled
   jumpstart_sources += umode_sources
 endif

@@ -43,7 +43,7 @@ class DiagSource:
         override_jumpstart_source_attributes,
         diag_attributes_yaml,
         override_diag_attributes,
-        supported_modes,
+        priv_modes_enabled,
     ):
         self.num_guard_pages_generated = 0
 
@@ -54,7 +54,7 @@ class DiagSource:
         with open(jumpstart_source_attributes_yaml) as f:
             self.jumpstart_source_attributes = yaml.safe_load(f)
 
-        self.supported_modes = supported_modes
+        self.priv_modes_enabled = priv_modes_enabled
 
         rivos_internal_lib_dir = f"{os.path.dirname(os.path.realpath(__file__))}/rivos_internal"
 
@@ -129,7 +129,7 @@ class DiagSource:
 
     def add_jumpstart_sections_to_mappings(self):
         for mode in ListUtils.intersection(
-            self.jumpstart_source_attributes["valid_modes"], self.supported_modes
+            self.jumpstart_source_attributes["priv_modes_supported"], self.priv_modes_enabled
         ):
             self.add_mappings_for_jumpstart_mode(mode)
 
@@ -338,7 +338,7 @@ class DiagSource:
             rivos_internal.generate_rivos_internal_diag_attribute_functions(
                 file_descriptor,
                 self.jumpstart_source_attributes["diag_attributes"],
-                self.supported_modes,
+                self.priv_modes_enabled,
             )
 
             rivos_internal_boolean_attributes = rivos_internal.get_boolean_diag_attributes()
@@ -352,7 +352,7 @@ class DiagSource:
 
     def generate_boolean_diag_attribute_functions(self, file_descriptor, boolean_attributes):
         for attribute in boolean_attributes:
-            modes = ListUtils.intersection(attribute.get_modes(), self.supported_modes)
+            modes = ListUtils.intersection(attribute.get_modes(), self.priv_modes_enabled)
             for mode in modes:
                 file_descriptor.write(f'.section .jumpstart.text.{mode}, "ax"\n\n')
                 attribute_function_name = f"{attribute.get_name()}"
@@ -370,7 +370,7 @@ class DiagSource:
                 file_descriptor.write("   ret\n\n\n")
 
     def generate_get_active_hart_mask_function(self, file_descriptor):
-        modes = ListUtils.intersection(["mmode", "smode"], self.supported_modes)
+        modes = ListUtils.intersection(["mmode", "smode"], self.priv_modes_enabled)
         for mode in modes:
             file_descriptor.write(f'.section .jumpstart.text.{mode}, "ax"\n\n')
             file_descriptor.write(f".global get_active_hart_mask_from_{mode}\n")
@@ -393,7 +393,7 @@ class DiagSource:
             self.jumpstart_source_attributes["diag_attributes"]["active_hart_mask"], 2
         )
 
-        modes = ListUtils.intersection(["mmode", "smode"], self.supported_modes)
+        modes = ListUtils.intersection(["mmode", "smode"], self.priv_modes_enabled)
         for mode in modes:
             file_descriptor.write(
                 f"""
@@ -486,7 +486,7 @@ sync_all_harts_from_{mode}:
             f"#define DIAG_SATP_MODE {self.page_tables.get_attribute('satp_mode')}\n"
         )
 
-        modes = ListUtils.intersection(["mmode", "smode"], self.supported_modes)
+        modes = ListUtils.intersection(["mmode", "smode"], self.priv_modes_enabled)
         for mode in modes:
             file_descriptor.write(f'.section .jumpstart.text.{mode}, "ax"\n\n')
 
@@ -559,7 +559,7 @@ sync_all_harts_from_{mode}:
 
             if self.jumpstart_source_attributes["rivos_internal_build"] is True:
                 rivos_internal.generate_rivos_internal_mmu_functions(
-                    file, self.memory_map, self.supported_modes
+                    file, self.memory_map, self.priv_modes_enabled
                 )
 
             self.generate_page_table_data(file)
@@ -595,7 +595,7 @@ def main():
         default=None,
     )
     parser.add_argument(
-        "--supported_modes",
+        "--priv_modes_enabled",
         help=".",
         required=True,
         nargs="+",
@@ -639,7 +639,7 @@ def main():
         args.override_jumpstart_source_attributes,
         args.diag_attributes_yaml,
         args.override_diag_attributes,
-        args.supported_modes,
+        args.priv_modes_enabled,
     )
 
     if args.output_assembly_file is not None:

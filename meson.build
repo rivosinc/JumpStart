@@ -19,13 +19,13 @@ add_project_arguments('-Wno-c++-compat',
                       '-mcmodel=medany',
                       language: 'c')
 
-riscv_modes_in_build = get_option('riscv_modes_in_build')
+riscv_priv_modes_enabled = get_option('riscv_priv_modes_enabled')
 
 jumpstart_source_attribute_overrides = get_option('jumpstart_source_attribute_overrides')
 diag_attribute_overrides = get_option('diag_attribute_overrides')
 
 if get_option('smode_boot') == true
-  riscv_modes_in_build = ['smode', 'umode']
+  riscv_priv_modes_enabled = ['smode', 'umode']
   jumpstart_source_attribute_overrides += ['diag_entry_label=smode_boot_start']
   diag_attribute_overrides += ['smode_start_address=' + get_option('smode_boot_start_address')]
 endif
@@ -44,7 +44,7 @@ jumpstart_source_generator_command = [prog_python,
                                               '--data_structures_file', '@OUTPUT1@',
                                               '--assembly_file', '@OUTPUT2@',
                                               '--jumpstart_source_attributes_yaml', '@INPUT1@',
-                                              '--supported_modes', riscv_modes_in_build
+                                              '--priv_modes_enabled', riscv_priv_modes_enabled
                                               ]
 
 override_jumpstart_source_attributes_parameter = []
@@ -138,7 +138,7 @@ diag_source_generator_command = [prog_python,
                                     '--diag_attributes_yaml', '@INPUT2@',
                                     '--output_assembly_file', '@OUTPUT0@',
                                     '--output_linker_script', '@OUTPUT1@',
-                                    '--supported_modes', riscv_modes_in_build
+                                    '--priv_modes_enabled', riscv_priv_modes_enabled
                                     ]
 
 if get_option('diag_target') == 'qemu'
