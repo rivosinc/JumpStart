@@ -18,6 +18,8 @@ setup_smode:
   sd    fp, 0(sp)
   addi  fp, sp, 16
 
+  jal enable_smode_float_and_vector_instructions
+
   jal setup_trap_vector
 
   jal setup_interrupt_enables
@@ -36,6 +38,13 @@ setup_smode:
   addi  sp, sp, 16
 
 setup_smode_done:
+  ret
+
+.global enable_smode_float_and_vector_instructions
+enable_smode_float_and_vector_instructions:
+  li t0, (SSTATUS_FS | SSTATUS_VS)
+  csrs sstatus, t0
+
   ret
 
 .global setup_trap_vector

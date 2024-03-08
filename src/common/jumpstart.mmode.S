@@ -49,7 +49,7 @@ _mmode_start:
 
   jal program_menvcfg
 
-  jal enable_float_and_vector_instructions
+  jal enable_mmode_float_and_vector_instructions
 
   jal setup_smode_trap_delegation
 
@@ -93,8 +93,8 @@ program_menvcfg:
 
   ret
 
-.global enable_float_and_vector_instructions
-enable_float_and_vector_instructions:
+.global enable_mmode_float_and_vector_instructions
+enable_mmode_float_and_vector_instructions:
   li t0, (MSTATUS_VS | MSTATUS_FS)
   csrrs t1, mstatus, t0
 
