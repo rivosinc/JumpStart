@@ -72,7 +72,7 @@ class MemoryMapping:
                 "page_size",
                 int,
                 int,
-                [PageSize.SIZE_4K, PageSize.SIZE_2M, PageSize.SIZE_1G],
+                [PageSize.SIZE_4K, PageSize.SIZE_2M, PageSize.SIZE_1G, PageSize.SIZE_512G],
                 None,
                 True,
             ),
