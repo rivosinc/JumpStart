@@ -34,6 +34,7 @@ start_in_smode_tests += [
   ['test033', 'Exit with jumpstart_umode_fail() to test umode fail path.', '', true],
   ['test034', 'Simple spinlock test with 4 active harts and 4 inactive ones.', '-p8'],
   ['test036', 'sv48 VA aliasing test.'],
+  ['test037', 'FP test.'],
 ]
 
 start_in_mmode_tests += [
