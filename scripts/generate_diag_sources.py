@@ -490,7 +490,7 @@ sync_all_harts_from_{mode}:
                 file_descriptor.write("  li  a7, SYSCALL_RUN_FUNC_IN_SMODE_COMPLETE\n")
                 file_descriptor.write("  ecall\n")
             else:
-                # We expect to be running in smode_boot mode.
+                # We expect to be running in sbi_firmware_boot mode.
                 # Use sbi call to request mmode fw to shutdown system.
                 file_descriptor.write("  li  a0, 0\n")
                 file_descriptor.write("  li  a1, DIAG_FAILED\n")

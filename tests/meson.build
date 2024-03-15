@@ -8,11 +8,11 @@ source_suffixes = ['.S', '.c']
 
 start_in_mmode_tests = [] # diag main() is in mmode
 start_in_smode_tests = [] # diag main() is in smode
-smode_boot_tests     = [] # diag needs smode_boot=true.
+sbi_firmware_boot_tests     = [] # diag needs sbi_firmware_boot=true.
 
 tests_disabled_on_qemu = []
 tests_disabled_on_spike = []
-tests_disabled_for_smode_boot = []
+tests_disabled_for_sbi_firmware_boot = []
 
 subdir('common')
 
@@ -30,8 +30,8 @@ if 'smode' in riscv_priv_modes_enabled
   unit_tests += start_in_smode_tests
 endif
 
-if get_option('smode_boot') == true
-  unit_tests += smode_boot_tests
+if get_option('sbi_firmware_boot') == true
+  unit_tests += sbi_firmware_boot_tests
 endif
 
 foreach unit_test : unit_tests
@@ -44,13 +44,13 @@ foreach unit_test : unit_tests
 
   test_disabled_on_qemu = test_name in tests_disabled_on_qemu
   test_disabled_on_spike = test_name in tests_disabled_on_spike
-  test_disabled_for_smode_boot = test_name in tests_disabled_for_smode_boot
+  test_disabled_for_sbi_firmware_boot = test_name in tests_disabled_for_sbi_firmware_boot
 
   if get_option('diag_target') == 'spike' and test_disabled_on_spike == true
     continue
   elif get_option('diag_target') == 'qemu' and test_disabled_on_qemu == true
     continue
-  elif get_option('smode_boot') == true and test_disabled_for_smode_boot == true
+  elif get_option('sbi_firmware_boot') == true and test_disabled_for_sbi_firmware_boot == true
     continue
   endif
 

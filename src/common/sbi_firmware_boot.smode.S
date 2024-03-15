@@ -7,15 +7,15 @@
 
 .section .jumpstart.text.smode.init, "ax"
 
-# In smode_boot mode, other firmwares run in M-mode and drop hand over control
+# In sbi_firmware_boot mode, other firmwares run in M-mode and drop hand over control
 # to JumpStart in S-mode. This code is the entry point for such environments.
 # We expect that only one hart is running at this point and all the other
 # harts are in STOPPED state. The running hart will make SBI HSM calls to
 # wake up the other harts and start them running in S-mode.
 # Inputs:
 #   a0: This hart's hartid.
-.global sbi_trampoline
-sbi_trampoline:
+.global sbi_firmware_trampoline
+sbi_firmware_trampoline:
   mv t0, a0
   li t1, 0  # hid = 0
   jal get_active_hart_mask_from_smode
@@ -31,7 +31,7 @@ start_active_harts_loop:
 
 invoke_sbi_start_hart:
   mv a0, t1               # param1: hartid of hart to start.
-  la a1, smode_boot_start # param2: start_address at which to start the hart.
+  la a1, sbi_firmware_boot_start # param2: start_address at which to start the hart.
   li a2, 0                # param3: opaque
   jal sbi_hart_start
   bnez a0, jumpstart_smode_fail # Fail if sbi_hart_start returns non-zero
@@ -58,7 +58,7 @@ start_active_harts_loop_end:
   mv   a0, t0  # $a0 = my_hart_id
   srl  t1, t1, a0
   andi t1, t1, 1
-  bnez t1, smode_boot_start # go to smode_boot_start if active thread
+  bnez t1, sbi_firmware_boot_start # go to sbi_firmware_boot_start if active thread
                             # or else stop this hart and wfi
   jal sbi_hart_stop
 
@@ -66,8 +66,8 @@ start_active_harts_loop_end:
 
 # Inputs:
 #   a0: hart id.
-.global smode_boot_start
-smode_boot_start:
+.global sbi_firmware_boot_start
+sbi_firmware_boot_start:
   # This code mirrors _mmode_start in start.mmode.S
   mv t0, a0
   jal get_active_hart_mask_from_smode
@@ -100,8 +100,8 @@ smode_boot_start:
 
   call main
 
-.global smode_boot_end
-smode_boot_end:
+.global sbi_firmware_boot_end
+sbi_firmware_boot_end:
   # a0 will contain diag pass/fail status.
 
   # Store pass/fail status into the hart status tracker.
@@ -143,7 +143,7 @@ wait_for_running_hart_loop:
   beq t4, t6, wait_for_running_hart_loop
 
   li t6, DIAG_PASSED
-  bne t4, t6, jumpstart_smode_boot_fail
+  bne t4, t6, jumpstart_sbi_firmware_boot_fail
 
 done_with_current_hart:
   srli a0, a0, 1
@@ -154,14 +154,14 @@ done_with_current_hart:
 
   # All harts have passed, we're done.
   li t1, DIAG_PASSED
-  bne a0, t1, jumpstart_smode_boot_fail
+  bne a0, t1, jumpstart_sbi_firmware_boot_fail
 
   li a0, DIAG_PASSED
 
   j run_end_of_sim_sequence
 
-.global jumpstart_smode_boot_fail
-jumpstart_smode_boot_fail:
+.global jumpstart_sbi_firmware_boot_fail
+jumpstart_sbi_firmware_boot_fail:
   li a0, DIAG_FAILED
 
 run_end_of_sim_sequence:

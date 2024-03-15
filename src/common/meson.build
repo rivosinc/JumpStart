@@ -15,9 +15,9 @@ smode_sources += files('data.smode.S',
                               'heap.smode.c',
                               'lock.smode.c')
 
-if get_option('smode_boot') == true
+if get_option('sbi_firmware_boot') == true
   smode_sources += files(
-                          'smode_boot.smode.S',
+                          'sbi_firmware_boot.smode.S',
                           'sbi.smode.S'
                         )
 endif
