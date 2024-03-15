@@ -31,7 +31,7 @@ start_active_harts_loop:
 
 invoke_sbi_start_hart:
   mv a0, t1               # param1: hartid of hart to start.
-  la a1, sbi_firmware_boot_start # param2: start_address at which to start the hart.
+  la a1, _smode_start # param2: start_address at which to start the hart.
   li a2, 0                # param3: opaque
   jal sbi_hart_start
   bnez a0, jumpstart_smode_fail # Fail if sbi_hart_start returns non-zero
@@ -58,16 +58,18 @@ start_active_harts_loop_end:
   mv   a0, t0  # $a0 = my_hart_id
   srl  t1, t1, a0
   andi t1, t1, 1
-  bnez t1, sbi_firmware_boot_start # go to sbi_firmware_boot_start if active thread
+  bnez t1, _smode_start # go to _smode_start if active thread
                             # or else stop this hart and wfi
   jal sbi_hart_stop
 
   j just_wfi_from_smode # should never get here.
 
+.section .jumpstart.text.smode, "ax"
+
 # Inputs:
 #   a0: hart id.
-.global sbi_firmware_boot_start
-sbi_firmware_boot_start:
+.global _smode_start
+_smode_start:
   # This code mirrors _mmode_start in start.mmode.S
   mv t0, a0
   jal get_active_hart_mask_from_smode
@@ -100,8 +102,8 @@ sbi_firmware_boot_start:
 
   call main
 
-.global sbi_firmware_boot_end
-sbi_firmware_boot_end:
+.global _smode_end
+_smode_end:
   # a0 will contain diag pass/fail status.
 
   # Store pass/fail status into the hart status tracker.
@@ -185,6 +187,57 @@ invoke_sbi_reset:
            # sbi_system_reset: param2(a1): DIAG_PASS(0)/DIAG_FAIL(1)
   jal sbi_system_reset
   j just_wfi_from_smode
+
+#define SBI_HSM_EID               0x48534D
+#define SBI_HSM_HART_START_FID    0
+#define SBI_HSM_HART_STOP_FID     1
+#define SBI_HSM_HART_STATUS_FID   2
+#define SBI_SRST_EID              0x53525354
+#define SBI_SRST_SYSTEM_RESET_FID 0
+
+.section .jumpstart.text.smode, "ax"
+
+# Reference:
+# https://github.com/riscv-non-isa/riscv-sbi-doc/blob/master/src/ext-hsm.adoc
+
+# Prototype:
+# struct sbiret sbi_hart_start(unsigned long hartid,
+#                              unsigned long start_addr,
+#                              unsigned long opaque)
+.global sbi_hart_start
+sbi_hart_start:
+  li a6, SBI_HSM_HART_START_FID
+  li a7, SBI_HSM_EID
+  ecall
+  ret
+
+# Prototype:
+# struct sbiret sbi_hart_stop(void)
+.global sbi_hart_stop
+sbi_hart_stop:
+  li a6, SBI_HSM_HART_STOP_FID
+  li a7, SBI_HSM_EID
+  ecall
+  ret
+
+# Prototype:
+# struct sbiret sbi_hart_get_status(unsigned long hartid)
+.global sbi_hart_get_status
+sbi_hart_get_status:
+  li a6, SBI_HSM_HART_STATUS_FID
+  li a7, SBI_HSM_EID
+  ecall
+  ret
+
+# Prototype:
+# struct sbiret sbi_system_reset(uint32_t reset_type, uint32_t reset_reason)
+.global sbi_system_reset
+sbi_system_reset:
+  li a6, SBI_SRST_SYSTEM_RESET_FID
+  li a7, SBI_SRST_EID
+  ecall
+  ret
+
 
 .section .jumpstart.data.smode, "aw", @progbits
 

@@ -45,7 +45,7 @@ option('sbi_firmware_boot',
        value : false,
        description : 'JumpStart run starts in smode (binary will not include higher privilege levels).')
 
-option('sbi_firmware_boot_start_address',
+option('_smode_start_address',
        type : 'string',
        value : '0x90000000',
        description : 'Address to place the smode code.')
