@@ -53,6 +53,8 @@ The MMU mode (SV39, SV48, SV57, SV64, ...) that the diag will run in.
 
 Controls whether the diag's `main()` will be called in M-mode or S-mode.
 
+NOTE: Diags that run in `sbi_firmware_boot` mode (where JumpStart starts in S-mode after SBI Firmware runs) cannot start in M-mode.
+
 Default: `False`. The diag's `main()` will be called in S-mode.
 
 Example: [test009](../tests/common/test009.diag_attributes.yaml).
@@ -177,7 +179,7 @@ meson test -C builddir
 
 ## JumpStart APIs
 
-These are listed in [jumpstart.h](../include/common/jumpstart.h).
+These are listed in the header files in the [include](../include) directory.
 
 Functions with names that end in `_from_smode()` or `_from_mmode()` can only be called from the respective modes.
 
@@ -213,11 +215,13 @@ Allows the diag to register a trap handler override function for M-mode traps. T
 
 Allows the diag to register a trap handler override function for S-mode traps. The registered function will be called when the trap occurs in S-mode.
 
-## Running and Debugging diags
+## Running Diags
 
-### Running diags on Spike
+JumpStart diags can be run on Spike and QEMU targets.
 
-`meson test` will attempt to run the diag on Spike. To see the options being passed to Spike as well as the output from Spike, run `meson test` with the `-v` option.
+The target can be specified by passing the `-Dtarget` option to `meson setup`. The target can be `spike` or `qemu`.
+
+`meson test` will attempt to run the diag on the target. To see the options being passed to the target, run `meson test` with the `-v` option.
 
 ```shell
 meson test -C builddir -v
@@ -229,8 +233,14 @@ To generate the execution trace, pass the `generate_trace=true` option to `meson
 meson setup -C builddir -Dgenerate_trace=true ...
 ```
 
-If the diag requires additional arguments be passed to Spike, specify them with the `spike_additional_arguments` option to `meson setup`. `spike_additional_arguments` takes a list of arguments.
+If the diag requires additional arguments be passed to the target, specify them with the `spike_additional_arguments`/`qemu_additional_arguments` options to `meson setup`.
+These take a list of arguments.
 
 ```shell
 meson setup -C builddir -Dspike_additional_arguments=-p2 ...
 ```
+### `sbi_firmware_boot`
+
+This mode starts JumpStart in S-mode after the RISC-V Firmware runs in M-mode. The firmware will transfer control to JumpStart in S-mode at the `sbi_firmware_trampoline` location.
+
+Only S-mode based diags can be run in this mode as JumpStart cannot enter M-mode.
