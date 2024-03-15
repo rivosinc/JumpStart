@@ -104,6 +104,7 @@ foreach unit_test : unit_tests
           spike,
           args : [spike_args, test_exe],
           suite:'basic',
+          timeout: get_option('spike_timeout'),
           should_fail: test_expected_to_fail)
   elif get_option('diag_target') == 'qemu'
     qemu_args = default_qemu_args

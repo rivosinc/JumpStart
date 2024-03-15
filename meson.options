@@ -69,6 +69,11 @@ option('spike_additional_arguments',
        type : 'array',
        description : 'Additional arguments to pass to spike when running the diag.')
 
+option('spike_timeout',
+       type : 'integer',
+       value : 30,
+       description : 'meson test timeout when running the tests on spike.')
+
 option('qemu_binary',
        type : 'string',
        value : '',

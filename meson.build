@@ -187,6 +187,7 @@ if diag_attributes_yaml != '' and diag_sources.length() > 0
     test('🧪 ' + diag_name,
           spike,
           args : [default_spike_args, diag_exe],
+          timeout: get_option('spike_timeout'),
           is_parallel : false) # Parallel runs of the test turns off terminal
                                # feedback and requires `reset` to be run to
                                # restore the terminal.
