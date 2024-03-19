@@ -280,6 +280,8 @@ class DiagSource:
             file.write("SECTIONS\n{\n")
             defined_sections = []
 
+            pt_load_program_headers = []
+
             # The linker script lays out the diag in physical memory. The
             # mappings are already sorted by PA.
             for entry in self.memory_map:
@@ -300,6 +302,7 @@ class DiagSource:
                 linker_script_sections = entry.get_field("linker_script_section").split(",")
 
                 top_level_section_name = linker_script_sections[0]
+                pt_load_program_headers.append(top_level_section_name)
 
                 # main() automatically gets placed in the .text.startup section
                 # and we want the .text.startup section to be part of the
@@ -321,12 +324,27 @@ class DiagSource:
                     assert section_name not in defined_sections
                     file.write(f"      *({section_name})\n")
                     defined_sections.append(section_name)
-                file.write("   }\n\n")
+                file.write(f"   }} : {top_level_section_name}\n\n")
                 file.write(
                     f"   . = {hex(entry.get_field('pa') + entry.get_field('num_pages') * entry.get_field('page_size') - 1)};\n"
                 )
                 file.write(f"  {top_level_section_variable_name_prefix}_END = .;\n")
             file.write("\n}\n")
+
+            # Specify separate load segments in the program headers for the
+            # different sections.
+            # Without this, GCC would split out the sections into separate
+            # load segments but LLVM would put non-adjacent sections with
+            # identical attributes into the same load segment.
+            # This would cause the loader to load gaps between the sections
+            # as well which spike has issues with as it doesn't treat
+            # the entire memory range as valid.
+            # Reference:
+            # https://ftp.gnu.org/old-gnu/Manuals/ld-2.9.1/html_node/ld_23.html
+            file.write("\nPHDRS\n{\n")
+            for entry in pt_load_program_headers:
+                file.write(f"  {entry} PT_LOAD ;\n")
+            file.write("}\n")
 
             file.close()
 
