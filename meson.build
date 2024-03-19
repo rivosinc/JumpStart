@@ -117,20 +117,6 @@ endif
 
 objdump = find_program('objdump')
 
-gcc_march_string = get_option('gcc_march_string')
-
-default_c_args_list = []
-
-if gcc_march_string == ''
-  if get_option('rivos_internal_build') == true
-    gcc_march_string = rivos_gcc_march_string
-  else
-    gcc_march_string = 'rv64gc_zbb_zbs'
-  endif
-endif
-
-default_c_args_list += ['-march=' + gcc_march_string]
-
 diag_source_generator_common_inputs = [diag_source_generator, jumpstart_source_attributes_yaml]
 diag_source_generator_command = [prog_python,
                                     '@INPUT0@',
@@ -171,8 +157,7 @@ if diag_attributes_yaml != '' and diag_sources.length() > 0
   diag_exe = executable(diag_name,
                         sources: [jumpstart_sources, diag_sources],
                         include_directories: jumpstart_includes,
-                        c_args: default_c_args_list,
-                        link_args: ['-T' + linker_script, '-nostdlib'])
+                        link_args: ['-T' + linker_script])
 
   if get_option('diag_generate_disassembly') == true
         custom_target('dump',

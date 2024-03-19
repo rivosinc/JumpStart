@@ -50,11 +50,6 @@ option('_smode_start_address',
        value : '0x90000000',
        description : 'Address to place the smode code.')
 
-option('gcc_march_string',
-       type : 'string',
-       value : '',
-       description : '-march string to pass to gcc.')
-
 option('spike_binary',
        type : 'string',
        value : 'spike',

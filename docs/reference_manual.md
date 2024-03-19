@@ -144,7 +144,7 @@ Takes the diag's sources and attributes and generates a meson build directory.
 Pass the sources and the attribute file to `meson setup` with the `diag_attributes_yaml`, `diag_name` and `diag_sources` setup options:
 
 ```shell
-meson setup builddir --cross-file cross-file.txt --buildtype release -Ddiag_attributes_yaml=tests/common/test000.diag_attributes.yaml -Ddiag_sources=tests/common/test000.c -Ddiag_name=my_jumpstart_diag
+meson setup builddir --cross-file cross_compile/rivos_internal/gcc_options.txt --cross-file cross_compile/gcc.txt  --buildtype release -Ddiag_attributes_yaml=tests/common/test000.diag_attributes.yaml -Ddiag_sources=tests/common/test000.c -Ddiag_name=my_jumpstart_diag
 ```
 
 All `meson setup` options are listed in the [meson_options.txt](../meson.options) file.

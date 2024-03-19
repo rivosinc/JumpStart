@@ -7,12 +7,6 @@ c = 'riscv64-unknown-elf-gcc'
 strip = 'riscv64-unknown-elf-strip'
 objdump = 'riscv64-unknown-elf-objdump'
 
-[properties]
-needs_exe_wrapper = true
-
-# these attributes don't seem to actually do anything
-[host_machine]
-system = 'linux'
-cpu_family = 'riscv64'
-cpu = 'rv64gc'
-endian = 'little'
+[built-in options]
+c_args = target_args
+c_link_args = ['-nostdlib', '-static']

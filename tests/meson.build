@@ -86,8 +86,7 @@ foreach unit_test : unit_tests
   test_exe = executable(test_name,
                         sources: [jumpstart_sources, test_sources],
                         include_directories: jumpstart_includes,
-                        c_args: default_c_args_list,
-                        link_args: ['-T' + linker_script, '-nostdlib'])
+                        link_args: ['-T' + linker_script])
 
   if get_option('diag_generate_disassembly') == true
     custom_target(test_name + '_dump',

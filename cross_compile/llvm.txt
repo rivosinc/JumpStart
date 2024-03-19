@@ -1,0 +1,18 @@
+# SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+
+[binaries]
+c = 'clang-18'
+strip = 'llvm-strip'
+objdump = 'riscv64-unknown-elf-objdump'
+
+[built-in options]
+# TODO: Enable werror
+# https://rivosinc.atlassian.net/browse/SW-6483
+werror = false
+
+c_args = target_args + ['-no-integrated-as',
+                        '-fno-pic',
+                       ]
+c_link_args = target_args + ['-nostdlib', '-static']
