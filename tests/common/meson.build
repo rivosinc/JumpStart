@@ -35,6 +35,7 @@ start_in_smode_tests += [
   ['test034', 'Simple spinlock test with 4 active harts and 4 inactive ones.', '-p8'],
   ['test036', 'sv48 VA aliasing test.'],
   ['test037', 'FP/Vector test.'],
+  ['test039', 'MP heap malloc test.', '-p4'],
 ]
 
 start_in_mmode_tests += [
