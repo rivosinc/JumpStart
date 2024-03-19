@@ -3,4 +3,4 @@
 # SPDX-License-Identifier: Apache-2.0
 
 [constants]
-target_args = ['-march=rv64gc_zbb_zbs']
+target_args = ['-march=rv64gcv_zbb_zbs']

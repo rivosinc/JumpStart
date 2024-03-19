@@ -14,6 +14,18 @@ double_float32_number:
 
   ret
 
+# Run something.
+.global run_vector_instructions
+run_vector_instructions:
+  vsetivli	zero,8,e32,m1,ta,ma
+
+  vfadd.vf v28, v28, f28
+  vfmin.vf v28, v28, f28
+  vfdiv.vf v28, v28, f28
+  vadd.vx   v28, v20, t4
+
+  ret
+
 .section .data, "aw"
 
 .global data_area
