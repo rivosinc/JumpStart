@@ -29,12 +29,25 @@ class ListUtils:
 
 
 class DictUtils:
-    def override_dict(original_dict, overrides_dict):
-        assert set(original_dict.keys()).issuperset(
-            set(overrides_dict.keys())
-        ), "Overrides contain keys not present in the original dictionary"
+    def override_dict(
+        original_dict, overrides_dict, original_is_superset=True, append_to_lists=False
+    ):
+        if original_is_superset is True:
+            assert set(original_dict.keys()).issuperset(
+                set(overrides_dict.keys())
+            ), "Overrides contain keys not present in the original dictionary"
 
-        original_dict.update(overrides_dict)
+        if append_to_lists is False:
+            original_dict.update(overrides_dict)
+        else:
+            for key in overrides_dict:
+                if key in original_dict and isinstance(original_dict[key], list):
+                    if isinstance(overrides_dict[key], list):
+                        original_dict[key].extend(overrides_dict[key])
+                    else:
+                        original_dict[key].append(overrides_dict[key])
+                else:
+                    original_dict[key] = overrides_dict[key]
 
     def create_dict(overrides_list):
         attributes_map = {}
