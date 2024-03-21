@@ -329,6 +329,11 @@ class DiagSource:
                     f"   . = {hex(entry.get_field('pa') + entry.get_field('num_pages') * entry.get_field('page_size') - 1)};\n"
                 )
                 file.write(f"  {top_level_section_variable_name_prefix}_END = .;\n")
+            file.write(
+                "/DISCARD/ : { *("
+                + " ".join([".note", ".comment", ".eh_frame", ".eh_frame_hdr"])
+                + ") }\n"
+            )
             file.write("\n}\n")
 
             # Specify separate load segments in the program headers for the
