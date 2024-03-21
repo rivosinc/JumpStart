@@ -6,6 +6,8 @@
 c = 'clang-18'
 strip = 'llvm-strip'
 objdump = 'riscv64-unknown-elf-objdump'
+# Use the gcc linker.
+c_ld = 'bfd'
 
 [built-in options]
 # TODO: Enable werror
