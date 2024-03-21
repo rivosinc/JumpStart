@@ -182,6 +182,8 @@ run_function_in_smode:
   GET_THREAD_ATTRIBUTES_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
   SAVE_ALL_GPRS
 
+  MMODE_ROLE_DISABLE
+
   li  t0, MSTATUS_MPP
   csrc mstatus, t0
   li  t0, (PRV_S << MSTATUS_MPP_SHIFT)
@@ -195,6 +197,8 @@ run_function_in_smode:
 # Inputs:
 #   a0: return status from S-mode function.
 run_function_in_smode_return_point:
+  MMODE_ROLE_ENABLE
+
   ld  ra, 8(sp)
   ld  fp, 0(sp)
   addi  sp, sp, 16
@@ -220,6 +224,7 @@ mtvec_trap_handler:
 handle_trap_from_smode:
   # Save away the S/U-mode reg context.
   GET_THREAD_ATTRIBUTES_LOWER_MODE_IN_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
+  MMODE_ROLE_ENABLE
   j save_context
 
 handle_trap_from_mmode:
@@ -249,6 +254,7 @@ save_context:
 
 restore_smode_context:
   # Set thread attribute from mstatus.
+  MMODE_ROLE_DISABLE
   csrr  gp, mstatus
   bexti gp, gp, MSTATUS_MPP_SHIFT
   SET_THREAD_ATTRIBUTES_CURRENT_MODE(gp)
