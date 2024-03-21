@@ -314,8 +314,22 @@ class DiagSource:
                     # Place .text.startup at the beginning of the list
                     # so that main() is the first thing in the .text section?
                     linker_script_sections.insert(0, ".text.startup")
-
-                file.write(f"   {top_level_section_name} : {{\n")
+                section_type = ""
+                section_pad = False
+                if ".bss" in linker_script_sections:
+                    # Switching BSS from the default NOBITS to PROGBITS.
+                    # With NOBITS the BSS section doesn't take up space in the
+                    # ELF file and the loader or runtime is expected to
+                    # zero out the memory region. This is fine for a real
+                    # system but the diag may be loaded into an environment
+                    # where the loader doesn't zero out the memory region.
+                    # We would have to run a memset() to zero out the BSS which
+                    # will unnecessarily consume simulation time.
+                    # PROGBITS ensures that the BSS section is assigned space
+                    # in the ELF file and initialized with zeros.
+                    section_type = "(TYPE=SHT_PROGBITS)"
+                    section_pad = True
+                file.write(f"   {top_level_section_name} {section_type} : {{\n")
                 top_level_section_variable_name_prefix = top_level_section_name.replace(
                     ".", "_"
                 ).upper()
@@ -324,6 +338,8 @@ class DiagSource:
                     assert section_name not in defined_sections
                     file.write(f"      *({section_name})\n")
                     defined_sections.append(section_name)
+                if section_pad:
+                    file.write("      BYTE(0)\n")
                 file.write(f"   }} : {top_level_section_name}\n\n")
                 file.write(
                     f"   . = {hex(entry.get_field('pa') + entry.get_field('num_pages') * entry.get_field('page_size') - 1)};\n"
