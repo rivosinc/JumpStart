@@ -62,7 +62,7 @@ jumpstart_smode:
     xwr: "0b011"
     umode: "0b0"
     pma_memory_type: "wb"
-    linker_script_section: ".bss"
+    linker_script_section: ".bss,.sbss,.sbss.*"
   rodata:
     page_size: 0x1000
     xwr: "0b001"
