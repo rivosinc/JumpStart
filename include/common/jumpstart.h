@@ -59,12 +59,14 @@
     __v;                                                                       \
   })
 
-#define STRINGIFY(x)      #x
-#define ADD_QUOTES(x)     STRINGIFY(x)
+#define STRINGIFY(x)  #x
+#define ADD_QUOTES(x) STRINGIFY(x)
 // Disables instruction by instruction checking when running on the simulator,
-#define disable_checktc() __asm__ __volatile__(ADD_QUOTES(CHECKTC_DISABLE))
+#define disable_checktc()                                                      \
+  __asm__ __volatile__(ADD_QUOTES(CHECKTC_DISABLE)::: "memory")
 // Enables instruction by instruction checking when running on the simulator,
-#define enable_checktc()  __asm__ __volatile__(ADD_QUOTES(CHECKTC_ENABLE))
+#define enable_checktc()                                                       \
+  __asm__ __volatile__(ADD_QUOTES(CHECKTC_ENABLE)::: "memory")
 
 // The functions run through the run_function_in_*mode() functions can be
 // passed up to 6 arguments.
