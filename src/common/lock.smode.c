@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "lock.smode.h"
+#include "jumpstart.h"
 
 typedef enum {
   AMOSWAP_ACQUIRE,
@@ -33,6 +34,7 @@ swap_atomic(uint64_t *val, uint64_t new_value, amoswapKind_t kind) {
 
 __attribute__((section(".jumpstart.text.smode"))) void
 acquire_lock(spinlock_t *lock) {
+  disable_checktc();
   while (1) {
     if (*(volatile uint64_t *)lock) {
       continue;
@@ -41,6 +43,7 @@ acquire_lock(spinlock_t *lock) {
       break;
     }
   }
+  enable_checktc();
 }
 
 __attribute__((section(".jumpstart.text.smode"))) void
