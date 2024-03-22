@@ -92,7 +92,7 @@ int main(void) {
   uint64_t fill_value = 0x123456789abcdef0;
 
   for (uint8_t i = 0; i < 5; ++i) {
-    // Read a machine mode register to really make sure we're in supervisor
+    // Read a smode register to really make sure we're in supervisor
     // mode.
     fill_value += read_csr(sscratch);
     uint64_t *src = (uint64_t *)&source_location;
