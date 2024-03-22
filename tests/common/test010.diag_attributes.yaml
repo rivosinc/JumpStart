@@ -4,6 +4,7 @@
 
 satp_mode: "sv39"
 
+# Override default M-mode, S-mode, U-mode start address
 mmode_start_address: 0x81000000
 smode_start_address: 0x82000000
 umode_start_address: 0x83000000

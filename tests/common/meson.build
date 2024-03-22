@@ -16,7 +16,7 @@ start_in_smode_tests += [
   ['test002', 'Run C/Assembly functions with run_function_in_umode() from supervisor mode.'],
   ['test003', 'Register and run Supervisor mode illegal instruction exception handler.'],
   ['test006', 'Read and Write CSRs.'],
-  ['test010', 'Override default M-mode, S-mode, U-mode start address.'],
+  ['test010', 'ELF checks.'],
   ['test011', 'Handle user mode exceptions in supervisor mode.'],
   ['test012', 'Exit with DIAG_FAILED to test fail path', '', true],
   ['test013', 'test000 with 4 harts.', '-p4'],

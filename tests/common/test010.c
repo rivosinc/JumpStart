@@ -8,8 +8,21 @@
 extern uint64_t _JUMPSTART_TEXT_MMODE_INIT_START;
 extern uint64_t _JUMPSTART_TEXT_SMODE_INIT_START;
 extern uint64_t _JUMPSTART_TEXT_UMODE_START;
+extern uint64_t _BSS_START;
+extern uint64_t _BSS_END;
 
-int main(void) {
+#define ADDR(var) ((uint64_t) & (var))
+#define VAR_WITHIN_REGION(var, start, end)                                     \
+  (((ADDR(var) >= (start)) && (ADDR(var) + (sizeof(var)) < (end))) ? 1 : 0)
+
+uint64_t uninitialized_var;
+uint64_t zero_initialized_var = 0;
+
+uint8_t uninitialized_arr[128];
+uint8_t zero_initialized_arr[128] = {0};
+
+__attribute__((pure)) int main(void) {
+  // Check that the M-mode, S-mode, U-mode start address overrides worked.
   uint64_t mmode_start_address = (uint64_t)&_JUMPSTART_TEXT_MMODE_INIT_START;
   if (mmode_start_address != 0x81000000) {
     return DIAG_FAILED;
@@ -25,26 +38,43 @@ int main(void) {
     return DIAG_FAILED;
   }
 
+  // Check that these functions are in the right place.
   uint64_t main_function_address = (uint64_t)&main;
   if (main_function_address != 0xC0020000) {
     return DIAG_FAILED;
   }
 
-  if (get_thread_attributes_hart_id_from_smode() != 0) {
+  // Check BSS.
+  // These variables should be located within the BSS section.
+  if (VAR_WITHIN_REGION(uninitialized_var, ADDR(_BSS_START), ADDR(_BSS_END)) ==
+      0) {
     return DIAG_FAILED;
   }
 
-  if (get_thread_attributes_bookend_magic_number_from_smode() !=
-      THREAD_ATTRIBUTES_BOOKEND_MAGIC_NUMBER_VALUE) {
+  if (VAR_WITHIN_REGION(zero_initialized_var, ADDR(_BSS_START),
+                        ADDR(_BSS_END)) == 0) {
     return DIAG_FAILED;
   }
 
-  if (get_diag_satp_mode_from_smode() != VM_1_10_SV39) {
+  if (VAR_WITHIN_REGION(uninitialized_arr, ADDR(_BSS_START), ADDR(_BSS_END)) ==
+      0) {
     return DIAG_FAILED;
   }
 
-  if (get_thread_attributes_current_mode_from_smode() != PRV_S) {
+  if (VAR_WITHIN_REGION(zero_initialized_arr, ADDR(_BSS_START),
+                        ADDR(_BSS_END)) == 0) {
     return DIAG_FAILED;
+  }
+
+  // All variables in the BSS should be initialized to zero.
+  if (uninitialized_var || zero_initialized_var) {
+    return DIAG_FAILED;
+  }
+
+  for (uint8_t i = 0; i < 128; i++) {
+    if (uninitialized_arr[i] || zero_initialized_arr[i]) {
+      return DIAG_FAILED;
+    }
   }
 
   return DIAG_PASSED;
