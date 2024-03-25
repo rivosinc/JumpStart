@@ -102,6 +102,7 @@ __attribute__((section(".jumpstart.text.smode"))) void free(void *ptr) {
 // Set up the heap
 //------------------------------------------------------------------------------
 __attribute__((section(".jumpstart.text.smode"))) void setup_heap(void) {
+  disable_checktc();
   if (heap_setup_done) {
     return;
   }
@@ -123,6 +124,7 @@ __attribute__((section(".jumpstart.text.smode"))) void setup_heap(void) {
   }
 
   release_lock(&heap_lock);
+  enable_checktc();
 }
 
 __attribute__((section(".jumpstart.text.smode"))) void *calloc(size_t nmemb,
