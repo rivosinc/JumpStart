@@ -401,7 +401,7 @@ class JumpStartGeneratedSource:
         if "mmode" in modes:
             modes += ["lower_mode_in_mmode"]
         self.assembly_file_fd.write(
-            f"\n# {modes} context saved registers: \n# {self.attributes_data['reg_context_to_save_across_modes']['registers']}\n"
+            f"\n# {modes} context saved registers:\n# {self.attributes_data['reg_context_to_save_across_modes']['registers']}\n"
         )
         for mode in modes:
             self.assembly_file_fd.write(f".global {mode}_reg_context_save_region\n")

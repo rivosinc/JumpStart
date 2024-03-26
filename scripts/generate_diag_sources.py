@@ -514,7 +514,7 @@ sync_all_harts_from_{mode}:
   ld  fp, 0(sp)
   addi  sp, sp, 16
   ret
-        """
+"""
             )
 
     def generate_smode_fail_functions(self, file_descriptor):
