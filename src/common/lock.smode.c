@@ -28,7 +28,6 @@ swap_atomic(uint64_t *val, uint64_t new_value, amoswapKind_t kind) {
     break;
   default:
     jumpstart_smode_fail();
-    break;
   }
 
   return result;
