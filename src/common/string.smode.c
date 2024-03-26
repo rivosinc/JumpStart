@@ -81,13 +81,14 @@ static char *ksprintn(char *nbuf, uintmax_t num, int base, int *lenp,
 __attribute__((section(".jumpstart.text.smode"))) int
 vsnprintf(char *str, size_t size, char const *fmt, va_list ap) {
 #define PCHAR(c)                                                               \
-  {                                                                            \
+  do {                                                                         \
     if (size >= 2) {                                                           \
       *str++ = c;                                                              \
       size--;                                                                  \
     }                                                                          \
     retval++;                                                                  \
-  }
+  } while (0)
+
 #define MAXNBUF 65
   char nbuf[MAXNBUF];
   const char *p, *percent;
