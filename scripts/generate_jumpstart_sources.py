@@ -118,6 +118,7 @@ class JumpStartGeneratedSource:
             f"#define MAX_NUM_HARTS_SUPPORTED {self.attributes_data['max_num_harts_supported']}\n\n"
         )
 
+        self.data_structures_file_fd.write('#include "jumpstart_defines.h"\n\n')
         self.data_structures_file_fd.write("#include <inttypes.h>\n\n")
 
     def generate_c_structs(self):
@@ -142,7 +143,7 @@ class JumpStartGeneratedSource:
                 field_size_in_bytes = field_type_to_size_in_bytes[field_type]
                 if num_field_elements > 1:
                     self.data_structures_file_fd.write(
-                        f"    {field_type} {field_name}[{num_field_elements}];\n"
+                        f"    {field_type} {field_name}[NUM_{field_name.upper()}];\n"
                     )
                 else:
                     self.data_structures_file_fd.write(f"    {field_type} {field_name};\n")
