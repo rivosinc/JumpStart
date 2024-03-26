@@ -15,9 +15,11 @@ tests_disabled_on_spike = []
 tests_disabled_for_sbi_firmware_boot = []
 
 subdir('common')
+test_root_directories = [meson.current_source_dir() + '/' + 'common']
 
 if get_option('rivos_internal_build') == true
   subdir('rivos_internal')
+  test_root_directories += [meson.current_source_dir() + '/' + 'rivos_internal']
 endif
 
 unit_tests = []
@@ -54,13 +56,19 @@ foreach unit_test : unit_tests
     continue
   endif
 
-  if fs.is_file(meson.current_source_dir() + '/' + 'common' + '/' + test_name + '/' + test_name + '.diag_attributes.yaml')
-    diag_attributes_yaml = files('common' + '/' + test_name + '/' + test_name + '.diag_attributes.yaml')
-  elif get_option('rivos_internal_build') == true
-    if fs.is_file(meson.current_source_dir() + '/' + 'rivos_internal' + '/' + test_name + '/' + test_name + '.diag_attributes.yaml')
-      diag_attributes_yaml = files('rivos_internal' + '/' + test_name + '/' + test_name + '.diag_attributes.yaml')
+  test_sources = []
+  foreach test_root_dir : test_root_directories
+    foreach suffix : source_suffixes
+      if fs.is_file(test_root_dir + '/' + test_name + '/' + test_name + suffix)
+        test_sources += files(test_root_dir + '/' + test_name + '/' + test_name + suffix)
+      endif
+    endforeach
+
+    if fs.is_file(test_root_dir + '/' + test_name + '/' + test_name + '.diag_attributes.yaml')
+      diag_attributes_yaml = files(test_root_dir + '/' + test_name + '/' + test_name + '.diag_attributes.yaml')
+      break
     endif
-  endif
+  endforeach
 
   diag_source_generator_output = custom_target(
                                 'Generate diag attributes related source files for ' + test_name,
@@ -69,19 +77,8 @@ foreach unit_test : unit_tests
                                           test_name + '.linker_script.ld'],
                                 command : diag_source_generator_command)
 
-  test_sources = [diag_source_generator_output[0]]
+  test_sources += diag_source_generator_output[0]
   linker_script = diag_source_generator_output[1].full_path()
-
-  foreach suffix : source_suffixes
-    if fs.is_file(meson.current_source_dir() + '/' + 'common' + '/' + test_name + '/' + test_name + suffix)
-      test_sources += ['common' + '/' + test_name + '/' + test_name + suffix]
-    elif get_option('rivos_internal_build') == true
-      if fs.is_file(meson.current_source_dir() + '/' + 'rivos_internal' + '/' + test_name + '/' + test_name + suffix)
-        test_sources += ['rivos_internal' + '/' + test_name + '/' + test_name + suffix]
-      endif
-    endif
-
-  endforeach
 
   test_exe = executable(test_name,
                         sources: [jumpstart_sources, test_sources],
