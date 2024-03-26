@@ -9,7 +9,7 @@ void test017_illegal_instruction_handler(void);
 int test017_illegal_instruction_function(void);
 
 int test016_main(void);
-void main(void);
+int main(void);
 
 int test016_main(void) {
   uint64_t main_function_address = (uint64_t)&main;
