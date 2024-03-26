@@ -87,13 +87,11 @@ get_mmode_trap_handler_override(uint64_t mcause) {
     }
 
     return trap_overrides->mmode_interrupt_handler_overrides[exception_code];
-  } else {
-    if (exception_code >= NUM_MMODE_EXCEPTION_HANDLER_OVERRIDES) {
-      jumpstart_mmode_fail();
-    }
-
-    return trap_overrides->mmode_exception_handler_overrides[exception_code];
   }
 
-  jumpstart_mmode_fail();
+  if (exception_code >= NUM_MMODE_EXCEPTION_HANDLER_OVERRIDES) {
+    jumpstart_mmode_fail();
+  }
+
+  return trap_overrides->mmode_exception_handler_overrides[exception_code];
 }
