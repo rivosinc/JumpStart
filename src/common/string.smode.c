@@ -30,12 +30,10 @@ inline int tolower(int c) {
   return isupper(c) ? c - ('A' - 'a') : c;
 }
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wsuggest-attribute=const"
-__attribute__((section(".jumpstart.text.smode"))) int toupper(int c) {
+__attribute__((section(".jumpstart.text.smode"))) __attribute__((const)) int
+toupper(int c) {
   return islower(c) ? c + ('A' - 'a') : c;
 }
-#pragma GCC diagnostic pop
 
 __attribute__((section(".jumpstart.text.smode"))) size_t
 strlen(const char *str) {
