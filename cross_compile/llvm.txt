@@ -10,10 +10,6 @@ objdump = 'riscv64-unknown-elf-objdump'
 c_ld = 'bfd'
 
 [built-in options]
-# TODO: Enable werror
-# https://rivosinc.atlassian.net/browse/SW-6483
-werror = false
-
 c_args = target_args + ['-no-integrated-as',
                         '-fno-pic',
                        ]
