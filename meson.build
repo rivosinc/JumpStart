@@ -4,15 +4,18 @@
 
 project('JumpStart', 'c',
         default_options : [
-          'warning_level=everything',
+          'warning_level=3',
           'werror=true',
           ],
         meson_version: '>=1.1.0'
 )
 
-add_project_arguments('-Wno-c++-compat',
-                      '-Wno-padded',
-                      '-Wno-pedantic',
+add_project_arguments('-Wno-pedantic',
+                      # Require that all enums are covered by a switch statement.
+                      '-Wswitch-enum',
+                      # Check for implicit fallthrough in switch statements.
+                      '-Wimplicit-fallthrough',
+                      '-Wunreachable-code',
                       # Let GCC know we are using our own malloc/calloc implementation. Otherwise
                       # it makes assumptions about using it's own.
                       '-fno-builtin',
