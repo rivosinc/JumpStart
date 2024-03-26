@@ -21,11 +21,13 @@ swap_atomic(uint64_t *val, uint64_t new_value, amoswapKind_t kind) {
                          : "memory");
     break;
   case AMOSWAP_ACQUIRE:
-  default:
     __asm__ __volatile__("amoswap.d.aq %0, %2, %1"
                          : "=r"(result), "+A"(*val)
                          : "r"(new_value)
                          : "memory");
+    break;
+  default:
+    jumpstart_smode_fail();
     break;
   }
 
