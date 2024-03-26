@@ -54,11 +54,11 @@ foreach unit_test : unit_tests
     continue
   endif
 
-  if fs.is_file(meson.current_source_dir() + '/' + 'common' + '/' + test_name + '.diag_attributes.yaml')
-    diag_attributes_yaml = files('common' + '/' + test_name + '.diag_attributes.yaml')
+  if fs.is_file(meson.current_source_dir() + '/' + 'common' + '/' + test_name + '/' + test_name + '.diag_attributes.yaml')
+    diag_attributes_yaml = files('common' + '/' + test_name + '/' + test_name + '.diag_attributes.yaml')
   elif get_option('rivos_internal_build') == true
-    if fs.is_file(meson.current_source_dir() + '/' + 'rivos_internal' + '/' + test_name + '.diag_attributes.yaml')
-      diag_attributes_yaml = files('rivos_internal' + '/' + test_name + '.diag_attributes.yaml')
+    if fs.is_file(meson.current_source_dir() + '/' + 'rivos_internal' + '/' + test_name + '/' + test_name + '.diag_attributes.yaml')
+      diag_attributes_yaml = files('rivos_internal' + '/' + test_name + '/' + test_name + '.diag_attributes.yaml')
     endif
   endif
 
@@ -73,11 +73,11 @@ foreach unit_test : unit_tests
   linker_script = diag_source_generator_output[1].full_path()
 
   foreach suffix : source_suffixes
-    if fs.is_file(meson.current_source_dir() + '/' + 'common' + '/' + test_name + suffix)
-      test_sources += ['common' + '/' + test_name + suffix]
+    if fs.is_file(meson.current_source_dir() + '/' + 'common' + '/' + test_name + '/' + test_name + suffix)
+      test_sources += ['common' + '/' + test_name + '/' + test_name + suffix]
     elif get_option('rivos_internal_build') == true
-      if fs.is_file(meson.current_source_dir() + '/' + 'rivos_internal' + '/' + test_name + suffix)
-        test_sources += ['rivos_internal' + '/' + test_name + suffix]
+      if fs.is_file(meson.current_source_dir() + '/' + 'rivos_internal' + '/' + test_name + '/' + test_name + suffix)
+        test_sources += ['rivos_internal' + '/' + test_name + '/' + test_name + suffix]
       endif
     endif
 
