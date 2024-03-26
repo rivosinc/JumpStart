@@ -12,14 +12,13 @@ import math
 import os
 import sys
 
-import public.lib as public
+import public.functions as public_functions
 import yaml
-from memory_mapping.lib import MemoryMapping, PageSize
-from pagetables.lib import PageTableAttributes, PageTables
-from utils.lib import DictUtils, ListUtils
+from data_structures import DictUtils, ListUtils
+from memory_management import MemoryMapping, PageSize, PageTableAttributes, PageTables
 
 try:
-    import rivos_internal.lib as rivos_internal
+    import rivos_internal.functions as rivos_internal_functions
 except ImportError:
     log.debug("rivos_internal Python module not present.")
 
@@ -63,7 +62,7 @@ class DiagSource:
             and os.path.isdir(rivos_internal_lib_dir) is False
         ):
             log.error(
-                f"rivos_internal.lib not found but rivos_internal_build is set to True in {jumpstart_source_attributes_yaml}"
+                f"rivos_internal/ not found but rivos_internal_build is set to True in {jumpstart_source_attributes_yaml}"
             )
             sys.exit(1)
         elif (
@@ -71,7 +70,7 @@ class DiagSource:
             and os.path.isdir(rivos_internal_lib_dir) is True
         ):
             log.warning(
-                f"rivos_internal.lib exists but rivos_internal_build is set to False in {jumpstart_source_attributes_yaml}"
+                f"rivos_internal/ exists but rivos_internal_build is set to False in {jumpstart_source_attributes_yaml}"
             )
 
         if override_jumpstart_source_attributes:
@@ -122,10 +121,10 @@ class DiagSource:
         )
 
     def sanity_check_memory_map(self):
-        public.sanity_check_memory_map(self.memory_map)
+        public_functions.sanity_check_memory_map(self.memory_map)
 
         if self.jumpstart_source_attributes["rivos_internal_build"] is True:
-            rivos_internal.sanity_check_memory_map(self.memory_map)
+            rivos_internal_functions.sanity_check_memory_map(self.memory_map)
 
     def add_jumpstart_sections_to_mappings(self):
         for mode in ListUtils.intersection(
@@ -137,7 +136,7 @@ class DiagSource:
 
         if self.jumpstart_source_attributes["rivos_internal_build"] is True:
             self.memory_map.extend(
-                rivos_internal.get_additional_mappings(
+                rivos_internal_functions.get_additional_mappings(
                     self.jumpstart_source_attributes,
                 )
             )
@@ -150,7 +149,7 @@ class DiagSource:
         )
 
         if self.jumpstart_source_attributes["rivos_internal_build"] is True:
-            rivos_internal.sanity_check_diag_attributes(
+            rivos_internal_functions.sanity_check_diag_attributes(
                 self.jumpstart_source_attributes["diag_attributes"]
             )
 
@@ -162,7 +161,7 @@ class DiagSource:
             "page_size"
         ) * previous_mapping.get_field("num_pages")
         if self.jumpstart_source_attributes["rivos_internal_build"] is True:
-            previous_mapping_size = rivos_internal.get_previous_mapping_size(
+            previous_mapping_size = rivos_internal_functions.get_previous_mapping_size(
                 previous_mapping, pma_memory_type
             )
 
@@ -374,13 +373,15 @@ class DiagSource:
 
         self.generate_get_active_hart_mask_function(file_descriptor)
         if self.jumpstart_source_attributes["rivos_internal_build"] is True:
-            rivos_internal.generate_rivos_internal_diag_attribute_functions(
+            rivos_internal_functions.generate_rivos_internal_diag_attribute_functions(
                 file_descriptor,
                 self.jumpstart_source_attributes["diag_attributes"],
                 self.priv_modes_enabled,
             )
 
-            rivos_internal_boolean_attributes = rivos_internal.get_boolean_diag_attributes()
+            rivos_internal_boolean_attributes = (
+                rivos_internal_functions.get_boolean_diag_attributes()
+            )
 
             for rivos_internal_attribute in rivos_internal_boolean_attributes:
                 boolean_attributes.append(
@@ -617,7 +618,7 @@ sync_all_harts_from_{mode}:
             self.generate_hart_sync_functions(file)
 
             if self.jumpstart_source_attributes["rivos_internal_build"] is True:
-                rivos_internal.generate_rivos_internal_mmu_functions(
+                rivos_internal_functions.generate_rivos_internal_mmu_functions(
                     file, self.memory_map, self.priv_modes_enabled
                 )
 

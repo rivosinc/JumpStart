@@ -7,8 +7,9 @@ import logging as log
 import math
 import sys
 
-from memory_mapping.lib import PageSize
-from utils.lib import BitField
+from data_structures import BitField
+
+from .page_size import PageSize
 
 
 class PbmtMode(enum.IntEnum):

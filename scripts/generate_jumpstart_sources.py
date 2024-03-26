@@ -13,7 +13,7 @@ import sys
 from enum import Enum
 
 import yaml
-from utils.lib import DictUtils, ListUtils
+from data_structures import DictUtils, ListUtils
 
 
 class MemoryOp(Enum):

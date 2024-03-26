@@ -1,31 +1,8 @@
-#!/usr/bin/env python3
-
 # SPDX-FileCopyrightText: 2024 Rivos Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 
-# Generates the jumpstart source files from the jumpstart attributes YAML file.
-
 import logging as log
-
-
-class BitField:
-    def extract_bits(value, bit_range):
-        msb = bit_range[0]
-        lsb = bit_range[1]
-        return (value >> lsb) & ((1 << (msb - lsb + 1)) - 1)
-
-    def place_bits(value, bits, bit_range):
-        msb = bit_range[0]
-        lsb = bit_range[1]
-        return (value & ~(((1 << (msb - lsb + 1)) - 1) << lsb)) | (bits << lsb)
-
-
-class ListUtils:
-    def intersection(lst1, lst2):
-        temp = set(lst2)
-        lst3 = [value for value in lst1 if value in temp]
-        return lst3
 
 
 class DictUtils:
