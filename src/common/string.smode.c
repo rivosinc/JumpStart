@@ -160,15 +160,23 @@ vsnprintf(char *str, size_t size, char const *fmt, va_list ap) {
         padc = '0';
         goto reswitch;
       }
-      /* fallthrough */
+      __attribute__((fallthrough));
     case '1':
+      __attribute__((fallthrough));
     case '2':
+      __attribute__((fallthrough));
     case '3':
+      __attribute__((fallthrough));
     case '4':
+      __attribute__((fallthrough));
     case '5':
+      __attribute__((fallthrough));
     case '6':
+      __attribute__((fallthrough));
     case '7':
+      __attribute__((fallthrough));
     case '8':
+      __attribute__((fallthrough));
     case '9':
       for (n = 0;; ++fmt) {
         n = n * 10 + ch - '0';
@@ -268,9 +276,7 @@ vsnprintf(char *str, size_t size, char const *fmt, va_list ap) {
       goto handle_nosign;
     case 'X':
       upper = 1;
-#if defined(__GNUC__) && !defined(__clang__)
       __attribute__((fallthrough));
-#endif
     case 'x':
       base = 16;
       goto handle_nosign;
