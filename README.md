@@ -10,9 +10,7 @@ SPDX-License-Identifier: Apache-2.0
 
 Bare-metal kernel, APIs and build infrastructure for writing directed diags for RISC-V CPU/SoC validation.
 
-## Getting Started
-
-### Setup the Environment
+## Setup the Environment
 
 JumpStart requires the following tools to be available in your path:
 * [meson](https://mesonbuild.com)
@@ -21,7 +19,7 @@ JumpStart requires the following tools to be available in your path:
 
 JumpStart has been tested on Ubuntu 22.04 and macOS.
 
-### Test JumpStart
+## Test the Environment
 
 This will build JumpStart and run the unit tests.
 
@@ -31,14 +29,26 @@ meson compile -C builddir
 meson test -C builddir
 ```
 
-### Build an Example Diag
+## Building and Running Diags
 
-This will build a diag and run it on Spike.
+The [`scripts/build_diag.py`](scripts/build_diag.py) script provides an easy way to build and run diags on different targets.
+
+This will build the diag in the [`tests/common/test000`](tests/common/test000) using the `gcc` toolchain and run it on the `spike` target:
 
 ```shell
-meson setup builddir --cross-file cross_compile/public/gcc_options.txt --cross-file cross_compile/gcc.txt --buildtype release -Ddiag_attributes_yaml=tests/common/test000.diag_attributes.yaml -Ddiag_sources=tests/common/test000.c -Ddiag_name=my_jumpstart_diag
-meson compile -C builddir
-meson test -C builddir
+❯ scripts/build_diag.py --diag_src_dir tests/common/test000/ --diag_build_dir /tmp/diag
+INFO: [MainThread]: Diag built:
+        Name: test000
+        Directory: /tmp/diag
+        Assets: {'disasm': '/tmp/diag/test000.elf.dis', 'binary': '/tmp/diag/test000.elf', 'spike_trace': '/tmp/diag/test000.itrace'}
+        BuildType: release,
+        Target: spike
+        RNG Seed: 8410517908284574883
+        Source Info:
+                Diag: test000, Source Path: /Users/joy/workspace/jumpstart/tests/common/test000
+                Sources: ['/Users/joy/workspace/jumpstart/tests/common/test000/test000.c']
+                Attributes: /Users/joy/workspace/jumpstart/tests/common/test000/test000.diag_attributes.yaml
+                Meson options overrides file: None
 ```
 
 ## Documentation
