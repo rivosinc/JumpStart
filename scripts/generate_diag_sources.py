@@ -35,7 +35,7 @@ class BooleanDiagAttribute:
         return self.modes
 
 
-class DiagSource:
+class SourceGenerator:
     def __init__(
         self,
         jumpstart_source_attributes_yaml,
@@ -694,7 +694,7 @@ def main():
             f"JumpStart Attributes file {args.jumpstart_source_attributes_yaml} not found"
         )
 
-    diag_source = DiagSource(
+    source_generator = SourceGenerator(
         args.jumpstart_source_attributes_yaml,
         args.override_jumpstart_source_attributes,
         args.diag_attributes_yaml,
@@ -703,12 +703,12 @@ def main():
     )
 
     if args.output_assembly_file is not None:
-        diag_source.generate_assembly_file(args.output_assembly_file)
+        source_generator.generate_assembly_file(args.output_assembly_file)
     if args.output_linker_script is not None:
-        diag_source.generate_linker_script(args.output_linker_script)
+        source_generator.generate_linker_script(args.output_linker_script)
 
     if args.translate_VA is not None:
-        diag_source.page_tables.translate_VA(args.translate_VA)
+        source_generator.page_tables.translate_VA(args.translate_VA)
 
 
 if __name__ == "__main__":
