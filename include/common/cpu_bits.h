@@ -761,6 +761,7 @@
 /* MIE masks */
 #define MIE_SEIE                           (1 << IRQ_S_EXT)
 #define MIE_UEIE                           (1 << IRQ_U_EXT)
+#define MIE_MTIE                           (1 << IRQ_M_TIMER)
 #define MIE_STIE                           (1 << IRQ_S_TIMER)
 #define MIE_UTIE                           (1 << IRQ_U_TIMER)
 #define MIE_SSIE                           (1 << IRQ_S_SOFT)
