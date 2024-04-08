@@ -44,6 +44,7 @@ start_in_mmode_tests += [
   ['test018', 'Run C/Assembly functions with run_function_in_smode() from machine mode.'],
   ['test023', 'Handle S mode exceptions in M mode handlers.'],
   ['test038', '2P where only non-primary hart runs functions with run_functions_in_smode().', '-p2'],
+  ['test040', 'Run smode function during mmode exception handler.'],
 ]
 
 sbi_firmware_boot_tests += []

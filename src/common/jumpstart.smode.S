@@ -118,32 +118,19 @@ stvec_trap_handler:
   li  gp, PRV_S
   SET_THREAD_ATTRIBUTES_CURRENT_MODE(gp)
 
-  csrr  gp, sstatus
-  bexti gp, gp, SSTATUS_SPP_SHIFT
-  beqz  gp, handle_trap_from_umode
+  # Make sure we have enough context saves remaining in S mode.
+  GET_THREAD_ATTRIBUTES_NUM_CONTEXT_SAVES_REMAINING_IN_SMODE(gp)
+  beqz gp, jumpstart_smode_fail
 
-handle_trap_from_smode:
+  addi gp, gp, -1
+  SET_THREAD_ATTRIBUTES_NUM_CONTEXT_SAVES_REMAINING_IN_SMODE(gp)
+
   GET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
   SAVE_ALL_GPRS
 
   csrr t0, hstatus
   sd t0, HSTATUS_OFFSET_IN_SAVE_REGION(gp)
 
-  j save_other_context
-
-handle_trap_from_umode:
-  # Save away the U-mode stack.
-  GET_THREAD_ATTRIBUTES_UMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
-  sd sp, SP_OFFSET_IN_SAVE_REGION(gp)
-  # and switch to the S-mode stack as we can't use the Umode stack.
-  GET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(sp)
-  ld sp, SP_OFFSET_IN_SAVE_REGION(sp)
-
-  # We will save away the user mode context to the user mode region
-  # which GP currently points to.
-  SAVE_ALL_GPRS
-
-save_other_context:
   csrr t0, stval
   sd t0, STVAL_OFFSET_IN_SAVE_REGION(gp)
 
@@ -152,6 +139,24 @@ save_other_context:
 
   csrr t0, sstatus
   sd t0, SSTATUS_OFFSET_IN_SAVE_REGION(gp)
+
+  # We just need to check the SPP field here to determine if we came from
+  # S or U mode.
+  bexti t0, t0, SSTATUS_SPP_SHIFT
+  bnez  t0, 1f
+
+  # We're handling a trap from umode.
+  # Switch to the S-mode stack as we can't use the Umode stack.
+  # We get the smode stack from the smode context that was saved
+  # when we ran run_function_in_umode() - the context just prior to this.
+  addi t0, gp, -REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES
+  ld sp, SP_OFFSET_IN_SAVE_REGION(t0)
+
+1:
+  # Point to the address of the next context save region for the next
+  # trap handler.
+  addi gp, gp, REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES
+  SET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
 
 check_for_trap_handler_overrides:
   # Check if the test has registered a trap handler for this trap.
@@ -165,24 +170,12 @@ check_for_trap_handler_overrides:
   #       If so, we need to restore them from the context save region.
   jalr  ra, a0
 
-  csrr  gp, sstatus
-  bexti gp, gp, SSTATUS_SPP_SHIFT
-  beqz  gp, restore_umode_context
-
-restore_smode_context:
-  GET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
-
-  ld t0, HSTATUS_OFFSET_IN_SAVE_REGION(gp)
-  csrw hstatus, t0
-
-  j restore_context
-
-restore_umode_context:
-  li  gp, PRV_U
-  SET_THREAD_ATTRIBUTES_CURRENT_MODE(gp)
-  GET_THREAD_ATTRIBUTES_UMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
-
 restore_context:
+  # Point to the address of the context save region we used when we
+  # took the trap.
+  GET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
+  addi gp, gp, -REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES
+
   ld t0, STVAL_OFFSET_IN_SAVE_REGION(gp)
   csrw stval, t0
 
@@ -192,7 +185,27 @@ restore_context:
   ld t0, SSTATUS_OFFSET_IN_SAVE_REGION(gp)
   csrw sstatus, t0
 
+  bexti t0, t0, SSTATUS_SPP_SHIFT
+  beqz  t0, restore_umode_context
+
+  ld t0, HSTATUS_OFFSET_IN_SAVE_REGION(gp)
+  csrw hstatus, t0
+
+  j restore_all_gprs
+
+restore_umode_context:
+  li  t0, PRV_U
+  SET_THREAD_ATTRIBUTES_CURRENT_MODE(t0)
+
+restore_all_gprs:
   RESTORE_ALL_GPRS
+
+  # This location is now free to be used by the next trap handler entry.
+  SET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
+
+  GET_THREAD_ATTRIBUTES_NUM_CONTEXT_SAVES_REMAINING_IN_SMODE(gp)
+  addi gp, gp, 1
+  SET_THREAD_ATTRIBUTES_NUM_CONTEXT_SAVES_REMAINING_IN_SMODE(gp)
 
 # The return_from_stvec_trap_handler label is referenced in control transfer
 # records diag so mark it as global.
@@ -226,16 +239,31 @@ handle_syscall_run_func_in_umode_complete:
   la  t0, run_function_in_umode_return_point
   csrw sepc, t0
 
+  # Point to the address of the context save region we used when we
+  # took the RUN_FUNC_IN_UMODE_COMPLETE syscall.
+  GET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
+  addi gp, gp, -REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES
+
   # The return value from the umode function is in the umode
   # context saved for a0 when we took the ecall exception from umode to
-  # smode. Place it in a0 smode context.
-  GET_THREAD_ATTRIBUTES_UMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
+  # smode.
   ld t0, A0_OFFSET_IN_SAVE_REGION(gp)
-  GET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
+
+  # Place it in the a0 location for the mmode context we saved before calling
+  # run_function_in_umode().
+  addi gp, gp, -REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES
   sd t0, A0_OFFSET_IN_SAVE_REGION(gp)
 
   # Restore S mode context from before the run_function_in_umode() call.
   RESTORE_ALL_GPRS
+
+  # This location is now free to be used by the next trap handler entry.
+  SET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
+
+  # We've freed 2 context saves.
+  GET_THREAD_ATTRIBUTES_NUM_CONTEXT_SAVES_REMAINING_IN_SMODE(gp)
+  addi gp, gp, 2
+  SET_THREAD_ATTRIBUTES_NUM_CONTEXT_SAVES_REMAINING_IN_SMODE(gp)
 
   sret
 
@@ -257,14 +285,23 @@ run_function_in_umode:
   # state we set up if we encounter an interrupt.
   csrci sstatus, SSTATUS_SIE
 
+  # Make sure we have enough context saves remaining in S mode.
+  GET_THREAD_ATTRIBUTES_NUM_CONTEXT_SAVES_REMAINING_IN_SMODE(gp)
+  beqz gp, jumpstart_smode_fail
+
+  addi gp, gp, -1
+  SET_THREAD_ATTRIBUTES_NUM_CONTEXT_SAVES_REMAINING_IN_SMODE(gp)
+
   # Save S-mode context
   GET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
   SAVE_ALL_GPRS
 
-  # Load U-mode context. We just need to set sepc, sstatus and a0 register.
-  la t0, jump_to_function_in_umode
-  csrw sepc, t0
+  # Point to the address of the next context save region for the next
+  # trap handler.
+  addi gp, gp, REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES
+  SET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
 
+  # Load U-mode context. We just need to set sepc, sstatus and a0 register.
   li t0, (PRV_S << SSTATUS_SPP_SHIFT)
   csrc sstatus, t0
 
@@ -278,6 +315,9 @@ run_function_in_umode:
 
   li  t0, PRV_U
   SET_THREAD_ATTRIBUTES_CURRENT_MODE(t0)
+
+  la t0, jump_to_function_in_umode
+  csrw sepc, t0
 
   sret
 
@@ -298,20 +338,13 @@ just_wfi_from_smode:
 .global get_sepc_for_current_exception
 get_sepc_for_current_exception:
   # This should only be called from a registered exception handler.
+  # Make sure that there is at least one exception we're handling at this point.
+  GET_THREAD_ATTRIBUTES_NUM_CONTEXT_SAVES_REMAINING_IN_SMODE(t0)
+  addi t0, t0, -MAX_NUM_CONTEXT_SAVES
+  beqz t0, jumpstart_smode_fail
 
-  # We just need to check MSB of SPP field here to determine if the exception
-  # we're processing came from smode or umode.
-  csrr  t0, sstatus
-  bexti t0, t0, SSTATUS_SPP_SHIFT
-  bnez  t0, 2f
-
-  GET_THREAD_ATTRIBUTES_UMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(t0)
-  j 1f
-
-2:
   GET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(t0)
-
-1:
+  addi t0, t0, -REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES
   ld a0, SEPC_OFFSET_IN_SAVE_REGION(t0)
   ret
 
@@ -320,19 +353,12 @@ get_sepc_for_current_exception:
 .global set_sepc_for_current_exception
 set_sepc_for_current_exception:
   # This should only be called from a registered exception handler.
+  # Make sure that there is at least one exception we're handling at this point.
+  GET_THREAD_ATTRIBUTES_NUM_CONTEXT_SAVES_REMAINING_IN_SMODE(t0)
+  addi t0, t0, -MAX_NUM_CONTEXT_SAVES
+  beqz t0, jumpstart_smode_fail
 
-  # We just need to check MSB of SPP field here to determine if the exception
-  # we're processing came from smode or umode.
-  csrr  t0, sstatus
-  bexti t0, t0, SSTATUS_SPP_SHIFT
-  bnez  t0, 2f
-
-  GET_THREAD_ATTRIBUTES_UMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(t0)
-  j 1f
-
-2:
   GET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(t0)
-
-1:
+  addi t0, t0, -REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES
   sd a0, SEPC_OFFSET_IN_SAVE_REGION(t0)
   ret

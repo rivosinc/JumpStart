@@ -148,16 +148,30 @@ handle_syscall_run_func_in_smode_complete:
   la  t0, run_function_in_smode_return_point
   csrw mepc, t0
 
-  # The return value from the smode function is in the smode
-  # context saved for a0 when we took the ecall exception from smode to
-  # mmode. Place it in a0 mmode context.
-  GET_THREAD_ATTRIBUTES_LOWER_MODE_IN_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
-  ld t0, A0_OFFSET_IN_SAVE_REGION(gp)
+  # Point to the address of the context save region we used when we
+  # took the RUN_FUNC_IN_SMODE_COMPLETE syscall.
   GET_THREAD_ATTRIBUTES_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
+  addi gp, gp, -REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES
+
+  # The return value from the smode function is in the a0 location for smode
+  # context saved when we took the ecall exception from smode to
+  # mmode.
+  ld t0, A0_OFFSET_IN_SAVE_REGION(gp)
+  # Place it in the a0 location for the mmode context we saved before calling
+  # run_function_in_smode().
+  addi gp, gp, -REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES
   sd t0, A0_OFFSET_IN_SAVE_REGION(gp)
 
   # Restore M mode context from before the run_function_in_smode() call.
   RESTORE_ALL_GPRS
+
+  # This location is now free to be used by the next trap handler entry.
+  SET_THREAD_ATTRIBUTES_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
+
+  # We've freed 2 context saves.
+  GET_THREAD_ATTRIBUTES_NUM_CONTEXT_SAVES_REMAINING_IN_MMODE(gp)
+  addi gp, gp, 2
+  SET_THREAD_ATTRIBUTES_NUM_CONTEXT_SAVES_REMAINING_IN_MMODE(gp)
 
   mret
 
@@ -181,9 +195,22 @@ run_function_in_smode:
   # the interrupts in the return path.
   csrci mstatus, MSTATUS_MIE
 
+save_mmode_context_before_smode_function:
+  # Make sure we have enough context saves remaining in M mode.
+  GET_THREAD_ATTRIBUTES_NUM_CONTEXT_SAVES_REMAINING_IN_MMODE(gp)
+  beqz gp, jumpstart_mmode_fail
+
+  addi gp, gp, -1
+  SET_THREAD_ATTRIBUTES_NUM_CONTEXT_SAVES_REMAINING_IN_MMODE(gp)
+
   # Save machine mode context
   GET_THREAD_ATTRIBUTES_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
   SAVE_ALL_GPRS
+
+  # Point to the address of the next context save region for the next
+  # trap handler.
+  addi gp, gp, REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES
+  SET_THREAD_ATTRIBUTES_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
 
   MMODE_ROLE_DISABLE
 
@@ -222,19 +249,21 @@ mtvec_trap_handler:
   # M or S mode. U mode is also handled in S mode path.
   csrr  gp, mstatus
   bexti gp, gp, MSTATUS_MPP_MSB
-  bnez  gp, handle_trap_from_mmode
+  bnez  gp, save_context
 
 handle_trap_from_smode:
-  # Save away the S/U-mode reg context.
-  GET_THREAD_ATTRIBUTES_LOWER_MODE_IN_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
   MMODE_ROLE_ENABLE
-  j save_context
-
-handle_trap_from_mmode:
-  # Save away the M-mode reg context.
-  GET_THREAD_ATTRIBUTES_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
 
 save_context:
+  # Make sure we have enough context saves remaining in M mode.
+  GET_THREAD_ATTRIBUTES_NUM_CONTEXT_SAVES_REMAINING_IN_MMODE(gp)
+  beqz gp, jumpstart_mmode_fail
+
+  addi gp, gp, -1
+  SET_THREAD_ATTRIBUTES_NUM_CONTEXT_SAVES_REMAINING_IN_MMODE(gp)
+
+  # Save away the reg context of the mode we came from.
+  GET_THREAD_ATTRIBUTES_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
   SAVE_ALL_GPRS
 
   csrr t0, mtval
@@ -249,6 +278,11 @@ save_context:
   csrr t0, hstatus
   sd t0, HSTATUS_OFFSET_IN_SAVE_REGION(gp)
 
+  # Point to the address of the next context save region for the next
+  # trap handler.
+  addi gp, gp, REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES
+  SET_THREAD_ATTRIBUTES_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
+
   # Check if the test has registered a trap handler for this trap.
   csrr  a0, mcause
   call  get_mmode_trap_handler_override
@@ -260,25 +294,12 @@ save_context:
   #       If so, we need to restore them from the context save region.
   jalr  ra, a0
 
-  csrr  gp, mstatus
-  bexti gp, gp, MSTATUS_MPP_MSB
-  bnez  gp, restore_mmode_context
-
-restore_smode_context:
-  # Set thread attribute from mstatus.
-  MMODE_ROLE_DISABLE
-  csrr  gp, mstatus
-  bexti gp, gp, MSTATUS_MPP_SHIFT
-  SET_THREAD_ATTRIBUTES_CURRENT_MODE(gp)
-
-  GET_THREAD_ATTRIBUTES_LOWER_MODE_IN_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
-
-  j restore_context
-
-restore_mmode_context:
-  GET_THREAD_ATTRIBUTES_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
-
 restore_context:
+  # Point to the address of the context save region we used when we
+  # took the trap.
+  GET_THREAD_ATTRIBUTES_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
+  addi gp, gp, -REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES
+
   ld t0, HSTATUS_OFFSET_IN_SAVE_REGION(gp)
   csrw hstatus, t0
 
@@ -291,7 +312,24 @@ restore_context:
   ld t0, MSTATUS_OFFSET_IN_SAVE_REGION(gp)
   csrw mstatus, t0
 
+  bexti t0, t0, MSTATUS_MPP_MSB
+  bnez  t0, restore_all_gprs
+
+restore_smode_context:
+  MMODE_ROLE_DISABLE
+  li  t0, PRV_S
+  SET_THREAD_ATTRIBUTES_CURRENT_MODE(t0)
+
+restore_all_gprs:
   RESTORE_ALL_GPRS
+
+  # This location is now free to be used by the next trap handler entry.
+  SET_THREAD_ATTRIBUTES_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
+
+  GET_THREAD_ATTRIBUTES_NUM_CONTEXT_SAVES_REMAINING_IN_MMODE(gp)
+  addi gp, gp, 1
+  SET_THREAD_ATTRIBUTES_NUM_CONTEXT_SAVES_REMAINING_IN_MMODE(gp)
+
   csrr  gp, mscratch
 
   mret
@@ -311,20 +349,13 @@ check_for_env_call_requests:
 .global get_mepc_for_current_exception
 get_mepc_for_current_exception:
   # This should only be called from a registered exception handler.
+  # Make sure that there is at least one exception we're handling at this point.
+  GET_THREAD_ATTRIBUTES_NUM_CONTEXT_SAVES_REMAINING_IN_MMODE(t0)
+  addi t0, t0, -MAX_NUM_CONTEXT_SAVES
+  beqz t0, jumpstart_mmode_fail
 
-  # We just need to check MSB of MPP field here to determine if the exception
-  # we're processing came from mmode or smode/umode.
-  csrr  t0, mstatus
-  bexti t0, t0, MSTATUS_MPP_MSB
-  bnez  t0, 2f
-
-  GET_THREAD_ATTRIBUTES_LOWER_MODE_IN_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(t0)
-  j 1f
-
-2:
   GET_THREAD_ATTRIBUTES_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(t0)
-
-1:
+  addi t0, t0, -REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES
   ld a0, MEPC_OFFSET_IN_SAVE_REGION(t0)
   ret
 
@@ -333,19 +364,12 @@ get_mepc_for_current_exception:
 .global set_mepc_for_current_exception
 set_mepc_for_current_exception:
   # This should only be called from a registered exception handler.
+  # Make sure that there is at least one exception we're handling at this point.
+  GET_THREAD_ATTRIBUTES_NUM_CONTEXT_SAVES_REMAINING_IN_MMODE(t0)
+  addi t0, t0, -MAX_NUM_CONTEXT_SAVES
+  beqz t0, jumpstart_mmode_fail
 
-  # We just need to check MSB of MPP field here to determine if the exception
-  # we're processing came from mmode or smode/umode.
-  csrr  t0, mstatus
-  bexti t0, t0, MSTATUS_MPP_MSB
-  bnez  t0, 2f
-
-  GET_THREAD_ATTRIBUTES_LOWER_MODE_IN_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(t0)
-  j 1f
-
-2:
   GET_THREAD_ATTRIBUTES_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(t0)
-
-1:
+  addi t0, t0, -REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES
   sd a0, MEPC_OFFSET_IN_SAVE_REGION(t0)
   ret

@@ -26,6 +26,18 @@ extern uint64_t destination_location;
 uint8_t c_check_passed_in_arguments(uint8_t a0, uint8_t a1, uint8_t a2,
                                     uint8_t a3, uint8_t a4, uint8_t a5,
                                     uint8_t a6) {
+  if (get_thread_attributes_num_context_saves_remaining_in_mmode_from_smode() !=
+      MAX_NUM_CONTEXT_SAVES - 1) {
+    // we should have consumed one of the mmode context saves to run
+    // the smode function.
+    return DIAG_FAILED;
+  }
+
+  if (get_thread_attributes_num_context_saves_remaining_in_smode_from_smode() !=
+      MAX_NUM_CONTEXT_SAVES) {
+    return DIAG_FAILED;
+  }
+
   if (a0 != 1) {
     return DIAG_FAILED;
   }
@@ -51,6 +63,12 @@ uint8_t c_check_passed_in_arguments(uint8_t a0, uint8_t a1, uint8_t a2,
 }
 
 int main(void) {
+  if (MAX_NUM_CONTEXT_SAVES < 2) {
+    // We need at least 2 smode context saves to run
+    // run_function_in_smode().
+    return DIAG_FAILED;
+  }
+
   if (get_thread_attributes_hart_id_from_mmode() != 0) {
     return DIAG_FAILED;
   }
@@ -116,6 +134,16 @@ int main(void) {
     if (get_thread_attributes_current_mode_from_mmode() != PRV_M) {
       return DIAG_FAILED;
     }
+  }
+
+  if (get_thread_attributes_num_context_saves_remaining_in_mmode_from_mmode() !=
+      MAX_NUM_CONTEXT_SAVES) {
+    return DIAG_FAILED;
+  }
+
+  if (get_thread_attributes_num_context_saves_remaining_in_smode_from_mmode() !=
+      MAX_NUM_CONTEXT_SAVES) {
+    return DIAG_FAILED;
   }
 
   return DIAG_PASSED;

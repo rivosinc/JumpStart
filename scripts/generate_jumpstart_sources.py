@@ -305,7 +305,9 @@ class JumpStartGeneratedSource:
                 "  SET_THREAD_ATTRIBUTES_TRAP_OVERRIDE_STRUCT_ADDRESS(t0)\n"
             )
             self.assembly_file_fd.write("\n")
-            self.assembly_file_fd.write("  li t0, REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES\n")
+            self.assembly_file_fd.write(
+                "  li t0, REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES * MAX_NUM_CONTEXT_SAVES\n"
+            )
             self.assembly_file_fd.write("  mul t0, a0, t0\n")
             self.assembly_file_fd.write("\n")
             if "mmode" in modes:
@@ -316,17 +318,9 @@ class JumpStartGeneratedSource:
                 self.assembly_file_fd.write(
                     "  SET_THREAD_ATTRIBUTES_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(t1)\n"
                 )
-                self.assembly_file_fd.write("\n")
+                self.assembly_file_fd.write("  li t1, MAX_NUM_CONTEXT_SAVES\n")
                 self.assembly_file_fd.write(
-                    "  la t1, lower_mode_in_mmode_reg_context_save_region\n"
-                )
-                self.assembly_file_fd.write("  add t1, t1, t0\n")
-                self.assembly_file_fd.write(
-                    "  la t2, lower_mode_in_mmode_reg_context_save_region_end\n"
-                )
-                self.assembly_file_fd.write(f"  bgeu t1, t2, jumpstart_{mode}_fail\n")
-                self.assembly_file_fd.write(
-                    "  SET_THREAD_ATTRIBUTES_LOWER_MODE_IN_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(t1)\n"
+                    "  SET_THREAD_ATTRIBUTES_NUM_CONTEXT_SAVES_REMAINING_IN_MMODE(t1)\n"
                 )
                 self.assembly_file_fd.write("\n")
             self.assembly_file_fd.write("  la t1, smode_reg_context_save_region\n")
@@ -336,13 +330,9 @@ class JumpStartGeneratedSource:
             self.assembly_file_fd.write(
                 "  SET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(t1)\n"
             )
-            self.assembly_file_fd.write("\n")
-            self.assembly_file_fd.write("  la t1, umode_reg_context_save_region\n")
-            self.assembly_file_fd.write("  add t1, t1, t0\n")
-            self.assembly_file_fd.write("  la t2, umode_reg_context_save_region_end\n")
-            self.assembly_file_fd.write(f"  bgeu t1, t2, jumpstart_{mode}_fail\n")
+            self.assembly_file_fd.write("  li t1, MAX_NUM_CONTEXT_SAVES\n")
             self.assembly_file_fd.write(
-                "  SET_THREAD_ATTRIBUTES_UMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(t1)\n"
+                "  SET_THREAD_ATTRIBUTES_NUM_CONTEXT_SAVES_REMAINING_IN_SMODE(t1)\n"
             )
             self.assembly_file_fd.write("\n")
             self.assembly_file_fd.write("  li  t0, 0\n")
@@ -358,13 +348,15 @@ class JumpStartGeneratedSource:
 
     def generate_reg_context_save_restore_code(self):
         assert (
-            self.attributes_data["reg_context_to_save_across_modes"]["temp_register"]
-            not in self.attributes_data["reg_context_to_save_across_modes"]["registers"]["gprs"]
+            self.attributes_data["reg_context_to_save_across_exceptions"]["temp_register"]
+            not in self.attributes_data["reg_context_to_save_across_exceptions"]["registers"][
+                "gprs"
+            ]
         )
 
         num_registers = 0
-        for reg_type in self.attributes_data["reg_context_to_save_across_modes"]["registers"]:
-            reg_names = self.attributes_data["reg_context_to_save_across_modes"]["registers"][
+        for reg_type in self.attributes_data["reg_context_to_save_across_exceptions"]["registers"]:
+            reg_names = self.attributes_data["reg_context_to_save_across_exceptions"]["registers"][
                 reg_type
             ]
             for reg_name in reg_names:
@@ -373,14 +365,19 @@ class JumpStartGeneratedSource:
                 )
                 num_registers += 1
 
-        temp_reg_name = self.attributes_data["reg_context_to_save_across_modes"]["temp_register"]
+        temp_reg_name = self.attributes_data["reg_context_to_save_across_exceptions"][
+            "temp_register"
+        ]
 
         self.defines_file_fd.write(
             f"\n#define REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES ({num_registers} * 8)\n"
         )
+        self.defines_file_fd.write(
+            f"\n#define MAX_NUM_CONTEXT_SAVES {self.attributes_data['reg_context_to_save_across_exceptions']['max_num_context_saves']}\n"
+        )
 
         self.defines_file_fd.write("\n#define SAVE_ALL_GPRS   ;")
-        for gpr_name in self.attributes_data["reg_context_to_save_across_modes"]["registers"][
+        for gpr_name in self.attributes_data["reg_context_to_save_across_exceptions"]["registers"][
             "gprs"
         ]:
             self.defines_file_fd.write(
@@ -389,7 +386,7 @@ class JumpStartGeneratedSource:
         self.defines_file_fd.write("\n\n")
 
         self.defines_file_fd.write("\n#define RESTORE_ALL_GPRS   ;")
-        for gpr_name in self.attributes_data["reg_context_to_save_across_modes"]["registers"][
+        for gpr_name in self.attributes_data["reg_context_to_save_across_exceptions"]["registers"][
             "gprs"
         ]:
             self.defines_file_fd.write(
@@ -398,20 +395,24 @@ class JumpStartGeneratedSource:
         self.defines_file_fd.write("\n\n")
 
         self.assembly_file_fd.write('\n\n.section .jumpstart.data.smode, "aw"\n')
-        modes = ListUtils.intersection(["mmode", "smode", "umode"], self.priv_modes_enabled)
-        if "mmode" in modes:
-            modes += ["lower_mode_in_mmode"]
+        modes = ListUtils.intersection(["mmode", "smode"], self.priv_modes_enabled)
         self.assembly_file_fd.write(
-            f"\n# {modes} context saved registers:\n# {self.attributes_data['reg_context_to_save_across_modes']['registers']}\n"
+            f"\n# {modes} context saved registers:\n# {self.attributes_data['reg_context_to_save_across_exceptions']['registers']}\n"
         )
         for mode in modes:
             self.assembly_file_fd.write(f".global {mode}_reg_context_save_region\n")
             self.assembly_file_fd.write(f"{mode}_reg_context_save_region:\n")
             for i in range(self.attributes_data["max_num_harts_supported"]):
                 self.assembly_file_fd.write(
-                    f"  # save area for hart {i}'s {num_registers} registers\n"
+                    f"  # {mode} context save area for hart {i}'s {num_registers} registers. {self.attributes_data['reg_context_to_save_across_exceptions']['max_num_context_saves']} nested contexts supported.\n"
                 )
-                self.assembly_file_fd.write(f"  .zero {num_registers * 8}\n\n")
+                for i in range(
+                    self.attributes_data["reg_context_to_save_across_exceptions"][
+                        "max_num_context_saves"
+                    ]
+                ):
+                    f"  # Context {i}\n"
+                    self.assembly_file_fd.write(f"  .zero {num_registers * 8}\n\n")
             self.assembly_file_fd.write(f".global {mode}_reg_context_save_region_end\n")
             self.assembly_file_fd.write(f"{mode}_reg_context_save_region_end:\n\n")
 
