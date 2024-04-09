@@ -212,14 +212,16 @@ handle_syscall_run_func_in_umode_complete:
   la  t0, run_function_in_umode_return_point
   csrw sepc, t0
 
-  # Restore S mode context.
-  GET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
-  RESTORE_ALL_GPRS
-
-  # Return U-mode status using a0. a0 was saved to umode_reg_context_save_region
-  # in stvec_trap_handler.
+  # The return value from the umode function is in the umode
+  # context saved for a0 when we took the ecall exception from umode to
+  # smode. Place it in a0 smode context.
   GET_THREAD_ATTRIBUTES_UMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
-  ld a0, A0_OFFSET_IN_SAVE_REGION(gp)
+  ld t0, A0_OFFSET_IN_SAVE_REGION(gp)
+  GET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
+  sd t0, A0_OFFSET_IN_SAVE_REGION(gp)
+
+  # Restore S mode context from before the run_function_in_umode() call.
+  RESTORE_ALL_GPRS
 
   sret
 
@@ -241,17 +243,13 @@ run_function_in_umode:
   # state we set up if we encounter an interrupt.
   csrci sstatus, SSTATUS_SIE
 
-  GET_THREAD_ATTRIBUTES_UMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
-  sd a0, A0_OFFSET_IN_SAVE_REGION(gp)
-  sd a1, A1_OFFSET_IN_SAVE_REGION(gp)
-
   # Save S-mode context
   GET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
   SAVE_ALL_GPRS
 
   # Load U-mode context. We just need to set sepc, sstatus and a0 register.
-  la a1, jump_to_function_in_umode
-  csrw sepc, a1
+  la t0, jump_to_function_in_umode
+  csrw sepc, t0
 
   li t0, (PRV_S << SSTATUS_SPP_SHIFT)
   csrc sstatus, t0
@@ -266,10 +264,6 @@ run_function_in_umode:
 
   li  t0, PRV_U
   SET_THREAD_ATTRIBUTES_CURRENT_MODE(t0)
-
-  GET_THREAD_ATTRIBUTES_UMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
-  ld a0, A0_OFFSET_IN_SAVE_REGION(gp)
-  ld a1, A1_OFFSET_IN_SAVE_REGION(gp)
 
   sret
 

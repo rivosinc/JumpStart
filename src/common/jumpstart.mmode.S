@@ -148,13 +148,16 @@ handle_syscall_run_func_in_smode_complete:
   la  t0, run_function_in_smode_return_point
   csrw mepc, t0
 
-  # Restore M mode context
-  GET_THREAD_ATTRIBUTES_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
-  RESTORE_ALL_GPRS
-
-  # return status is in a0.
+  # The return value from the smode function is in the smode
+  # context saved for a0 when we took the ecall exception from smode to
+  # mmode. Place it in a0 mmode context.
   GET_THREAD_ATTRIBUTES_LOWER_MODE_IN_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
-  ld a0, A0_OFFSET_IN_SAVE_REGION(gp)
+  ld t0, A0_OFFSET_IN_SAVE_REGION(gp)
+  GET_THREAD_ATTRIBUTES_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
+  sd t0, A0_OFFSET_IN_SAVE_REGION(gp)
+
+  # Restore M mode context from before the run_function_in_smode() call.
+  RESTORE_ALL_GPRS
 
   mret
 
