@@ -150,6 +150,9 @@ save_other_context:
   csrr t0, sepc
   sd t0, SEPC_OFFSET_IN_SAVE_REGION(gp)
 
+  csrr t0, sstatus
+  sd t0, SSTATUS_OFFSET_IN_SAVE_REGION(gp)
+
 check_for_trap_handler_overrides:
   # Check if the test has registered a trap handler for this trap.
   csrr a0, scause
@@ -185,6 +188,9 @@ restore_context:
 
   ld t0, SEPC_OFFSET_IN_SAVE_REGION(gp)
   csrw sepc, t0
+
+  ld t0, SSTATUS_OFFSET_IN_SAVE_REGION(gp)
+  csrw sstatus, t0
 
   RESTORE_ALL_GPRS
 

@@ -243,6 +243,9 @@ save_context:
   csrr t0, mepc
   sd t0, MEPC_OFFSET_IN_SAVE_REGION(gp)
 
+  csrr t0, mstatus
+  sd t0, MSTATUS_OFFSET_IN_SAVE_REGION(gp)
+
   csrr t0, hstatus
   sd t0, HSTATUS_OFFSET_IN_SAVE_REGION(gp)
 
@@ -284,6 +287,9 @@ restore_context:
 
   ld t0, MEPC_OFFSET_IN_SAVE_REGION(gp)
   csrw mepc, t0
+
+  ld t0, MSTATUS_OFFSET_IN_SAVE_REGION(gp)
+  csrw mstatus, t0
 
   RESTORE_ALL_GPRS
   csrr  gp, mscratch
