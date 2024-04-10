@@ -119,11 +119,8 @@ stvec_trap_handler:
   SET_THREAD_ATTRIBUTES_CURRENT_MODE(gp)
 
   csrr  gp, sstatus
-  andi  gp, gp, SSTATUS_SPP
-  srli  gp, gp, SSTATUS_SPP_SHIFT
-  addi  gp, gp, -PRV_S
-  beqz  gp, handle_trap_from_smode
-  j  handle_trap_from_umode
+  bexti gp, gp, SSTATUS_SPP_SHIFT
+  beqz  gp, handle_trap_from_umode
 
 handle_trap_from_smode:
   GET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
@@ -159,10 +156,8 @@ check_for_trap_handler_overrides:
   jalr  ra, a0
 
   csrr  gp, sstatus
-  andi  gp, gp, SSTATUS_SPP
-  srli  gp, gp, SSTATUS_SPP_SHIFT
-  addi  gp, gp, -PRV_S
-  bnez  gp, restore_umode_context
+  bexti gp, gp, SSTATUS_SPP_SHIFT
+  beqz  gp, restore_umode_context
 
 restore_smode_context:
   GET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
