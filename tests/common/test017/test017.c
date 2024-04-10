@@ -7,11 +7,32 @@
 
 void test017_illegal_instruction_handler(void);
 int test017_illegal_instruction_function(void);
+int alt_test017_illegal_instruction_function(void);
 
-int test016_main(void);
+int test017_main(void);
 int main(void);
 
-int test016_main(void) {
+uint8_t num_saved_contexts_remaining = 1;
+
+void test017_illegal_instruction_handler(void) {
+  --num_saved_contexts_remaining;
+
+  if (num_saved_contexts_remaining > 0) {
+    if (num_saved_contexts_remaining % 2) {
+      if (alt_test017_illegal_instruction_function() != DIAG_PASSED) {
+        jumpstart_mmode_fail();
+      }
+    } else {
+      if (test017_illegal_instruction_function() != DIAG_PASSED) {
+        jumpstart_mmode_fail();
+      }
+    }
+  }
+
+  set_mepc_for_current_exception(get_mepc_for_current_exception() + 4);
+}
+
+int test017_main(void) {
   uint64_t main_function_address = (uint64_t)&main;
   if (main_function_address != 0xC0020000) {
     return DIAG_FAILED;

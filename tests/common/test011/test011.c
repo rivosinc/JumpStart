@@ -10,10 +10,10 @@ int test_illegal_instruction_in_umode(void);
 static volatile uint32_t excep_rcvd = 0;
 
 static void test011_exception_handler(void) {
-  uint64_t reg = read_csr(sepc);
+  uint64_t reg = get_sepc_for_current_exception();
 
   /* Just skip the illegal instruction and move to next instruction. */
-  write_csr(sepc, reg + 4);
+  set_sepc_for_current_exception(reg + 4);
 
   /* Set excep_rcvd to non-zero to notify main that exception occurred. */
   excep_rcvd = 0xabcdabcd;

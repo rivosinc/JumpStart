@@ -144,13 +144,3 @@ test003_illegal_instruction_function_fail:
   ld  fp, 0(sp)
   addi  sp, sp, 16
   ret
-
-.align 2
-.global test003_illegal_instruction_handler
-test003_illegal_instruction_handler:
-  # skip over the illegal instruction
-  csrr a0, sepc
-  addi a0, a0, 4
-  csrw sepc, a0
-
-  ret

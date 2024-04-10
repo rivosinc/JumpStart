@@ -215,6 +215,10 @@ Allows the diag to register a trap handler override function for M-mode traps. T
 
 Allows the diag to register a trap handler override function for S-mode traps. The registered function will be called when the trap occurs in S-mode.
 
+### `get_*epc_for_current_exception()` and `set_*epc_for_current_exception()`
+
+These functions can be used to get and set the MEPC/SEPC during an exception. Allows modification of the EPC before returning from the exception.
+
 ## Running Diags
 
 JumpStart diags can be run on Spike and QEMU targets.

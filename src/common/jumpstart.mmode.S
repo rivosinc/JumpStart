@@ -237,6 +237,12 @@ handle_trap_from_mmode:
 save_context:
   SAVE_ALL_GPRS
 
+  csrr t0, mtval
+  sd t0, MTVAL_OFFSET_IN_SAVE_REGION(gp)
+
+  csrr t0, mepc
+  sd t0, MEPC_OFFSET_IN_SAVE_REGION(gp)
+
   csrr t0, hstatus
   sd t0, HSTATUS_OFFSET_IN_SAVE_REGION(gp)
 
@@ -273,6 +279,12 @@ restore_context:
   ld t0, HSTATUS_OFFSET_IN_SAVE_REGION(gp)
   csrw hstatus, t0
 
+  ld t0, MTVAL_OFFSET_IN_SAVE_REGION(gp)
+  csrw mtval, t0
+
+  ld t0, MEPC_OFFSET_IN_SAVE_REGION(gp)
+  csrw mepc, t0
+
   RESTORE_ALL_GPRS
   csrr  gp, mscratch
 
@@ -289,3 +301,45 @@ check_for_env_call_requests:
   beq t0, t1, handle_env_call_from_smode
 
   j jumpstart_mmode_fail
+
+.global get_mepc_for_current_exception
+get_mepc_for_current_exception:
+  # This should only be called from a registered exception handler.
+
+  # We just need to check MSB of MPP field here to determine if the exception
+  # we're processing came from mmode or smode/umode.
+  csrr  t0, mstatus
+  bexti t0, t0, MSTATUS_MPP_MSB
+  bnez  t0, 2f
+
+  GET_THREAD_ATTRIBUTES_LOWER_MODE_IN_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(t0)
+  j 1f
+
+2:
+  GET_THREAD_ATTRIBUTES_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(t0)
+
+1:
+  ld a0, MEPC_OFFSET_IN_SAVE_REGION(t0)
+  ret
+
+# Inputs:
+#  a0: mepc value to set.
+.global set_mepc_for_current_exception
+set_mepc_for_current_exception:
+  # This should only be called from a registered exception handler.
+
+  # We just need to check MSB of MPP field here to determine if the exception
+  # we're processing came from mmode or smode/umode.
+  csrr  t0, mstatus
+  bexti t0, t0, MSTATUS_MPP_MSB
+  bnez  t0, 2f
+
+  GET_THREAD_ATTRIBUTES_LOWER_MODE_IN_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(t0)
+  j 1f
+
+2:
+  GET_THREAD_ATTRIBUTES_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(t0)
+
+1:
+  sd a0, MEPC_OFFSET_IN_SAVE_REGION(t0)
+  ret

@@ -8,6 +8,10 @@
 void test003_illegal_instruction_handler(void);
 int test003_illegal_instruction_function(void);
 
+void test003_illegal_instruction_handler(void) {
+  set_sepc_for_current_exception(get_sepc_for_current_exception() + 4);
+}
+
 int main(void) {
 
   register_smode_trap_handler_override(

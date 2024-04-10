@@ -175,9 +175,8 @@ void hart1_load_page_fault_handler(void) {
 ..
 ..
   // skip over the faulting load
-  uint64_t sepc_value = read_csr(sepc);
-  sepc_value += 4;
-  write_csr(sepc, sepc_value);
+  uint64_t sepc_value = get_sepc_for_current_exception();
+  set_sepc_for_current_exception(sepc_value + 4);
 }
 ```
 

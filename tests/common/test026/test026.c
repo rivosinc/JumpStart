@@ -12,7 +12,7 @@ extern uint64_t load_from_address(uint64_t address);
 uint8_t PA_access_faulted = 0;
 
 static void skip_instruction(void) {
-  uint64_t reg = read_csr(sepc);
+  uint64_t reg = get_sepc_for_current_exception();
 
   uint32_t opcode = *((uint32_t *)reg);
   uint8_t instruction_size = 2;
@@ -21,7 +21,7 @@ static void skip_instruction(void) {
   }
 
   /* Just skip the illegal instruction and move to next instruction. */
-  write_csr(sepc, reg + instruction_size);
+  set_sepc_for_current_exception(reg + instruction_size);
 
   PA_access_faulted = 1;
 }

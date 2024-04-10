@@ -14,7 +14,7 @@ int smode_breakpoint_and_illegal_instruction_function(void)
 void smode_breakpoint_handler(void) __attribute__((section(".text.smode")));
 
 static void mmode_illegal_instruction_handler(void) {
-  write_csr(mepc, read_csr(mepc) + 4);
+  set_mepc_for_current_exception(get_mepc_for_current_exception() + 4);
 }
 
 int main(void) {
@@ -59,7 +59,7 @@ void smode_breakpoint_handler(void) {
   }
 
   // Skip over the c.ebreak instruction
-  write_csr(sepc, read_csr(sepc) + 2);
+  set_sepc_for_current_exception(get_sepc_for_current_exception() + 2);
 }
 
 int smode_breakpoint_and_illegal_instruction_function(void) {

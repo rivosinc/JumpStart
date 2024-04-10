@@ -129,7 +129,7 @@ handle_trap_from_smode:
   csrr t0, hstatus
   sd t0, HSTATUS_OFFSET_IN_SAVE_REGION(gp)
 
-  j check_for_trap_handler_overrides
+  j save_other_context
 
 handle_trap_from_umode:
   # Save away the U-mode stack.
@@ -142,6 +142,13 @@ handle_trap_from_umode:
   # We will save away the user mode context to the user mode region
   # which GP currently points to.
   SAVE_ALL_GPRS
+
+save_other_context:
+  csrr t0, stval
+  sd t0, STVAL_OFFSET_IN_SAVE_REGION(gp)
+
+  csrr t0, sepc
+  sd t0, SEPC_OFFSET_IN_SAVE_REGION(gp)
 
 check_for_trap_handler_overrides:
   # Check if the test has registered a trap handler for this trap.
@@ -173,6 +180,12 @@ restore_umode_context:
   GET_THREAD_ATTRIBUTES_UMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
 
 restore_context:
+  ld t0, STVAL_OFFSET_IN_SAVE_REGION(gp)
+  csrw stval, t0
+
+  ld t0, SEPC_OFFSET_IN_SAVE_REGION(gp)
+  csrw sepc, t0
+
   RESTORE_ALL_GPRS
 
 # The return_from_stvec_trap_handler label is referenced in control transfer
@@ -274,3 +287,46 @@ run_function_in_umode_return_point:
 just_wfi_from_smode:
   wfi
   j just_wfi_from_smode
+
+
+.global get_sepc_for_current_exception
+get_sepc_for_current_exception:
+  # This should only be called from a registered exception handler.
+
+  # We just need to check MSB of SPP field here to determine if the exception
+  # we're processing came from smode or umode.
+  csrr  t0, sstatus
+  bexti t0, t0, SSTATUS_SPP_SHIFT
+  bnez  t0, 2f
+
+  GET_THREAD_ATTRIBUTES_UMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(t0)
+  j 1f
+
+2:
+  GET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(t0)
+
+1:
+  ld a0, SEPC_OFFSET_IN_SAVE_REGION(t0)
+  ret
+
+# Inputs:
+#  a0: sepc value to set.
+.global set_sepc_for_current_exception
+set_sepc_for_current_exception:
+  # This should only be called from a registered exception handler.
+
+  # We just need to check MSB of SPP field here to determine if the exception
+  # we're processing came from smode or umode.
+  csrr  t0, sstatus
+  bexti t0, t0, SSTATUS_SPP_SHIFT
+  bnez  t0, 2f
+
+  GET_THREAD_ATTRIBUTES_UMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(t0)
+  j 1f
+
+2:
+  GET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(t0)
+
+1:
+  sd a0, SEPC_OFFSET_IN_SAVE_REGION(t0)
+  ret
