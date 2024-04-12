@@ -45,6 +45,8 @@ start_in_mmode_tests += [
   ['test023', 'Handle S mode exceptions in M mode handlers.'],
   ['test038', '2P where only non-primary hart runs functions with run_functions_in_smode().', '-p2'],
   ['test040', 'Run smode function during mmode exception handler.'],
+  ['test041', 'Fail gracefully on hitting too many nested exceptions in smode.', '', true],
+  ['test042', 'Run Supervisor mode illegal instruction exception handler on 4 cores.', '-p4'],
 ]
 
 sbi_firmware_boot_tests += []
