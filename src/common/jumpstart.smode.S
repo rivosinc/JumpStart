@@ -132,13 +132,13 @@ stvec_trap_handler:
   sd t0, HSTATUS_OFFSET_IN_SAVE_REGION(gp)
 
   csrr t0, stval
-  sd t0, STVAL_OFFSET_IN_SAVE_REGION(gp)
+  sd t0, TVAL_OFFSET_IN_SAVE_REGION(gp)
 
   csrr t0, sepc
-  sd t0, SEPC_OFFSET_IN_SAVE_REGION(gp)
+  sd t0, EPC_OFFSET_IN_SAVE_REGION(gp)
 
   csrr t0, sstatus
-  sd t0, SSTATUS_OFFSET_IN_SAVE_REGION(gp)
+  sd t0, STATUS_OFFSET_IN_SAVE_REGION(gp)
 
   # We just need to check the SPP field here to determine if we came from
   # S or U mode.
@@ -176,19 +176,19 @@ restore_context:
   GET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
   addi gp, gp, -REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES
 
-  ld t0, STVAL_OFFSET_IN_SAVE_REGION(gp)
+  ld t0, TVAL_OFFSET_IN_SAVE_REGION(gp)
   csrw stval, t0
 
-  ld t0, SEPC_OFFSET_IN_SAVE_REGION(gp)
+  ld t0, EPC_OFFSET_IN_SAVE_REGION(gp)
   csrw sepc, t0
 
-  ld t0, SSTATUS_OFFSET_IN_SAVE_REGION(gp)
+  ld t0, STATUS_OFFSET_IN_SAVE_REGION(gp)
   csrw sstatus, t0
 
   bexti t0, t0, SSTATUS_SPP_SHIFT
   beqz  t0, restore_umode_context
 
-  ld t0, HSTATUS_OFFSET_IN_SAVE_REGION(gp)
+  ld t0, STATUS_OFFSET_IN_SAVE_REGION(gp)
   csrw hstatus, t0
 
   j restore_all_gprs
@@ -345,7 +345,7 @@ get_sepc_for_current_exception:
 
   GET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(t0)
   addi t0, t0, -REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES
-  ld a0, SEPC_OFFSET_IN_SAVE_REGION(t0)
+  ld a0, EPC_OFFSET_IN_SAVE_REGION(t0)
   ret
 
 # Inputs:
@@ -360,5 +360,5 @@ set_sepc_for_current_exception:
 
   GET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(t0)
   addi t0, t0, -REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES
-  sd a0, SEPC_OFFSET_IN_SAVE_REGION(t0)
+  sd a0, EPC_OFFSET_IN_SAVE_REGION(t0)
   ret

@@ -267,13 +267,13 @@ save_context:
   SAVE_ALL_GPRS
 
   csrr t0, mtval
-  sd t0, MTVAL_OFFSET_IN_SAVE_REGION(gp)
+  sd t0, TVAL_OFFSET_IN_SAVE_REGION(gp)
 
   csrr t0, mepc
-  sd t0, MEPC_OFFSET_IN_SAVE_REGION(gp)
+  sd t0, EPC_OFFSET_IN_SAVE_REGION(gp)
 
   csrr t0, mstatus
-  sd t0, MSTATUS_OFFSET_IN_SAVE_REGION(gp)
+  sd t0, STATUS_OFFSET_IN_SAVE_REGION(gp)
 
   csrr t0, hstatus
   sd t0, HSTATUS_OFFSET_IN_SAVE_REGION(gp)
@@ -300,16 +300,16 @@ restore_context:
   GET_THREAD_ATTRIBUTES_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
   addi gp, gp, -REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES
 
-  ld t0, HSTATUS_OFFSET_IN_SAVE_REGION(gp)
+  ld t0, STATUS_OFFSET_IN_SAVE_REGION(gp)
   csrw hstatus, t0
 
-  ld t0, MTVAL_OFFSET_IN_SAVE_REGION(gp)
+  ld t0, TVAL_OFFSET_IN_SAVE_REGION(gp)
   csrw mtval, t0
 
-  ld t0, MEPC_OFFSET_IN_SAVE_REGION(gp)
+  ld t0, EPC_OFFSET_IN_SAVE_REGION(gp)
   csrw mepc, t0
 
-  ld t0, MSTATUS_OFFSET_IN_SAVE_REGION(gp)
+  ld t0, STATUS_OFFSET_IN_SAVE_REGION(gp)
   csrw mstatus, t0
 
   bexti t0, t0, MSTATUS_MPP_MSB
@@ -356,7 +356,7 @@ get_mepc_for_current_exception:
 
   GET_THREAD_ATTRIBUTES_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(t0)
   addi t0, t0, -REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES
-  ld a0, MEPC_OFFSET_IN_SAVE_REGION(t0)
+  ld a0, EPC_OFFSET_IN_SAVE_REGION(t0)
   ret
 
 # Inputs:
@@ -371,5 +371,5 @@ set_mepc_for_current_exception:
 
   GET_THREAD_ATTRIBUTES_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(t0)
   addi t0, t0, -REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES
-  sd a0, MEPC_OFFSET_IN_SAVE_REGION(t0)
+  sd a0, EPC_OFFSET_IN_SAVE_REGION(t0)
   ret
