@@ -15,4 +15,5 @@ setup_mmode:
 
 .global _JUMPSTART_TEXT_MMODE_INIT_BOUNDARY
 _JUMPSTART_TEXT_MMODE_INIT_BOUNDARY:
-    .8byte 0xDEADBEEF
+    j jumpstart_mmode_fail
+    ret

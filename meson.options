@@ -40,15 +40,25 @@ option('riscv_priv_modes_enabled',
        value : ['mmode', 'smode', 'umode'],
        description : 'RISC-V privilege modes included in the build.')
 
-option('sbi_firmware_boot',
-       type : 'boolean',
-       value : false,
-       description : 'JumpStart run starts in smode (binary will not include higher privilege levels).')
+option('boot_config',
+       type : 'combo',
+       choices: ['fw-none', 'fw-m', 'fw-sbi'],
+       value : 'fw-none',
+       description : 'Select Fw to run before handover to jumpstart. \n' +
+                     '- fw-none : expects direct entry into jumpstart from hardware reset without fw. \n' +
+                     '- fw-m    : expects handover to jumpstart in mmode (Non-resident fw). \n' +
+                     '- fw-sbi  : expects handover to jumpstart in smode with sbi interface (Resident M-Mode fw). \n' +
+                     'Note: highest privilege level in jumpstart binary will be the entry priv level' )
 
-option('_smode_start_address',
+option('smode_start_address',
        type : 'string',
        value : '0x90000000',
        description : 'Address to place the smode code.')
+
+option('mmode_start_address',
+       type : 'string',
+       value : '0x90000000',
+       description : 'Address to place the mmode code.')
 
 option('spike_binary',
        type : 'string',

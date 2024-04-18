@@ -15,7 +15,7 @@ smode_sources += files('data.smode.S',
                               'heap.smode.c',
                               'lock.smode.c')
 
-if get_option('sbi_firmware_boot') == true
+if get_option('boot_config') == 'fw-sbi'
   smode_sources += files(
                           'sbi_firmware_boot.smode.S',
                         )

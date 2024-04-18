@@ -243,8 +243,20 @@ These take a list of arguments.
 ```shell
 meson setup -C builddir -Dspike_additional_arguments=-p2 ...
 ```
-### `sbi_firmware_boot`
+## Boot Configs
 
-This mode starts JumpStart in S-mode after the RISC-V Firmware runs in M-mode. The firmware will transfer control to JumpStart in S-mode at the `sbi_firmware_trampoline` location.
+The boot path can be selected at build time with the `boot_config` meson option.
+
+### `fw-none` (default)
+
+   JumpStart starts running from hardware reset. No system firmware is expected to be present.
+
+### `fw-m`
+
+JumpStart starts in M-mode at the `mmode_start_address` after running system firmware for initialization. The system firmware that runs prior to JumpStart can be overwritten by JumpStart.
+
+### `fw-sbi`
+
+JumpStart starts in S-mode at the `sbi_firmware_trampoline` address after running system firmware for initialization. The system firmware is expected to be resident and will not be overwritten by JumpStart. JumpStart will interact with the system firmware using the SBI HSM extension - for example, to boot non-booting harts.
 
 Only S-mode based diags can be run in this mode as JumpStart cannot enter M-mode.

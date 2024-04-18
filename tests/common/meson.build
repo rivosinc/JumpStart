@@ -49,7 +49,7 @@ start_in_mmode_tests += [
   ['test042', 'Run Supervisor mode illegal instruction exception handler on 4 cores.', '-p4'],
 ]
 
-sbi_firmware_boot_tests += []
+firmware_boot_tests += []
 
 tests_disabled_on_qemu += []
 tests_disabled_on_spike += []
