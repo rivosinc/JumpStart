@@ -397,7 +397,7 @@ class SourceGenerator:
         for attribute in boolean_attributes:
             modes = ListUtils.intersection(attribute.get_modes(), self.priv_modes_enabled)
             for mode in modes:
-                file_descriptor.write(f'.section .jumpstart.text.{mode}, "ax"\n\n')
+                file_descriptor.write(f'.section .jumpstart.text.{mode}.init, "ax"\n\n')
                 attribute_function_name = f"{attribute.get_name()}"
                 file_descriptor.write(f".global {attribute_function_name}_from_{mode}\n")
                 file_descriptor.write(f"{attribute_function_name}_from_{mode}:\n\n")
@@ -415,7 +415,7 @@ class SourceGenerator:
     def generate_get_active_hart_mask_function(self, file_descriptor):
         modes = ListUtils.intersection(["mmode", "smode"], self.priv_modes_enabled)
         for mode in modes:
-            file_descriptor.write(f'.section .jumpstart.text.{mode}, "ax"\n\n')
+            file_descriptor.write(f'.section .jumpstart.text.{mode}.init, "ax"\n\n')
             file_descriptor.write(f".global get_active_hart_mask_from_{mode}\n")
             file_descriptor.write(f"get_active_hart_mask_from_{mode}:\n\n")
 

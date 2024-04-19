@@ -5,7 +5,7 @@
 #include "jumpstart_defines.h"
 #include "cpu_bits.h"
 
-.section .jumpstart.text.smode.init, "ax"
+.section .jumpstart.text.smode.init.enter, "ax"
 
 # In sbi_firmware_boot mode, other firmwares run in M-mode and drop hand over control
 # to JumpStart in S-mode. This code is the entry point for such environments.

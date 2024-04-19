@@ -5,8 +5,8 @@
 #include "cpu_bits.h"
 #include "jumpstart.h"
 
-extern uint64_t _JUMPSTART_TEXT_MMODE_INIT_START;
-extern uint64_t _JUMPSTART_TEXT_SMODE_INIT_START;
+extern uint64_t _JUMPSTART_TEXT_MMODE_INIT_ENTER_START;
+extern uint64_t _JUMPSTART_TEXT_SMODE_INIT_ENTER_START;
 extern uint64_t _JUMPSTART_TEXT_UMODE_START;
 extern uint64_t _BSS_START;
 extern uint64_t _BSS_END;
@@ -23,12 +23,14 @@ uint8_t zero_initialized_arr[128] = {0};
 
 __attribute__((pure)) int main(void) {
   // Check that the M-mode, S-mode, U-mode start address overrides worked.
-  uint64_t mmode_start_address = (uint64_t)&_JUMPSTART_TEXT_MMODE_INIT_START;
+  uint64_t mmode_start_address =
+      (uint64_t)&_JUMPSTART_TEXT_MMODE_INIT_ENTER_START;
   if (mmode_start_address != 0x81000000) {
     return DIAG_FAILED;
   }
 
-  uint64_t smode_start_address = (uint64_t)&_JUMPSTART_TEXT_SMODE_INIT_START;
+  uint64_t smode_start_address =
+      (uint64_t)&_JUMPSTART_TEXT_SMODE_INIT_ENTER_START;
   if (smode_start_address != 0x82000000) {
     return DIAG_FAILED;
   }

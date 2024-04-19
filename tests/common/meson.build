@@ -55,4 +55,5 @@ tests_disabled_on_qemu += []
 tests_disabled_on_spike += []
 tests_disabled_for_sbi_firmware_boot += [
                                   'test010',
+                                  'test043',
                                 ]

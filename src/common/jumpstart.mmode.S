@@ -6,12 +6,20 @@
 #include "cpu_bits.h"
 
 # This section should fall into the initial 4K page set up.
-.section .jumpstart.text.mmode.init, "ax"
+.section .jumpstart.text.mmode.init.enter, "ax"
 
 .global _mmode_start
 _mmode_start:
   la t0, mtvec_trap_handler
   csrw mtvec, t0
+
+  # The mmode init code is expected to fit in a 4KB page for Rivos internal
+  # reasons.
+  la t0, _JUMPSTART_TEXT_MMODE_INIT_BOUNDARY
+  la t1, _JUMPSTART_TEXT_MMODE_INIT_ENTER_START
+  sub t2, t0, t1
+  li t3, 0x1000 # 4KB
+  bgt t2, t3, jumpstart_mmode_fail
 
   csrr  t0, mhartid
 
@@ -41,6 +49,7 @@ _mmode_start:
 
   mv  fp, sp
 
+  jal setup_mmode
   # Enable interrupts in machine mode.
   li t0, MSTATUS_MIE
   csrs mstatus, t0

@@ -4,7 +4,8 @@
 
 mmode_sources += files(
                           'jump_to_main.mmode.S',
-                          'end.mmode.S'
+                          'init.mmode.S',
+                          'exit.mmode.S'
                           )
 
 subdir('uart')

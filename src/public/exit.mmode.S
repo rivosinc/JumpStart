@@ -4,7 +4,7 @@
 
 #include "jumpstart_defines.h"
 
-.section .jumpstart.text.mmode.end, "ax"
+.section .jumpstart.text.mmode.init.exit, "ax"
 
 .global _mmode_end
 _mmode_end:
@@ -79,10 +79,6 @@ run_end_of_sim_sequence:
 just_wfi_from_mmode:
   wfi
   j just_wfi_from_mmode
-
-.align PAGE_OFFSET, 0x0
-.global jumpstart_mmode_end_point
-jumpstart_mmode_end_point:
 
 .section .jumpstart.data.smode, "aw", @progbits
 
