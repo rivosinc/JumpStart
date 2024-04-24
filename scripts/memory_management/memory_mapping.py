@@ -140,7 +140,15 @@ class MemoryMapping:
         self.fields[field_name].set_value(value)
 
     def __str__(self) -> str:
-        return f"MemoryMapping({self.fields})"
+        print_string = "MemoryMapping("
+        for field_name, field in self.fields.items():
+            field_value = field.get_value()
+            if isinstance(field_value, int):
+                field_value = f"{hex(field_value)}"
+            print_string += f"{field_name}={field_value}, "
+        print_string += ")"
+
+        return print_string
 
     def copy(self):
         return copy.deepcopy(self)
