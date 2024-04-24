@@ -110,6 +110,9 @@ class SourceGenerator:
             reverse=False,
         )
 
+        if self.jumpstart_source_attributes["rivos_internal_build"] is True:
+            rivos_internal_functions.process_memory_map(self.memory_map)
+
         self.sanity_check_memory_map()
 
         self.page_tables = PageTables(
