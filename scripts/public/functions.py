@@ -55,6 +55,8 @@ def sanity_check_memory_map(mappings):
             log.error(f"\t{previous_mapping}")
             sys.exit(1)
 
+        previous_mapping = mapping
+
     for mapping in mappings:
         if mapping.get_field("alias") is True:
             if alias_mapping_overlaps_with_existing_mapping(mapping, mappings) is False:
@@ -76,7 +78,10 @@ def sanity_check_memory_map(mappings):
         ) * previous_mapping.get_field("num_pages")
         previous_mapping_end_pa = previous_mapping.get_field("pa") + previous_mapping_size
 
-        if mapping.get_field("pa") < previous_mapping_end_pa:
+        if (
+            mapping.get_field("pa") < previous_mapping_end_pa
+            and mapping.get_field("alias") is False
+        ):
             log.error(
                 "PA overlap in these mappings. If one of these is an alias add the 'alias: True' attribute for it's entry in the memory map."
             )
@@ -89,6 +94,8 @@ def sanity_check_memory_map(mappings):
             "linker_script_section"
         ).split(","):
             found_text_section = True
+
+        previous_mapping = mapping
 
     if found_text_section is False:
         log.error("The diag must have a .text section.")
