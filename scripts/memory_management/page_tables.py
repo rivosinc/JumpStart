@@ -286,7 +286,11 @@ class PageTables:
         assert (address % self.get_attribute("pte_size_in_bytes")) == 0
 
         if address in self.pte_memory:
-            assert self.pte_memory[address] == value
+            if self.pte_memory[address] != value:
+                log.error(
+                    f"[{hex(address)}] already contains a different value {hex(self.pte_memory[address])}. Cannot update to {hex(value)}"
+                )
+                sys.exit(1)
             log.debug(f"[{hex(address)}] already contains {hex(value)}. No update needed.")
         else:
             self.pte_memory[address] = value
