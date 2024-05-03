@@ -102,6 +102,7 @@ class DiagSource:
 class DiagBuildTarget:
     supported_targets = ["qemu", "spike"]
     supported_toolchains = ["gcc", "llvm"]
+    supported_boot_configs = ["fw-none", "fw-m", "fw-sbi"]
 
     def __init__(
         self,
@@ -110,6 +111,7 @@ class DiagBuildTarget:
         buildtype,
         target,
         toolchain,
+        boot_config,
         rng_seed,
         active_hart_mask_override,
         meson_options_cmd_line_overrides,
@@ -126,12 +128,15 @@ class DiagBuildTarget:
         assert toolchain in self.supported_toolchains
         self.toolchain = toolchain
 
+        assert boot_config in self.supported_boot_configs
+        self.boot_config = boot_config
+
         self.active_hart_mask_override = active_hart_mask_override
 
         self.meson_options_cmd_line_overrides = meson_options_cmd_line_overrides
 
     def __str__(self) -> str:
-        print_string = f"\n\tName: {self.diag_source.diag_name}\n\tDirectory: {self.build_dir}\n\tAssets: {self.build_assets}\n\tBuildType: {self.buildtype},\n\tTarget: {self.target}"
+        print_string = f"\n\tName: {self.diag_source.diag_name}\n\tDirectory: {self.build_dir}\n\tAssets: {self.build_assets}\n\tBuildType: {self.buildtype},\n\tTarget: {self.target},\n\tBootConfig: {self.boot_config},"
         if self.rng_seed is not None:
             print_string += f"\n\tRNG Seed: {self.rng_seed}"
         print_string += f"\n\tSource Info:\n{self.diag_source}"

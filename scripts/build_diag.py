@@ -69,6 +69,14 @@ def main():
         choices=DiagBuildTarget.supported_toolchains,
     )
     parser.add_argument(
+        "--boot_config",
+        help=f"Boot Config to build diag for. Options: {DiagBuildTarget.supported_boot_configs}.",
+        required=False,
+        type=str,
+        default="fw-none",
+        choices=DiagBuildTarget.supported_boot_configs,
+    )
+    parser.add_argument(
         "--disable_diag_run",
         help="Build the diag but don't run it on the target to generate the trace.",
         action="store_true",
@@ -109,6 +117,7 @@ def main():
         args.buildtype,
         args.target,
         args.toolchain,
+        args.boot_config,
         args.rng_seed,
         args.active_hart_mask_override,
         args.override_meson_options,

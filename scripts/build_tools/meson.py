@@ -91,6 +91,7 @@ class Meson:
         self.meson_options[
             "diag_attributes_yaml"
         ] = self.diag_build_target.diag_source.get_diag_attributes_yaml()
+        self.meson_options["boot_config"] = self.diag_build_target.boot_config
         self.meson_options["diag_attribute_overrides"] = []
 
         self.meson_options["spike_additional_arguments"] = []
