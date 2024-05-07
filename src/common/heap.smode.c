@@ -6,6 +6,7 @@
 #include "jumpstart.h"
 #include "jumpstart_defines.h"
 #include "lock.smode.h"
+#include "uart.smode.h"
 
 #include <stdint.h>
 
@@ -13,6 +14,7 @@ extern uint64_t _JUMPSTART_SMODE_HEAP_START[];
 extern uint64_t _JUMPSTART_SMODE_HEAP_END[];
 
 void setup_heap(void);
+void print_heap(void);
 //------------------------------------------------------------------------------
 // Malloc helper structs
 //------------------------------------------------------------------------------
@@ -22,6 +24,9 @@ struct memchunk {
 };
 
 typedef struct memchunk memchunk;
+
+#define MIN_HEAP_ALLOCATION_BYTES 8
+#define MIN_HEAP_SEGMENT_BYTES    (sizeof(memchunk) + MIN_HEAP_ALLOCATION_BYTES)
 
 __attribute__((section(".jumpstart.data.smode"))) static memchunk *head;
 __attribute__((
@@ -138,6 +143,11 @@ __attribute__((section(".jumpstart.text.smode"))) void *calloc(size_t nmemb,
 
 __attribute__((section(".jumpstart.text.smode"))) void *
 memalign(size_t alignment, size_t size) {
+  if (alignment & (alignment - 1)) {
+    // alignment is not a power of 2
+    return 0;
+  }
+
   if (head == 0 || size > MEMCHUNK_MAX_SIZE) {
     return 0;
   }
@@ -182,15 +192,13 @@ memalign(size_t alignment, size_t size) {
       break;
     }
 
+    // The start of the allocated chunk must leave space for the 8 bytes of data
+    // payload and metadata of the new chunk
+    aligned_start =
+        ((((start + MIN_HEAP_SEGMENT_BYTES) - 1) >> pow2) << pow2) + alignment;
+
     // Aligned start must be within the chunk
     if (aligned_start >= end) {
-      continue;
-    }
-
-    // The start of the allocated chunk must be far away from the start of
-    // the current chunk to leave space for at least 8 bytes of data payload
-    // and metadata of the new chunk
-    if (aligned_start < start + sizeof(memchunk) + 8) {
       continue;
     }
 
@@ -260,4 +268,22 @@ memcpy(void *dest, const void *src, size_t n) {
   }
 
   return dest;
+}
+
+__attribute__((section(".jumpstart.text.smode"))) void print_heap(void) {
+  acquire_lock(&heap_lock);
+  printk("===================\n");
+  memchunk *chunk = head;
+  while (chunk != 0) {
+    if (chunk->size & MEMCHUNK_USED) {
+      printk("[USED] Size:0x%llx\n", (chunk->size & MEMCHUNK_MAX_SIZE));
+    } else {
+      printk("[FREE] Size:0x%lx    Start:0x%lx\n", chunk->size,
+             (uint64_t)((void *)chunk + sizeof(memchunk)));
+    }
+    chunk = chunk->next;
+  }
+
+  printk("===================\n");
+  release_lock(&heap_lock);
 }
