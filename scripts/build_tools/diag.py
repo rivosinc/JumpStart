@@ -131,6 +131,11 @@ class DiagBuildTarget:
         assert boot_config in self.supported_boot_configs
         self.boot_config = boot_config
 
+        if self.target == "spike" and self.boot_config != "fw-none":
+            raise Exception(
+                f"Invalid boot_config {self.boot_config} for spike. Only fw-none is supported for spike."
+            )
+
         self.active_hart_mask_override = active_hart_mask_override
 
         self.meson_options_cmd_line_overrides = meson_options_cmd_line_overrides
