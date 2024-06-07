@@ -6,6 +6,7 @@ project('JumpStart', 'c',
         default_options : [
           'warning_level=3',
           'werror=true',
+          'b_ndebug=if-release',
           ],
         meson_version: '>=1.1.0'
 )
