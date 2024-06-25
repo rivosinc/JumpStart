@@ -27,7 +27,7 @@
 #define read_write_csr(reg, val)                                               \
   ({                                                                           \
     unsigned long __v = (unsigned long)(val);                                  \
-    __asm__ __volatile__("csrrw %0, " #reg ", %1"                              \
+    __asm__ __volatile__("csrrw %0, " __ASM_STR(reg) ", %1"                    \
                          : "=r"(__v)                                           \
                          : "rK"(__v)                                           \
                          : "memory");                                          \
