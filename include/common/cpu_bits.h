@@ -913,11 +913,13 @@
 #define SISELECT_SMCDELEG_LAST            0x5F
 
 /* seed CSR bits */
-#define SEED_OPST                        (0b11 << 30)
-#define SEED_OPST_BIST                   (0b00 << 30)
-#define SEED_OPST_WAIT                   (0b01 << 30)
-#define SEED_OPST_ES16                   (0b10 << 30)
-#define SEED_OPST_DEAD                   (0b11 << 30)
+#define SEED_OPST                          (0b11U << 30)
+#define SEED_OPST_BIST                     0b00U
+#define SEED_OPST_WAIT                     0b01U
+#define SEED_OPST_ES16                     0b10U
+#define SEED_OPST_DEAD                     0b11U
+#define SEED_ENTROPY_MASK                  0xFFFFU
+
 /* PMU related bits */
 #define MIE_LCOFIE                         (1 << IRQ_PMU_OVF)
 

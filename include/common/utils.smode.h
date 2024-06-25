@@ -11,3 +11,7 @@ struct bit_range {
 
 uint64_t extract_bits(uint64_t value, struct bit_range range);
 uint64_t place_bits(uint64_t value, uint64_t bits, struct bit_range range);
+
+int32_t smode_try_get_seed(void);
+int32_t get_random_number_from_smode(void);
+void set_random_seed_from_smode(int32_t seed);
