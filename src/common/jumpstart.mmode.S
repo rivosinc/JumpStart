@@ -13,6 +13,21 @@ _mmode_start:
   la t0, mtvec_trap_handler
   csrw mtvec, t0
 
+  csrr t0, mhartid
+
+  li t1, MAX_NUM_HARTS_SUPPORTED
+  bge t0, t1, just_wfi_from_mmode
+
+  # Set up the stack.
+  # S-mode and M-mode share the same stack.
+  li  t1, (NUM_PAGES_PER_HART_FOR_SMODE_STACK * SMODE_STACK_PAGE_SIZE)
+  mul t3, t0, t1
+  la  t2, smode_stack_top
+  add sp, t2, t3
+  add sp, sp, t1 # We want the stack bottom.
+
+  mv  fp, sp
+
   # The mmode init code is expected to fit in a 4KB page for Rivos internal
   # reasons.
   la t0, _JUMPSTART_TEXT_MMODE_INIT_BOUNDARY
@@ -20,6 +35,8 @@ _mmode_start:
   sub t2, t0, t1
   li t3, 0x1000 # 4KB
   bgt t2, t3, jumpstart_mmode_fail
+
+  jal setup_mmode
 
   csrr  t0, mhartid
 
@@ -39,17 +56,6 @@ _mmode_start:
   mv a0, t0
   jal setup_thread_attributes_from_mmode
 
-  # S-mode and M-mode share the same stack.
-  GET_THREAD_ATTRIBUTES_HART_ID(t0)
-  li  t1, (NUM_PAGES_PER_HART_FOR_SMODE_STACK * SMODE_STACK_PAGE_SIZE)
-  mul t0, t0, t1
-  la  t2, smode_stack_top
-  add sp, t2, t0
-  add sp, sp, t1 # We want the stack bottom.
-
-  mv  fp, sp
-
-  jal setup_mmode
   # Enable interrupts in machine mode.
   li t0, MSTATUS_MIE
   csrs mstatus, t0
