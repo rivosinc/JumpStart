@@ -28,6 +28,23 @@ _mmode_start:
 
   mv  fp, sp
 
+  li t1, BATCH_MODE
+  beqz t1, 1f
+
+  # When running in batch mode, have the primary hart save away it's
+  # return address.
+  # This return address is common to all the harts and allows all
+  # harts to exit back to where they came from.
+  csrr t0, mhartid
+  li t1, PRIMARY_HART_ID
+  bne t0, t1, 1f
+  la t1, batch_mode_exit_address
+  sd ra, (t1)
+  fence rw, rw
+  la t1, batch_mode_exit_lock
+  sd zero, (t1)
+
+1:
   # The mmode init code is expected to fit in a 4KB page for Rivos internal
   # reasons.
   la t0, _JUMPSTART_TEXT_MMODE_INIT_BOUNDARY
@@ -36,19 +53,32 @@ _mmode_start:
   li t3, 0x1000 # 4KB
   bgt t2, t3, jumpstart_mmode_fail
 
+  # Run the setup_mmode before running any more code. Only the first
+  # 4K page of mmode code is set up to run right now. setup_mmode()
+  # will enable the rest of the mmode code.
   jal setup_mmode
 
   jal reset_csrs
 
   csrr  t0, mhartid
 
+  # Check if this hart is in the active hart mask.
   li a0, ACTIVE_HART_MASK
   li t1, 1
   sll t1, t1, t0
   and a0, a0, t1
-  # Send all inactive harts to wfi.
-  beqz a0, just_wfi_from_mmode
+  bnez a0, 2f
 
+  # Inactive hart.
+
+  # If running in batch mode, return the inactive hart.
+  li t2, BATCH_MODE
+  bnez t2, batch_mode_return_unused_hart
+
+  # Send the hart to WFI if not running in batch mode.
+  j just_wfi_from_mmode
+
+2:
   # Have the hart mark itself as running.
   la t1, hart_status_tracker
   add t1, t1, t0

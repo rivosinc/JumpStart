@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 #include "jumpstart_defines.h"
+#include "cpu_bits.h"
 
 .section .jumpstart.text.mmode.init.exit, "ax"
 
@@ -16,11 +17,19 @@ _mmode_end:
   add t1, t1, t0
   sb a0, 0(t1)
 
-  # Have all the secondary harts wait on the wfi.
-  # the primary hart will go through the exit routine.
+  # The primary hart will go through the exit routine.
   li t1, PRIMARY_HART_ID
-  bne t0, t1, just_wfi_from_mmode
+  beq t0, t1, 1f
 
+  # Secondary hart.
+  # If we're running in batch mode, return the hart.
+  li t0, BATCH_MODE
+  bnez t0, batch_mode_return_hart
+
+  # otherwise have all the secondary harts wait on the wfi.
+  j just_wfi_from_mmode
+
+1:
   # Check the status of all the active harts.
   # a0: Active hart mask. Gets shifted right as we check each hart.
   # t0: hart_status_tracker address
@@ -66,6 +75,9 @@ done_with_current_hart:
 jumpstart_mmode_fail:
   li a0, DIAG_FAILED
 
+  li t0, BATCH_MODE
+  bnez t0, batch_mode_return_hart
+
 run_end_of_sim_sequence:
   slli a0, a0, 1
   ori a0, a0, 1
@@ -80,7 +92,40 @@ just_wfi_from_mmode:
   wfi
   j just_wfi_from_mmode
 
+.global batch_mode_return_unused_hart
+batch_mode_return_unused_hart:
+  li a0, DIAG_PASSED
+# a0: return value
+.global batch_mode_return_hart
+batch_mode_return_hart:
+  la t0, batch_mode_exit_lock
+acquire_exit_lock:
+  ld t1, (t0)
+  bnez t1, acquire_exit_lock
+  li t2, 1
+  amoswap.d.aq t2, t2, (t0)
+  bnez t2, acquire_exit_lock
+
+  la t1, batch_mode_exit_address
+  ld ra, (t1)
+
+release_exit_lock:
+  sd zero, (t0)
+  csrw mepc, ra
+  li t0, MSTATUS_MPP
+  csrw mstatus, t0
+  mret
+
 .section .jumpstart.data.smode, "aw", @progbits
+
+.align 8
+.global batch_mode_exit_address
+batch_mode_exit_address:
+  .8byte 0
+.global batch_mode_exit_lock
+batch_mode_exit_lock:
+  # initial state is locked. This is set to zero by primary hart after saving return address
+  .8byte 1
 
 .align 6
 .globl tohost
