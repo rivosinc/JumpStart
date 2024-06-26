@@ -543,7 +543,7 @@ sync_all_harts_from_{mode}:
             f"# SATP.Mode is {self.jumpstart_source_attributes['diag_attributes']['satp_mode']}\n\n"
         )
         file_descriptor.write(
-            f"#define DIAG_SATP_MODE {self.page_tables.get_attribute('satp_mode')}\n"
+            f"#define DIAG_SATP_MODE {self.page_tables.get_attribute('mode_encoding')}\n"
         )
 
         modes = ListUtils.intersection(["mmode", "smode"], self.priv_modes_enabled)

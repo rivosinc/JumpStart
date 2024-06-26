@@ -32,7 +32,7 @@ class PageTableAttributes:
 
     mode_attributes = {
         "sv39": {
-            "satp_mode": 8,
+            "mode_encoding": 8,
             "pte_size_in_bytes": 8,
             "num_levels": 3,
             "va_vpn_bits": [(38, 30), (29, 21), (20, 12)],
@@ -41,7 +41,7 @@ class PageTableAttributes:
             "page_sizes": [PageSize.SIZE_1G, PageSize.SIZE_2M, PageSize.SIZE_4K],
         },
         "sv48": {
-            "satp_mode": 9,
+            "mode_encoding": 9,
             "pte_size_in_bytes": 8,
             "num_levels": 4,
             "va_vpn_bits": [(47, 39), (38, 30), (29, 21), (20, 12)],
@@ -88,14 +88,16 @@ class PageTableAttributes:
 
 
 class PageTablePage:
-    def __init__(self, page_pa, va, satp_mode, level):
+    def __init__(self, page_pa, va, translation_mode, level):
         # Location of the page table page in physical memory
         self.page_pa = page_pa
 
-        start_va_lsb = PageTableAttributes.mode_attributes[satp_mode]["va_vpn_bits"][level][0] + 1
+        start_va_lsb = (
+            PageTableAttributes.mode_attributes[translation_mode]["va_vpn_bits"][level][0] + 1
+        )
         start_va = (va >> start_va_lsb) << start_va_lsb
         va_range_in_bytes = 1 << (
-            PageTableAttributes.mode_attributes[satp_mode]["va_vpn_bits"][level][0] + 1
+            PageTableAttributes.mode_attributes[translation_mode]["va_vpn_bits"][level][0] + 1
         )
         # The start VA for the address range covered by this page table page
         # should be a multiple of the size of the area it covers.
@@ -123,10 +125,10 @@ class PageTablePage:
 
 
 class PageTables:
-    def __init__(self, satp_mode, max_num_pages_for_pagetables, memory_mappings):
+    def __init__(self, translation_mode, max_num_pages_for_pagetables, memory_mappings):
         # List of PageTablePage objects
         self.pages = []
-        self.satp_mode = satp_mode
+        self.translation_mode = translation_mode
         self.max_num_pages_for_pagetables = max_num_pages_for_pagetables
 
         self.asm_label = "pagetables_start"
@@ -152,7 +154,7 @@ class PageTables:
         return self.asm_label
 
     def get_attribute(self, attribute):
-        return self.attributes.get_attribute(attribute, self.satp_mode)
+        return self.attributes.get_attribute(attribute, self.translation_mode)
 
     def get_pte_addresses(self):
         return self.pte_memory.keys()
@@ -180,7 +182,10 @@ class PageTables:
             sys.exit(1)
 
         new_page = PageTablePage(
-            self.start_address + PageSize.SIZE_4K * len(self.pages), va, self.satp_mode, level
+            self.start_address + PageSize.SIZE_4K * len(self.pages),
+            va,
+            self.translation_mode,
+            level,
         )
 
         log.debug(f"Allocated new page table page {new_page}")
@@ -190,7 +195,7 @@ class PageTables:
         return new_page
 
     def translate_VA(self, va):
-        log.info(f"Translating VA {hex(va)}. SATP.Mode = {self.satp_mode}")
+        log.info(f"Translating VA {hex(va)}. Translation.Mode = {self.translation_mode}")
 
         # Step 1
         assert self.start_address == self.pages[0].get_page_pa()
