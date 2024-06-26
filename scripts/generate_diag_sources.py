@@ -15,7 +15,7 @@ import sys
 import public.functions as public_functions
 import yaml
 from data_structures import DictUtils, ListUtils
-from memory_management import MemoryMapping, PageSize, PageTableAttributes, PageTables
+from memory_management import MemoryMapping, PageSize, PageTables, TranslationMode
 
 try:
     import rivos_internal.functions as rivos_internal_functions
@@ -147,8 +147,10 @@ class SourceGenerator:
     def sanity_check_diag_attributes(self):
         assert "satp_mode" in self.jumpstart_source_attributes["diag_attributes"]
         assert (
-            self.jumpstart_source_attributes["diag_attributes"]["satp_mode"]
-            in PageTableAttributes.mode_attributes
+            TranslationMode.is_valid_mode(
+                self.jumpstart_source_attributes["diag_attributes"]["satp_mode"]
+            )
+            is True
         )
 
         if self.jumpstart_source_attributes["rivos_internal_build"] is True:
@@ -543,7 +545,7 @@ sync_all_harts_from_{mode}:
             f"# SATP.Mode is {self.jumpstart_source_attributes['diag_attributes']['satp_mode']}\n\n"
         )
         file_descriptor.write(
-            f"#define DIAG_SATP_MODE {self.page_tables.get_attribute('mode_encoding')}\n"
+            f"#define DIAG_SATP_MODE {TranslationMode.get_encoding(self.jumpstart_source_attributes['diag_attributes']['satp_mode'])}\n"
         )
 
         modes = ListUtils.intersection(["mmode", "smode"], self.priv_modes_enabled)

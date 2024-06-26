@@ -6,16 +6,56 @@ import enum
 import logging as log
 import math
 import sys
+import typing
 
 from data_structures import BitField
 
 from .page_size import PageSize
 
 
-class PbmtMode(enum.IntEnum):
-    PMA = 0
-    NC = 1
-    IO = 2
+class PbmtMode:
+    @enum.unique
+    class Encoding(enum.IntEnum):
+        PMA = 0
+        NC = 1
+        IO = 2
+
+    encoding: typing.Dict[str, Encoding] = {e.name.lower(): e for e in Encoding}
+
+    @classmethod
+    def get_encoding(cls, mode: str) -> Encoding:
+        if mode.lower() not in cls.encoding:
+            raise ValueError(f"Invalid PbmtMode: {mode}")
+        return cls.encoding[mode.lower()]
+
+    @classmethod
+    def is_valid_mode(cls, mode: str) -> bool:
+        return mode.lower() in cls.encoding
+
+
+# class mapping a string to an enum value
+class TranslationMode:
+    modes = {
+        "bare": 0,
+        "sv39": 8,
+        "sv48": 9,
+        "sv39x4": 8,
+        "sv48x4": 9,
+    }
+
+    @classmethod
+    def get_encoding(cls, mode: str):
+        if mode not in cls.modes:
+            raise ValueError(f"Invalid TranslationMode: {mode}")
+        return cls.modes[mode]
+
+    @classmethod
+    def is_valid_mode(cls, mode: str) -> bool:
+        return mode in cls.modes
+
+    @classmethod
+    def get_all_modes(cls):
+        return cls.modes.keys()
 
 
 class PageTableAttributes:
@@ -32,7 +72,6 @@ class PageTableAttributes:
 
     mode_attributes = {
         "sv39": {
-            "mode_encoding": 8,
             "pte_size_in_bytes": 8,
             "num_levels": 3,
             "va_vpn_bits": [(38, 30), (29, 21), (20, 12)],
@@ -41,7 +80,6 @@ class PageTableAttributes:
             "page_sizes": [PageSize.SIZE_1G, PageSize.SIZE_2M, PageSize.SIZE_4K],
         },
         "sv48": {
-            "mode_encoding": 9,
             "pte_size_in_bytes": 8,
             "num_levels": 4,
             "va_vpn_bits": [(47, 39), (38, 30), (29, 21), (20, 12)],
@@ -60,31 +98,12 @@ class PageTableAttributes:
         if attribute in self.common_attributes:
             return self.common_attributes[attribute]
 
-        assert mode is not None
-        assert attribute in self.mode_attributes[mode]
+        assert (
+            mode is not None
+            and mode in self.mode_attributes
+            and TranslationMode.is_valid_mode(mode) is True
+        )
         return self.mode_attributes[mode][attribute]
-
-    def convert_pbmt_mode_string_to_mode(self, mode_string):
-        if mode_string == "pma":
-            return PbmtMode.PMA
-        elif mode_string == "nc":
-            return PbmtMode.NC
-        elif mode_string == "io":
-            return PbmtMode.IO
-        else:
-            log.error(f"Unknown pbmt mode {mode_string}")
-            sys.exit(1)
-
-    def convert_pbmt_mode_to_string(self, mode):
-        if mode == PbmtMode.PMA:
-            return "pma"
-        elif mode == PbmtMode.NC:
-            return "nc"
-        elif mode == PbmtMode.IO:
-            return "io"
-        else:
-            log.error(f"Unknown pbmt mode {mode}")
-            sys.exit(1)
 
 
 class PageTablePage:
@@ -128,6 +147,9 @@ class PageTables:
     def __init__(self, translation_mode, max_num_pages_for_pagetables, memory_mappings):
         # List of PageTablePage objects
         self.pages = []
+        assert (
+            translation_mode is not None and TranslationMode.is_valid_mode(translation_mode) is True
+        )
         self.translation_mode = translation_mode
         self.max_num_pages_for_pagetables = max_num_pages_for_pagetables
 
@@ -362,9 +384,7 @@ class PageTables:
                     )
 
                     if entry.get_field("pbmt_mode") is not None:
-                        pbmt_mode = self.attributes.convert_pbmt_mode_string_to_mode(
-                            entry.get_field("pbmt_mode")
-                        )
+                        pbmt_mode = PbmtMode.get_encoding(entry.get_field("pbmt_mode").lower())
                         pte_value = BitField.place_bits(
                             pte_value, pbmt_mode, self.attributes.common_attributes["pbmt_bits"]
                         )
