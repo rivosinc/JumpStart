@@ -83,9 +83,15 @@ Example: [test021](../tests/common/test021.diag_attributes.yaml).
 
 Controls the memory layout and attributes of all the sections of the diag.
 
-#### `va` and `pa`
+#### `va`, `gpa`, `pa`
 
-Controls the virtual and physical addresses of the section.
+Controls the virtual, guest physical and physical addresses of the mapping.
+
+#### `stage`
+
+Controls the translation stage (S, VS, G) that this mapping will be used in. The S stage is the single stage translation and the VS and G stages are the two stage translation.
+
+Default: If not explicitly specified, the stage will be inferred based on the `va`, `gpa` and `pa` attributes. It will be set to `None` for a direct mapping (only the `pa` has been specified).
 
 #### `xwr`, `umode` and `valid`
 

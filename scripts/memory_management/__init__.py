@@ -6,11 +6,25 @@
 
 from .memory_mapping import MemoryMapping
 from .page_size import PageSize
-from .page_tables import PageTableAttributes, PageTables, TranslationMode
+from .page_tables import (
+    AddressType,
+    PageTableAttributes,
+    PageTables,
+    TranslationMode,
+    TranslationStage,
+)
 
 # PEP8 guideline:
 # https://peps.python.org/pep-0008/#public-and-internal-interfaces
 # To better support introspection, modules should explicitly declare
 # the names in their public API using the __all__ attribute.
 
-__all__ = ["PageSize", "MemoryMapping", "PageTables", "PageTableAttributes", "TranslationMode"]
+__all__ = [
+    "AddressType",
+    "PageSize",
+    "MemoryMapping",
+    "PageTables",
+    "PageTableAttributes",
+    "TranslationMode",
+    "TranslationStage",
+]

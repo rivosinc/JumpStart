@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import copy
 import enum
 import logging as log
 import math
@@ -58,6 +59,57 @@ class TranslationMode:
         return cls.modes.keys()
 
 
+class AddressType:
+    # Create a set of valid address types
+    types = ["va", "pa", "gpa"]
+
+    @classmethod
+    def is_valid_address_type(cls, address_type: str) -> bool:
+        return address_type in cls.types
+
+    @classmethod
+    def get_all_address_types(cls):
+        return set(cls.types)
+
+
+class TranslationStage:
+    stages = {
+        "s": {
+            "modes": ["bare", "sv39", "sv48"],
+            "translates": ["va", "pa"],
+        },
+        "vs": {
+            "modes": ["bare", "sv39", "sv48"],
+            "translates": ["va", "gpa"],
+        },
+        "g": {
+            "modes": ["bare", "sv39x4", "sv48x4"],
+            "translates": ["gpa", "pa"],
+        },
+    }
+
+    @classmethod
+    def is_valid_stage(cls, stage: str) -> bool:
+        return stage in cls.stages
+
+    @classmethod
+    def is_valid_mode_for_stage(cls, stage: str, mode: str) -> bool:
+        if not cls.is_valid_stage(stage):
+            raise ValueError(f"Invalid TranslationStage: {stage}")
+
+        if TranslationMode.is_valid_mode(mode) is False:
+            raise ValueError(f"Invalid TranslationMode: {mode}")
+
+        return TranslationMode.get_encoding(mode) in cls.stages[stage]["modes"]
+
+    @classmethod
+    def get_address_types(cls, stage: str):
+        if not cls.is_valid_stage(stage):
+            raise ValueError(f"Invalid TranslationStage: {stage}")
+
+        return set(cls.stages[stage]["translates"])
+
+
 class PageTableAttributes:
     common_attributes = {
         "page_offset": 12,
@@ -71,6 +123,7 @@ class PageTableAttributes:
     }
 
     mode_attributes = {
+        # The following translation modes are valid for the S, HS, and VS stages.
         "sv39": {
             "pte_size_in_bytes": 8,
             "num_levels": 3,
@@ -93,6 +146,18 @@ class PageTableAttributes:
             ],
         },
     }
+
+    # # The following translation modes are valid for the G stage.
+    mode_attributes["sv39x4"] = copy.deepcopy(mode_attributes["sv39"])
+    mode_attributes["sv48x4"] = copy.deepcopy(mode_attributes["sv48"])
+
+    # sv39x4 is identical to an Sv39 virtual address, except with
+    # 2 more bits at the high end in VPN[2]
+    mode_attributes["sv39x4"]["va_vpn_bits"][0] = (40, 30)
+
+    # sv48x4 is identical to an Sv48 virtual address, except with
+    # 2 more bits at the high end in VPN[3]
+    mode_attributes["sv48x4"]["va_vpn_bits"][0] = (49, 39)
 
     def get_attribute(self, attribute, mode):
         if attribute in self.common_attributes:

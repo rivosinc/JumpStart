@@ -5,6 +5,7 @@
 import copy
 
 from .page_size import PageSize
+from .page_tables import AddressType, TranslationStage
 
 
 class MappingField:
@@ -59,6 +60,7 @@ class MemoryMapping:
     def __init__(self, mapping_dict) -> None:
         self.fields = {
             "va": MappingField("va", int, int, None, None, False),
+            "gpa": MappingField("gpa", int, int, None, None, False),
             "pa": MappingField("pa", int, int, None, None, True),
             "xwr": MappingField("xwr", int, str, [0, 1, 2, 3, 4, 5, 6, 7], None, False),
             "umode": MappingField("umode", int, str, [0, 1], None, False),
@@ -81,6 +83,9 @@ class MemoryMapping:
             ),
             "valid": MappingField("umode", int, str, [0, 1], 1, False),
             "no_pte_allocation": MappingField("no_pte_allocation", bool, bool, None, False, False),
+            "translation_stage": MappingField(
+                "translation_stage", str, str, list(TranslationStage.stages.keys()), None, False
+            ),
         }
 
         assert set(self.fields.keys()).issuperset(
@@ -96,7 +101,34 @@ class MemoryMapping:
             else:
                 self.fields[field_name].set_value_from_yaml(mapping_dict[field_name])
 
+        self.set_translation_stage()
+
         self.sanity_check_field_values()
+
+    def set_translation_stage(self):
+        if self.get_field("translation_stage") is not None:
+            return
+
+        for stage in TranslationStage.stages.keys():
+            address_types = TranslationStage.stages[stage]["translates"]
+            assert all([address_type in self.fields.keys() for address_type in address_types])
+            if all([self.get_field(address_type) is not None for address_type in address_types]):
+                assert (
+                    self.get_field("no_pte_allocation") is not True
+                ), "no_pte_allocation is explicitly set to True for a non-direct mapping"
+
+                self.set_field("translation_stage", stage)
+                return
+
+        # If no translation stage is set, then it is a direct mapping
+        # and requires a PA.
+        assert (
+            "pa" in self.fields.keys() and self.get_field("pa") is not None
+        ), "PA is required for direct mapping"
+
+        assert (
+            self.get_field("no_pte_allocation") is not False
+        ), "no_pte_allocation is explicitly set to False for a direct mapping"
 
     def sanity_check_field_values(self):
         if self.get_field("pa") % self.get_field("page_size") != 0:
@@ -116,6 +148,23 @@ class MemoryMapping:
                 assert (
                     self.get_field(field_name) is not None
                 ), f"{field_name} field is required when no_pte_allocation is set to false"
+
+        required_address_types = {"pa"}
+        if self.get_field("translation_stage") is not None:
+            required_address_types = TranslationStage.get_address_types(
+                self.get_field("translation_stage")
+            )
+        assert all(
+            [address_type in self.fields.keys() for address_type in required_address_types]
+        ), f"Missing required address types: {required_address_types} when translation_stage is set to {self.get_field('translation_stage')}"
+
+        disallowed_address_types = AddressType.get_all_address_types() - required_address_types
+        assert all(
+            [
+                address_type in self.fields.keys() and self.get_field(address_type) is None
+                for address_type in disallowed_address_types
+            ]
+        ), f"Disallowed address type in: {disallowed_address_types} when translation_stage is set to {self.get_field('translation_stage')}"
 
         if self.get_field("alias") is True:
             if self.get_field("no_pte_allocation") is True:
