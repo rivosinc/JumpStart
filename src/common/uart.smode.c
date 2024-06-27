@@ -65,7 +65,7 @@ static int vprintk(const char *fmt, va_list args) {
 __attribute__((section(".jumpstart.text.smode"))) int printk(const char *fmt,
                                                              ...) {
   if (uart_initialized == 0) {
-    jumpstart_smode_fail();
+    return 0;
   }
 
   va_list args;
