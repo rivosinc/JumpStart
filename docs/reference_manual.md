@@ -114,8 +114,9 @@ Indicates whether this is a VA alias. It's PA should be contained in the PA rang
 #### `no_pte_allocation`
 
 Controls whether the diag will allocate page table entries for the section.
+If not explicitly specified, this will be inferred based on the translation stage. It will be set to `True` for direct mappings (`stage` is `None`) and `False` for non-direct mappings.
 
-Default: `False`. Page table entries will be allocated for the section.
+Default: `None`.
 
 #### `linker_script_section`
 

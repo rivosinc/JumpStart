@@ -82,7 +82,7 @@ class MemoryMapping:
                 "linker_script_section", str, str, None, None, False
             ),
             "valid": MappingField("umode", int, str, [0, 1], 1, False),
-            "no_pte_allocation": MappingField("no_pte_allocation", bool, bool, None, False, False),
+            "no_pte_allocation": MappingField("no_pte_allocation", bool, bool, None, None, False),
             "translation_stage": MappingField(
                 "translation_stage", str, str, list(TranslationStage.stages.keys()), None, False
             ),
@@ -116,12 +116,12 @@ class MemoryMapping:
                 assert (
                     self.get_field("no_pte_allocation") is not True
                 ), "no_pte_allocation is explicitly set to True for a non-direct mapping"
+                self.set_field("no_pte_allocation", False)
 
                 self.set_field("translation_stage", stage)
                 return
 
-        # If no translation stage is set, then it is a direct mapping
-        # and requires a PA.
+        # We're dealing with a direct mapping.
         assert (
             "pa" in self.fields.keys() and self.get_field("pa") is not None
         ), "PA is required for direct mapping"
@@ -129,6 +129,7 @@ class MemoryMapping:
         assert (
             self.get_field("no_pte_allocation") is not False
         ), "no_pte_allocation is explicitly set to False for a direct mapping"
+        self.set_field("no_pte_allocation", True)
 
     def sanity_check_field_values(self):
         if self.get_field("pa") % self.get_field("page_size") != 0:
@@ -136,24 +137,35 @@ class MemoryMapping:
                 f"pa value {self.get_field('pa')} is not aligned with page_size {self.get_field('page_size')}"
             )
 
-        if self.get_field("no_pte_allocation") is True:
-            fields_not_allowed_for_no_pte_allocation = ["xwr", "umode", "va"]
-            for field_name in fields_not_allowed_for_no_pte_allocation:
-                assert (
-                    self.get_field(field_name) is None
-                ), f"{field_name} field is not allowed when no_pte_allocation is set to true"
-        else:
-            fields_required_for_pte_allocation = ["xwr", "va"]
-            for field_name in fields_required_for_pte_allocation:
-                assert (
-                    self.get_field(field_name) is not None
-                ), f"{field_name} field is required when no_pte_allocation is set to false"
+        if (
+            self.get_field("translation_stage") is None
+            and self.get_field("no_pte_allocation") is False
+        ):
+            raise ValueError("no_pte_allocation must be True for a direct mapping")
+        if (
+            self.get_field("translation_stage") is not None
+            and self.get_field("no_pte_allocation") is True
+        ):
+            raise ValueError("no_pte_allocation must be False for a non-direct mapping")
 
-        required_address_types = {"pa"}
+        required_address_types = None
         if self.get_field("translation_stage") is not None:
             required_address_types = TranslationStage.get_address_types(
                 self.get_field("translation_stage")
             )
+
+            assert self.get_field("xwr") is not None, "xwr is required for non-direct mappings"
+        else:
+            required_address_types = {"pa"}
+
+            assert all(
+                [self.get_field(field_name) is None for field_name in ["xwr", "umode"]]
+            ), "xwr and umode are not allowed for direct mappings"
+
+            assert (
+                self.get_field("alias") is False
+            ), "alias must be set to False for direct mappings"
+
         assert all(
             [address_type in self.fields.keys() for address_type in required_address_types]
         ), f"Missing required address types: {required_address_types} when translation_stage is set to {self.get_field('translation_stage')}"
@@ -167,18 +179,16 @@ class MemoryMapping:
         ), f"Disallowed address type in: {disallowed_address_types} when translation_stage is set to {self.get_field('translation_stage')}"
 
         if self.get_field("alias") is True:
-            if self.get_field("no_pte_allocation") is True:
-                raise ValueError(
-                    "alias and no_pte_allocation cannot be set to true at the same time"
-                )
             fields_not_allowed_for_va_alias = [
                 "linker_script_section",
                 "pma_memory_type",
             ]
-            for field_name in fields_not_allowed_for_va_alias:
-                assert (
+            assert all(
+                [
                     self.get_field(field_name) is None
-                ), f"{field_name} field is not allowed when alias is set to true"
+                    for field_name in fields_not_allowed_for_va_alias
+                ]
+            ), f"{fields_not_allowed_for_va_alias} fields are not allowed when alias is set to True"
 
     def get_field(self, field_name):
         assert field_name in self.fields.keys()

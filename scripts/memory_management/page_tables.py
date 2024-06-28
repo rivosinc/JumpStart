@@ -357,7 +357,8 @@ class PageTables:
     def split_mappings_at_page_granularity(self, memory_mappings):
         split_mappings = []
         for entry in memory_mappings:
-            if entry.get_field("no_pte_allocation") is True:
+            if entry.get_field("translation_stage") is None:
+                assert entry.get_field("no_pte_allocation") is True
                 continue
 
             va = entry.get_field("va")

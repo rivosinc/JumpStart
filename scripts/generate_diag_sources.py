@@ -221,6 +221,9 @@ class SourceGenerator:
                 "no_pte_allocation" not in section_mapping
                 or section_mapping["no_pte_allocation"] is False
             ):
+                # This is the only real use for the "no_pte_allocation" attribute.
+                # If we had another way to tell that we had to copy the VA from
+                # the PA for these mappings we could remove this attribute.
                 section_mapping["va"] = section_mapping["pa"]
 
             # This is where we pick up num_pages_for_jumpstart_*mode_* attributes from the diag_attributes
@@ -256,6 +259,7 @@ class SourceGenerator:
         guard_page_mapping = {}
         guard_page_mapping["page_size"] = PageSize.SIZE_4K
         guard_page_mapping["pma_memory_type"] = "wb"
+        # Guard pages have no allocations in the page tables but occupy space in the memory map.
         guard_page_mapping["pa"] = self.get_next_available_pa_after_last_mapping(
             guard_page_mapping["page_size"], guard_page_mapping["pma_memory_type"]
         )
@@ -263,8 +267,6 @@ class SourceGenerator:
         guard_page_mapping["linker_script_section"] = (
             f".jumpstart.guard_page.{self.num_guard_pages_generated}"
         )
-        # Guard pages have no allocations in the page tables but occupy space in the memory map.
-        guard_page_mapping["no_pte_allocation"] = True
 
         self.memory_map.insert(len(self.memory_map), MemoryMapping(guard_page_mapping))
 
