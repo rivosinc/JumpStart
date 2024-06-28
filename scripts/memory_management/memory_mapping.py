@@ -61,7 +61,8 @@ class MemoryMapping:
         self.fields = {
             "va": MappingField("va", int, int, None, None, False),
             "gpa": MappingField("gpa", int, int, None, None, False),
-            "pa": MappingField("pa", int, int, None, None, True),
+            "pa": MappingField("pa", int, int, None, None, False),
+            "spa": MappingField("spa", int, int, None, None, False),
             "xwr": MappingField("xwr", int, str, [0, 1, 2, 3, 4, 5, 6, 7], None, False),
             "umode": MappingField("umode", int, str, [0, 1], None, False),
             "page_size": MappingField(
@@ -109,68 +110,83 @@ class MemoryMapping:
         if self.get_field("translation_stage") is not None:
             return
 
+        address_types = [
+            address_type
+            for address_type in AddressType.get_all_address_types()
+            if self.get_field(address_type) is not None
+        ]
+
+        assert (
+            len(address_types) <= 2
+        ), f"Mapping has more than 2 address types set: {address_types}"
+
         for stage in TranslationStage.get_enabled_stages():
-            address_types = TranslationStage.stages[stage]["translates"]
-            assert all([address_type in self.fields.keys() for address_type in address_types])
-            if all([self.get_field(address_type) is not None for address_type in address_types]):
+            if (
+                len(address_types) == 2
+                and TranslationStage.get_translates_from(stage) in address_types
+                and TranslationStage.get_translates_to(stage) in address_types
+            ):
+                # we're dealing with a non-bare mapping for this stage.
                 assert (
                     self.get_field("no_pte_allocation") is not True
-                ), "no_pte_allocation is explicitly set to True for a non-direct mapping"
+                ), f"no_pte_allocation is explicitly set to True for a non-bare mapping: {self}"
                 self.set_field("no_pte_allocation", False)
 
                 self.set_field("translation_stage", stage)
                 return
+            elif (
+                len(address_types) == 1
+                and TranslationStage.get_translates_to(stage) in address_types
+            ):
+                # We're dealing with a direct mapping for this stage.
+                assert (
+                    self.get_field("no_pte_allocation") is not False
+                ), f"no_pte_allocation is explicitly set to False for a direct mapping: {self}"
+                self.set_field("no_pte_allocation", True)
 
-        # We're dealing with a direct mapping.
-        assert (
-            "pa" in self.fields.keys() and self.get_field("pa") is not None
-        ), "PA is required for direct mapping"
+                self.set_field("translation_stage", stage)
+                return
+            else:
+                # Doesn't match this stage.
+                continue
 
-        assert (
-            self.get_field("no_pte_allocation") is not False
-        ), "no_pte_allocation is explicitly set to False for a direct mapping"
-        self.set_field("no_pte_allocation", True)
+        raise ValueError(f"Unable to determine translation stage for mapping: {self}")
+
+    def is_bare_mapping(self):
+        assert self.get_field("translation_stage") is not None
+        return (
+            self.get_field(TranslationStage.get_translates_to(self.get_field("translation_stage")))
+            is not None
+            and self.get_field(
+                TranslationStage.get_translates_from(self.get_field("translation_stage"))
+            )
+            is None
+        )
 
     def sanity_check_field_values(self):
-        if self.get_field("pa") % self.get_field("page_size") != 0:
+        source_address_type = TranslationStage.get_translates_from(
+            self.get_field("translation_stage")
+        )
+        destination_address_type = TranslationStage.get_translates_to(
+            self.get_field("translation_stage")
+        )
+
+        # Check that we have a destination address for this mapping
+        assert (
+            self.get_field(TranslationStage.get_translates_to(self.get_field("translation_stage")))
+            is not None
+        ), f"Missing destination address for mapping: {self}"
+
+        if self.get_field(destination_address_type) % self.get_field("page_size") != 0:
             raise ValueError(
-                f"pa value {self.get_field('pa')} is not aligned with page_size {self.get_field('page_size')}"
+                f"{destination_address_type.upper()} value {self.get_field(destination_address_type)} is not aligned with page_size {self.get_field('page_size')}"
             )
 
-        if (
-            self.get_field("translation_stage") is None
-            and self.get_field("no_pte_allocation") is False
-        ):
-            raise ValueError("no_pte_allocation must be True for a direct mapping")
-        if (
-            self.get_field("translation_stage") is not None
-            and self.get_field("no_pte_allocation") is True
-        ):
-            raise ValueError("no_pte_allocation must be False for a non-direct mapping")
+        # Remove the source and destination addresses from the list of address types.
+        disallowed_address_types = AddressType.get_all_address_types()
+        disallowed_address_types.remove(source_address_type)
+        disallowed_address_types.remove(destination_address_type)
 
-        required_address_types = None
-        if self.get_field("translation_stage") is not None:
-            required_address_types = TranslationStage.get_address_types(
-                self.get_field("translation_stage")
-            )
-
-            assert self.get_field("xwr") is not None, "xwr is required for non-direct mappings"
-        else:
-            required_address_types = {"pa"}
-
-            assert all(
-                [self.get_field(field_name) is None for field_name in ["xwr", "umode"]]
-            ), "xwr and umode are not allowed for direct mappings"
-
-            assert (
-                self.get_field("alias") is False
-            ), "alias must be set to False for direct mappings"
-
-        assert all(
-            [address_type in self.fields.keys() for address_type in required_address_types]
-        ), f"Missing required address types: {required_address_types} when translation_stage is set to {self.get_field('translation_stage')}"
-
-        disallowed_address_types = AddressType.get_all_address_types() - required_address_types
         assert all(
             [
                 address_type in self.fields.keys() and self.get_field(address_type) is None
@@ -178,17 +194,46 @@ class MemoryMapping:
             ]
         ), f"Disallowed address type in: {disallowed_address_types} when translation_stage is set to {self.get_field('translation_stage')}"
 
+        # Make sure that there are only 2 address types set for this mapping.
+        address_types = [
+            address_type
+            for address_type in AddressType.get_all_address_types()
+            if self.get_field(address_type) is not None
+        ]
+
+        assert (
+            len(address_types) <= 2
+        ), f"Mapping has more than 2 address types set: {address_types}"
+
+        if self.is_bare_mapping():
+            assert all(
+                [self.get_field(field_name) is None for field_name in ["xwr", "umode"]]
+            ), "xwr and umode are not allowed for direct mappings"
+
+            assert (
+                self.get_field("alias") is False
+            ), "alias must be set to False for direct mappings"
+        else:
+            assert self.get_field("xwr") is not None, "xwr is required for non-bare mappings"
+
         if self.get_field("alias") is True:
-            fields_not_allowed_for_va_alias = [
+            fields_not_allowed_for_alias_mappings = [
                 "linker_script_section",
                 "pma_memory_type",
             ]
             assert all(
                 [
                     self.get_field(field_name) is None
-                    for field_name in fields_not_allowed_for_va_alias
+                    for field_name in fields_not_allowed_for_alias_mappings
                 ]
-            ), f"{fields_not_allowed_for_va_alias} fields are not allowed when alias is set to True"
+            ), f"{fields_not_allowed_for_alias_mappings} fields are not allowed when alias is set to True"
+
+        if (
+            self.get_field("no_pte_allocation") is False
+            and self.get_field("translation_stage") == "g"
+            and self.get_field("umode") != 1
+        ):
+            raise ValueError(f"umode not set to 1 for g stage mapping: {self}")
 
     def get_field(self, field_name):
         assert field_name in self.fields.keys()

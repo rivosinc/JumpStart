@@ -14,10 +14,11 @@ import sys
 
 import public.functions as public_functions
 import yaml
-from data_structures import DictUtils, ListUtils
+from data_structures import BitField, DictUtils, ListUtils
 from memory_management import (
     MemoryMapping,
     PageSize,
+    PageTableAttributes,
     PageTables,
     TranslationMode,
     TranslationStage,
@@ -50,16 +51,23 @@ class SourceGenerator:
         override_diag_attributes,
         priv_modes_enabled,
     ):
-        self.num_guard_pages_generated = 0
+        self.priv_modes_enabled = priv_modes_enabled
 
-        self.diag_attributes_yaml = diag_attributes_yaml
-        with open(diag_attributes_yaml) as f:
-            diag_attributes = yaml.safe_load(f)
+        self.process_source_attributes(
+            jumpstart_source_attributes_yaml, override_jumpstart_source_attributes
+        )
 
+        self.process_diag_attributes(diag_attributes_yaml, override_diag_attributes)
+
+        self.process_memory_map()
+
+        self.create_page_tables_data()
+
+    def process_source_attributes(
+        self, jumpstart_source_attributes_yaml, override_jumpstart_source_attributes
+    ):
         with open(jumpstart_source_attributes_yaml) as f:
             self.jumpstart_source_attributes = yaml.safe_load(f)
-
-        self.priv_modes_enabled = priv_modes_enabled
 
         rivos_internal_lib_dir = f"{os.path.dirname(os.path.realpath(__file__))}/rivos_internal"
 
@@ -87,6 +95,11 @@ class SourceGenerator:
                 DictUtils.create_dict(override_jumpstart_source_attributes),
             )
 
+    def process_diag_attributes(self, diag_attributes_yaml, override_diag_attributes):
+        self.diag_attributes_yaml = diag_attributes_yaml
+        with open(diag_attributes_yaml) as f:
+            diag_attributes = yaml.safe_load(f)
+
         # Override the default diag attribute values with the values
         # specified by the diag.
         DictUtils.override_dict(
@@ -107,31 +120,40 @@ class SourceGenerator:
 
         self.sanity_check_diag_attributes()
 
-        self.memory_map = []
+    def process_memory_map(self):
+        self.memory_map = {stage: [] for stage in TranslationStage.get_enabled_stages()}
+
         for mapping in self.jumpstart_source_attributes["diag_attributes"]["mappings"]:
-            self.memory_map.append(MemoryMapping(mapping))
+            mapping = MemoryMapping(mapping)
+            self.memory_map[mapping.get_field("translation_stage")].append(mapping)
 
         self.add_jumpstart_sections_to_mappings()
 
-        # Sort all the mappings by the PA.
-        self.memory_map = sorted(
-            self.memory_map,
-            key=lambda x: x.get_field("pa"),
-            reverse=False,
-        )
+        for stage in self.memory_map.keys():
+            # Sort all the mappings by the destination address.
+            self.memory_map[stage] = sorted(
+                self.memory_map[stage],
+                key=lambda x: x.get_field(TranslationStage.get_translates_to(stage)),
+                reverse=False,
+            )
 
         if self.jumpstart_source_attributes["rivos_internal_build"] is True:
             rivos_internal_functions.process_memory_map(self.memory_map)
 
         self.sanity_check_memory_map()
 
-        self.page_tables = PageTables(
-            self.jumpstart_source_attributes["diag_attributes"]["satp_mode"],
-            self.jumpstart_source_attributes["diag_attributes"][
-                "num_pages_for_jumpstart_smode_pagetables"
-            ],
-            self.memory_map,
-        )
+    def create_page_tables_data(self):
+        self.page_tables = {}
+        for stage in TranslationStage.get_enabled_stages():
+            self.page_tables[stage] = PageTables(
+                self.jumpstart_source_attributes["diag_attributes"][
+                    f"{TranslationStage.get_atp_register(stage)}_mode"
+                ],
+                self.jumpstart_source_attributes["diag_attributes"][
+                    "max_num_pagetable_pages_per_stage"
+                ],
+                self.memory_map[stage],
+            )
 
     def sanity_check_memory_map(self):
         public_functions.sanity_check_memory_map(self.memory_map)
@@ -139,38 +161,125 @@ class SourceGenerator:
         if self.jumpstart_source_attributes["rivos_internal_build"] is True:
             rivos_internal_functions.sanity_check_memory_map(self.memory_map)
 
-    def add_jumpstart_sections_to_mappings(self):
-        for mode in ListUtils.intersection(
-            self.jumpstart_source_attributes["priv_modes_supported"], self.priv_modes_enabled
+    def add_pagetable_mappings(self, start_address):
+        common_attributes = {
+            "page_size": PageSize.SIZE_4K,
+            "num_pages": self.jumpstart_source_attributes["diag_attributes"][
+                "max_num_pagetable_pages_per_stage"
+            ],
+            "umode": "0b0",
+            "pma_memory_type": "wb",
+        }
+        if (
+            self.jumpstart_source_attributes["diag_attributes"]["allow_page_table_modifications"]
+            is True
         ):
-            self.add_mappings_for_jumpstart_mode(mode)
+            common_attributes["xwr"] = "0b011"
+        else:
+            common_attributes["xwr"] = "0b001"
 
-        self.add_pa_guard_page_after_last_mapping()
+        per_stage_pagetable_mappings = {}
 
-        if self.jumpstart_source_attributes["rivos_internal_build"] is True:
-            self.memory_map.extend(
-                rivos_internal_functions.get_additional_mappings(
-                    self.jumpstart_source_attributes,
-                )
+        for stage in TranslationStage.get_enabled_stages():
+            section_mapping = common_attributes.copy()
+            source_address_type = TranslationStage.get_translates_from(stage)
+            dest_address_type = TranslationStage.get_translates_to(stage)
+
+            # The start of the pagetables have to be aligned to the size of the
+            # root (first level) page table.
+            translation_mode = self.jumpstart_source_attributes["diag_attributes"][
+                f"{TranslationStage.get_atp_register(stage)}_mode"
+            ]
+            root_page_table_size = PageTableAttributes.mode_attributes[translation_mode][
+                "pagetable_sizes"
+            ][0]
+            if (start_address % root_page_table_size) != 0:
+                start_address = (
+                    math.floor(start_address / root_page_table_size) + 1
+                ) * root_page_table_size
+
+            section_mapping[source_address_type] = section_mapping[dest_address_type] = (
+                start_address
             )
+
+            section_mapping["translation_stage"] = stage
+            section_mapping["linker_script_section"] = f".jumpstart.rodata.{stage}_stage.pagetables"
+
+            per_stage_pagetable_mappings[stage] = MemoryMapping(section_mapping)
+
+            self.memory_map[stage].insert(
+                len(self.memory_map[stage]), per_stage_pagetable_mappings[stage]
+            )
+
+            start_address += common_attributes["num_pages"] * common_attributes["page_size"]
+
+        if "g" in TranslationStage.get_enabled_stages():
+            vs_stage_memory_mapping = per_stage_pagetable_mappings["vs"].copy()
+
+            vs_stage_memory_mapping.set_field("translation_stage", "g")
+
+            start_address = vs_stage_memory_mapping.get_field(
+                TranslationStage.get_translates_to("vs")
+            )
+            vs_stage_memory_mapping.set_field(TranslationStage.get_translates_from("vs"), None)
+            vs_stage_memory_mapping.set_field(TranslationStage.get_translates_to("vs"), None)
+            vs_stage_memory_mapping.set_field(
+                TranslationStage.get_translates_from("g"), start_address
+            )
+            vs_stage_memory_mapping.set_field(
+                TranslationStage.get_translates_to("g"), start_address
+            )
+
+            vs_stage_memory_mapping.set_field("umode", 1)
+
+            self.memory_map["g"].insert(len(self.memory_map["g"]), vs_stage_memory_mapping)
+
+        for stage in TranslationStage.get_enabled_stages():
+            self.add_pa_guard_page_after_last_mapping(stage)
+
+    def add_jumpstart_sections_to_mappings(self):
+        pagetables_start_address = 0
+        for stage in TranslationStage.get_enabled_stages():
+            if self.jumpstart_source_attributes["rivos_internal_build"] is True:
+                self.memory_map[stage].extend(
+                    rivos_internal_functions.get_additional_mappings(
+                        stage,
+                        self.jumpstart_source_attributes,
+                    )
+                )
+
+            for mode in ListUtils.intersection(
+                self.jumpstart_source_attributes["priv_modes_supported"], self.priv_modes_enabled
+            ):
+                self.add_jumpstart_mode_mappings_for_stage(stage, mode)
+
+                # Pagetables for each stage are placed consecutively in the physical address
+                # space. We will place the pagetables after the last physical address
+                # used by the jumpstart mappings in any stage.
+                next_available_dest_address = self.get_next_available_dest_addr_after_last_mapping(
+                    stage, PageSize.SIZE_4K, "wb"
+                )
+                if next_available_dest_address > pagetables_start_address:
+                    pagetables_start_address = next_available_dest_address
+
+        self.add_pagetable_mappings(pagetables_start_address)
 
     def sanity_check_diag_attributes(self):
-        assert "satp_mode" in self.jumpstart_source_attributes["diag_attributes"]
-        assert (
-            TranslationMode.is_valid_mode(
-                self.jumpstart_source_attributes["diag_attributes"]["satp_mode"]
+        for stage in TranslationStage.get_enabled_stages():
+            atp_register = TranslationStage.get_atp_register(stage)
+            assert f"{atp_register}_mode" in self.jumpstart_source_attributes["diag_attributes"]
+            assert TranslationMode.is_valid_mode(
+                self.jumpstart_source_attributes["diag_attributes"][f"{atp_register}_mode"]
             )
-            is True
-        )
 
         if self.jumpstart_source_attributes["rivos_internal_build"] is True:
             rivos_internal_functions.sanity_check_diag_attributes(
                 self.jumpstart_source_attributes["diag_attributes"]
             )
 
-    def get_next_available_pa_after_last_mapping(self, page_size, pma_memory_type):
-        previous_mapping_id = len(self.memory_map) - 1
-        previous_mapping = self.memory_map[previous_mapping_id]
+    def get_next_available_dest_addr_after_last_mapping(self, stage, page_size, pma_memory_type):
+        previous_mapping_id = len(self.memory_map[stage]) - 1
+        previous_mapping = self.memory_map[stage][previous_mapping_id]
 
         previous_mapping_size = previous_mapping.get_field(
             "page_size"
@@ -180,7 +289,8 @@ class SourceGenerator:
                 previous_mapping, pma_memory_type
             )
 
-        next_available_pa = previous_mapping.get_field("pa") + previous_mapping_size
+        dest_address_type = TranslationStage.get_translates_to(stage)
+        next_available_pa = previous_mapping.get_field(dest_address_type) + previous_mapping_size
 
         if (next_available_pa % page_size) != 0:
             # Align the PA to the page size.
@@ -188,8 +298,9 @@ class SourceGenerator:
 
         return next_available_pa
 
-    def add_mappings_for_jumpstart_mode(self, mode):
+    def add_jumpstart_mode_mappings_for_stage(self, stage, mode):
         area_name = f"jumpstart_{mode}"
+        area_start_address_attribute_name = f"{mode}_start_address"
 
         # We pick up the start PA of the area from the diag_attributes
         #   Example: mmode_start_address, smode_start_address,
@@ -198,7 +309,6 @@ class SourceGenerator:
         # first section in the area. Every subsequent section will just follow
         # the previous section in the PA space.
         area_start_pa = None
-        area_start_address_attribute_name = f"{mode}_start_address"
         if (
             area_start_address_attribute_name in self.jumpstart_source_attributes["diag_attributes"]
             and self.jumpstart_source_attributes["diag_attributes"][
@@ -211,34 +321,11 @@ class SourceGenerator:
             ]
 
         for section_name in self.jumpstart_source_attributes[area_name]:
-            section_mapping = self.jumpstart_source_attributes[area_name][section_name]
-
-            assert "pa" not in section_mapping
-            if area_start_pa is not None:
-                section_mapping["pa"] = area_start_pa
-                # Every subsequent section will just follow the previous section
-                # in the PA space.
-                area_start_pa = None
-            else:
-                # We're going to start the PA of the new mapping after the PA range
-                # # of the last mapping.
-                section_mapping["pa"] = self.get_next_available_pa_after_last_mapping(
-                    self.jumpstart_source_attributes[area_name][section_name]["page_size"],
-                    self.jumpstart_source_attributes[area_name][section_name]["pma_memory_type"],
-                )
-
-            if (
-                "no_pte_allocation" not in section_mapping
-                or section_mapping["no_pte_allocation"] is False
-            ):
-                # This is the only real use for the "no_pte_allocation" attribute.
-                # If we had another way to tell that we had to copy the VA from
-                # the PA for these mappings we could remove this attribute.
-                section_mapping["va"] = section_mapping["pa"]
+            section_mapping = self.jumpstart_source_attributes[area_name][section_name].copy()
+            section_mapping["translation_stage"] = stage
 
             # This is where we pick up num_pages_for_jumpstart_*mode_* attributes from the diag_attributes
-            #   Example: num_pages_for_jumpstart_smode_pagetables, num_pages_for_jumpstart_smode_bss,
-            #            num_pages_for_jumpstart_smode_rodata, etc.
+            #   Example: num_pages_for_jumpstart_smode_bss, num_pages_for_jumpstart_smode_rodata, etc.
             num_pages_diag_attribute_name = f"num_pages_for_{area_name}_{section_name}"
             if (
                 "num_pages" in section_mapping
@@ -254,136 +341,187 @@ class SourceGenerator:
                     num_pages_diag_attribute_name
                 ]
 
+            dest_address_type = TranslationStage.get_translates_to(stage)
+            assert dest_address_type not in section_mapping
+            if area_start_pa is not None:
+                section_mapping[dest_address_type] = area_start_pa
+                # Every subsequent section will just follow the previous section
+                # in the PA space.
+                area_start_pa = None
+            else:
+                # We're going to start the PA of the new mapping after the PA range
+                # # of the last mapping.
+                section_mapping[dest_address_type] = (
+                    self.get_next_available_dest_addr_after_last_mapping(
+                        stage,
+                        self.jumpstart_source_attributes[area_name][section_name]["page_size"],
+                        self.jumpstart_source_attributes[area_name][section_name][
+                            "pma_memory_type"
+                        ],
+                    )
+                )
+
             if (
-                section_name == "pagetables"
-                and self.jumpstart_source_attributes["diag_attributes"][
-                    "allow_page_table_modifications"
-                ]
-                is True
+                "no_pte_allocation" not in section_mapping
+                or section_mapping["no_pte_allocation"] is False
             ):
-                section_mapping["xwr"] = "0b011"
+                # This is the only real use for the "no_pte_allocation" attribute.
+                # If we had another way to tell that we had to copy the VA from
+                # the PA for these mappings we could remove this attribute.
+                section_mapping[TranslationStage.get_translates_from(stage)] = section_mapping[
+                    dest_address_type
+                ]
 
-            self.memory_map.insert(len(self.memory_map), MemoryMapping(section_mapping))
+                if stage == "g":
+                    # For G-stage address translation, all memory accesses
+                    # (including those made to access data structures for
+                    # VS-stage address translation) are considered to be
+                    # #user-level accesses, as though executed in U-mode.
+                    section_mapping["umode"] = "0b1"
 
-    def add_pa_guard_page_after_last_mapping(self):
+            self.memory_map[stage].insert(
+                len(self.memory_map[stage]), MemoryMapping(section_mapping)
+            )
+
+    def add_pa_guard_page_after_last_mapping(self, stage):
         guard_page_mapping = {}
         guard_page_mapping["page_size"] = PageSize.SIZE_4K
         guard_page_mapping["pma_memory_type"] = "wb"
-        # Guard pages have no allocations in the page tables but occupy space in the memory map.
-        guard_page_mapping["pa"] = self.get_next_available_pa_after_last_mapping(
-            guard_page_mapping["page_size"], guard_page_mapping["pma_memory_type"]
+        guard_page_mapping["translation_stage"] = stage
+
+        # Guard pages have no allocations in the page tables
+        # but occupy space in the memory map.
+        # They also don't occupy space in the ELFs.
+        guard_page_mapping["no_pte_allocation"] = True
+        guard_page_mapping["valid"] = "0b0"
+        dest_address_type = TranslationStage.get_translates_to(stage)
+        guard_page_mapping[dest_address_type] = (
+            self.get_next_available_dest_addr_after_last_mapping(
+                stage, guard_page_mapping["page_size"], guard_page_mapping["pma_memory_type"]
+            )
         )
         guard_page_mapping["num_pages"] = 1
-        guard_page_mapping["linker_script_section"] = (
-            f".jumpstart.guard_page.{self.num_guard_pages_generated}"
+
+        self.memory_map[stage].insert(
+            len(self.memory_map[stage]), MemoryMapping(guard_page_mapping)
         )
 
-        self.memory_map.insert(len(self.memory_map), MemoryMapping(guard_page_mapping))
-
-        self.num_guard_pages_generated += 1
-
     def generate_linker_script(self, output_linker_script):
-        with open(output_linker_script, "w") as file:
+        file = open(output_linker_script, "w")
+        if file is None:
+            raise Exception(f"Unable to open {output_linker_script} for writing")
+
+        file.write(
+            f"/* This file is auto-generated by {sys.argv[0]} from {self.diag_attributes_yaml} */\n"
+        )
+        for stage in TranslationStage.get_enabled_stages():
+            atp_register = TranslationStage.get_atp_register(stage)
             file.write(
-                f"/* This file is auto-generated by {sys.argv[0]} from {self.diag_attributes_yaml} */\n"
+                f"/* {atp_register.upper()} mode is {self.jumpstart_source_attributes['diag_attributes'][f'{atp_register}_mode']} */\n\n"
             )
+        file.write('OUTPUT_ARCH( "riscv" )\n')
+        file.write(f"ENTRY({self.jumpstart_source_attributes['diag_entry_label']})\n\n")
+
+        file.write("SECTIONS\n{\n")
+        defined_sections = []
+
+        pt_load_program_headers = []
+
+        # The linker script lays out the diag in physical memory. The
+        # mappings are already sorted by PA.
+
+        # We only generate linker script sections for the final stages.
+        final_stages = [
+            stage
+            for stage in TranslationStage.get_enabled_stages()
+            if TranslationStage.is_final_stage(stage)
+        ]
+        final_stage_mappings = []
+        for stage in final_stages:
+            final_stage_mappings.extend(self.memory_map[stage])
+
+        for entry in final_stage_mappings:
+            if entry.get_field("linker_script_section") is None:
+                # We don't generate linker script sections for entries
+                # that don't have a linker_script_section attribute.
+                continue
+
+            file.write(f"   /* {entry.get_field('linker_script_section')}:\n")
             file.write(
-                f"/* SATP.Mode is {self.jumpstart_source_attributes['diag_attributes']['satp_mode']} */\n\n"
+                f"       PA Range: {hex(entry.get_field('pa'))} - {hex(entry.get_field('pa') + entry.get_field('num_pages') * entry.get_field('page_size'))}\n"
             )
-            file.write('OUTPUT_ARCH( "riscv" )\n')
-            file.write(f"ENTRY({self.jumpstart_source_attributes['diag_entry_label']})\n\n")
+            file.write("   */\n")
+            file.write(f"   . = {hex(entry.get_field('pa'))};\n")
 
-            file.write("SECTIONS\n{\n")
-            defined_sections = []
+            # If this is a list of sections, the first section listed is the
+            # top level section that all the other sections get placed in.
+            linker_script_sections = entry.get_field("linker_script_section").split(",")
 
-            pt_load_program_headers = []
+            top_level_section_name = linker_script_sections[0]
+            pt_load_program_headers.append(top_level_section_name)
 
-            # The linker script lays out the diag in physical memory. The
-            # mappings are already sorted by PA.
-            for entry in self.memory_map:
-                if entry.get_field("linker_script_section") is None:
-                    # We don't generate linker script sections for entries
-                    # that don't have a linker_script_section attribute.
-                    continue
-
-                file.write(f"   /* {entry.get_field('linker_script_section')}:\n")
-                file.write(
-                    f"       PA Range: {hex(entry.get_field('pa'))} - {hex(entry.get_field('pa') + entry.get_field('num_pages') * entry.get_field('page_size'))}\n"
-                )
-                file.write("   */\n")
-                file.write(f"   . = {hex(entry.get_field('pa'))};\n")
-
-                # If this is a list of sections, the first section listed is the
-                # top level section that all the other sections get placed in.
-                linker_script_sections = entry.get_field("linker_script_section").split(",")
-
-                top_level_section_name = linker_script_sections[0]
-                pt_load_program_headers.append(top_level_section_name)
-
-                # main() automatically gets placed in the .text.startup section
-                # and we want the .text.startup section to be part of the
-                # .text section.
-                if (
-                    ".text" in linker_script_sections
-                    and ".text.startup" not in linker_script_sections
-                ):
-                    # Place .text.startup at the beginning of the list
-                    # so that main() is the first thing in the .text section?
-                    linker_script_sections.insert(0, ".text.startup")
-                section_type = ""
-                section_pad = False
-                if ".bss" in linker_script_sections:
-                    # Switching BSS from the default NOBITS to PROGBITS.
-                    # With NOBITS the BSS section doesn't take up space in the
-                    # ELF file and the loader or runtime is expected to
-                    # zero out the memory region. This is fine for a real
-                    # system but the diag may be loaded into an environment
-                    # where the loader doesn't zero out the memory region.
-                    # We would have to run a memset() to zero out the BSS which
-                    # will unnecessarily consume simulation time.
-                    # PROGBITS ensures that the BSS section is assigned space
-                    # in the ELF file and initialized with zeros.
-                    section_type = "(TYPE=SHT_PROGBITS)"
-                    section_pad = True
-                file.write(f"   {top_level_section_name} {section_type} : {{\n")
-                top_level_section_variable_name_prefix = top_level_section_name.replace(
-                    ".", "_"
-                ).upper()
-                file.write(f"   {top_level_section_variable_name_prefix}_START = .;\n")
-                for section_name in linker_script_sections:
-                    assert section_name not in defined_sections
-                    file.write(f"      *({section_name})\n")
-                    defined_sections.append(section_name)
-                if section_pad:
-                    file.write("      BYTE(0)\n")
-                file.write(f"   }} : {top_level_section_name}\n\n")
-                file.write(
-                    f"   . = {hex(entry.get_field('pa') + entry.get_field('num_pages') * entry.get_field('page_size') - 1)};\n"
-                )
-                file.write(f"  {top_level_section_variable_name_prefix}_END = .;\n")
+            # main() automatically gets placed in the .text.startup section
+            # and we want the .text.startup section to be part of the
+            # .text section.
+            if ".text" in linker_script_sections and ".text.startup" not in linker_script_sections:
+                # Place .text.startup at the beginning of the list
+                # so that main() is the first thing in the .text section?
+                linker_script_sections.insert(0, ".text.startup")
+            section_type = ""
+            section_pad = False
+            if ".bss" in linker_script_sections:
+                # Switching BSS from the default NOBITS to PROGBITS.
+                # With NOBITS the BSS section doesn't take up space in the
+                # ELF file and the loader or runtime is expected to
+                # zero out the memory region. This is fine for a real
+                # system but the diag may be loaded into an environment
+                # where the loader doesn't zero out the memory region.
+                # We would have to run a memset() to zero out the BSS which
+                # will unnecessarily consume simulation time.
+                # PROGBITS ensures that the BSS section is assigned space
+                # in the ELF file and initialized with zeros.
+                section_type = "(TYPE=SHT_PROGBITS)"
+                section_pad = True
+            file.write(f"   {top_level_section_name} {section_type} : {{\n")
+            top_level_section_variable_name_prefix = top_level_section_name.replace(
+                ".", "_"
+            ).upper()
+            file.write(f"   {top_level_section_variable_name_prefix}_START = .;\n")
+            for section_name in linker_script_sections:
+                assert section_name not in defined_sections
+                file.write(f"      *({section_name})\n")
+                defined_sections.append(section_name)
+            if section_pad:
+                file.write("      BYTE(0)\n")
+            file.write(f"   }} : {top_level_section_name}\n\n")
             file.write(
-                "/DISCARD/ : { *("
-                + " ".join([".note", ".comment", ".eh_frame", ".eh_frame_hdr"])
-                + ") }\n"
+                f"   . = {hex(entry.get_field('pa') + entry.get_field('num_pages') * entry.get_field('page_size') - 1)};\n"
             )
-            file.write("\n}\n")
+            file.write(f"  {top_level_section_variable_name_prefix}_END = .;\n")
+        file.write(
+            "/DISCARD/ : { *("
+            + " ".join([".note", ".comment", ".eh_frame", ".eh_frame_hdr"])
+            + ") }\n"
+        )
+        file.write("\n}\n")
 
-            # Specify separate load segments in the program headers for the
-            # different sections.
-            # Without this, GCC would split out the sections into separate
-            # load segments but LLVM would put non-adjacent sections with
-            # identical attributes into the same load segment.
-            # This would cause the loader to load gaps between the sections
-            # as well which spike has issues with as it doesn't treat
-            # the entire memory range as valid.
-            # Reference:
-            # https://ftp.gnu.org/old-gnu/Manuals/ld-2.9.1/html_node/ld_23.html
-            file.write("\nPHDRS\n{\n")
-            for entry in pt_load_program_headers:
-                file.write(f"  {entry} PT_LOAD ;\n")
-            file.write("}\n")
+        # Specify separate load segments in the program headers for the
+        # different sections.
+        # Without this, GCC would split out the sections into separate
+        # load segments but LLVM would put non-adjacent sections with
+        # identical attributes into the same load segment.
+        # This would cause the loader to load gaps between the sections
+        # as well which spike has issues with as it doesn't treat
+        # the entire memory range as valid.
+        # Reference:
+        # https://ftp.gnu.org/old-gnu/Manuals/ld-2.9.1/html_node/ld_23.html
+        # https://rivosinc.slack.com/archives/C030C5A4BUZ/p1710366517457539
+        file.write("\nPHDRS\n{\n")
+        for entry in pt_load_program_headers:
+            file.write(f"  {entry} PT_LOAD ;\n")
+        file.write("}\n")
 
-            file.close()
+        file.close()
 
     def generate_diag_attribute_functions(self, file_descriptor):
         boolean_attributes = [
@@ -556,68 +694,69 @@ sync_all_harts_from_{mode}:
                 file_descriptor.write("  jal sbi_system_reset\n")
 
     def generate_mmu_functions(self, file_descriptor):
-        file_descriptor.write(
-            f"# SATP.Mode is {self.jumpstart_source_attributes['diag_attributes']['satp_mode']}\n\n"
-        )
-        file_descriptor.write(
-            f"#define DIAG_SATP_MODE {TranslationMode.get_encoding(self.jumpstart_source_attributes['diag_attributes']['satp_mode'])}\n"
-        )
+        for stage in TranslationStage.get_enabled_stages():
+            atp_register = TranslationStage.get_atp_register(stage)
+            file_descriptor.write(
+                f"\n\n# {atp_register.upper()} mode is {self.jumpstart_source_attributes['diag_attributes'][f'{atp_register}_mode']}\n\n"
+            )
+            file_descriptor.write(
+                f"#define DIAG_{atp_register.upper()}_MODE {TranslationMode.get_encoding(self.jumpstart_source_attributes['diag_attributes'][f'{atp_register}_mode'])}\n"
+            )
 
         modes = ListUtils.intersection(["mmode", "smode"], self.priv_modes_enabled)
         for mode in modes:
             file_descriptor.write(f'.section .jumpstart.text.{mode}, "ax"\n\n')
 
-            file_descriptor.write(f".global get_diag_satp_mode_from_{mode}\n")
-            file_descriptor.write(f"get_diag_satp_mode_from_{mode}:\n\n")
-            file_descriptor.write("    li   a0, DIAG_SATP_MODE\n")
-            file_descriptor.write("    ret\n\n\n")
+            for stage in TranslationStage.get_enabled_stages():
+                atp_register = TranslationStage.get_atp_register(stage)
+                file_descriptor.write(f".global get_diag_{atp_register}_mode_from_{mode}\n")
+                file_descriptor.write(f"get_diag_{atp_register}_mode_from_{mode}:\n\n")
+                file_descriptor.write(f"    li   a0, DIAG_{atp_register.upper()}_MODE\n")
+                file_descriptor.write("    ret\n\n\n")
 
             file_descriptor.write(f".global setup_mmu_from_{mode}\n")
             file_descriptor.write(f"setup_mmu_from_{mode}:\n\n")
-            file_descriptor.write("    li   t0, DIAG_SATP_MODE\n")
-            file_descriptor.write("    slli  t0, t0, SATP64_MODE_SHIFT\n")
-            file_descriptor.write(f"    la t1, {self.page_tables.get_asm_label()}\n")
-            file_descriptor.write("    srai t1, t1, PAGE_OFFSET\n")
-            file_descriptor.write("    add  t1, t1, t0\n")
-            file_descriptor.write("    csrw  satp, t1\n")
+            for stage in TranslationStage.get_enabled_stages():
+                atp_register = TranslationStage.get_atp_register(stage)
+                file_descriptor.write(f"    li   t0, DIAG_{atp_register.upper()}_MODE\n")
+                file_descriptor.write(f"    slli  t0, t0, {atp_register.upper()}64_MODE_SHIFT\n")
+                file_descriptor.write(f"    la t1, {self.page_tables[stage].get_asm_label()}\n")
+                file_descriptor.write("    srai t1, t1, PAGE_OFFSET\n")
+                file_descriptor.write("    add  t1, t1, t0\n")
+                file_descriptor.write(f"    csrw  {atp_register}, t1\n")
+
             file_descriptor.write("    sfence.vma\n")
+            if self.jumpstart_source_attributes["diag_attributes"]["enable_virtualization"] is True:
+                # This is for the hgatp update.
+                file_descriptor.write("    hfence.gvma\n")
             file_descriptor.write("    ret\n")
 
-    def generate_page_table_data(self, file_descriptor):
-        file_descriptor.write('.section .jumpstart.rodata.pagetables, "a"\n\n')
-        file_descriptor.write(f".global {self.page_tables.get_asm_label()}\n")
-        file_descriptor.write(f"{self.page_tables.get_asm_label()}:\n\n")
+    def generate_page_tables(self, file_descriptor):
+        for stage in TranslationStage.get_enabled_stages():
 
-        pagetable_filled_memory_addresses = list(sorted(self.page_tables.get_pte_addresses()))
+            file_descriptor.write(f'.section .jumpstart.rodata.{stage}_stage.pagetables, "a"\n\n')
 
-        pte_size_in_bytes = self.page_tables.get_attribute("pte_size_in_bytes")
-        last_filled_address = None
-        for address in pagetable_filled_memory_addresses:
-            if last_filled_address is not None and address != (
-                last_filled_address + pte_size_in_bytes
-            ):
-                file_descriptor.write(
-                    f".skip {hex(address - (last_filled_address + pte_size_in_bytes))}\n"
+            file_descriptor.write(f".global {self.page_tables[stage].get_asm_label()}\n")
+            file_descriptor.write(f"{self.page_tables[stage].get_asm_label()}:\n\n")
+
+            pte_size_in_bytes = self.page_tables[stage].get_attribute("pte_size_in_bytes")
+            last_filled_address = None
+            for address in list(sorted(self.page_tables[stage].get_pte_addresses())):
+                if last_filled_address is not None and address != (
+                    last_filled_address + pte_size_in_bytes
+                ):
+                    file_descriptor.write(
+                        f".skip {hex(address - (last_filled_address + pte_size_in_bytes))}\n"
+                    )
+                log.debug(
+                    f"Writing [{hex(address)}] = {hex(self.page_tables[stage].get_pte(address))}"
                 )
-            log.debug(f"Writing [{hex(address)}] = {hex(self.page_tables.get_pte(address))}")
-            file_descriptor.write(f"\n# [{hex(address)}]\n")
-            file_descriptor.write(
-                f".{pte_size_in_bytes}byte {hex(self.page_tables.get_pte(address))}\n"
-            )
+                file_descriptor.write(f"\n# [{hex(address)}]\n")
+                file_descriptor.write(
+                    f".{pte_size_in_bytes}byte {hex(self.page_tables[stage].get_pte(address))}\n"
+                )
 
-            last_filled_address = address
-
-    def generate_guard_pages(self, file_descriptor):
-        for guard_page_id in range(self.num_guard_pages_generated):
-            # @nobits reference:
-            #   section does not contain data (i.e., section only occupies space)
-            # https://ftp.gnu.org/old-gnu/Manuals/gas-2.9.1/html_node/as_117.html?cmdf=.section+nobits
-            file_descriptor.write(
-                f'\n\n.section .jumpstart.guard_page.{guard_page_id}, "a",@nobits\n'
-            )
-            file_descriptor.write(f".global guard_page_{guard_page_id}\n")
-            file_descriptor.write(f"guard_page_{guard_page_id}:\n")
-            file_descriptor.write(f".zero {PageSize.SIZE_4K}\n\n")
+                last_filled_address = address
 
     def generate_assembly_file(self, output_assembly_file):
         with open(output_assembly_file, "w") as file:
@@ -638,14 +777,101 @@ sync_all_harts_from_{mode}:
 
             if self.jumpstart_source_attributes["rivos_internal_build"] is True:
                 rivos_internal_functions.generate_rivos_internal_mmu_functions(
-                    file, self.memory_map, self.priv_modes_enabled
+                    file, self.priv_modes_enabled
                 )
 
-            self.generate_page_table_data(file)
+            self.generate_page_tables(file)
 
-            self.generate_guard_pages(file)
+            # self.generate_guard_pages(file)
 
             file.close()
+
+    def translate(self, source_address):
+        for stage in TranslationStage.get_enabled_stages():
+            try:
+                self.translate_stage(stage, source_address)
+                log.info(f"{stage} Stage: Translation SUCCESS\n\n")
+            except Exception as e:
+                log.warning(f"{stage} Stage: Translation FAILED: {e}\n\n")
+
+    def translate_stage(self, stage, source_address):
+        translation_mode = self.jumpstart_source_attributes["diag_attributes"][
+            f"{TranslationStage.get_atp_register(stage)}_mode"
+        ]
+        log.info(
+            f"{stage} Stage: Translating Address {hex(source_address)}. Translation.translation_mode = {translation_mode}."
+        )
+
+        attributes = PageTableAttributes(translation_mode)
+
+        # Step 1
+        a = self.page_tables[stage].get_start_address()
+
+        current_level = 0
+        pte_value = 0
+
+        # Step 2
+        while True:
+            log.info(f"    {stage} Stage: a = {hex(a)}; current_level = {current_level}")
+
+            pte_address = a + BitField.extract_bits(
+                source_address, attributes.get_attribute("va_vpn_bits")[current_level]
+            ) * attributes.get_attribute("pte_size_in_bytes")
+
+            if TranslationStage.get_next_stage(stage) is not None:
+                log.info(
+                    f"    {stage} Stage: PTE Address {hex(pte_address)} needs next stage translation."
+                )
+                self.translate_stage(TranslationStage.get_next_stage(stage), pte_address)
+
+            pte_value = self.page_tables[stage].read_sparse_memory(pte_address)
+
+            if pte_value is None:
+                raise ValueError(f"Level {current_level} PTE at {hex(pte_address)} is not valid.")
+
+            log.info(
+                f"    {stage} Stage: level{current_level} PTE: [{hex(pte_address)}] = {hex(pte_value)}"
+            )
+
+            if BitField.extract_bits(pte_value, attributes.common_attributes["valid_bit"]) == 0:
+                raise Exception(f"PTE at {hex(pte_address)} is not valid")
+
+            xwr = BitField.extract_bits(pte_value, attributes.common_attributes["xwr_bits"])
+            if (xwr & 0x3) == 0x2:
+                raise Exception(f"PTE at {hex(pte_address)} has R=0 and X=1")
+
+            a = 0
+            for ppn_id in range(len(attributes.get_attribute("pte_ppn_bits"))):
+                ppn_value = BitField.extract_bits(
+                    pte_value, attributes.get_attribute("pte_ppn_bits")[ppn_id]
+                )
+                a = BitField.place_bits(
+                    a, ppn_value, attributes.get_attribute("pa_ppn_bits")[ppn_id]
+                )
+
+            if (xwr & 0x6) or (xwr & 0x1):
+                log.info(f"    {stage} Stage: This is a Leaf PTE")
+                break
+            else:
+                if BitField.extract_bits(pte_value, attributes.common_attributes["a_bit"]) != 0:
+                    log.error("PTE has A=1 but is not a Leaf PTE")
+                    sys.exit(1)
+                elif BitField.extract_bits(pte_value, attributes.common_attributes["d_bit"]) != 0:
+                    raise Exception("PTE has D=1 but is not a Leaf PTE")
+
+            current_level += 1
+            assert current_level < attributes.get_attribute("num_levels")
+            continue
+
+        dest_address = a
+        dest_address += BitField.extract_bits(
+            source_address, (attributes.get_attribute("va_vpn_bits")[current_level][1] - 1, 0)
+        )
+
+        log.info(f"    {stage} Stage: PTE value = {hex(pte_value)}")
+        log.info(f"{stage} Stage: Translated {hex(source_address)} --> {hex(dest_address)}")
+
+        return dest_address
 
 
 def main():
@@ -690,8 +916,8 @@ def main():
         "--output_linker_script", help="Linker script to generate", required=False, type=str
     )
     parser.add_argument(
-        "--translate_VA",
-        help="Translate the given VA to PA",
+        "--translate",
+        help="Translate the address.",
         required=False,
         type=lambda x: int(x, 0),
     )
@@ -726,8 +952,8 @@ def main():
     if args.output_linker_script is not None:
         source_generator.generate_linker_script(args.output_linker_script)
 
-    if args.translate_VA is not None:
-        source_generator.page_tables.translate_VA(args.translate_VA)
+    if args.translate is not None:
+        source_generator.translate(args.translate)
 
 
 if __name__ == "__main__":

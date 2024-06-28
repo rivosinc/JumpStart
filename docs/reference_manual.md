@@ -69,13 +69,13 @@ Example: [test009](../tests/common/test009.diag_attributes.yaml).
 
 The address at which the start of the Machine, Supervisor and User mode sections will be placed by the linker.
 
-### `num_pages_for_jumpstart_smode_pagetables`
+### `max_num_pagetable_pages_per_stage`
 
-The maximum number of pages that can be used to allocate Page Tables.
+The maximum number of 4K pages that can be used to allocate Page Tables for each translation stage.
 
 ### `num_pages_for_jumpstart_smode_bss` and `num_pages_for_jumpstart_smode_rodata`
 
-The number of pages allowed for the `.bss` and `.rodata` sections respectively.
+The number of 4K pages allowed for the `.bss` and `.rodata` sections respectively.
 
 ### `allow_page_table_modifications`
 
@@ -89,15 +89,15 @@ Example: [test021](../tests/common/test021.diag_attributes.yaml).
 
 Controls the memory layout and attributes of all the sections of the diag.
 
-#### `va`, `gpa`, `pa`
+#### `va`, `gpa`, `pa`, `spa`
 
-Controls the virtual, guest physical and physical addresses of the mapping.
+Controls the virtual, guest physical, physical and supervisor physical addresses of the mapping.
 
 #### `stage`
 
 Controls the translation stage (S, VS, G) that this mapping will be used in. The S stage is the single stage translation and the VS and G stages are the two stage translation.
 
-Default: If not explicitly specified, the stage will be inferred based on the `va`, `gpa` and `pa` attributes. It will be set to `None` for a direct mapping (only the `pa` has been specified).
+Default: If not explicitly specified, the stage will be inferred based on the `va`, `gpa`, `pa`, `spa` attributes. A bare mapping will only have a `gpa`, `pa` or a `spa` attribute.
 
 #### `xwr`, `umode` and `valid`
 
@@ -111,7 +111,7 @@ The page size has to conform to the sizes supported by the SATP mode.
 
 #### `num_pages`
 
-Controls the number of pages allocated for the section.
+Controls the number of `page_size` pages allocated for the section.
 
 #### `alias`
 
@@ -120,7 +120,7 @@ Indicates whether this is a VA alias. It's PA should be contained in the PA rang
 #### `no_pte_allocation`
 
 Controls whether the diag will allocate page table entries for the section.
-If not explicitly specified, this will be inferred based on the translation stage. It will be set to `True` for direct mappings (`stage` is `None`) and `False` for non-direct mappings.
+If not explicitly specified, this will be inferred based on the translation stage. It will be set to `True` for bare mappings and `False` for non-bare mappings.
 
 Default: `None`.
 

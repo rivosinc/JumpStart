@@ -69,12 +69,6 @@ jumpstart_smode:
     umode: "0b0"
     pma_memory_type: "wb"
     linker_script_section: ".rodata"
-  pagetables:
-    page_size: 0x1000
-    xwr: "0b001"
-    umode: "0b0"
-    pma_memory_type: "wb"
-    linker_script_section: ".jumpstart.rodata.pagetables"
   heap:
     page_size: 0x200000
     num_pages: 2
@@ -104,7 +98,7 @@ jumpstart_umode:
 diag_attributes:
   start_test_in_mmode: false
   enable_virtualization: false
-  num_pages_for_jumpstart_smode_pagetables: 30
+  max_num_pagetable_pages_per_stage: 30
   num_pages_for_jumpstart_smode_bss: 7
   num_pages_for_jumpstart_smode_rodata: 1
   allow_page_table_modifications: false

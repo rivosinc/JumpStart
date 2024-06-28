@@ -61,7 +61,7 @@ class TranslationMode:
 
 class AddressType:
     # Create a set of valid address types
-    types = ["va", "pa", "gpa"]
+    types = ["va", "pa", "gpa", "spa"]
 
     @classmethod
     def is_valid_address_type(cls, address_type: str) -> bool:
@@ -80,21 +80,29 @@ class TranslationStage:
             "modes": ["bare", "sv39", "sv48"],
             "translates": ["va", "pa"],
             "virtualization_enabled": False,
+            "next_stage": None,
+            "atp_register": "satp",
         },
         "hs": {
             "modes": ["bare", "sv39", "sv48"],
             "translates": ["va", "pa"],
             "virtualization_enabled": True,
+            "next_stage": None,
+            "atp_register": "satp",
         },
         "vs": {
             "modes": ["bare", "sv39", "sv48"],
             "translates": ["va", "gpa"],
             "virtualization_enabled": True,
+            "next_stage": "g",
+            "atp_register": "vsatp",
         },
         "g": {
             "modes": ["bare", "sv39x4", "sv48x4"],
-            "translates": ["gpa", "pa"],
+            "translates": ["gpa", "spa"],
             "virtualization_enabled": True,
+            "next_stage": None,
+            "atp_register": "hgatp",
         },
     }
 
@@ -108,6 +116,22 @@ class TranslationStage:
             stage in cls.stages
             and cls.stages[stage]["virtualization_enabled"] == cls.virtualization_enabled
         )
+
+    @classmethod
+    def is_final_stage(cls, stage: str) -> bool:
+        if not cls.is_valid_stage(stage):
+            raise ValueError(
+                f"Invalid TranslationStage: {stage} with virtualization enabled: {cls.virtualization_enabled}"
+            )
+        return cls.stages[stage]["next_stage"] is None
+
+    @classmethod
+    def get_next_stage(cls, stage: str) -> str:
+        if not cls.is_valid_stage(stage):
+            raise ValueError(
+                f"Invalid TranslationStage: {stage} with virtualization enabled: {cls.virtualization_enabled}"
+            )
+        return cls.stages[stage]["next_stage"]
 
     @classmethod
     def is_valid_mode_for_stage(cls, stage: str, mode: str) -> bool:
@@ -131,12 +155,39 @@ class TranslationStage:
         return set(cls.stages[stage]["translates"])
 
     @classmethod
+    def get_translates_from(cls, stage: str):
+        if not cls.is_valid_stage(stage):
+            raise ValueError(
+                f"Invalid TranslationStage: {stage} with virtualization enabled: {cls.virtualization_enabled}"
+            )
+
+        return cls.stages[stage]["translates"][0]
+
+    @classmethod
+    def get_translates_to(cls, stage: str):
+        if not cls.is_valid_stage(stage):
+            raise ValueError(
+                f"Invalid TranslationStage: {stage} with virtualization enabled: {cls.virtualization_enabled}"
+            )
+
+        return cls.stages[stage]["translates"][1]
+
+    @classmethod
     def get_enabled_stages(cls):
         return [
             stage
             for stage in cls.stages
             if cls.stages[stage]["virtualization_enabled"] == cls.virtualization_enabled
         ]
+
+    @classmethod
+    def get_atp_register(cls, stage: str):
+        if not cls.is_valid_stage(stage):
+            raise ValueError(
+                f"Invalid TranslationStage: {stage} with virtualization enabled: {cls.virtualization_enabled}"
+            )
+
+        return cls.stages[stage]["atp_register"]
 
 
 class PageTableAttributes:
@@ -160,6 +211,7 @@ class PageTableAttributes:
             "pa_ppn_bits": [(55, 30), (29, 21), (20, 12)],
             "pte_ppn_bits": [(53, 28), (27, 19), (18, 10)],
             "page_sizes": [PageSize.SIZE_1G, PageSize.SIZE_2M, PageSize.SIZE_4K],
+            "pagetable_sizes": [PageSize.SIZE_4K, PageSize.SIZE_4K, PageSize.SIZE_4K],
         },
         "sv48": {
             "pte_size_in_bytes": 8,
@@ -171,6 +223,12 @@ class PageTableAttributes:
                 PageSize.SIZE_512G,
                 PageSize.SIZE_1G,
                 PageSize.SIZE_2M,
+                PageSize.SIZE_4K,
+            ],
+            "pagetable_sizes": [
+                PageSize.SIZE_4K,
+                PageSize.SIZE_4K,
+                PageSize.SIZE_4K,
                 PageSize.SIZE_4K,
             ],
         },
@@ -188,40 +246,46 @@ class PageTableAttributes:
     # 2 more bits at the high end in VPN[3]
     mode_attributes["sv48x4"]["va_vpn_bits"][0] = (49, 39)
 
-    def get_attribute(self, attribute, mode):
+    # For Sv32x4, Sv39x4, Sv48x4, and Sv57x4, the root page table is 16
+    # KiB and must be aligned to a 16-KiB boundary.
+    mode_attributes["sv39x4"]["pagetable_sizes"][0] = PageSize.SIZE_4K * 4
+    mode_attributes["sv48x4"]["pagetable_sizes"][0] = PageSize.SIZE_4K * 4
+
+    def __init__(self, mode):
+        assert mode in self.mode_attributes.keys()
+        self.mode = mode
+
+    def get_attribute(self, attribute):
         if attribute in self.common_attributes:
             return self.common_attributes[attribute]
 
-        assert (
-            mode is not None
-            and mode in self.mode_attributes
-            and TranslationMode.is_valid_mode(mode) is True
-        )
-        return self.mode_attributes[mode][attribute]
+        return self.mode_attributes[self.mode][attribute]
 
 
 class PageTablePage:
-    def __init__(self, page_pa, va, translation_mode, level):
+    def __init__(self, page_pa, va, page_size, translation_mode, level):
+        self.level = level
+        self.page_size = page_size
+
+        # The page table page address should be aligned to the page size
+        assert (page_pa % self.page_size) == 0
         # Location of the page table page in physical memory
         self.page_pa = page_pa
 
-        start_va_lsb = (
+        start_va_msb = (
             PageTableAttributes.mode_attributes[translation_mode]["va_vpn_bits"][level][0] + 1
         )
-        start_va = (va >> start_va_lsb) << start_va_lsb
-        va_range_in_bytes = 1 << (
-            PageTableAttributes.mode_attributes[translation_mode]["va_vpn_bits"][level][0] + 1
-        )
+        start_va = (va >> start_va_msb) << start_va_msb
+        va_range_in_bytes = 1 << start_va_msb
+        self.range_in_bytes = va_range_in_bytes
+
         # The start VA for the address range covered by this page table page
         # should be a multiple of the size of the area it covers.
         assert start_va == (math.floor(va / va_range_in_bytes)) * va_range_in_bytes
-
         self.start_va = start_va
-        self.level = level
-        self.range_in_bytes = va_range_in_bytes
 
     def __str__(self):
-        return f"PageTablePage: page_pa={hex(self.page_pa)}, start_va={hex(self.start_va)}, level={hex(self.level)}, range_in_bytes={hex(self.range_in_bytes)}"
+        return f"PageTablePage: page_pa={hex(self.page_pa)}, start_va={hex(self.start_va)}, page_size={hex(self.page_size)}, level={hex(self.level)}, range_in_bytes={hex(self.range_in_bytes)}"
 
     def get_page_pa(self):
         return self.page_pa
@@ -236,19 +300,20 @@ class PageTablePage:
             return True
         return False
 
+    def get_size(self):
+        return self.page_size
+
 
 class PageTables:
-    def __init__(self, translation_mode, max_num_pages_for_pagetables, memory_mappings):
+    def __init__(self, translation_mode, max_num_4K_pages, memory_mappings):
         # List of PageTablePage objects
         self.pages = []
-        assert (
-            translation_mode is not None and TranslationMode.is_valid_mode(translation_mode) is True
-        )
         self.translation_mode = translation_mode
-        self.max_num_pages_for_pagetables = max_num_pages_for_pagetables
+        self.translation_stage = memory_mappings[0].get_field("translation_stage")
+        self.max_num_4K_pages = max_num_4K_pages
 
-        self.asm_label = "pagetables_start"
-        self.attributes = PageTableAttributes()
+        self.asm_label = f"{self.translation_stage}_stage_pagetables_start"
+        self.attributes = PageTableAttributes(self.translation_mode)
 
         self.pte_memory = {}
 
@@ -256,21 +321,27 @@ class PageTables:
         for mapping in memory_mappings:
             if mapping.get_field(
                 "linker_script_section"
-            ) is not None and "pagetables" in mapping.get_field("linker_script_section"):
-                self.start_address = mapping.get_field("pa")
+            ) is not None and f"{self.translation_stage}_stage.pagetables" in mapping.get_field(
+                "linker_script_section"
+            ):
+                self.start_address = mapping.get_field(
+                    TranslationStage.get_translates_to(self.translation_stage)
+                )
                 break
 
         if self.start_address is None:
             log.error("No pagetables section found in memory mappings")
             sys.exit(1)
 
-        self.create_pagetables_for_mappings(memory_mappings)
+        self.create_from_mappings(
+            mapping for mapping in memory_mappings if mapping.is_bare_mapping() is False
+        )
 
     def get_asm_label(self):
         return self.asm_label
 
     def get_attribute(self, attribute):
-        return self.attributes.get_attribute(attribute, self.translation_mode)
+        return self.attributes.get_attribute(attribute)
 
     def get_pte_addresses(self):
         return self.pte_memory.keys()
@@ -278,7 +349,7 @@ class PageTables:
     def get_pte(self, address):
         return self.pte_memory[address]
 
-    def get_page(self, va, level):
+    def get_new_page(self, va, level):
         log.debug(f"get_page_table_page({hex(va)}, {level})")
         assert self.start_address is not None
         # look for an existing pagetable page that contains the given VA
@@ -290,112 +361,49 @@ class PageTables:
         # else allocate a new page
         log.debug(f"Allocating new pagetable page for VA {hex(va)} at level {level}")
 
-        if len(self.pages) == self.max_num_pages_for_pagetables:
-            # Can't create any more pagetable pages
-            log.error(
-                f"Insufficient pagetable pages (num_pages_for_jumpstart_smode_pagetables = {self.max_num_pages_for_pagetables}) to create level {level + 1} pagetable for VA {hex(va)}"
+        new_page_size = PageTableAttributes.mode_attributes[self.translation_mode][
+            "pagetable_sizes"
+        ][level]
+        if (self.get_current_size() + new_page_size) > self.get_max_size():
+            raise ValueError(
+                f"Insufficient pagetable pages (max_num_pagetable_pages_per_stage = {self.max_num_4K_pages}) to create level {level + 1} pagetable for VA {hex(va)}"
             )
-            sys.exit(1)
 
         new_page = PageTablePage(
-            self.start_address + PageSize.SIZE_4K * len(self.pages),
+            self.start_address + self.get_current_size(),
             va,
+            new_page_size,
             self.translation_mode,
             level,
         )
 
-        log.debug(f"Allocated new page table page {new_page}")
-
         self.pages.append(new_page)
 
+        assert self.get_current_size() <= self.get_max_size()
+
+        log.debug(f"Allocated new page table page {new_page}")
         return new_page
 
-    def translate_VA(self, va):
-        log.info(f"Translating VA {hex(va)}. Translation.Mode = {self.translation_mode}")
+    def get_max_size(self):
+        return self.max_num_4K_pages * PageSize.SIZE_4K
 
-        # Step 1
-        assert self.start_address == self.pages[0].get_page_pa()
-        a = self.pages[0].get_page_pa()
+    def get_current_size(self):
+        return sum(page.get_size() for page in self.pages)
 
-        current_level = 0
-        pte_value = 0
-
-        # Step 2
-        while True:
-            log.info(f"    a = {hex(a)}; current_level = {current_level}")
-            pte_address = a + BitField.extract_bits(
-                va, self.get_attribute("va_vpn_bits")[current_level]
-            ) * self.get_attribute("pte_size_in_bytes")
-            pte_value = self.read_sparse_memory(pte_address)
-            if pte_value is None:
-                log.error(f"Expected PTE at {hex(pte_address)} is not present")
-                sys.exit(1)
-
-            log.info(f"    level{current_level} PTE: [{hex(pte_address)}] = {hex(pte_value)}")
-
-            if (
-                BitField.extract_bits(pte_value, self.attributes.common_attributes["valid_bit"])
-                == 0
-            ):
-                log.error(f"PTE at {hex(pte_address)} is not valid")
-                sys.exit(1)
-
-            xwr = BitField.extract_bits(pte_value, self.attributes.common_attributes["xwr_bits"])
-            if (xwr & 0x3) == 0x2:
-                log.error(f"PTE at {hex(pte_address)} has R=0 and W=1")
-                sys.exit(1)
-
-            a = 0
-            for ppn_id in range(len(self.get_attribute("pte_ppn_bits"))):
-                ppn_value = BitField.extract_bits(
-                    pte_value, self.get_attribute("pte_ppn_bits")[ppn_id]
-                )
-                a = BitField.place_bits(a, ppn_value, self.get_attribute("pa_ppn_bits")[ppn_id])
-
-            if (xwr & 0x6) or (xwr & 0x1):
-                log.info("    This is a Leaf PTE")
-                break
-            else:
-                if (
-                    BitField.extract_bits(pte_value, self.attributes.common_attributes["a_bit"])
-                    != 0
-                ):
-                    log.error("PTE has A=1 but is not a Leaf PTE")
-                    sys.exit(1)
-                elif (
-                    BitField.extract_bits(pte_value, self.attributes.common_attributes["d_bit"])
-                    != 0
-                ):
-                    log.error("PTE has D=1 but is not a Leaf PTE")
-                    sys.exit(1)
-
-            current_level += 1
-            if current_level >= self.get_attribute("num_levels"):
-                log.error("Ran out of levels")
-                sys.exit(1)
-            continue
-
-        pa = a
-        pa += BitField.extract_bits(
-            va, (self.get_attribute("va_vpn_bits")[current_level][1] - 1, 0)
-        )
-
-        log.info(f"Translated PA = {hex(pa)}")
-        log.info(f"    PTE value = {hex(pte_value)}")
+    def get_start_address(self):
+        return self.start_address
 
     def split_mappings_at_page_granularity(self, memory_mappings):
         split_mappings = []
+        source_address_type = TranslationStage.get_translates_from(self.translation_stage)
+        dest_address_type = TranslationStage.get_translates_to(self.translation_stage)
         for entry in memory_mappings:
-            if entry.get_field("translation_stage") is None:
-                assert entry.get_field("no_pte_allocation") is True
-                continue
-
-            va = entry.get_field("va")
-            pa = entry.get_field("pa")
+            va = entry.get_field(source_address_type)
+            pa = entry.get_field(dest_address_type)
             for _ in range(entry.get_field("num_pages")):
                 new_entry = entry.copy()
-                new_entry.set_field("va", va)
-                new_entry.set_field("pa", pa)
+                new_entry.set_field(source_address_type, va)
+                new_entry.set_field(dest_address_type, pa)
                 new_entry.set_field("num_pages", 1)
                 split_mappings.append(new_entry)
 
@@ -426,8 +434,12 @@ class PageTables:
         return None
 
     # Populates the sparse memory with the pagetable entries
-    def create_pagetables_for_mappings(self, memory_mappings):
+    def create_from_mappings(self, memory_mappings):
+        source_address_type = TranslationStage.get_translates_from(self.translation_stage)
+        dest_address_type = TranslationStage.get_translates_to(self.translation_stage)
+
         for entry in self.split_mappings_at_page_granularity(memory_mappings):
+            assert self.translation_stage == entry.get_field("translation_stage")
             assert entry.get_field("page_size") in self.get_attribute("page_sizes")
             leaf_level = self.get_attribute("page_sizes").index(entry.get_field("page_size"))
             assert leaf_level < self.get_attribute("num_levels")
@@ -437,23 +449,30 @@ class PageTables:
             current_level = 0
 
             while current_level <= leaf_level:
-                current_level_PT_page = self.get_page(entry.get_field("va"), current_level)
+                current_level_PT_page = self.get_new_page(
+                    entry.get_field(source_address_type), current_level
+                )
 
                 current_level_range_start = current_level_PT_page.get_page_pa()
-                current_level_range_end = current_level_range_start + (PageSize.SIZE_4K)
+                current_level_range_end = (
+                    current_level_range_start + current_level_PT_page.get_size()
+                )
 
                 pte_value = BitField.place_bits(
                     0, 1, self.attributes.common_attributes["valid_bit"]
                 )
 
                 if current_level < leaf_level:
-                    next_level_pagetable = self.get_page(entry.get_field("va"), current_level + 1)
+                    next_level_pagetable = self.get_new_page(
+                        entry.get_field(source_address_type), current_level + 1
+                    )
 
                     next_level_range_start = next_level_pagetable.get_page_pa()
-                    next_level_range_end = next_level_range_start + (PageSize.SIZE_4K)
+                    next_level_range_end = next_level_range_start + next_level_pagetable.get_size()
 
                     next_level_pa = next_level_range_start + BitField.extract_bits(
-                        entry.get_field("va"), self.get_attribute("va_vpn_bits")[current_level]
+                        entry.get_field(source_address_type),
+                        self.get_attribute("va_vpn_bits")[current_level],
                     ) * self.get_attribute("pte_size_in_bytes")
 
                     assert next_level_pa < next_level_range_end
@@ -490,7 +509,7 @@ class PageTables:
                         self.attributes.common_attributes["valid_bit"],
                     )
 
-                    next_level_pa = entry.get_field("pa")
+                    next_level_pa = entry.get_field(dest_address_type)
 
                 for ppn_id in range(len(self.get_attribute("pa_ppn_bits"))):
                     ppn_value = BitField.extract_bits(
@@ -500,7 +519,8 @@ class PageTables:
                         pte_value, ppn_value, self.get_attribute("pte_ppn_bits")[ppn_id]
                     )
                 current_level_pt_offset = BitField.extract_bits(
-                    entry.get_field("va"), self.get_attribute("va_vpn_bits")[current_level]
+                    entry.get_field(source_address_type),
+                    self.get_attribute("va_vpn_bits")[current_level],
                 )
                 pte_address = (
                     current_level_range_start
@@ -517,10 +537,9 @@ class PageTables:
         # page table section in the assembly file.
         assert self.start_address == self.pages[0].get_page_pa()
         pte_region_sparse_memory_start = self.pages[0].get_page_pa()
-        page_size = PageSize.SIZE_4K
         pte_region_sparse_memory_end = (
             self.pages[len(self.pages) - 1].get_page_pa()
-            + page_size
+            + self.pages[len(self.pages) - 1].get_size()
             - self.get_attribute("pte_size_in_bytes")
         )
 
