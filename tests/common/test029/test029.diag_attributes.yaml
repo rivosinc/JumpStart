@@ -33,6 +33,7 @@ mappings:
     page_size: 0x200000
     num_pages: 2
     pma_memory_type: "wb"
+    linker_script_section: ".data.1"
   -
     va: 0xD0400000
     pa: 0xE0000000
@@ -48,6 +49,7 @@ mappings:
     page_size: 0x40000000
     num_pages: 2
     pma_memory_type: "wb"
+    linker_script_section: ".data.2"
   -
     va: 0x180000000
     pa: 0x100000000
