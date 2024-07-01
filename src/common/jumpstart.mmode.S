@@ -38,6 +38,8 @@ _mmode_start:
 
   jal setup_mmode
 
+  jal reset_csrs
+
   csrr  t0, mhartid
 
   li a0, ACTIVE_HART_MASK
@@ -59,6 +61,8 @@ _mmode_start:
   # Enable interrupts in machine mode.
   li t0, MSTATUS_MIE
   csrs mstatus, t0
+  li t0, MSTATUS_MPIE
+  csrc mstatus, t0
   li t0, MIP_MEIP
   csrw mie, t0
 
@@ -152,6 +156,24 @@ program_menvcfg:
   # CDE: Counter Delegation Enable
   li t0, (MENVCFG_CBIE | MENVCFG_CBCFE | MENVCFG_CBZE | MENVCFG_PBMTE | MENVCFG_CDE)
   csrrs t1, menvcfg, t0
+
+  ret
+
+.global reset_csrs
+reset_csrs:
+  csrw mcause, zero
+  csrw mepc, zero
+  csrw mie, zero
+  csrw mip, zero
+  MTIMER_RESET
+
+  csrw satp, zero
+  csrw scause, zero
+  csrw sepc, zero
+  csrw sie, zero
+  csrw sip, zero
+  csrw stvec, zero
+  STIMER_RESET
 
   ret
 

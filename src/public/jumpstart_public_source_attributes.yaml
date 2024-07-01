@@ -149,6 +149,8 @@ defines:
   CHECKTC_ENABLE: nop
   MMODE_ROLE_DISABLE: nop
   MMODE_ROLE_ENABLE:  nop
+  STIMER_RESET: nop
+  MTIMER_RESET: nop
 
 syscall_numbers:
   - SYSCALL_RUN_FUNC_IN_UMODE_COMPLETE
