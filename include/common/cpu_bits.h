@@ -17,6 +17,9 @@
                  (((uint64_t)(val) * ((mask) & ~((mask) << 1))) & \
                  (uint64_t)(mask)))
 
+/* Create a bit mask with bits set from start to end inclusive. */
+#define BIT_MASK(start, end) ((~0ULL >> (64 - ((end) - (start) + 1))) << (start))
+
 #define BIT(nr)                 (1UL << (nr))
 
 /* Extension context status mask */
