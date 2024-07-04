@@ -47,6 +47,7 @@ start_in_mmode_tests += [
   ['test040', 'Run smode function during mmode exception handler.'],
   ['test041', 'Fail gracefully on hitting too many nested exceptions in smode.', '', true],
   ['test042', 'Run Supervisor mode illegal instruction exception handler on 4 cores.', '-p4'],
+  ['test044', 'Tests random number generation and seed csr from both M and S modes.', '-p4'],
 ]
 
 firmware_boot_tests += []

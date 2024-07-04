@@ -105,7 +105,7 @@ if get_option('diag_target') == 'spike'
 
   else
     if spike_isa_string == ''
-      spike_isa_string = 'rv64gcvh_zbb_zbs_svpbmt'
+      spike_isa_string = 'rv64gcvh_zbb_zbs_zkr_svpbmt'
     endif
 
   endif

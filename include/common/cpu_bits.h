@@ -363,6 +363,10 @@
 /* Enhanced Physical Memory Protection (ePMP) */
 #define CSR_MSECCFG         0x747
 #define CSR_MSECCFGH        0x757
+
+#define MSECCFG_SSEED       (1ULL << 9)
+#define MSECCFG_USEED       (1ULL << 8)
+
 /* Physical Memory Protection */
 #define CSR_PMPCFG0         0x3a0
 #define CSR_PMPCFG1         0x3a1
