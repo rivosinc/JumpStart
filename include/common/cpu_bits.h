@@ -21,6 +21,7 @@
 #define BIT_MASK(start, end) ((~0ULL >> (64 - ((end) - (start) + 1))) << (start))
 
 #define BIT(nr)                 (1UL << (nr))
+#define ALIGN_UP_SIZE(base, size) (((base) + (size) - 1) & ~((uint64_t)(size)-1))
 
 /* Extension context status mask */
 #define EXT_STATUS_MASK     0x3ULL
