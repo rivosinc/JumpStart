@@ -90,7 +90,7 @@ option('qemu_additional_arguments',
 
 option('qemu_timeout',
        type : 'integer',
-       value : 240,
+       value : 300,
        description : 'meson test timeout when running the tests on QEMU.')
 
 option('generate_trace',
