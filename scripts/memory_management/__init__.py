@@ -4,6 +4,7 @@
 
 # __init__.py
 
+from .linker_script import LinkerScript
 from .memory_mapping import MemoryMapping
 from .page_size import PageSize
 from .page_tables import (
@@ -21,6 +22,7 @@ from .page_tables import (
 
 __all__ = [
     "AddressType",
+    "LinkerScript",
     "PageSize",
     "MemoryMapping",
     "PageTables",

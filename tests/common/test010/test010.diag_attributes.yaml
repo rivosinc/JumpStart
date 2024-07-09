@@ -26,3 +26,15 @@ mappings:
     num_pages: 1
     pma_memory_type: "wb"
     linker_script_section: ".data"
+  -
+    # Check that we can merge linker sections with the same sections in
+    # linker_script_section
+    # The linker will generate a single section for these two mappings.
+    # The missing page starting at 0xC0023000 will not have a page mapping.
+    va: 0xC0024000
+    pa: 0xC0024000
+    xwr: "0b011"
+    page_size: 0x1000
+    num_pages: 1
+    pma_memory_type: "wb"
+    linker_script_section: ".data"
