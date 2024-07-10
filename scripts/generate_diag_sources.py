@@ -15,7 +15,13 @@ import sys
 import public.functions as public_functions
 import yaml
 from data_structures import DictUtils, ListUtils
-from memory_management import MemoryMapping, PageSize, PageTables, TranslationMode
+from memory_management import (
+    MemoryMapping,
+    PageSize,
+    PageTables,
+    TranslationMode,
+    TranslationStage,
+)
 
 try:
     import rivos_internal.functions as rivos_internal_functions
@@ -94,6 +100,10 @@ class SourceGenerator:
                 self.jumpstart_source_attributes["diag_attributes"],
                 DictUtils.create_dict(override_diag_attributes),
             )
+
+        TranslationStage.set_virtualization_enabled(
+            self.jumpstart_source_attributes["diag_attributes"]["enable_virtualization"]
+        )
 
         self.sanity_check_diag_attributes()
 
@@ -376,7 +386,10 @@ class SourceGenerator:
             file.close()
 
     def generate_diag_attribute_functions(self, file_descriptor):
-        boolean_attributes = [BooleanDiagAttribute("start_test_in_mmode", ["mmode"])]
+        boolean_attributes = [
+            BooleanDiagAttribute("start_test_in_mmode", ["mmode"]),
+            BooleanDiagAttribute("enable_virtualization", ["mmode", "smode"]),
+        ]
 
         self.generate_get_active_hart_mask_function(file_descriptor)
         if self.jumpstart_source_attributes["rivos_internal_build"] is True:

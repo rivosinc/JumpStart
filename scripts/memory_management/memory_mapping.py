@@ -109,7 +109,7 @@ class MemoryMapping:
         if self.get_field("translation_stage") is not None:
             return
 
-        for stage in TranslationStage.stages.keys():
+        for stage in TranslationStage.get_enabled_stages():
             address_types = TranslationStage.stages[stage]["translates"]
             assert all([address_type in self.fields.keys() for address_type in address_types])
             if all([self.get_field(address_type) is not None for address_type in address_types]):

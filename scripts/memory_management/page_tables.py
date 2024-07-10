@@ -73,29 +73,48 @@ class AddressType:
 
 
 class TranslationStage:
+    virtualization_enabled = None
+
     stages = {
         "s": {
             "modes": ["bare", "sv39", "sv48"],
             "translates": ["va", "pa"],
+            "virtualization_enabled": False,
+        },
+        "hs": {
+            "modes": ["bare", "sv39", "sv48"],
+            "translates": ["va", "pa"],
+            "virtualization_enabled": True,
         },
         "vs": {
             "modes": ["bare", "sv39", "sv48"],
             "translates": ["va", "gpa"],
+            "virtualization_enabled": True,
         },
         "g": {
             "modes": ["bare", "sv39x4", "sv48x4"],
             "translates": ["gpa", "pa"],
+            "virtualization_enabled": True,
         },
     }
 
     @classmethod
+    def set_virtualization_enabled(cls, value):
+        cls.virtualization_enabled = value
+
+    @classmethod
     def is_valid_stage(cls, stage: str) -> bool:
-        return stage in cls.stages
+        return (
+            stage in cls.stages
+            and cls.stages[stage]["virtualization_enabled"] == cls.virtualization_enabled
+        )
 
     @classmethod
     def is_valid_mode_for_stage(cls, stage: str, mode: str) -> bool:
         if not cls.is_valid_stage(stage):
-            raise ValueError(f"Invalid TranslationStage: {stage}")
+            raise ValueError(
+                f"Invalid TranslationStage: {stage} with virtualization enabled: {cls.virtualization_enabled}"
+            )
 
         if TranslationMode.is_valid_mode(mode) is False:
             raise ValueError(f"Invalid TranslationMode: {mode}")
@@ -105,9 +124,19 @@ class TranslationStage:
     @classmethod
     def get_address_types(cls, stage: str):
         if not cls.is_valid_stage(stage):
-            raise ValueError(f"Invalid TranslationStage: {stage}")
+            raise ValueError(
+                f"Invalid TranslationStage: {stage} with virtualization enabled: {cls.virtualization_enabled}"
+            )
 
         return set(cls.stages[stage]["translates"])
+
+    @classmethod
+    def get_enabled_stages(cls):
+        return [
+            stage
+            for stage in cls.stages
+            if cls.stages[stage]["virtualization_enabled"] == cls.virtualization_enabled
+        ]
 
 
 class PageTableAttributes:

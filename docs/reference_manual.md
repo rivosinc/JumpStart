@@ -45,9 +45,15 @@ Default: `0b1` or 1 hart active.
 
 Specifies the active harts in the diag. The default is `0b1` or 1 hart active.
 
-### `satp_mode`
+### `enable_virtualization`
 
-The MMU mode (SV39, SV48, SV57, SV64, ...) that the diag will run in.
+Enable the Virtualization extension.
+
+Default: `False`.
+
+### `satp_mode`, `vstap_mode`, `hgatp_mode`
+
+The MMU mode (SV39, SV48, etc.) that will be programmed into the corresponding *ATP register.
 
 ### `start_test_in_mmode`
 
