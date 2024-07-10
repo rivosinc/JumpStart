@@ -27,7 +27,7 @@ mmode_try_get_seed(void) {
 }
 
 #define RAND_MAX 0x7fffffff
-__attribute__((section(".jumpstart.data.mmode"))) uint64_t next = 1;
+__attribute__((section(".jumpstart.data.smode"))) uint64_t next = 1;
 __attribute__((section(".jumpstart.text.mmode"))) uint64_t
 __mmode_random(void) {
   /* Based on rand in diags/perf/membw/libc_replacement.h */
