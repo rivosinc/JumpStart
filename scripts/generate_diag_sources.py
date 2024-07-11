@@ -530,8 +530,7 @@ sync_all_harts_from_{mode}:
             if "mmode" in self.priv_modes_enabled:
                 # use jumpstart mmode env call
                 file_descriptor.write("  li  a0, DIAG_FAILED\n")
-                file_descriptor.write("  li  a7, SYSCALL_RUN_FUNC_IN_SMODE_COMPLETE\n")
-                file_descriptor.write("  ecall\n")
+                file_descriptor.write("  j exit_from_smode\n")
             else:
                 # We expect to be running in sbi_firmware_boot mode.
                 # Use sbi call to request mmode fw to shutdown system.

@@ -122,5 +122,7 @@ void set_mepc_for_current_exception(uint64_t new_mepc);
 uint64_t get_sepc_for_current_exception(void);
 void set_sepc_for_current_exception(uint64_t new_sepc);
 
+void exit_from_smode(uint64_t return_code) __attribute__((noreturn));
+
 #define __attr_stext __attribute__((section(".jumpstart.text.smode")))
 #define __attr_mtext __attribute__((section(".jumpstart.text.mmode")))

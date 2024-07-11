@@ -100,6 +100,8 @@ jump_to_function_in_smode:
 
   jalr ra, t0
 
+.global exit_from_smode
+exit_from_smode:
   # a0 contains the exit code.
   li  a7, SYSCALL_RUN_FUNC_IN_SMODE_COMPLETE
   ecall
