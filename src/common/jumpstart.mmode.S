@@ -353,6 +353,9 @@ check_for_env_call_requests:
   li  t1, RISCV_EXCP_S_ECALL
   beq t0, t1, handle_env_call_from_smode
 
+  li  t1, RISCV_EXCP_VS_ECALL
+  beq t0, t1, handle_env_call_from_smode
+
   j jumpstart_mmode_fail
 
 .global get_mepc_for_current_exception
