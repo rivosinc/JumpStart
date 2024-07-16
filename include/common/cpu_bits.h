@@ -774,6 +774,7 @@
 #define SIP_SSIP                           MIP_SSIP
 #define SIP_STIP                           MIP_STIP
 #define SIP_SEIP                           MIP_SEIP
+#define SIP_SGEIP                          MIP_SGEIP
 #define SIP_LCOFIP                         MIP_LCOFIP
 
 /* MIE masks */

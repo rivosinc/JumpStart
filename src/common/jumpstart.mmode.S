@@ -62,6 +62,14 @@ _mmode_start:
 
   jal setup_smode_trap_delegation
 
+  jal enable_virtualization_from_mmode
+  beqz a0, 1f
+
+  jal program_henvcfg
+
+  jal setup_vsmode_trap_delegation
+
+1:
   j jump_to_main
 
 .section .jumpstart.text.mmode, "ax"
@@ -78,14 +86,53 @@ setup_smode_trap_delegation:
             (1 << RISCV_EXCP_STORE_AMO_ADDR_MIS) | \
             (1 << RISCV_EXCP_STORE_AMO_ACCESS_FAULT) | \
             (1 << RISCV_EXCP_U_ECALL) | \
+            (1 << RISCV_EXCP_VS_ECALL) | \
             (1 << RISCV_EXCP_INST_PAGE_FAULT) | \
             (1 << RISCV_EXCP_LOAD_PAGE_FAULT) | \
             (1 << RISCV_EXCP_STORE_PAGE_FAULT) | \
-            (1 << RISCV_EXCP_DATA_CORRUPTION_EXCEPTION)
+            (1 << RISCV_EXCP_DATA_CORRUPTION_EXCEPTION) | \
+            (1 << RISCV_EXCP_INST_GUEST_PAGE_FAULT) | \
+            (1 << RISCV_EXCP_LOAD_GUEST_ACCESS_FAULT) | \
+            (1 << RISCV_EXCP_VIRT_INSTRUCTION_FAULT) | \
+            (1 << RISCV_EXCP_STORE_GUEST_AMO_ACCESS_FAULT)
   csrw medeleg, t0
 
-  li t0, SIP_SEIP | SIP_STIP | SIP_SSIP
+  li t0, SIP_SEIP | SIP_STIP | SIP_SSIP | SIP_SGEIP
   csrw mideleg, t0
+
+  ret
+
+.global setup_vsmode_trap_delegation
+setup_vsmode_trap_delegation:
+  li t0, (1 << RISCV_EXCP_INST_ADDR_MIS) | \
+            (1 << RISCV_EXCP_INST_ACCESS_FAULT) | \
+            (1 << RISCV_EXCP_ILLEGAL_INST) | \
+            (1 << RISCV_EXCP_BREAKPOINT) | \
+            (1 << RISCV_EXCP_LOAD_ADDR_MIS) | \
+            (1 << RISCV_EXCP_LOAD_ACCESS_FAULT) | \
+            (1 << RISCV_EXCP_STORE_AMO_ADDR_MIS) | \
+            (1 << RISCV_EXCP_STORE_AMO_ACCESS_FAULT) | \
+            (1 << RISCV_EXCP_U_ECALL) | \
+            (1 << RISCV_EXCP_INST_PAGE_FAULT) | \
+            (1 << RISCV_EXCP_LOAD_PAGE_FAULT) | \
+            (1 << RISCV_EXCP_STORE_PAGE_FAULT)
+  csrw hedeleg, t0
+
+  # Delegate guest interrupts.
+  li t0, MIP_VSEIP | MIP_VSTIP | MIP_VSSIP
+  csrw hideleg, t0
+
+  ret
+
+.global program_henvcfg
+program_henvcfg:
+  # CBIE: Cache Block Invalidate instruction Enable
+  # CBCFE: Cache Block Clean and Flush instruction Enable
+  # CBZE: Cache Block Zero instruction Enable
+  # PMBTE: Enables Svpbmt extension for S-mode and G-stage address translation.
+  #        i.e., for page tables pointed to by satp or hgatp.
+  li t0, (HENVCFG_CBIE | HENVCFG_CBCFE | HENVCFG_CBZE | HENVCFG_PBMTE)
+  csrrs t1, henvcfg, t0
 
   ret
 
