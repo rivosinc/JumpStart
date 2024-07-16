@@ -271,7 +271,7 @@ handle_syscall_run_func_in_umode_complete:
 
 # Inputs:
 #   a0: address of the function to run in usermode.
-#   a1: arg0 to function to run in usermode.
+#   a1-a7 contains the arguments to pass to the user function.
 .global run_function_in_umode
 run_function_in_umode:
   addi  sp, sp, -16
