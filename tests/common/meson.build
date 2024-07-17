@@ -36,6 +36,7 @@ start_in_smode_tests += [
   ['test036', 'sv48 VA aliasing test.'],
   ['test037', 'FP/Vector test.'],
   ['test039', 'MP heap malloc test.', '-p4'],
+  ['test045', 'Run C/Assembly functions with run_function_in_vsmode() from supervisor mode.'],
 ]
 
 start_in_mmode_tests += [
@@ -57,4 +58,11 @@ tests_disabled_on_spike += []
 tests_disabled_for_sbi_firmware_boot += [
                                   'test010',
                                   'test043',
+                                ]
+
+# FW doesn't appear to enable the trap delegation of VS excall in smode.
+# Disabling virtualization tests till this is resolved.
+# https://rivosinc.atlassian.net/browse/SW-7451
+tests_disabled_for_sbi_firmware_boot += [
+                                  'test045',
                                 ]

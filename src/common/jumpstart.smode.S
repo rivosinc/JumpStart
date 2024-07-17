@@ -66,6 +66,88 @@ setup_interrupt_enables:
 
   ret
 
+# Inputs:
+#   a0: address of the function to run in usermode.
+#   a1-a7 contains the arguments to pass to the user function.
+.global run_function_in_vsmode
+run_function_in_vsmode:
+  addi  sp, sp, -16
+  sd    ra, 8(sp)
+  sd    fp, 0(sp)
+  addi  fp, sp, 16
+
+  GET_THREAD_ATTRIBUTES_CURRENT_MODE(t0)
+  li  t1, PRV_S
+  bne t0, t1, jumpstart_smode_fail
+
+  # Disable interrupts when switching modes to avoid clobbering any
+  # state we set up if we encounter an interrupt.
+  csrci sstatus, SSTATUS_SIE
+
+  # Make sure we have enough context saves remaining in S mode.
+  GET_THREAD_ATTRIBUTES_NUM_CONTEXT_SAVES_REMAINING_IN_SMODE(gp)
+  beqz gp, jumpstart_smode_fail
+
+  addi gp, gp, -1
+  SET_THREAD_ATTRIBUTES_NUM_CONTEXT_SAVES_REMAINING_IN_SMODE(gp)
+
+  # Save S-mode context
+  GET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
+  SAVE_ALL_GPRS
+
+  # Point to the address of the next context save region for the next
+  # trap handler.
+  addi gp, gp, REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES
+  SET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
+
+  # Setup VS-mode in sstatus and hstatus. sepc will contain the address of
+  # the function to run in VS-mode.
+  li t0, HSTATUS_SPV
+  csrs hstatus, t0
+
+  li t0, SSTATUS_SPP
+  csrs sstatus, t0
+
+  la t0, jump_to_function_in_vsmode
+  csrw sepc, t0
+
+  sret
+
+# Inputs:
+#   a0: return status from VS-mode function.
+run_function_in_vsmode_return_point:
+  ld  ra, 8(sp)
+  ld  fp, 0(sp)
+  addi  sp, sp, 16
+  ret
+
+# Inputs:
+#   a0: address of the function to run.
+#   a1-a7 contains the arguments to pass to the vsmode function.
+.global jump_to_function_in_vsmode
+jump_to_function_in_vsmode:
+  mv t0, a0
+
+  # Function arguments have to be passed in a0-a6.
+  mv a0, a1
+  mv a1, a2
+  mv a2, a3
+  mv a3, a4
+  mv a4, a5
+  mv a5, a6
+  mv a6, a7
+
+  jalr ra, t0
+
+.global exit_from_vsmode
+exit_from_vsmode:
+  # a0 contains the exit code.
+  li  a7, SYSCALL_RUN_FUNC_IN_VSMODE_COMPLETE
+  ecall
+
+  # We shouldn't come back here.
+  wfi
+
 # a0: address of target function.
 # a1-a7: arguments to pass to the target function.
 .global jump_to_function_in_smode
@@ -220,6 +302,9 @@ check_for_env_call_requests:
   li t1, RISCV_EXCP_U_ECALL
   beq t0, t1, handle_env_call_from_umode
 
+  li t1, RISCV_EXCP_VS_ECALL
+  beq t0, t1, handle_env_call_from_vsmode
+
   j jumpstart_smode_fail
 
 handle_env_call_from_umode:
@@ -227,6 +312,14 @@ handle_env_call_from_umode:
 
   li t0, SYSCALL_RUN_FUNC_IN_UMODE_COMPLETE
   beq a7, t0, handle_syscall_run_func_in_umode_complete
+
+  j jumpstart_smode_fail
+
+handle_env_call_from_vsmode:
+  # a7 will contain the syscall number
+
+  li t0, SYSCALL_RUN_FUNC_IN_VSMODE_COMPLETE
+  beq a7, t0, handle_syscall_run_func_in_vsmode_complete
 
   j jumpstart_smode_fail
 
@@ -257,6 +350,48 @@ handle_syscall_run_func_in_umode_complete:
   sd t0, A0_OFFSET_IN_SAVE_REGION(gp)
 
   # Restore S mode context from before the run_function_in_umode() call.
+  RESTORE_ALL_GPRS
+
+  # This location is now free to be used by the next trap handler entry.
+  SET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
+
+  # We've freed 2 context saves.
+  GET_THREAD_ATTRIBUTES_NUM_CONTEXT_SAVES_REMAINING_IN_SMODE(gp)
+  addi gp, gp, 2
+  SET_THREAD_ATTRIBUTES_NUM_CONTEXT_SAVES_REMAINING_IN_SMODE(gp)
+
+  sret
+
+handle_syscall_run_func_in_vsmode_complete:
+  # This is the return to supervisor path for run_function_in_vsmode().
+
+  # Re-enable interrupts that were disabled in run_function_in_vsmode().
+  # Set SPIE to 1, on sret this will set SIE to 1.
+  li  t0, (PRV_S << SSTATUS_SPP_SHIFT) | SSTATUS_SPIE
+  csrs  sstatus, t0
+
+  li t0, (HSTATUS_SPV | HSTATUS_SPVP)
+  csrc hstatus, t0
+
+  la  t0, run_function_in_vsmode_return_point
+  csrw sepc, t0
+
+  # Point to the address of the context save region we used when we
+  # took the RUN_FUNC_IN_VSMODE_COMPLETE syscall.
+  GET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
+  addi gp, gp, -REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES
+
+  # The return value from the vsmode function is in the vsmode
+  # context saved for a0 when we took the ecall exception from vsmode to
+  # smode.
+  ld t0, A0_OFFSET_IN_SAVE_REGION(gp)
+
+  # Place it in the a0 location for the mmode context we saved before calling
+  # run_function_in_vsmode().
+  addi gp, gp, -REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES
+  sd t0, A0_OFFSET_IN_SAVE_REGION(gp)
+
+  # Restore S mode context from before the run_function_in_vsmode() call.
   RESTORE_ALL_GPRS
 
   # This location is now free to be used by the next trap handler entry.
