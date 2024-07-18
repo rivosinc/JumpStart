@@ -120,6 +120,7 @@ c_structs:
       current_mode: uint8_t
       current_v_bit: uint8_t
       smode_setup_done: uint8_t
+      vsmode_setup_done: uint8_t
       trap_override_struct_address: uint64_t
       mmode_reg_context_save_region_address: uint64_t
       num_context_saves_remaining_in_mmode: uint8_t
@@ -128,6 +129,8 @@ c_structs:
       bookend_magic_number: uint64_t
   trap_override_attributes:
     fields:
+      vsmode_interrupt_handler_overrides: uint64_t,46
+      vsmode_exception_handler_overrides: uint64_t,20
       smode_interrupt_handler_overrides: uint64_t,46
       smode_exception_handler_overrides: uint64_t,20
       mmode_interrupt_handler_overrides: uint64_t,46
@@ -149,6 +152,7 @@ defines:
 
 syscall_numbers:
   - SYSCALL_RUN_FUNC_IN_UMODE_COMPLETE
+  - SYSCALL_RUN_FUNC_IN_VUMODE_COMPLETE
   - SYSCALL_RUN_FUNC_IN_VSMODE_COMPLETE
   - SYSCALL_RUN_FUNC_IN_SMODE_COMPLETE
 

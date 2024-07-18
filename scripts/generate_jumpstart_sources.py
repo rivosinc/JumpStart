@@ -337,6 +337,7 @@ class JumpStartGeneratedSource:
             self.assembly_file_fd.write("\n")
             self.assembly_file_fd.write("  li  t0, 0\n")
             self.assembly_file_fd.write("  SET_THREAD_ATTRIBUTES_SMODE_SETUP_DONE(t0)\n")
+            self.assembly_file_fd.write("  SET_THREAD_ATTRIBUTES_VSMODE_SETUP_DONE(t0)\n")
             self.assembly_file_fd.write("\n")
             self.assembly_file_fd.write("  SET_THREAD_ATTRIBUTES_CURRENT_V_BIT(t0)\n")
             self.assembly_file_fd.write("\n")

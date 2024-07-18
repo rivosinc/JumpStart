@@ -8,6 +8,7 @@ mmode_sources += files('jumpstart.mmode.S',
 
 smode_sources += files('data.smode.S',
                               'jumpstart.smode.S',
+                              'jumpstart.vsmode.S',
                               'tablewalk.smode.c',
                               'trap_handler.smode.c',
                               'string.smode.c',

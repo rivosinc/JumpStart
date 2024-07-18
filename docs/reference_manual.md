@@ -228,6 +228,10 @@ Allows the diag to register a trap handler override function for M-mode traps. T
 
 Allows the diag to register a trap handler override function for S-mode traps. The registered function will be called when the trap occurs in S-mode.
 
+### `register_vsmode_trap_handler_override()` and `get_vsmode_trap_handler_override()`
+
+Allows the diag to register a trap handler override function for VS-mode traps. The registered function will be called when the trap occurs in VS-mode.
+
 ### `get_*epc_for_current_exception()` and `set_*epc_for_current_exception()`
 
 These functions can be used to get and set the MEPC/SEPC during an exception. Allows modification of the EPC before returning from the exception.

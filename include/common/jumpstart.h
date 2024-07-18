@@ -81,16 +81,22 @@ void register_mmode_trap_handler_override(uint64_t mcause,
                                           uint64_t handler_address);
 void deregister_mmode_trap_handler_override(uint64_t mcause);
 
-uint64_t get_smode_trap_handler_override(uint64_t mcause);
-void register_smode_trap_handler_override(uint64_t mcause,
+uint64_t get_smode_trap_handler_override(uint64_t scause);
+void register_smode_trap_handler_override(uint64_t scause,
                                           uint64_t handler_address);
-void deregister_smode_trap_handler_override(uint64_t mcause);
+void deregister_smode_trap_handler_override(uint64_t scause);
+
+uint64_t get_vsmode_trap_handler_override(uint64_t vscause);
+void register_vsmode_trap_handler_override(uint64_t vscause,
+                                           uint64_t handler_address);
+void deregister_vsmode_trap_handler_override(uint64_t vscause);
 
 uint64_t get_thread_attributes_bookend_magic_number_from_smode(void);
 uint64_t get_thread_attributes_trap_override_struct_address_from_smode(void);
 uint8_t get_thread_attributes_current_mode_from_smode(void);
 uint8_t get_thread_attributes_current_v_bit_from_smode(void);
 uint8_t get_thread_attributes_hart_id_from_smode(void);
+uint8_t get_thread_attributes_vsmode_setup_done_from_smode(void);
 uint8_t
 get_thread_attributes_num_context_saves_remaining_in_smode_from_smode(void);
 uint8_t
@@ -117,6 +123,7 @@ void sync_all_harts_from_mmode(void);
 
 void jumpstart_umode_fail(void) __attribute__((noreturn));
 void jumpstart_smode_fail(void) __attribute__((noreturn));
+void jumpstart_vsmode_fail(void) __attribute__((noreturn));
 void jumpstart_mmode_fail(void) __attribute__((noreturn));
 
 uint64_t get_mepc_for_current_exception(void);

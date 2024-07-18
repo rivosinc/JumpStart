@@ -14,7 +14,7 @@ start_in_smode_tests += [
   ['test000', 'Enable MMU (SATP.mode = sv39), jump to main and exit.'],
   ['test001', 'Enable MMU (SATP.mode = sv48), jump to main and exit.'],
   ['test002', 'Run C/Assembly functions with run_function_in_umode() from supervisor mode.'],
-  ['test003', 'Register and run Supervisor mode illegal instruction exception handler.'],
+  ['test003', 'Register and run smode illegal instruction exception handler.'],
   ['test006', 'Read and Write CSRs.'],
   ['test010', 'ELF checks.'],
   ['test011', 'Handle user mode exceptions in supervisor mode.'],
@@ -37,6 +37,7 @@ start_in_smode_tests += [
   ['test037', 'FP/Vector test.'],
   ['test039', 'MP heap malloc test.', '-p4'],
   ['test045', 'Run C/Assembly functions with run_function_in_vsmode() from supervisor mode.'],
+  ['test046', 'Register and run vsmode illegal instruction exception handler.'],
 ]
 
 start_in_mmode_tests += [
@@ -65,4 +66,5 @@ tests_disabled_for_sbi_firmware_boot += [
 # https://rivosinc.atlassian.net/browse/SW-7451
 tests_disabled_for_sbi_firmware_boot += [
                                   'test045',
+                                  'test046',
                                 ]
