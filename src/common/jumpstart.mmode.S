@@ -301,6 +301,12 @@ mtvec_trap_handler:
   li  gp, PRV_M
   SET_THREAD_ATTRIBUTES_CURRENT_MODE(gp)
 
+  # We don't currently expect mmode to handle a trap taken from VS mode.
+  # Once we do the following code will need to be updated to save and restore
+  # the V bit value across the trap handler.
+  GET_THREAD_ATTRIBUTES_CURRENT_V_BIT(gp)
+  bnez gp, jumpstart_mmode_fail
+
   # We just need to check MSB of MPP field here to determine if we came from
   # M or S mode. U mode is also handled in S mode path.
   csrr  gp, mstatus
@@ -373,6 +379,7 @@ restore_context:
 
 restore_smode_context:
   MMODE_ROLE_DISABLE
+
   li  t0, PRV_S
   SET_THREAD_ATTRIBUTES_CURRENT_MODE(t0)
 

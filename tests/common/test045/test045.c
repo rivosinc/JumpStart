@@ -19,6 +19,14 @@ uint8_t c_check_passed_in_arguments(uint8_t a0, uint8_t a1, uint8_t a2,
 uint8_t c_check_passed_in_arguments(uint8_t a0, uint8_t a1, uint8_t a2,
                                     uint8_t a3, uint8_t a4, uint8_t a5,
                                     uint8_t a6) {
+  if (get_thread_attributes_current_mode_from_smode() != PRV_S) {
+    return DIAG_FAILED;
+  }
+
+  if (get_thread_attributes_current_v_bit_from_smode() != 1) {
+    return DIAG_FAILED;
+  }
+
   if (a0 != 1) {
     return DIAG_FAILED;
   }
@@ -57,13 +65,25 @@ int main(void) {
     return DIAG_FAILED;
   }
 
+  if (get_thread_attributes_current_v_bit_from_smode() != 0) {
+    return DIAG_FAILED;
+  }
+
   if (run_function_in_vsmode((uint64_t)asm_check_passed_in_arguments, 1, 2, 3,
                              4, 5, 6, 7) != DIAG_PASSED) {
     return DIAG_FAILED;
   }
 
+  if (get_thread_attributes_current_v_bit_from_smode() != 0) {
+    return DIAG_FAILED;
+  }
+
   if (run_function_in_vsmode((uint64_t)c_check_passed_in_arguments, 1, 2, 3, 4,
                              5, 6, 7) != DIAG_PASSED) {
+    return DIAG_FAILED;
+  }
+
+  if (get_thread_attributes_current_v_bit_from_smode() != 0) {
     return DIAG_FAILED;
   }
 

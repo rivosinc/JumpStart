@@ -89,6 +89,7 @@ void deregister_smode_trap_handler_override(uint64_t mcause);
 uint64_t get_thread_attributes_bookend_magic_number_from_smode(void);
 uint64_t get_thread_attributes_trap_override_struct_address_from_smode(void);
 uint8_t get_thread_attributes_current_mode_from_smode(void);
+uint8_t get_thread_attributes_current_v_bit_from_smode(void);
 uint8_t get_thread_attributes_hart_id_from_smode(void);
 uint8_t
 get_thread_attributes_num_context_saves_remaining_in_smode_from_smode(void);
@@ -98,6 +99,7 @@ get_thread_attributes_num_context_saves_remaining_in_smode_from_mmode(void);
 uint64_t get_thread_attributes_bookend_magic_number_from_mmode(void);
 uint64_t get_thread_attributes_trap_override_struct_address_from_mmode(void);
 uint8_t get_thread_attributes_current_mode_from_mmode(void);
+uint8_t get_thread_attributes_current_v_bit_from_mmode(void);
 uint8_t get_thread_attributes_hart_id_from_mmode(void);
 uint8_t get_thread_attributes_smode_setup_done_from_mmode(void);
 uint8_t

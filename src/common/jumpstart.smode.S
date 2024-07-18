@@ -100,6 +100,9 @@ run_function_in_vsmode:
   addi gp, gp, REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES
   SET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
 
+  li  t0, 1
+  SET_THREAD_ATTRIBUTES_CURRENT_V_BIT(t0)
+
   # Setup VS-mode in sstatus and hstatus. sepc will contain the address of
   # the function to run in VS-mode.
   li t0, HSTATUS_SPV
@@ -201,6 +204,10 @@ disable_mmu_from_smode:
 stvec_trap_handler:
   li  gp, PRV_S
   SET_THREAD_ATTRIBUTES_CURRENT_MODE(gp)
+
+  # We could be coming from VS or VU mode. Clear the V bit.
+  li  gp, 0
+  SET_THREAD_ATTRIBUTES_CURRENT_V_BIT(gp)
 
   # Make sure we have enough context saves remaining in S mode.
   GET_THREAD_ATTRIBUTES_NUM_CONTEXT_SAVES_REMAINING_IN_SMODE(gp)
