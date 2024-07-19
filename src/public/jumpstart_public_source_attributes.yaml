@@ -45,7 +45,7 @@ jumpstart_smode:
     linker_script_section: ".jumpstart.c_structs.smode"
   data:
     page_size: 0x1000
-    num_pages: 2
+    num_pages: 3
     xwr: "0b011"
     umode: "0b0"
     pma_memory_type: "wb"
@@ -162,4 +162,4 @@ reg_context_to_save_across_exceptions:
   # Temporary register to hold the address of the context save area when
   # saving and restoring.
   temp_register: gp
-  max_num_context_saves: 3
+  max_num_context_saves: 5
