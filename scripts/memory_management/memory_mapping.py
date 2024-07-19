@@ -150,7 +150,9 @@ class MemoryMapping:
                 # Doesn't match this stage.
                 continue
 
-        raise ValueError(f"Unable to determine translation stage for mapping: {self}")
+        raise ValueError(
+            f"Unable to assign translation stage from among valid stages {TranslationStage.get_enabled_stages()} to mapping based on source and destination address types: {self}"
+        )
 
     def is_bare_mapping(self):
         assert self.get_field("translation_stage") is not None
