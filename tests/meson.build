@@ -70,20 +70,27 @@ foreach unit_test : unit_tests
     endif
   endforeach
 
+  test_defines_file_name = test_name + '.defines.h'
   diag_source_generator_output = custom_target(
                                 'Generate diag attributes related source files for ' + test_name,
                                 input : diag_source_generator_common_inputs + [diag_attributes_yaml],
                                 output : [test_name + '.generated.S',
-                                          test_name + '.linker_script.ld'],
+                                          test_name + '.linker_script.ld',
+                                          test_name + '.defines.h'],
                                 command : diag_source_generator_command)
 
   test_sources += diag_source_generator_output[0]
-  linker_script = diag_source_generator_output[1].full_path()
+  linker_script = diag_source_generator_output[1]
+  test_defines = diag_source_generator_output[2]
 
   test_exe = executable(test_name,
                         sources: [jumpstart_sources, test_sources],
                         include_directories: jumpstart_includes,
-                        link_args: ['-T' + linker_script])
+                        c_args: ['-include', test_defines.full_path()],
+                        link_args: ['-T' + linker_script.full_path()],
+                        link_depends: linker_script,
+                        dependencies: declare_dependency(sources: test_defines)
+                        )
 
   if get_option('diag_generate_disassembly') == true
     custom_target(test_name + '_dump',

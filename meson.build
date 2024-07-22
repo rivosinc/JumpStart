@@ -146,6 +146,7 @@ diag_source_generator_command = [prog_python,
                                     '--jumpstart_source_attributes_yaml', '@INPUT1@',
                                     '--diag_attributes_yaml', '@INPUT2@',
                                     '--output_assembly_file', '@OUTPUT0@',
+                                    '--output_defines_file', '@OUTPUT2@',
                                     '--output_linker_script', '@OUTPUT1@',
                                     '--priv_modes_enabled', riscv_priv_modes_enabled
                                     ]
@@ -170,17 +171,23 @@ if diag_attributes_yaml != '' and diag_sources.length() > 0
   diag_source_generator_output = custom_target(
                                 'Generate diag attributes related source files for ' + diag_name,
                                 input : diag_source_generator_common_inputs + [diag_attributes_yaml],
-                                output : ['generated_diag_source.S',
-                                          'linker_script.ld'],
+                                output : [diag_name + '.generated.S',
+                                          diag_name + '.linker_script.ld',
+                                          diag_name + '.defines.h'],
                                 command : diag_source_generator_command)
 
   diag_sources += diag_source_generator_output[0]
-  linker_script = diag_source_generator_output[1].full_path()
+  linker_script = diag_source_generator_output[1]
+  diag_defines = diag_source_generator_output[2]
 
   diag_exe = executable(diag_name,
                         sources: [jumpstart_sources, diag_sources],
                         include_directories: jumpstart_includes,
-                        link_args: ['-T' + linker_script])
+                        c_args: ['-include', diag_defines.full_path()],
+                        link_args: ['-T' + linker_script.full_path()],
+                        link_depends: linker_script,
+                        dependencies: declare_dependency(sources: diag_defines)
+                        )
 
   if get_option('diag_generate_disassembly') == true
         custom_target('dump',
