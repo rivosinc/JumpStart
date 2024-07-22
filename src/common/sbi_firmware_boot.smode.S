@@ -18,7 +18,7 @@
 sbi_firmware_trampoline:
   mv t0, a0
   li t1, 0  # hid = 0
-  jal get_active_hart_mask_from_smode
+  li t2, ACTIVE_HART_MASK
   mv t2, a0 # active_hart_mask
 
 start_active_harts_loop:
@@ -53,8 +53,7 @@ invoke_sbi_start_hart_done:
   j start_active_harts_loop
 
 start_active_harts_loop_end:
-  jal  get_active_hart_mask_from_smode
-  mv   t1, a0 # active_hart_mask
+  li  t1, ACTIVE_HART_MASK
   mv   a0, t0  # $a0 = my_hart_id
   srl  t1, t1, a0
   andi t1, t1, 1
@@ -72,7 +71,7 @@ start_active_harts_loop_end:
 _smode_start:
   # This code mirrors _mmode_start in start.mmode.S
   mv t0, a0
-  jal get_active_hart_mask_from_smode
+  li a0, ACTIVE_HART_MASK
   li t1, 1
   sll t1, t1, t0
   and a0, a0, t1
@@ -123,7 +122,7 @@ _smode_end:
   # a0: Active hart mask. Gets shifted right as we check each hart.
   # t0: hart_status_tracker address
   # t1: Hart id of the current hart we're checking status of.
-  jal get_active_hart_mask_from_smode
+  li a0, ACTIVE_HART_MASK
   la t0, hart_status_tracker
   li t1, 0x0
 
@@ -168,12 +167,9 @@ jumpstart_sbi_firmware_boot_fail:
 
 run_end_of_sim_sequence:
   # NOTE: this will not work on RTL simulation.
-  mv t0, a0 # save diag pass/fail in a1
-  jal in_qemu_mode_from_smode
-  mv t1, a0
-  mv a0, t0
+  li t1, IN_QEMU_MODE
   bnez t1, invoke_sbi_reset
-  slli t1, t0, 1
+  slli t1, a0, 1
   ori t1, t1, 1
 
   la t0, tohost

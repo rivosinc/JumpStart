@@ -113,11 +113,6 @@ get_thread_attributes_num_context_saves_remaining_in_mmode_from_mmode(void);
 uint8_t
 get_thread_attributes_num_context_saves_remaining_in_mmode_from_smode(void);
 
-uint8_t get_diag_satp_mode_from_smode(void);
-
-uint64_t get_active_hart_mask_from_smode(void);
-uint64_t get_active_hart_mask_from_mmode(void);
-
 void sync_all_harts_from_smode(void);
 void sync_all_harts_from_mmode(void);
 

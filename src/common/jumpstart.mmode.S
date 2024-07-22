@@ -23,7 +23,7 @@ _mmode_start:
 
   csrr  t0, mhartid
 
-  jal get_active_hart_mask_from_mmode
+  li a0, ACTIVE_HART_MASK
   li t1, 1
   sll t1, t1, t0
   and a0, a0, t1
@@ -62,8 +62,8 @@ _mmode_start:
 
   jal setup_smode_trap_delegation
 
-  jal enable_virtualization_from_mmode
-  beqz a0, 1f
+  li  t0, ENABLE_VIRTUALIZATION
+  beqz t0, 1f
 
   jal program_henvcfg
 
@@ -173,8 +173,8 @@ delegate_mmode_resources_to_smode:
 .global jump_to_main
 jump_to_main:
 
-  jal start_test_in_mmode
-  bnez a0, jump_to_main_in_mmode
+  li t0, START_TEST_IN_MMODE
+  bnez t0, jump_to_main_in_mmode
 
   jal delegate_mmode_resources_to_smode
 

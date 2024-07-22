@@ -20,7 +20,7 @@ int main(void) {
     return DIAG_FAILED;
   }
 
-  if (get_diag_satp_mode_from_smode() != VM_1_10_SV48) {
+  if (SATP_MODE != VM_1_10_SV48) {
     return DIAG_FAILED;
   }
 

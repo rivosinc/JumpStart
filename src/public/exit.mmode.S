@@ -25,7 +25,7 @@ _mmode_end:
   # a0: Active hart mask. Gets shifted right as we check each hart.
   # t0: hart_status_tracker address
   # t1: Hart id of the current hart we're checking status of.
-  jal get_active_hart_mask_from_mmode
+  li  a0, ACTIVE_HART_MASK
   la t0, hart_status_tracker
   li t1, 0x0
 
