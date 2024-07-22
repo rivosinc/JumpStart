@@ -44,6 +44,13 @@ def main():
         default=None,
     )
     parser.add_argument(
+        "--override_diag_attributes",
+        help="Diag attributes to override.",
+        required=False,
+        nargs="+",
+        default=None,
+    )
+    parser.add_argument(
         "--active_hart_mask_override",
         "-c",
         help="Override the default hart mask for the diag.",
@@ -121,6 +128,7 @@ def main():
         args.rng_seed,
         args.active_hart_mask_override,
         args.override_meson_options,
+        args.override_diag_attributes,
     )
 
     generated_diag = build_jumpstart_diag(

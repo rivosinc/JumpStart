@@ -115,6 +115,7 @@ class DiagBuildTarget:
         rng_seed,
         active_hart_mask_override,
         meson_options_cmd_line_overrides,
+        diag_attributes_cmd_line_overrides,
     ) -> None:
         self.build_dir = os.path.abspath(build_dir)
         self.build_assets = {}
@@ -139,6 +140,8 @@ class DiagBuildTarget:
         self.active_hart_mask_override = active_hart_mask_override
 
         self.meson_options_cmd_line_overrides = meson_options_cmd_line_overrides
+
+        self.diag_attributes_cmd_line_overrides = diag_attributes_cmd_line_overrides
 
     def __str__(self) -> str:
         print_string = f"\n\tName: {self.diag_source.diag_name}\n\tDirectory: {self.build_dir}\n\tAssets: {self.build_assets}\n\tBuildType: {self.buildtype},\n\tTarget: {self.target},\n\tBootConfig: {self.boot_config},"

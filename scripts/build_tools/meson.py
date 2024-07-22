@@ -135,6 +135,11 @@ class Meson:
                     f"-p{convert_hart_mask_to_num_active_harts(active_hart_mask)}"
                 )
 
+        if self.diag_build_target.diag_attributes_cmd_line_overrides is not None:
+            self.meson_options["diag_attribute_overrides"].extend(
+                self.diag_build_target.diag_attributes_cmd_line_overrides
+            )
+
     def apply_meson_option_overrides_from_diag(self):
         if self.diag_build_target.diag_source.get_meson_options_override_yaml() is not None:
             with open(self.diag_build_target.diag_source.get_meson_options_override_yaml()) as f:
