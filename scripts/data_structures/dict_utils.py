@@ -29,11 +29,11 @@ class DictUtils:
     def create_dict(overrides_list):
         attributes_map = {}
         for override in overrides_list:
-            key_value_pair = override.split("=")
-            assert len(key_value_pair) == 2, "Invalid override: " + override
+            # Split at the first '='
+            name_value_pair = override.split("=", 1)
 
-            attribute_name = override.split("=")[0]
-            attribute_value = override.split("=")[1]
+            attribute_name = name_value_pair[0]
+            attribute_value = name_value_pair[1]
 
             if attribute_value.lower() == "true":
                 attribute_value = True
