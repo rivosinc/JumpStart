@@ -10,6 +10,26 @@
 #include <stdbool.h>
 #include <string.h>
 
+#define MISS_LIMIT 5
+
+#define CHECK_SEED(flt_cnt, local_cnt, curr_seed, last_seed, misses)           \
+  if (flt_cnt[hart_id] != local_cnt)                                           \
+    jumpstart_mmode_fail();                                                    \
+  if (curr_seed == last_seed) {                                                \
+    misses++;                                                                  \
+    if (misses > MISS_LIMIT)                                                   \
+      jumpstart_mmode_fail();                                                  \
+  }
+
+#define SCHECK_SEED(flt_cnt, local_cnt, curr_seed, last_seed, misses)          \
+  if (flt_cnt[hart_id] != local_cnt)                                           \
+    jumpstart_smode_fail();                                                    \
+  if (curr_seed == last_seed) {                                                \
+    misses++;                                                                  \
+    if (misses > MISS_LIMIT)                                                   \
+      jumpstart_smode_fail();                                                  \
+  }
+
 __attribute__((section(".data.smode"))) volatile uint64_t
     fault_count_s[MAX_NUM_HARTS_SUPPORTED] = {0};
 
@@ -36,6 +56,7 @@ __attribute__((section(".text.smode"))) int smode_main(void) {
   int rand = 0, last_rand = 0;
   uint64_t temp = 65321512512;
   uint32_t faults = 0;
+  uint32_t miss = 0;
 
   register_smode_trap_handler_override(RISCV_EXCP_ILLEGAL_INST,
                                        (uint64_t)(smode_exception_handler));
@@ -54,36 +75,28 @@ __attribute__((section(".text.smode"))) int smode_main(void) {
     last_rand = rand;
   }
 
-  for (unsigned i = 0; i < 100; i++) {
+  for (unsigned i = 0; i < 1024; i++) {
     /* Try csrrwi, it shouldn't fault. */
     last_seed = seed;
     __asm__ __volatile__("csrrwi %0, seed, 5" : "=r"(seed)::"memory");
-    if (fault_count_s[hart_id] != faults || seed == last_seed)
-      jumpstart_smode_fail();
+    SCHECK_SEED(fault_count_s, faults, seed, last_seed, miss);
 
     /* Try csrrwi with zero imm, it shouldn't fault. */
     last_seed = seed;
     __asm__ __volatile__("csrrwi %0, seed, 0" : "=r"(seed)::"memory");
-    if (fault_count_s[hart_id] != faults || seed == last_seed)
-      jumpstart_smode_fail();
+    SCHECK_SEED(fault_count_s, faults, seed, last_seed, miss);
 
     /* Try csrrs with x0, it should fault. */
     last_seed = seed;
     faults++;
     __asm__ __volatile__("csrrs %0, seed, x0" : "=r"(seed)::"memory");
-    // if (fault_count_s[hart_id] != faults || seed == last_seed)
-    //  Commenting out last seed check from CSRRC/CSRRS instructions due
-    //  to https://rivosinc.atlassian.net/browse/RVRCC-7834.
-    if (fault_count_s[hart_id] != faults)
-      jumpstart_smode_fail();
+    SCHECK_SEED(fault_count_s, faults, seed, last_seed, miss);
 
     /* Try csrrc with x0, it should fault. */
     last_seed = seed;
     faults++;
     __asm__ __volatile__("csrrc %0, seed, x0" : "=r"(seed)::"memory");
-    // if (fault_count_s[hart_id] != faults || seed == last_seed)
-    if (fault_count_s[hart_id] != faults)
-      jumpstart_smode_fail();
+    SCHECK_SEED(fault_count_s, faults, seed, last_seed, miss);
 
     /* Try csrrs with rs1 != x0, shouldn't fault. */
     last_seed = seed;
@@ -91,9 +104,7 @@ __attribute__((section(".text.smode"))) int smode_main(void) {
                          : "=r"(seed)
                          : "rK"(temp)
                          : "memory");
-    // if (fault_count_s[hart_id] != faults || seed == last_seed)
-    if (fault_count_s[hart_id] != faults)
-      jumpstart_smode_fail();
+    SCHECK_SEED(fault_count_s, faults, seed, last_seed, miss);
 
     /* Try csrrc with rs1 != x0, shouldn't fault. */
     last_seed = seed;
@@ -101,39 +112,29 @@ __attribute__((section(".text.smode"))) int smode_main(void) {
                          : "=r"(seed)
                          : "rK"(temp)
                          : "memory");
-    // if (fault_count_s[hart_id] != faults || seed == last_seed)
-    if (fault_count_s[hart_id] != faults)
-      jumpstart_smode_fail();
+    SCHECK_SEED(fault_count_s, faults, seed, last_seed, miss);
 
     /* Try csrrsi with uimm=0, it should fault. */
     last_seed = seed;
     faults++;
     __asm__ __volatile__("csrrsi %0, seed, 0" : "=r"(seed)::"memory");
-    // if (fault_count_s[hart_id] != faults || seed == last_seed)
-    if (fault_count_s[hart_id] != faults)
-      jumpstart_smode_fail();
+    SCHECK_SEED(fault_count_s, faults, seed, last_seed, miss);
 
     /* Try csrrci with uimm=0, it should fault. */
     last_seed = seed;
     faults++;
     __asm__ __volatile__("csrrci %0, seed, 0" : "=r"(seed)::"memory");
-    // if (fault_count_s[hart_id] != faults || seed == last_seed)
-    if (fault_count_s[hart_id] != faults)
-      jumpstart_smode_fail();
+    SCHECK_SEED(fault_count_s, faults, seed, last_seed, miss);
 
     /* Try csrrsi with uimm != 0, shouldn't fault. */
     last_seed = seed;
     __asm__ __volatile__("csrrsi %0, seed, 1" : "=r"(seed)::"memory");
-    // if (fault_count_s[hart_id] != faults || seed == last_seed)
-    if (fault_count_s[hart_id] != faults)
-      jumpstart_smode_fail();
+    SCHECK_SEED(fault_count_s, faults, seed, last_seed, miss);
 
     /* Try csrrci with uimm != 0, shouldn't fault. */
     last_seed = seed;
     __asm__ __volatile__("csrrc %0, seed, 31" : "=r"(seed)::"memory");
-    // if (fault_count_s[hart_id] != faults || seed == last_seed)
-    if (fault_count_s[hart_id] != faults)
-      jumpstart_smode_fail();
+    SCHECK_SEED(fault_count_s, faults, seed, last_seed, miss);
 
     /* Try csrrw, it shouldn't fault. */
     last_seed = seed;
@@ -141,9 +142,7 @@ __attribute__((section(".text.smode"))) int smode_main(void) {
                          : "=r"(seed)
                          : "rK"(temp)
                          : "memory");
-    // if (fault_count_s[hart_id] != faults || seed == last_seed)
-    if (fault_count_s[hart_id] != faults)
-      jumpstart_smode_fail();
+    SCHECK_SEED(fault_count_s, faults, seed, last_seed, miss);
 
     /* Try csrrw, it shouldn't fault. */
     last_seed = seed;
@@ -151,8 +150,7 @@ __attribute__((section(".text.smode"))) int smode_main(void) {
                          : "=r"(seed)
                          : "rK"(temp)
                          : "memory");
-    if (fault_count_s[hart_id] != faults || seed == last_seed)
-      jumpstart_smode_fail();
+    SCHECK_SEED(fault_count_s, faults, seed, last_seed, miss);
 
     /* Try csrrw, it shouldn't fault. */
     last_seed = seed;
@@ -160,8 +158,7 @@ __attribute__((section(".text.smode"))) int smode_main(void) {
                          : "=r"(seed)
                          : "rK"(temp)
                          : "memory");
-    if (fault_count_s[hart_id] != faults || seed == last_seed)
-      jumpstart_smode_fail();
+    SCHECK_SEED(fault_count_s, faults, seed, last_seed, miss);
   }
 
   return DIAG_PASSED;
@@ -191,6 +188,7 @@ int main(void) {
   int rand = 0, last_rand = 0;
   uint64_t temp = 65321512512;
   uint32_t faults = 0;
+  uint32_t miss = 0;
 
   register_mmode_trap_handler_override(RISCV_EXCP_ILLEGAL_INST,
                                        (uint64_t)(mmode_exception_handler));
@@ -208,36 +206,28 @@ int main(void) {
     last_rand = rand;
   }
 
-  for (unsigned i = 0; i < 100; i++) {
+  for (unsigned i = 0; i < 1024; i++) {
     /* Try csrrwi, it shouldn't fault. */
     last_seed = seed;
     __asm__ __volatile__("csrrwi %0, seed, 5" : "=r"(seed)::"memory");
-    if (fault_count[hart_id] != faults || seed == last_seed)
-      jumpstart_mmode_fail();
+    CHECK_SEED(fault_count, faults, seed, last_seed, miss);
 
     /* Try csrrwi with zero imm, it shouldn't fault. */
     last_seed = seed;
     __asm__ __volatile__("csrrwi %0, seed, 0" : "=r"(seed)::"memory");
-    if (fault_count[hart_id] != faults || seed == last_seed)
-      jumpstart_mmode_fail();
+    CHECK_SEED(fault_count, faults, seed, last_seed, miss);
 
     /* Try csrrs with x0, it should fault. */
     last_seed = seed;
     faults++;
     __asm__ __volatile__("csrrs %0, seed, x0" : "=r"(seed)::"memory");
-    // if (fault_count[hart_id] != faults || seed == last_seed)
-    //  Commenting out last seed check from CSRRC/CSRRS instructions due
-    //  to https://rivosinc.atlassian.net/browse/RVRCC-7834.
-    if (fault_count[hart_id] != faults)
-      jumpstart_mmode_fail();
+    CHECK_SEED(fault_count, faults, seed, last_seed, miss);
 
     /* Try csrrc with x0, it should fault. */
     last_seed = seed;
     faults++;
     __asm__ __volatile__("csrrc %0, seed, x0" : "=r"(seed)::"memory");
-    // if (fault_count[hart_id] != faults || seed == last_seed)
-    if (fault_count[hart_id] != faults)
-      jumpstart_mmode_fail();
+    CHECK_SEED(fault_count, faults, seed, last_seed, miss);
 
     /* Try csrrs with rs1 != x0, shouldn't fault. */
     last_seed = seed;
@@ -245,9 +235,7 @@ int main(void) {
                          : "=r"(seed)
                          : "rK"(temp)
                          : "memory");
-    // if (fault_count[hart_id] != faults || seed == last_seed)
-    if (fault_count[hart_id] != faults)
-      jumpstart_mmode_fail();
+    CHECK_SEED(fault_count, faults, seed, last_seed, miss);
 
     /* Try csrrc with rs1 != x0, shouldn't fault. */
     last_seed = seed;
@@ -255,39 +243,29 @@ int main(void) {
                          : "=r"(seed)
                          : "rK"(temp)
                          : "memory");
-    // if (fault_count[hart_id] != faults || seed == last_seed)
-    if (fault_count[hart_id] != faults)
-      jumpstart_mmode_fail();
+    CHECK_SEED(fault_count, faults, seed, last_seed, miss);
 
     /* Try csrrsi with uimm=0, it should fault. */
     last_seed = seed;
     faults++;
     __asm__ __volatile__("csrrsi %0, seed, 0" : "=r"(seed)::"memory");
-    // if (fault_count[hart_id] != faults || seed == last_seed)
-    if (fault_count[hart_id] != faults)
-      jumpstart_mmode_fail();
+    CHECK_SEED(fault_count, faults, seed, last_seed, miss);
 
     /* Try csrrci with uimm=0, it should fault. */
     last_seed = seed;
     faults++;
     __asm__ __volatile__("csrrci %0, seed, 0" : "=r"(seed)::"memory");
-    // if (fault_count[hart_id] != faults || seed == last_seed)
-    if (fault_count[hart_id] != faults)
-      jumpstart_mmode_fail();
+    CHECK_SEED(fault_count, faults, seed, last_seed, miss);
 
     /* Try csrrsi with uimm != 0, shouldn't fault. */
     last_seed = seed;
     __asm__ __volatile__("csrrsi %0, seed, 1" : "=r"(seed)::"memory");
-    // if (fault_count[hart_id] != faults || seed == last_seed)
-    if (fault_count[hart_id] != faults)
-      jumpstart_mmode_fail();
+    CHECK_SEED(fault_count, faults, seed, last_seed, miss);
 
     /* Try csrrci with uimm != 0, shouldn't fault. */
     last_seed = seed;
     __asm__ __volatile__("csrrc %0, seed, 31" : "=r"(seed)::"memory");
-    // if (fault_count[hart_id] != faults || seed == last_seed)
-    if (fault_count[hart_id] != faults)
-      jumpstart_mmode_fail();
+    CHECK_SEED(fault_count, faults, seed, last_seed, miss);
 
     /* Try csrrw, it shouldn't fault. */
     last_seed = seed;
@@ -295,9 +273,7 @@ int main(void) {
                          : "=r"(seed)
                          : "rK"(temp)
                          : "memory");
-    // if (fault_count[hart_id] != faults || seed == last_seed)
-    if (fault_count[hart_id] != faults)
-      jumpstart_mmode_fail();
+    CHECK_SEED(fault_count, faults, seed, last_seed, miss);
 
     /* Try csrrw, it shouldn't fault. */
     last_seed = seed;
@@ -305,8 +281,7 @@ int main(void) {
                          : "=r"(seed)
                          : "rK"(temp)
                          : "memory");
-    if (fault_count[hart_id] != faults || seed == last_seed)
-      jumpstart_mmode_fail();
+    CHECK_SEED(fault_count, faults, seed, last_seed, miss);
 
     /* Try csrrw, it shouldn't fault. */
     last_seed = seed;
@@ -314,8 +289,7 @@ int main(void) {
                          : "=r"(seed)
                          : "rK"(temp)
                          : "memory");
-    if (fault_count[hart_id] != faults || seed == last_seed)
-      jumpstart_mmode_fail();
+    CHECK_SEED(fault_count, faults, seed, last_seed, miss);
   }
 
   set_csr(mseccfg, MSECCFG_SSEED);
