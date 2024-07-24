@@ -47,18 +47,18 @@ __attribute__((section(".text.startup"))) __attribute__((pure)) int main(void) {
   // Check that the M-mode, S-mode, U-mode start address overrides worked.
   uint64_t mmode_start_address =
       (uint64_t)&_JUMPSTART_TEXT_MMODE_INIT_ENTER_START;
-  if (mmode_start_address != 0x81000000) {
+  if (mmode_start_address != MMODE_START_ADDRESS) {
     return DIAG_FAILED;
   }
 
   uint64_t smode_start_address =
       (uint64_t)&_JUMPSTART_TEXT_SMODE_INIT_ENTER_START;
-  if (smode_start_address != 0x82000000) {
+  if (smode_start_address != SMODE_START_ADDRESS) {
     return DIAG_FAILED;
   }
 
   uint64_t umode_start_address = (uint64_t)&_JUMPSTART_TEXT_UMODE_START;
-  if (umode_start_address != 0x83000000) {
+  if (umode_start_address != UMODE_START_ADDRESS) {
     return DIAG_FAILED;
   }
 
