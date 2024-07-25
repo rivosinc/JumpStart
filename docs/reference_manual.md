@@ -204,13 +204,19 @@ Returns the hart id of the hart calling the function. Can only be called from S-
 
 Operates on the specified CSR. The CSR names are passed to the RISC-V `csrr` and `csrw` instructions so the names should match what GCC expects.
 
-### `run_function_in_smode()`, `run_function_in_umode()` and `run_function_in_vsmode()`
+### `run_function_in_smode()`, `run_function_in_umode()`, `run_function_in_vsmode()` and `run_function_in_vumode()`
 
 Diags can use these functions to run functions in the corresponding modes. Each function can be passed up to 6 arguments.
 
+`run_function_in_smode()` can only be called from M-mode.
+
+`run_function_in_umode()` and `run_function_in_vsmode()` can only be called from S-mode.
+
+`run_function_in_vumode()` can only be called from VS-mode.
+
 The different modes cannot share the same pages so the functions belonging to each mode should be tagged with the corresponding linker script section name to place them in different sections.
 
-Refer to Unit Tests `test002`, `test011`, `test018`, `test045` for examples of how these functions can be called and how the memory map can be set up.
+Refer to Unit Tests `test002`, `test011`, `test018`, `test045`, `test048` for examples of how these functions can be called and how the memory map can be set up.
 
 ### `disable_mmu_from_smode()`
 

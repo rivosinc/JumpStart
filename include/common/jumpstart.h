@@ -73,6 +73,7 @@
 int run_function_in_umode(uint64_t function_address, ...);
 int run_function_in_smode(uint64_t function_address, ...);
 int run_function_in_vsmode(uint64_t function_address, ...);
+int run_function_in_vumode(uint64_t function_address, ...);
 
 void disable_mmu_from_smode(void);
 

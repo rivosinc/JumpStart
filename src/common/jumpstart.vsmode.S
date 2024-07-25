@@ -132,7 +132,7 @@ vstvec_trap_handler:
 
   # We're handling a trap from vumode.
   # Switch to the S-mode stack as we can't use the vumode stack.
-  # We get the smode stack from the smode context that was saved
+  # We get the smode stack from the vsmode context that was saved
   # when we ran run_function_in_vumode() - the context just prior to this.
   addi t0, gp, -REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES
   ld sp, SP_OFFSET_IN_SAVE_REGION(t0)
@@ -205,9 +205,117 @@ check_for_env_call_requests:
 handle_env_call_from_vumode:
   # a7 will contain the syscall number
 
+  li t0, SYSCALL_RUN_FUNC_IN_VUMODE_COMPLETE
+  beq a7, t0, handle_syscall_run_func_in_vumode_complete
+
   j jumpstart_vsmode_fail
 
 handle_env_call_from_vsmode:
   # a7 will contain the syscall number
 
   j jumpstart_vsmode_fail
+
+handle_syscall_run_func_in_vumode_complete:
+  # This is the return to supervisor path for run_function_in_vumode().
+
+  # Re-enable interrupts that were disabled in run_function_in_vumode().
+  # Set SPIE to 1, on sret this will set SIE to 1.
+  li  t0, (PRV_S << SSTATUS_SPP_SHIFT) | SSTATUS_SPIE
+  csrs  sstatus, t0
+
+  la  t0, run_function_in_vumode_return_point
+  csrw sepc, t0
+
+  # Point to the address of the context save region we used when we
+  # took the RUN_FUNC_IN_VUMODE_COMPLETE syscall.
+  GET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
+  addi gp, gp, -REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES
+
+  # The return value from the vumode function is in the vumode
+  # context saved for a0 when we took the ecall exception from umode to
+  # smode.
+  ld t0, A0_OFFSET_IN_SAVE_REGION(gp)
+
+  # Place it in the a0 location for the mmode context we saved before calling
+  # run_function_in_vumode().
+  addi gp, gp, -REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES
+  sd t0, A0_OFFSET_IN_SAVE_REGION(gp)
+
+  # Restore VS mode context from before the run_function_in_vumode() call.
+  RESTORE_ALL_GPRS
+
+  # This location is now free to be used by the next trap handler entry.
+  SET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
+
+  # We've freed 2 context saves.
+  GET_THREAD_ATTRIBUTES_NUM_CONTEXT_SAVES_REMAINING_IN_SMODE(gp)
+  addi gp, gp, 2
+  SET_THREAD_ATTRIBUTES_NUM_CONTEXT_SAVES_REMAINING_IN_SMODE(gp)
+
+  sret
+
+# Inputs:
+#   a0: address of the function to run in usermode.
+#   a1-a7 contains the arguments to pass to the user function.
+.global run_function_in_vumode
+run_function_in_vumode:
+  addi  sp, sp, -16
+  sd    ra, 8(sp)
+  sd    fp, 0(sp)
+  addi  fp, sp, 16
+
+  GET_THREAD_ATTRIBUTES_CURRENT_MODE(t0)
+  li  t1, PRV_S
+  bne t0, t1, jumpstart_vsmode_fail
+
+  # Make sure we only call this function from VS mode (for now).
+  GET_THREAD_ATTRIBUTES_CURRENT_V_BIT(t0)
+  beqz t0, jumpstart_vsmode_fail
+
+  # Disable interrupts when switching modes to avoid clobbering any
+  # state we set up if we encounter an interrupt.
+  csrci sstatus, SSTATUS_SIE
+
+  # Make sure we have enough context saves remaining in S mode.
+  GET_THREAD_ATTRIBUTES_NUM_CONTEXT_SAVES_REMAINING_IN_SMODE(gp)
+  beqz gp, jumpstart_vsmode_fail
+
+  addi gp, gp, -1
+  SET_THREAD_ATTRIBUTES_NUM_CONTEXT_SAVES_REMAINING_IN_SMODE(gp)
+
+  # Save VS-mode context
+  GET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
+  SAVE_ALL_GPRS
+
+  # Point to the address of the next context save region for the next
+  # trap handler.
+  addi gp, gp, REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES
+  SET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
+
+  # Load VU-mode context. We just need to set sepc, sstatus and a0 register.
+  li t0, (PRV_S << SSTATUS_SPP_SHIFT)
+  csrc sstatus, t0
+
+  # Switch to the VU-mode stack
+  GET_THREAD_ATTRIBUTES_HART_ID(t0)
+  li  t1, (NUM_PAGES_PER_HART_FOR_UMODE_STACK * UMODE_STACK_PAGE_SIZE)
+  mul t0, t0, t1
+  la  t2, umode_stack_top
+  add sp, t2, t0
+  add sp, sp, t1 # We want the stack bottom.
+
+  li  t0, PRV_U
+  SET_THREAD_ATTRIBUTES_CURRENT_MODE(t0)
+
+  la t0, jump_to_function_in_vumode
+  csrw sepc, t0
+
+  sret
+
+# Inputs:
+#   a0: return status from U-mode function.
+run_function_in_vumode_return_point:
+  ld  ra, 8(sp)
+  ld  fp, 0(sp)
+  addi  sp, sp, 16
+  ret

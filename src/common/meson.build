@@ -23,4 +23,5 @@ if get_option('boot_config') == 'fw-sbi'
                         )
 endif
 
-umode_sources += files('jumpstart.umode.S')
+umode_sources += files('jumpstart.umode.S',
+                       'jumpstart.vumode.S')

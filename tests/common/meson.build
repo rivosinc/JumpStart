@@ -39,6 +39,7 @@ start_in_smode_tests += [
   ['test045', 'Run C/Assembly functions with run_function_in_vsmode() from supervisor mode.'],
   ['test046', 'Register and run vsmode illegal instruction exception handler.'],
   ['test047', 'Hypervisor load/store.'],
+  ['test048', 'Run C/Assembly functions with run_function_in_vumode() from VS mode.'],
 ]
 
 start_in_mmode_tests += [
