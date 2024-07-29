@@ -38,6 +38,7 @@ start_in_smode_tests += [
   ['test039', 'MP heap malloc test.', '-p4'],
   ['test045', 'Run C/Assembly functions with run_function_in_vsmode() from supervisor mode.'],
   ['test046', 'Register and run vsmode illegal instruction exception handler.'],
+  ['test047', 'Hypervisor load/store.'],
 ]
 
 start_in_mmode_tests += [
