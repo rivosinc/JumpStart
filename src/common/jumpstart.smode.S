@@ -357,7 +357,7 @@ handle_syscall_run_func_in_vsmode_complete:
   li  t0, (PRV_S << SSTATUS_SPP_SHIFT) | SSTATUS_SPIE
   csrs  sstatus, t0
 
-  li t0, (HSTATUS_SPV | HSTATUS_SPVP)
+  li t0, HSTATUS_SPV
   csrc hstatus, t0
 
   la  t0, run_function_in_vsmode_return_point
