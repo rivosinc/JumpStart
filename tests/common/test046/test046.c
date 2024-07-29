@@ -102,4 +102,6 @@ int main(void) {
   if (get_thread_attributes_current_v_bit_from_smode() != 0) {
     return DIAG_FAILED;
   }
+
+  return DIAG_PASSED;
 }
