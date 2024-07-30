@@ -40,6 +40,8 @@ start_in_smode_tests += [
   ['test046', 'Register and run vsmode illegal instruction exception handler.'],
   ['test047', 'Hypervisor load/store.'],
   ['test048', 'Run C/Assembly functions with run_function_in_vumode() from VS mode.'],
+  ['test049', 'Exit with jumpstart_vumode_fail() to test umode fail path.', '', true],
+  ['test050', 'Exit with jumpstart_vsmode_fail() to test fail path.', '', true],
 ]
 
 start_in_mmode_tests += [
