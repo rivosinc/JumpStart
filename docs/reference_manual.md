@@ -216,6 +216,8 @@ Diags can use these functions to run functions in the corresponding modes. Each 
 
 The different modes cannot share the same pages so the functions belonging to each mode should be tagged with the corresponding linker script section name to place them in different sections.
 
+*IMPORTANT*: The return values of these functions should be checked. The only way to tell if the function ran successfully is to check the return value.
+
 Refer to Unit Tests `test002`, `test011`, `test018`, `test045`, `test048` for examples of how these functions can be called and how the memory map can be set up.
 
 ### `disable_mmu_from_smode()`

@@ -90,7 +90,6 @@ jump_to_function_in_vsmode:
 
   jalr ra, t0
 
-.global exit_from_vsmode
 exit_from_vsmode:
   # a0 contains the exit code.
   li  a7, SYSCALL_RUN_FUNC_IN_VSMODE_COMPLETE
@@ -98,6 +97,11 @@ exit_from_vsmode:
 
   # We shouldn't come back here.
   wfi
+
+.global jumpstart_vsmode_fail
+jumpstart_vsmode_fail:
+  li  a0, DIAG_FAILED
+  j exit_from_vsmode
 
 # The stvec.base must always be 4 byte aligned.
 .align 2

@@ -24,6 +24,7 @@ jump_to_function_in_vumode:
 
   jalr ra, t0
 
+exit_from_vumode:
   # a0 contains the exit code.
   li  a7, SYSCALL_RUN_FUNC_IN_VUMODE_COMPLETE
   ecall
@@ -34,5 +35,4 @@ jump_to_function_in_vumode:
 .global jumpstart_vumode_fail
 jumpstart_vumode_fail:
   li a0, DIAG_FAILED
-  li  a7, SYSCALL_RUN_FUNC_IN_VUMODE_COMPLETE
-  ecall
+  j exit_from_vumode

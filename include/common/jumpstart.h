@@ -120,6 +120,7 @@ void sync_all_harts_from_mmode(void);
 void jumpstart_umode_fail(void) __attribute__((noreturn));
 void jumpstart_smode_fail(void) __attribute__((noreturn));
 void jumpstart_vsmode_fail(void) __attribute__((noreturn));
+void jumpstart_vumode_fail(void) __attribute__((noreturn));
 void jumpstart_mmode_fail(void) __attribute__((noreturn));
 
 uint64_t get_mepc_for_current_exception(void);

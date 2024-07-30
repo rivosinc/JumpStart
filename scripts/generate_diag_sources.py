@@ -546,11 +546,6 @@ sync_all_harts_from_{mode}:
                 file_descriptor.write("  li  a1, DIAG_FAILED\n")
                 file_descriptor.write("  jal sbi_system_reset\n")
 
-            file_descriptor.write(".global jumpstart_vsmode_fail\n")
-            file_descriptor.write("jumpstart_vsmode_fail:\n")
-            file_descriptor.write("  li  a0, DIAG_FAILED\n")
-            file_descriptor.write("  j exit_from_vsmode\n")
-
     def generate_mmu_functions(self, file_descriptor):
         modes = ListUtils.intersection(["mmode", "smode"], self.priv_modes_enabled)
         for mode in modes:
