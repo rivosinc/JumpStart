@@ -258,9 +258,9 @@ class SourceGenerator:
             guard_page_mapping["page_size"], guard_page_mapping["pma_memory_type"]
         )
         guard_page_mapping["num_pages"] = 1
-        guard_page_mapping[
-            "linker_script_section"
-        ] = f".jumpstart.guard_page.{self.num_guard_pages_generated}"
+        guard_page_mapping["linker_script_section"] = (
+            f".jumpstart.guard_page.{self.num_guard_pages_generated}"
+        )
         # Guard pages have no allocations in the page tables but occupy space in the memory map.
         guard_page_mapping["no_pte_allocation"] = True
 

@@ -88,9 +88,9 @@ class Meson:
     def setup_default_meson_options(self):
         self.meson_options["diag_name"] = self.diag_binary_name
         self.meson_options["diag_sources"] = self.diag_build_target.diag_source.get_sources()
-        self.meson_options[
-            "diag_attributes_yaml"
-        ] = self.diag_build_target.diag_source.get_diag_attributes_yaml()
+        self.meson_options["diag_attributes_yaml"] = (
+            self.diag_build_target.diag_source.get_diag_attributes_yaml()
+        )
         self.meson_options["boot_config"] = self.diag_build_target.boot_config
         self.meson_options["diag_attribute_overrides"] = []
 
