@@ -108,6 +108,8 @@ if get_option('diag_target') == 'spike'
       spike_isa_string = 'rv64gcvh_zbb_zbs_zkr_svpbmt'
     endif
 
+    default_spike_args += ['--misaligned']
+
   endif
 
   if spike_isa_string != ''
