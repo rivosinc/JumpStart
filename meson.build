@@ -8,7 +8,7 @@ project('JumpStart', 'c',
           'werror=true',
           'b_ndebug=if-release',
           ],
-        meson_version: '>=1.1.0'
+        meson_version: '>=1.0.3'
 )
 
 add_project_arguments('-Wno-pedantic',
