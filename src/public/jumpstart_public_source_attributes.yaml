@@ -8,6 +8,8 @@ rivos_internal_build: false
 
 max_num_harts_supported: 4
 
+priv_modes_supported: [mmode, smode, umode]
+
 # Hard limits on how many pages the jumsptart infrastructure itself will occupy.
 # Allows us to keep track of infrastructure code size.
 # The test pages are not limited by these counts and are dependent on the
@@ -16,7 +18,7 @@ jumpstart_mmode:
   text:
     page_size: 0x1000
     num_pages: 4
-    linker_script_section: ".jumpstart.text.mmode.init,.jumpstart.text.mmode,.jumpstart.text.mmode.end"
+    linker_script_section: ".jumpstart.text.mmode.init.enter,.jumpstart.text.mmode.init.exit,.jumpstart.text.mmode.init,.jumpstart.text.mmode.init.end,.jumpstart.text.mmode"
     pma_memory_type: "wb"
     no_pte_allocation: True
 jumpstart_smode:
@@ -26,7 +28,7 @@ jumpstart_smode:
     xwr: "0b101"
     umode: "0b0"
     pma_memory_type: "wb"
-    linker_script_section: ".jumpstart.text.smode"
+    linker_script_section: ".jumpstart.text.smode.init.enter,.jumpstart.text.smode.init,.jumpstart.text.smode"
   stack:
     page_size: 0x1000
     num_pages: 4
@@ -43,7 +45,7 @@ jumpstart_smode:
     linker_script_section: ".jumpstart.c_structs.smode"
   data:
     page_size: 0x1000
-    num_pages: 2
+    num_pages: 3
     xwr: "0b011"
     umode: "0b0"
     pma_memory_type: "wb"
@@ -60,19 +62,13 @@ jumpstart_smode:
     xwr: "0b011"
     umode: "0b0"
     pma_memory_type: "wb"
-    linker_script_section: ".bss"
+    linker_script_section: ".bss,.sbss,.sbss.*"
   rodata:
     page_size: 0x1000
     xwr: "0b001"
     umode: "0b0"
     pma_memory_type: "wb"
     linker_script_section: ".rodata"
-  pagetables:
-    page_size: 0x1000
-    xwr: "0b001"
-    umode: "0b0"
-    pma_memory_type: "wb"
-    linker_script_section: ".jumpstart.rodata.pagetables"
   heap:
     page_size: 0x200000
     num_pages: 2
@@ -101,7 +97,8 @@ jumpstart_umode:
 # at build time.
 diag_attributes:
   start_test_in_mmode: false
-  num_pages_for_jumpstart_smode_pagetables: 30
+  enable_virtualization: false
+  max_num_pagetable_pages_per_stage: 30
   num_pages_for_jumpstart_smode_bss: 7
   num_pages_for_jumpstart_smode_rodata: 1
   allow_page_table_modifications: false
@@ -111,23 +108,30 @@ diag_attributes:
   smode_start_address: null
   umode_start_address: null
   active_hart_mask: '0b1'
-  allow_active_hart_mask_override: false
   satp_mode: 'sv39'
+  vsatp_mode: 'sv39'
+  hgatp_mode: 'sv39x4'
   mappings: null
+  batch_mode: false
 
 c_structs:
   thread_attributes:
     fields:
       hart_id: uint8_t
       current_mode: uint8_t
+      current_v_bit: uint8_t
+      smode_setup_done: uint8_t
+      vsmode_setup_done: uint8_t
       trap_override_struct_address: uint64_t
       mmode_reg_context_save_region_address: uint64_t
-      lower_mode_in_mmode_reg_context_save_region_address: uint64_t
+      num_context_saves_remaining_in_mmode: uint8_t
       smode_reg_context_save_region_address: uint64_t
-      umode_reg_context_save_region_address: uint64_t
+      num_context_saves_remaining_in_smode: uint8_t
       bookend_magic_number: uint64_t
   trap_override_attributes:
     fields:
+      vsmode_interrupt_handler_overrides: uint64_t,46
+      vsmode_exception_handler_overrides: uint64_t,20
       smode_interrupt_handler_overrides: uint64_t,46
       smode_exception_handler_overrides: uint64_t,20
       mmode_interrupt_handler_overrides: uint64_t,46
@@ -144,18 +148,25 @@ defines:
   PRIMARY_HART_ID: 0
   CHECKTC_DISABLE: nop
   CHECKTC_ENABLE: nop
+  MMODE_ROLE_DISABLE: nop
+  MMODE_ROLE_ENABLE:  nop
+  STIMER_RESET: nop
+  MTIMER_RESET: nop
 
 syscall_numbers:
   - SYSCALL_RUN_FUNC_IN_UMODE_COMPLETE
+  - SYSCALL_RUN_FUNC_IN_VUMODE_COMPLETE
+  - SYSCALL_RUN_FUNC_IN_VSMODE_COMPLETE
   - SYSCALL_RUN_FUNC_IN_SMODE_COMPLETE
 
 # These are the registers that need to be saved/restored when moving
 # between U-mode and S-mode. We will generate S and U mode regions to
 # hold this context across context switches.
-reg_context_to_save_across_modes:
+reg_context_to_save_across_exceptions:
   registers:
     gprs: [sp, s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, t0, t1, t2, t3, t4, t5, t6, a0, a1, a2, a3, a4, a5, a6, a7, ra]
-    csrs: [sepc, sstatus, mepc, mstatus, hstatus]
+    csrs: [epc, tval, status, hstatus]
   # Temporary register to hold the address of the context save area when
   # saving and restoring.
   temp_register: gp
+  max_num_context_saves: 5

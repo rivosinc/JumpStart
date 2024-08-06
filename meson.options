@@ -18,7 +18,7 @@ option('diag_attributes_yaml',
 
 option('diag_attribute_overrides',
        type : 'array',
-       description : 'Overrides specified test attributes.')
+       description : 'Overrides specified diag attributes.')
 
 option('diag_generate_disassembly',
        type : 'boolean',
@@ -31,10 +31,34 @@ option('diag_target',
        value : 'spike',
        description : 'Target to build the diag for.')
 
-option('gcc_march_string',
+option('jumpstart_source_attribute_overrides',
+       type : 'array',
+       description : 'Overrides specified JumpStart source attributes.')
+
+option('riscv_priv_modes_enabled',
+       type : 'array',
+       value : ['mmode', 'smode', 'umode'],
+       description : 'RISC-V privilege modes included in the build.')
+
+option('boot_config',
+       type : 'combo',
+       choices: ['fw-none', 'fw-m', 'fw-sbi'],
+       value : 'fw-none',
+       description : 'Select Fw to run before handover to jumpstart. \n' +
+                     '- fw-none : expects direct entry into jumpstart from hardware reset without fw. \n' +
+                     '- fw-m    : expects handover to jumpstart in mmode (Non-resident fw). \n' +
+                     '- fw-sbi  : expects handover to jumpstart in smode with sbi interface (Resident M-Mode fw). \n' +
+                     'Note: highest privilege level in jumpstart binary will be the entry priv level' )
+
+option('smode_start_address',
        type : 'string',
-       value : '',
-       description : '-march string to pass to gcc.')
+       value : '0x90000000',
+       description : 'Address to place the smode code.')
+
+option('mmode_start_address',
+       type : 'string',
+       value : '0x90000000',
+       description : 'Address to place the mmode code.')
 
 option('spike_binary',
        type : 'string',
@@ -50,6 +74,11 @@ option('spike_additional_arguments',
        type : 'array',
        description : 'Additional arguments to pass to spike when running the diag.')
 
+option('spike_timeout',
+       type : 'integer',
+       value : 30,
+       description : 'meson test timeout when running the tests on spike.')
+
 option('qemu_binary',
        type : 'string',
        value : '',
@@ -61,7 +90,7 @@ option('qemu_additional_arguments',
 
 option('qemu_timeout',
        type : 'integer',
-       value : 120,
+       value : 300,
        description : 'meson test timeout when running the tests on QEMU.')
 
 option('generate_trace',

@@ -4,20 +4,52 @@
 
 project('JumpStart', 'c',
         default_options : [
-          'warning_level=everything',
+          'warning_level=3',
           'werror=true',
+          'b_ndebug=if-release',
           ],
-        meson_version: '>=1.1.0'
+        meson_version: '>=1.0.3'
 )
 
-add_project_arguments('-Wno-c++-compat',
-                      '-Wno-padded',
-                      '-Wno-pedantic',
+add_project_arguments('-Wno-pedantic',
+                      # Require that all enums are covered by a switch statement.
+                      '-Wswitch-enum',
+                      # Check for implicit fallthrough in switch statements.
+                      '-Wimplicit-fallthrough',
+                      '-Wunreachable-code',
                       # Let GCC know we are using our own malloc/calloc implementation. Otherwise
                       # it makes assumptions about using it's own.
                       '-fno-builtin',
                       '-mcmodel=medany',
                       language: 'c')
+
+
+
+jumpstart_source_attribute_overrides = get_option('jumpstart_source_attribute_overrides')
+diag_attribute_overrides = get_option('diag_attribute_overrides')
+
+compatible_priv_modes = []
+if get_option('boot_config') == 'fw-none'
+  compatible_priv_modes = get_option('riscv_priv_modes_enabled')
+elif get_option('boot_config') == 'fw-m'
+  compatible_priv_modes = ['mmode', 'smode', 'umode']
+  jumpstart_source_attribute_overrides += ['diag_entry_label=_mmode_start']
+  diag_attribute_overrides += ['mmode_start_address=' + get_option('mmode_start_address')]
+elif get_option('boot_config') == 'fw-sbi'
+  compatible_priv_modes = ['smode', 'umode']
+  jumpstart_source_attribute_overrides += ['diag_entry_label=sbi_firmware_trampoline']
+  diag_attribute_overrides += ['smode_start_address=' + get_option('smode_start_address')]
+else
+  error('Invalid boot_config value')
+endif
+
+riscv_priv_modes_enabled = []
+foreach mode: get_option('riscv_priv_modes_enabled')
+    if compatible_priv_modes.contains(mode)
+      riscv_priv_modes_enabled += [mode]
+    endif
+endforeach
+
 
 subdir('src')
 subdir('include')
@@ -33,7 +65,18 @@ jumpstart_source_generator_command = [prog_python,
                                               '--data_structures_file', '@OUTPUT1@',
                                               '--assembly_file', '@OUTPUT2@',
                                               '--jumpstart_source_attributes_yaml', '@INPUT1@',
+                                              '--priv_modes_enabled', riscv_priv_modes_enabled
                                               ]
+
+override_jumpstart_source_attributes_parameter = []
+if jumpstart_source_attribute_overrides.length() > 0
+  override_jumpstart_source_attributes_parameter += ['--override_jumpstart_source_attributes']
+
+  foreach override : jumpstart_source_attribute_overrides
+    override_jumpstart_source_attributes_parameter += [override]
+  endforeach
+endif
+jumpstart_source_generator_command += override_jumpstart_source_attributes_parameter
 
 jumpstart_source_generator_outputs = custom_target(
                                       'Generate jumpstart sources for build',
@@ -62,8 +105,10 @@ if get_option('diag_target') == 'spike'
 
   else
     if spike_isa_string == ''
-      spike_isa_string = 'rv64gch_zbb_zbs'
+      spike_isa_string = 'rv64gcvh_zbb_zbs_zkr_svpbmt'
     endif
+
+    default_spike_args += ['--misaligned']
 
   endif
 
@@ -95,61 +140,54 @@ endif
 
 objdump = find_program('objdump')
 
-gcc_march_string = get_option('gcc_march_string')
-
-default_c_args_list = []
-
-if gcc_march_string == ''
-  if get_option('rivos_internal_build') == true
-    gcc_march_string = rivos_gcc_march_string
-  else
-    gcc_march_string = 'rv64gc_zbb_zbs'
-  endif
-endif
-
-default_c_args_list += ['-march=' + gcc_march_string]
-
 diag_source_generator_common_inputs = [diag_source_generator, jumpstart_source_attributes_yaml]
 diag_source_generator_command = [prog_python,
                                     '@INPUT0@',
                                     '--jumpstart_source_attributes_yaml', '@INPUT1@',
                                     '--diag_attributes_yaml', '@INPUT2@',
                                     '--output_assembly_file', '@OUTPUT0@',
+                                    '--output_defines_file', '@OUTPUT2@',
                                     '--output_linker_script', '@OUTPUT1@',
+                                    '--priv_modes_enabled', riscv_priv_modes_enabled
                                     ]
+
+if get_option('diag_target') == 'qemu'
+  diag_attribute_overrides += ['in_qemu_mode=True']
+endif
+
+diag_source_generator_command += override_jumpstart_source_attributes_parameter
+
+if diag_attribute_overrides.length() > 0
+  diag_source_generator_command += ['--override_diag_attributes']
+
+  foreach override : diag_attribute_overrides
+    diag_source_generator_command += [override]
+  endforeach
+endif
 
 if diag_attributes_yaml != '' and diag_sources.length() > 0
   diag_name = get_option('diag_name')
 
-  diag_attribute_overrides = get_option('diag_attribute_overrides')
-
-  if get_option('diag_target') == 'qemu'
-    diag_attribute_overrides += ['in_qemu_mode=True']
-  endif
-
-  if diag_attribute_overrides.length() > 0
-    diag_source_generator_command += ['--override_diag_attributes']
-
-    foreach override : diag_attribute_overrides
-      diag_source_generator_command += [override]
-    endforeach
-  endif
-
   diag_source_generator_output = custom_target(
                                 'Generate diag attributes related source files for ' + diag_name,
                                 input : diag_source_generator_common_inputs + [diag_attributes_yaml],
-                                output : ['generated_diag_source.S',
-                                          'linker_script.ld'],
+                                output : [diag_name + '.generated.S',
+                                          diag_name + '.linker_script.ld',
+                                          diag_name + '.defines.h'],
                                 command : diag_source_generator_command)
 
   diag_sources += diag_source_generator_output[0]
-  linker_script = diag_source_generator_output[1].full_path()
+  linker_script = diag_source_generator_output[1]
+  diag_defines = diag_source_generator_output[2]
 
   diag_exe = executable(diag_name,
                         sources: [jumpstart_sources, diag_sources],
                         include_directories: jumpstart_includes,
-                        c_args: default_c_args_list,
-                        link_args: ['-T' + linker_script, '-nostdlib'])
+                        c_args: ['-include', diag_defines.full_path()],
+                        link_args: ['-T' + linker_script.full_path()],
+                        link_depends: linker_script,
+                        dependencies: declare_dependency(sources: diag_defines)
+                        )
 
   if get_option('diag_generate_disassembly') == true
         custom_target('dump',
@@ -164,6 +202,7 @@ if diag_attributes_yaml != '' and diag_sources.length() > 0
     test('🧪 ' + diag_name,
           spike,
           args : [default_spike_args, diag_exe],
+          timeout: get_option('spike_timeout'),
           is_parallel : false) # Parallel runs of the test turns off terminal
                                # feedback and requires `reset` to be run to
                                # restore the terminal.

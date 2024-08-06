@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+
+[binaries]
+c = 'riscv64-unknown-elf-gcc'
+strip = 'riscv64-unknown-elf-strip'
+objdump = 'riscv64-unknown-elf-objdump'
+
+[built-in options]
+c_args = target_args
+c_link_args = ['-nostdlib', '-static']

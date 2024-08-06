@@ -45,13 +45,21 @@ Default: `0b1` or 1 hart active.
 
 Specifies the active harts in the diag. The default is `0b1` or 1 hart active.
 
-### `satp_mode`
+### `enable_virtualization`
 
-The MMU mode (SV39, SV48, SV57, SV64, ...) that the diag will run in.
+Enable the Virtualization extension.
+
+Default: `False`.
+
+### `satp_mode`, `vstap_mode`, `hgatp_mode`
+
+The MMU mode (SV39, SV48, etc.) that will be programmed into the corresponding *ATP register.
 
 ### `start_test_in_mmode`
 
 Controls whether the diag's `main()` will be called in M-mode or S-mode.
+
+NOTE: Diags that run in `sbi_firmware_boot` mode (where JumpStart starts in S-mode after SBI Firmware runs) cannot start in M-mode.
 
 Default: `False`. The diag's `main()` will be called in S-mode.
 
@@ -61,13 +69,13 @@ Example: [test009](../tests/common/test009.diag_attributes.yaml).
 
 The address at which the start of the Machine, Supervisor and User mode sections will be placed by the linker.
 
-### `num_pages_for_jumpstart_smode_pagetables`
+### `max_num_pagetable_pages_per_stage`
 
-The maximum number of pages that can be used to allocate Page Tables.
+The maximum number of 4K pages that can be used to allocate Page Tables for each translation stage.
 
 ### `num_pages_for_jumpstart_smode_bss` and `num_pages_for_jumpstart_smode_rodata`
 
-The number of pages allowed for the `.bss` and `.rodata` sections respectively.
+The number of 4K pages allowed for the `.bss` and `.rodata` sections respectively.
 
 ### `allow_page_table_modifications`
 
@@ -77,21 +85,19 @@ Default: `False`. The page tables regions are marked Read Only in the page table
 
 Example: [test021](../tests/common/test021.diag_attributes.yaml).
 
-### `allow_active_hart_mask_override`
-
-Allows `active_hart_mask` to be overriden from the command line at `meson setup` time.
-
-Diags may be written to allow a fixed number of active harts or can be written to scale with the number of active harts. `meson compile` will fail if a command line override of `active_hart_mask` is attempted for a diag that does not allow it.
-
-Default: `False`.
-
 ### `mappings`
 
 Controls the memory layout and attributes of all the sections of the diag.
 
-#### `va` and `pa`
+#### `va`, `gpa`, `pa`, `spa`
 
-Controls the virtual and physical addresses of the section.
+Controls the virtual, guest physical, physical and supervisor physical addresses of the mapping.
+
+#### `stage`
+
+Controls the translation stage (S, VS, G) that this mapping will be used in. The S stage is the single stage translation and the VS and G stages are the two stage translation.
+
+Default: If not explicitly specified, the stage will be inferred based on the `va`, `gpa`, `pa`, `spa` attributes. A bare mapping will only have a `gpa`, `pa` or a `spa` attribute.
 
 #### `xwr`, `umode` and `valid`
 
@@ -105,7 +111,7 @@ The page size has to conform to the sizes supported by the SATP mode.
 
 #### `num_pages`
 
-Controls the number of pages allocated for the section.
+Controls the number of `page_size` pages allocated for the section.
 
 #### `alias`
 
@@ -114,8 +120,9 @@ Indicates whether this is a VA alias. It's PA should be contained in the PA rang
 #### `no_pte_allocation`
 
 Controls whether the diag will allocate page table entries for the section.
+If not explicitly specified, this will be inferred based on the translation stage. It will be set to `True` for bare mappings and `False` for non-bare mappings.
 
-Default: `False`. Page table entries will be allocated for the section.
+Default: `None`.
 
 #### `linker_script_section`
 
@@ -150,7 +157,7 @@ Takes the diag's sources and attributes and generates a meson build directory.
 Pass the sources and the attribute file to `meson setup` with the `diag_attributes_yaml`, `diag_name` and `diag_sources` setup options:
 
 ```shell
-meson setup builddir --cross-file cross-file.txt --buildtype release -Ddiag_attributes_yaml=tests/common/test000.diag_attributes.yaml -Ddiag_sources=tests/common/test000.c -Ddiag_name=my_jumpstart_diag
+meson setup builddir --cross-file cross_compile/rivos_internal/gcc_options.txt --cross-file cross_compile/gcc.txt  --buildtype release -Ddiag_attributes_yaml=tests/common/test000.diag_attributes.yaml -Ddiag_sources=tests/common/test000.c -Ddiag_name=my_jumpstart_diag
 ```
 
 All `meson setup` options are listed in the [meson_options.txt](../meson.options) file.
@@ -185,7 +192,7 @@ meson test -C builddir
 
 ## JumpStart APIs
 
-These are listed in [jumpstart.h](../include/common/jumpstart.h).
+These are listed in the header files in the [include](../include) directory.
 
 Functions with names that end in `_from_smode()` or `_from_mmode()` can only be called from the respective modes.
 
@@ -197,13 +204,13 @@ Returns the hart id of the hart calling the function. Can only be called from S-
 
 Operates on the specified CSR. The CSR names are passed to the RISC-V `csrr` and `csrw` instructions so the names should match what GCC expects.
 
-### `run_function_in_smode()` and `run_function_in_umode()`
+### `run_function_in_smode()`, `run_function_in_umode()` and `run_function_in_vsmode()`
 
-Diags can use the `run_function_in_smode()` and `run_function_in_umode()` functions to run functions in supervisor and user mode respectively. Each function can be passed up to 6 arguments.
+Diags can use these functions to run functions in the corresponding modes. Each function can be passed up to 6 arguments.
 
 The different modes cannot share the same pages so the functions belonging to each mode should be tagged with the corresponding linker script section name to place them in different sections.
 
-Refer to Unit Tests `test002`, `test011` and `test018` for examples of how these functions can be called and how the memory map can be set up.
+Refer to Unit Tests `test002`, `test011`, `test018`, `test045` for examples of how these functions can be called and how the memory map can be set up.
 
 ### `disable_mmu_from_smode()`
 
@@ -221,11 +228,21 @@ Allows the diag to register a trap handler override function for M-mode traps. T
 
 Allows the diag to register a trap handler override function for S-mode traps. The registered function will be called when the trap occurs in S-mode.
 
-## Running and Debugging diags
+### `register_vsmode_trap_handler_override()` and `get_vsmode_trap_handler_override()`
 
-### Running diags on Spike
+Allows the diag to register a trap handler override function for VS-mode traps. The registered function will be called when the trap occurs in VS-mode.
 
-`meson test` will attempt to run the diag on Spike. To see the options being passed to Spike as well as the output from Spike, run `meson test` with the `-v` option.
+### `get_*epc_for_current_exception()` and `set_*epc_for_current_exception()`
+
+These functions can be used to get and set the MEPC/SEPC during an exception. Allows modification of the EPC before returning from the exception.
+
+## Running Diags
+
+JumpStart diags can be run on Spike and QEMU targets.
+
+The target can be specified by passing the `-Dtarget` option to `meson setup`. The target can be `spike` or `qemu`.
+
+`meson test` will attempt to run the diag on the target. To see the options being passed to the target, run `meson test` with the `-v` option.
 
 ```shell
 meson test -C builddir -v
@@ -237,8 +254,26 @@ To generate the execution trace, pass the `generate_trace=true` option to `meson
 meson setup -C builddir -Dgenerate_trace=true ...
 ```
 
-If the diag requires additional arguments be passed to Spike, specify them with the `spike_additional_arguments` option to `meson setup`. `spike_additional_arguments` takes a list of arguments.
+If the diag requires additional arguments be passed to the target, specify them with the `spike_additional_arguments`/`qemu_additional_arguments` options to `meson setup`.
+These take a list of arguments.
 
 ```shell
 meson setup -C builddir -Dspike_additional_arguments=-p2 ...
 ```
+## Boot Configs
+
+The boot path can be selected at build time with the `boot_config` meson option.
+
+### `fw-none` (default)
+
+   JumpStart starts running from hardware reset. No system firmware is expected to be present.
+
+### `fw-m`
+
+JumpStart starts in M-mode at the `mmode_start_address` after running system firmware for initialization. The system firmware that runs prior to JumpStart can be overwritten by JumpStart.
+
+### `fw-sbi`
+
+JumpStart starts in S-mode at the `sbi_firmware_trampoline` address after running system firmware for initialization. The system firmware is expected to be resident and will not be overwritten by JumpStart. JumpStart will interact with the system firmware using the SBI HSM extension - for example, to boot non-booting harts.
+
+Only S-mode based diags can be run in this mode as JumpStart cannot enter M-mode.

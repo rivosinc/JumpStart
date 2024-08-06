@@ -11,7 +11,6 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-extern void setup_uart(void);
 extern void putch(char c);
 
 int toupper(int c);
@@ -20,15 +19,19 @@ static int vprintk(const char *fmt, va_list args)
     __attribute__((section(".jumpstart.text.smode")));
 void mark_uart_as_enabled(void);
 
-__attribute__((
-    section(".jumpstart.data.smode"))) static uint8_t uart_initialized = 0;
+__attribute__((section(
+    ".jumpstart.data.smode"))) static volatile uint8_t uart_initialized = 0;
 
 __attribute__((
     section(".jumpstart.data.smode"))) static spinlock_t printk_lock = 0;
 
-__attribute__((section(".jumpstart.text.mmode"))) void
+__attribute__((section(".jumpstart.text.smode"))) void
 mark_uart_as_enabled(void) {
   uart_initialized = 1;
+}
+
+__attribute__((section(".jumpstart.text.smode"))) int is_uart_enabled(void) {
+  return uart_initialized == 1;
 }
 
 __attribute__((section(".jumpstart.text.smode"))) int puts(const char *str) {
@@ -66,7 +69,7 @@ static int vprintk(const char *fmt, va_list args) {
 __attribute__((section(".jumpstart.text.smode"))) int printk(const char *fmt,
                                                              ...) {
   if (uart_initialized == 0) {
-    jumpstart_smode_fail();
+    return 0;
   }
 
   va_list args;

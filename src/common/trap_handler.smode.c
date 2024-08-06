@@ -87,22 +87,24 @@ get_smode_trap_handler_override(uint64_t mcause) {
     }
 
     return trap_overrides->smode_interrupt_handler_overrides[exception_code];
-  } else {
-    if (exception_code >= NUM_SMODE_EXCEPTION_HANDLER_OVERRIDES) {
-      jumpstart_smode_fail();
-    }
-
-    return trap_overrides->smode_exception_handler_overrides[exception_code];
   }
 
-  jumpstart_smode_fail();
+  if (exception_code >= NUM_SMODE_EXCEPTION_HANDLER_OVERRIDES) {
+    jumpstart_smode_fail();
+  }
+
+  return trap_overrides->smode_exception_handler_overrides[exception_code];
 }
 
-__attribute__((section(".jumpstart.text.mmode"))) void
-register_mmode_trap_handler_override(uint64_t mcause,
-                                     uint64_t handler_address) {
+__attribute__((section(".jumpstart.text.smode"))) void
+register_vsmode_trap_handler_override(uint64_t mcause,
+                                      uint64_t handler_address) {
+  if (get_thread_attributes_current_v_bit_from_smode() != 1) {
+    jumpstart_vsmode_fail();
+  }
+
   uint64_t trap_override_struct_address =
-      get_thread_attributes_trap_override_struct_address_from_mmode();
+      get_thread_attributes_trap_override_struct_address_from_smode();
 
   struct trap_override_attributes *trap_overrides =
       (struct trap_override_attributes *)trap_override_struct_address;
@@ -111,26 +113,30 @@ register_mmode_trap_handler_override(uint64_t mcause,
   uint64_t interrupt = mcause & MCAUSE_INT_FLAG;
 
   if (interrupt) {
-    if (exception_code >= NUM_MMODE_INTERRUPT_HANDLER_OVERRIDES) {
-      jumpstart_mmode_fail();
+    if (exception_code >= NUM_VSMODE_INTERRUPT_HANDLER_OVERRIDES) {
+      jumpstart_vsmode_fail();
     }
 
-    trap_overrides->mmode_interrupt_handler_overrides[exception_code] =
+    trap_overrides->vsmode_interrupt_handler_overrides[exception_code] =
         handler_address;
   } else {
-    if (exception_code >= NUM_MMODE_EXCEPTION_HANDLER_OVERRIDES) {
-      jumpstart_mmode_fail();
+    if (exception_code >= NUM_VSMODE_EXCEPTION_HANDLER_OVERRIDES) {
+      jumpstart_vsmode_fail();
     }
 
-    trap_overrides->mmode_exception_handler_overrides[exception_code] =
+    trap_overrides->vsmode_exception_handler_overrides[exception_code] =
         handler_address;
   }
 }
 
-__attribute__((section(".jumpstart.text.mmode"))) void
-deregister_mmode_trap_handler_override(uint64_t mcause) {
+__attribute__((section(".jumpstart.text.smode"))) void
+deregister_vsmode_trap_handler_override(uint64_t mcause) {
+  if (get_thread_attributes_current_v_bit_from_smode() != 1) {
+    jumpstart_vsmode_fail();
+  }
+
   uint64_t trap_override_struct_address =
-      get_thread_attributes_trap_override_struct_address_from_mmode();
+      get_thread_attributes_trap_override_struct_address_from_smode();
 
   struct trap_override_attributes *trap_overrides =
       (struct trap_override_attributes *)trap_override_struct_address;
@@ -139,34 +145,38 @@ deregister_mmode_trap_handler_override(uint64_t mcause) {
   uint64_t interrupt = mcause & MCAUSE_INT_FLAG;
 
   if (interrupt) {
-    if (exception_code >= NUM_MMODE_INTERRUPT_HANDLER_OVERRIDES) {
-      jumpstart_mmode_fail();
+    if (exception_code >= NUM_VSMODE_INTERRUPT_HANDLER_OVERRIDES) {
+      jumpstart_vsmode_fail();
     }
 
-    if (trap_overrides->mmode_interrupt_handler_overrides[exception_code] ==
+    if (trap_overrides->vsmode_interrupt_handler_overrides[exception_code] ==
         0x0) {
-      jumpstart_mmode_fail();
+      jumpstart_vsmode_fail();
     }
 
-    trap_overrides->mmode_interrupt_handler_overrides[exception_code] = 0x0;
+    trap_overrides->vsmode_interrupt_handler_overrides[exception_code] = 0x0;
   } else {
-    if (exception_code >= NUM_MMODE_EXCEPTION_HANDLER_OVERRIDES) {
-      jumpstart_mmode_fail();
+    if (exception_code >= NUM_VSMODE_EXCEPTION_HANDLER_OVERRIDES) {
+      jumpstart_vsmode_fail();
     }
 
-    if (trap_overrides->mmode_exception_handler_overrides[exception_code] ==
-        0) {
-      jumpstart_mmode_fail();
+    if (trap_overrides->vsmode_exception_handler_overrides[exception_code] ==
+        0x0) {
+      jumpstart_vsmode_fail();
     }
 
-    trap_overrides->mmode_exception_handler_overrides[exception_code] = 0x0;
+    trap_overrides->vsmode_exception_handler_overrides[exception_code] = 0x0;
   }
 }
 
-__attribute__((section(".jumpstart.text.mmode"))) uint64_t
-get_mmode_trap_handler_override(uint64_t mcause) {
+__attribute__((section(".jumpstart.text.smode"))) uint64_t
+get_vsmode_trap_handler_override(uint64_t mcause) {
+  if (get_thread_attributes_current_v_bit_from_smode() != 1) {
+    jumpstart_vsmode_fail();
+  }
+
   uint64_t trap_override_struct_address =
-      get_thread_attributes_trap_override_struct_address_from_mmode();
+      get_thread_attributes_trap_override_struct_address_from_smode();
 
   struct trap_override_attributes *trap_overrides =
       (struct trap_override_attributes *)trap_override_struct_address;
@@ -175,18 +185,16 @@ get_mmode_trap_handler_override(uint64_t mcause) {
   uint64_t interrupt = mcause & MCAUSE_INT_FLAG;
 
   if (interrupt) {
-    if (exception_code >= NUM_MMODE_INTERRUPT_HANDLER_OVERRIDES) {
-      jumpstart_mmode_fail();
+    if (exception_code >= NUM_VSMODE_INTERRUPT_HANDLER_OVERRIDES) {
+      jumpstart_vsmode_fail();
     }
 
-    return trap_overrides->mmode_interrupt_handler_overrides[exception_code];
-  } else {
-    if (exception_code >= NUM_MMODE_EXCEPTION_HANDLER_OVERRIDES) {
-      jumpstart_mmode_fail();
-    }
-
-    return trap_overrides->mmode_exception_handler_overrides[exception_code];
+    return trap_overrides->vsmode_interrupt_handler_overrides[exception_code];
   }
 
-  jumpstart_mmode_fail();
+  if (exception_code >= NUM_VSMODE_EXCEPTION_HANDLER_OVERRIDES) {
+    jumpstart_vsmode_fail();
+  }
+
+  return trap_overrides->vsmode_exception_handler_overrides[exception_code];
 }

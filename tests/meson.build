@@ -6,23 +6,35 @@ fs = import('fs')
 
 source_suffixes = ['.S', '.c']
 
-subdir('common')
+start_in_mmode_tests = [] # diag main() is in mmode
+start_in_smode_tests = [] # diag main() is in smode
+firmware_boot_tests  = [] # diag needs boot_config!=fw-none
 
-unit_tests = common_tests
-unit_tests_disabled_on_qemu = common_tests_disabled_on_qemu
-unit_tests_disabled_on_spike = common_tests_disabled_on_spike
+tests_disabled_on_qemu = []
+tests_disabled_on_spike = []
+tests_disabled_for_sbi_firmware_boot = []
+
+subdir('common')
+test_root_directories = [meson.current_source_dir() + '/' + 'common']
 
 if get_option('rivos_internal_build') == true
   subdir('rivos_internal')
-  unit_tests += rivos_internal_tests
-  unit_tests_disabled_on_qemu += rivos_internal_tests_disabled_on_qemu
-  unit_tests_disabled_on_spike += rivos_internal_tests_disabled_on_spike
+  test_root_directories += [meson.current_source_dir() + '/' + 'rivos_internal']
 endif
 
-if get_option('diag_target') == 'qemu'
-  diag_source_generator_command += ['--override_diag_attributes=in_qemu_mode=True']
+unit_tests = []
+start_in_mmode_tests + start_in_smode_tests
+
+if 'mmode' in riscv_priv_modes_enabled
+  unit_tests += start_in_mmode_tests
+endif
+if 'smode' in riscv_priv_modes_enabled
+  unit_tests += start_in_smode_tests
 endif
 
+if get_option('boot_config') != 'fw-none'
+  unit_tests += firmware_boot_tests
+endif
 
 foreach unit_test : unit_tests
   test_name = unit_test.get(0)
@@ -32,49 +44,53 @@ foreach unit_test : unit_tests
 
   test_expected_to_fail = unit_test.get(3, false)
 
-  test_disabled_on_qemu = test_name in unit_tests_disabled_on_qemu
-  test_disabled_on_spike = test_name in unit_tests_disabled_on_spike
+  test_disabled_on_qemu = test_name in tests_disabled_on_qemu
+  test_disabled_on_spike = test_name in tests_disabled_on_spike
+  test_disabled_for_sbi_firmware_boot = test_name in tests_disabled_for_sbi_firmware_boot
 
   if get_option('diag_target') == 'spike' and test_disabled_on_spike == true
     continue
   elif get_option('diag_target') == 'qemu' and test_disabled_on_qemu == true
     continue
+  elif get_option('boot_config') == 'fw-sbi' and test_disabled_for_sbi_firmware_boot == true
+    continue
   endif
 
-  if fs.is_file(meson.current_source_dir() + '/' + 'common' + '/' + test_name + '.diag_attributes.yaml')
-    diag_attributes_yaml = files('common' + '/' + test_name + '.diag_attributes.yaml')
-  elif get_option('rivos_internal_build') == true
-    if fs.is_file(meson.current_source_dir() + '/' + 'rivos_internal' + '/' + test_name + '.diag_attributes.yaml')
-      diag_attributes_yaml = files('rivos_internal' + '/' + test_name + '.diag_attributes.yaml')
+  test_sources = []
+  foreach test_root_dir : test_root_directories
+    foreach suffix : source_suffixes
+      if fs.is_file(test_root_dir + '/' + test_name + '/' + test_name + suffix)
+        test_sources += files(test_root_dir + '/' + test_name + '/' + test_name + suffix)
+      endif
+    endforeach
+
+    if fs.is_file(test_root_dir + '/' + test_name + '/' + test_name + '.diag_attributes.yaml')
+      diag_attributes_yaml = files(test_root_dir + '/' + test_name + '/' + test_name + '.diag_attributes.yaml')
+      break
     endif
-  endif
+  endforeach
 
+  test_defines_file_name = test_name + '.defines.h'
   diag_source_generator_output = custom_target(
                                 'Generate diag attributes related source files for ' + test_name,
                                 input : diag_source_generator_common_inputs + [diag_attributes_yaml],
                                 output : [test_name + '.generated.S',
-                                          test_name + '.linker_script.ld'],
+                                          test_name + '.linker_script.ld',
+                                          test_name + '.defines.h'],
                                 command : diag_source_generator_command)
 
-  test_sources = [diag_source_generator_output[0]]
-  linker_script = diag_source_generator_output[1].full_path()
-
-  foreach suffix : source_suffixes
-    if fs.is_file(meson.current_source_dir() + '/' + 'common' + '/' + test_name + suffix)
-      test_sources += ['common' + '/' + test_name + suffix]
-    elif get_option('rivos_internal_build') == true
-      if fs.is_file(meson.current_source_dir() + '/' + 'rivos_internal' + '/' + test_name + suffix)
-        test_sources += ['rivos_internal' + '/' + test_name + suffix]
-      endif
-    endif
-
-  endforeach
+  test_sources += diag_source_generator_output[0]
+  linker_script = diag_source_generator_output[1]
+  test_defines = diag_source_generator_output[2]
 
   test_exe = executable(test_name,
                         sources: [jumpstart_sources, test_sources],
                         include_directories: jumpstart_includes,
-                        c_args: default_c_args_list,
-                        link_args: ['-T' + linker_script, '-nostdlib'])
+                        c_args: ['-include', test_defines.full_path()],
+                        link_args: ['-T' + linker_script.full_path()],
+                        link_depends: linker_script,
+                        dependencies: declare_dependency(sources: test_defines)
+                        )
 
   if get_option('diag_generate_disassembly') == true
     custom_target(test_name + '_dump',
@@ -96,6 +112,7 @@ foreach unit_test : unit_tests
           spike,
           args : [spike_args, test_exe],
           suite:'basic',
+          timeout: get_option('spike_timeout'),
           should_fail: test_expected_to_fail)
   elif get_option('diag_target') == 'qemu'
     qemu_args = default_qemu_args

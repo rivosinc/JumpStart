@@ -27,7 +27,7 @@
 #define read_write_csr(reg, val)                                               \
   ({                                                                           \
     unsigned long __v = (unsigned long)(val);                                  \
-    __asm__ __volatile__("csrrw %0, " #reg ", %1"                              \
+    __asm__ __volatile__("csrrw %0, " __ASM_STR(reg) ", %1"                    \
                          : "=r"(__v)                                           \
                          : "rK"(__v)                                           \
                          : "memory");                                          \
@@ -59,17 +59,20 @@
     __v;                                                                       \
   })
 
-#define STRINGIFY(x)      #x
-#define ADD_QUOTES(x)     STRINGIFY(x)
+#define STRINGIFY(x)  #x
+#define ADD_QUOTES(x) STRINGIFY(x)
 // Disables instruction by instruction checking when running on the simulator,
-#define disable_checktc() __asm__ __volatile__(ADD_QUOTES(CHECKTC_DISABLE))
+#define disable_checktc()                                                      \
+  __asm__ __volatile__(ADD_QUOTES(CHECKTC_DISABLE)::: "memory")
 // Enables instruction by instruction checking when running on the simulator,
-#define enable_checktc()  __asm__ __volatile__(ADD_QUOTES(CHECKTC_ENABLE))
+#define enable_checktc()                                                       \
+  __asm__ __volatile__(ADD_QUOTES(CHECKTC_ENABLE)::: "memory")
 
 // The functions run through the run_function_in_*mode() functions can be
 // passed up to 6 arguments.
 int run_function_in_umode(uint64_t function_address, ...);
 int run_function_in_smode(uint64_t function_address, ...);
+int run_function_in_vsmode(uint64_t function_address, ...);
 
 void disable_mmu_from_smode(void);
 
@@ -78,29 +81,53 @@ void register_mmode_trap_handler_override(uint64_t mcause,
                                           uint64_t handler_address);
 void deregister_mmode_trap_handler_override(uint64_t mcause);
 
-uint64_t get_smode_trap_handler_override(uint64_t mcause);
-void register_smode_trap_handler_override(uint64_t mcause,
+uint64_t get_smode_trap_handler_override(uint64_t scause);
+void register_smode_trap_handler_override(uint64_t scause,
                                           uint64_t handler_address);
-void deregister_smode_trap_handler_override(uint64_t mcause);
+void deregister_smode_trap_handler_override(uint64_t scause);
+
+uint64_t get_vsmode_trap_handler_override(uint64_t vscause);
+void register_vsmode_trap_handler_override(uint64_t vscause,
+                                           uint64_t handler_address);
+void deregister_vsmode_trap_handler_override(uint64_t vscause);
 
 uint64_t get_thread_attributes_bookend_magic_number_from_smode(void);
 uint64_t get_thread_attributes_trap_override_struct_address_from_smode(void);
 uint8_t get_thread_attributes_current_mode_from_smode(void);
+uint8_t get_thread_attributes_current_v_bit_from_smode(void);
 uint8_t get_thread_attributes_hart_id_from_smode(void);
+uint8_t get_thread_attributes_vsmode_setup_done_from_smode(void);
+uint8_t
+get_thread_attributes_num_context_saves_remaining_in_smode_from_smode(void);
+uint8_t
+get_thread_attributes_num_context_saves_remaining_in_smode_from_mmode(void);
 
 uint64_t get_thread_attributes_bookend_magic_number_from_mmode(void);
 uint64_t get_thread_attributes_trap_override_struct_address_from_mmode(void);
 uint8_t get_thread_attributes_current_mode_from_mmode(void);
+uint8_t get_thread_attributes_current_v_bit_from_mmode(void);
 uint8_t get_thread_attributes_hart_id_from_mmode(void);
-
-uint8_t get_diag_satp_mode_from_smode(void);
-
-uint64_t get_active_hart_mask_from_smode(void);
-uint64_t get_active_hart_mask_from_mmode(void);
+uint8_t get_thread_attributes_smode_setup_done_from_mmode(void);
+uint8_t
+get_thread_attributes_num_context_saves_remaining_in_mmode_from_mmode(void);
+uint8_t
+get_thread_attributes_num_context_saves_remaining_in_mmode_from_smode(void);
 
 void sync_all_harts_from_smode(void);
 void sync_all_harts_from_mmode(void);
 
 void jumpstart_umode_fail(void) __attribute__((noreturn));
 void jumpstart_smode_fail(void) __attribute__((noreturn));
+void jumpstart_vsmode_fail(void) __attribute__((noreturn));
 void jumpstart_mmode_fail(void) __attribute__((noreturn));
+
+uint64_t get_mepc_for_current_exception(void);
+void set_mepc_for_current_exception(uint64_t new_mepc);
+
+uint64_t get_sepc_for_current_exception(void);
+void set_sepc_for_current_exception(uint64_t new_sepc);
+
+void exit_from_smode(uint64_t return_code) __attribute__((noreturn));
+
+#define __attr_stext __attribute__((section(".jumpstart.text.smode")))
+#define __attr_mtext __attribute__((section(".jumpstart.text.mmode")))

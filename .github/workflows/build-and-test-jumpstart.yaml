@@ -102,6 +102,6 @@ jobs:
       with:
         action: test
         directory: build
-        setup-options: --cross-file cross-file.txt --buildtype release -Dspike_binary=/opt/riscv/spike/bin/spike
+        setup-options: --cross-file cross_compile/public/gcc_options.txt --cross-file cross_compile/gcc.txt --buildtype release -Dspike_binary=/opt/riscv/spike/bin/spike
         options: --verbose
         meson-version: 1.2.0

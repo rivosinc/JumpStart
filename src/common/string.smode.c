@@ -30,12 +30,10 @@ inline int tolower(int c) {
   return isupper(c) ? c - ('A' - 'a') : c;
 }
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wsuggest-attribute=const"
-__attribute__((section(".jumpstart.text.smode"))) int toupper(int c) {
+__attribute__((section(".jumpstart.text.smode"))) __attribute__((const)) int
+toupper(int c) {
   return islower(c) ? c + ('A' - 'a') : c;
 }
-#pragma GCC diagnostic pop
 
 __attribute__((section(".jumpstart.text.smode"))) size_t
 strlen(const char *str) {
@@ -81,13 +79,14 @@ static char *ksprintn(char *nbuf, uintmax_t num, int base, int *lenp,
 __attribute__((section(".jumpstart.text.smode"))) int
 vsnprintf(char *str, size_t size, char const *fmt, va_list ap) {
 #define PCHAR(c)                                                               \
-  {                                                                            \
+  do {                                                                         \
     if (size >= 2) {                                                           \
       *str++ = c;                                                              \
       size--;                                                                  \
     }                                                                          \
     retval++;                                                                  \
-  }
+  } while (0)
+
 #define MAXNBUF 65
   char nbuf[MAXNBUF];
   const char *p, *percent;
@@ -160,15 +159,23 @@ vsnprintf(char *str, size_t size, char const *fmt, va_list ap) {
         padc = '0';
         goto reswitch;
       }
-      /* fallthrough */
+      __attribute__((fallthrough));
     case '1':
+      __attribute__((fallthrough));
     case '2':
+      __attribute__((fallthrough));
     case '3':
+      __attribute__((fallthrough));
     case '4':
+      __attribute__((fallthrough));
     case '5':
+      __attribute__((fallthrough));
     case '6':
+      __attribute__((fallthrough));
     case '7':
+      __attribute__((fallthrough));
     case '8':
+      __attribute__((fallthrough));
     case '9':
       for (n = 0;; ++fmt) {
         n = n * 10 + ch - '0';
@@ -268,9 +275,7 @@ vsnprintf(char *str, size_t size, char const *fmt, va_list ap) {
       goto handle_nosign;
     case 'X':
       upper = 1;
-#if defined(__GNUC__) && !defined(__clang__)
       __attribute__((fallthrough));
-#endif
     case 'x':
       base = 16;
       goto handle_nosign;

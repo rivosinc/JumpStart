@@ -17,7 +17,11 @@
                  (((uint64_t)(val) * ((mask) & ~((mask) << 1))) & \
                  (uint64_t)(mask)))
 
+/* Create a bit mask with bits set from start to end inclusive. */
+#define BIT_MASK(start, end) ((~0ULL >> (64 - ((end) - (start) + 1))) << (start))
+
 #define BIT(nr)                 (1UL << (nr))
+#define ALIGN_UP_SIZE(base, size) (((base) + (size) - 1) & ~((uint64_t)(size)-1))
 
 /* Extension context status mask */
 #define EXT_STATUS_MASK     0x3ULL
@@ -360,6 +364,10 @@
 /* Enhanced Physical Memory Protection (ePMP) */
 #define CSR_MSECCFG         0x747
 #define CSR_MSECCFGH        0x757
+
+#define MSECCFG_SSEED       (1ULL << 9)
+#define MSECCFG_USEED       (1ULL << 8)
+
 /* Physical Memory Protection */
 #define CSR_PMPCFG0         0x3a0
 #define CSR_PMPCFG1         0x3a1
@@ -656,6 +664,16 @@
 #define SATP64_PPN          0x00000FFFFFFFFFFFULL
 #define SATP64_MODE_SHIFT   60
 
+#define VSATP64_MODE SATP64_MODE
+#define VSATP64_ASID SATP64_ASID
+#define VSATP64_PPN SATP64_PPN
+#define VSATP64_MODE_SHIFT SATP64_MODE_SHIFT
+
+#define HGATP64_MODE SATP64_MODE
+#define HGATP64_ASID SATP64_ASID
+#define HGATP64_PPN SATP64_PPN
+#define HGATP64_MODE_SHIFT SATP64_MODE_SHIFT
+
 /* VM modes (satp.mode) privileged ISA 1.10 */
 #define VM_1_10_MBARE       0
 #define VM_1_10_SV32        1
@@ -756,11 +774,13 @@
 #define SIP_SSIP                           MIP_SSIP
 #define SIP_STIP                           MIP_STIP
 #define SIP_SEIP                           MIP_SEIP
+#define SIP_SGEIP                          MIP_SGEIP
 #define SIP_LCOFIP                         MIP_LCOFIP
 
 /* MIE masks */
 #define MIE_SEIE                           (1 << IRQ_S_EXT)
 #define MIE_UEIE                           (1 << IRQ_U_EXT)
+#define MIE_MTIE                           (1 << IRQ_M_TIMER)
 #define MIE_STIE                           (1 << IRQ_S_TIMER)
 #define MIE_UTIE                           (1 << IRQ_U_TIMER)
 #define MIE_SSIE                           (1 << IRQ_S_SOFT)
@@ -909,11 +929,13 @@
 #define SISELECT_SMCDELEG_LAST            0x5F
 
 /* seed CSR bits */
-#define SEED_OPST                        (0b11 << 30)
-#define SEED_OPST_BIST                   (0b00 << 30)
-#define SEED_OPST_WAIT                   (0b01 << 30)
-#define SEED_OPST_ES16                   (0b10 << 30)
-#define SEED_OPST_DEAD                   (0b11 << 30)
+#define SEED_OPST                          (0b11U << 30)
+#define SEED_OPST_BIST                     0b00U
+#define SEED_OPST_WAIT                     0b01U
+#define SEED_OPST_ES16                     0b10U
+#define SEED_OPST_DEAD                     0b11U
+#define SEED_ENTROPY_MASK                  0xFFFFU
+
 /* PMU related bits */
 #define MIE_LCOFIE                         (1 << IRQ_PMU_OVF)
 

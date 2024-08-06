@@ -1,0 +1,16 @@
+# SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+
+[binaries]
+c = 'clang-18'
+strip = 'llvm-strip'
+objdump = 'riscv64-unknown-elf-objdump'
+# Use the gcc linker.
+c_ld = 'bfd'
+
+[built-in options]
+c_args = target_args + ['-no-integrated-as',
+                        '-fno-pic',
+                       ]
+c_link_args = target_args + ['-nostdlib', '-static']
