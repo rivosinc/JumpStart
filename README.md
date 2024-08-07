@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
+SPDX-FileCopyrightText: 2023 - 2025 Rivos Inc.
 
 SPDX-License-Identifier: Apache-2.0
 -->
@@ -16,6 +16,7 @@ JumpStart requires the following tools to be available in your path:
 * [meson](https://mesonbuild.com)
 * [riscv-gnu-toolchain](https://github.com/riscv-collab/riscv-gnu-toolchain)
 * [Spike](https://github.com/riscv-software-src/riscv-isa-sim)
+* [just](https://github.com/casey/just) (command runner)
 
 JumpStart has been tested on Ubuntu 22.04 and macOS.
 
@@ -24,9 +25,13 @@ JumpStart has been tested on Ubuntu 22.04 and macOS.
 This will build JumpStart and run the unit tests.
 
 ```shell
-meson setup builddir --cross-file cross_compile/public/gcc_options.txt --cross-file cross_compile/gcc.txt --buildtype release
-meson compile -C builddir
-meson test -C builddir
+just test gcc release spike
+```
+
+To see all the possible test targets, run:
+
+```shell
+just --list
 ```
 
 ## Building and Running Diags
