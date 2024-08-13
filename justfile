@@ -76,5 +76,4 @@ test-all-gcc:
     @just test-all-spike-gcc
 
 clean:
-    @just clean_internal gcc debug spike
-    @just clean_internal gcc release spike
+    rm -rf *.builddir
