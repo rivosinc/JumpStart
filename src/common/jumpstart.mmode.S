@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
+# SPDX-FileCopyrightText: 2023 - 2025 Rivos Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -96,6 +96,8 @@ _mmode_start:
   li t0, MIP_MEIP
   csrw mie, t0
 
+  jal program_mstateen
+
   jal program_menvcfg
 
   jal enable_mmode_float_and_vector_instructions
@@ -174,6 +176,12 @@ program_henvcfg:
   li t0, (HENVCFG_CBIE | HENVCFG_CBCFE | HENVCFG_CBZE | HENVCFG_PBMTE)
   csrrs t1, henvcfg, t0
 
+  ret
+
+.global program_mstateen
+program_mstateen:
+  li t0, (SMSTATEEN0_HSCONTXT | SMSTATEEN0_IMSIC | SMSTATEEN0_AIA | SMSTATEEN0_SVSLCT | SMSTATEEN0_HSENVCFG | SMSTATEEN_STATEEN)
+  csrw mstateen0, t0
   ret
 
 .global program_menvcfg
