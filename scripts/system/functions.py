@@ -53,6 +53,10 @@ def run_command(command, run_directory):
             log.error(stdout.decode())
             log.error(stderr.decode())
             raise Exception(f"Command: {' '.join(command)} failed.")
+
+        log.debug(stdout.decode())
+        log.debug(stderr.decode())
+
     except KeyboardInterrupt:
         log.error(f"Command: {' '.join(command)} interrupted.")
         if group_pid is not None:
