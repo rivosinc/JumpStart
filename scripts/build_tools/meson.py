@@ -156,7 +156,7 @@ class Meson:
             )
 
     def setup(self):
-        log.debug(
+        log.info(
             f"Running meson setup for diag: {self.diag_build_target.diag_source.get_diag_src_dir()}"
         )
 
@@ -200,7 +200,7 @@ class Meson:
             )
 
     def compile(self):
-        log.debug(
+        log.info(
             f"Running meson compile for diag: {self.diag_build_target.diag_source.get_diag_src_dir()}"
         )
 
@@ -221,7 +221,7 @@ class Meson:
         log.debug(f"Diag disassembly: {self.diag_build_target.get_build_asset('disasm')}")
 
     def test(self):
-        log.debug(
+        log.info(
             f"Running meson test for diag: {self.diag_build_target.diag_source.get_diag_src_dir()}"
         )
 
