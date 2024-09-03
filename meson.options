@@ -50,15 +50,11 @@ option('boot_config',
                      '- fw-sbi  : expects handover to jumpstart in smode with sbi interface (Resident M-Mode fw). \n' +
                      'Note: highest privilege level in jumpstart binary will be the entry priv level' )
 
-option('smode_start_address',
-       type : 'string',
-       value : '0x90000000',
-       description : 'Address to place the smode code.')
 
-option('mmode_start_address',
-       type : 'string',
-       value : '0x90000000',
-       description : 'Address to place the mmode code.')
+option('batch_mode',
+       type : 'boolean',
+       value : false,
+       description : 'Run Tests with batch runner.')
 
 option('spike_binary',
        type : 'string',
