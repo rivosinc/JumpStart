@@ -220,6 +220,12 @@ enable_mmode_float_and_vector_instructions:
   li t0, (MSTATUS_VS | MSTATUS_FS)
   csrrs t1, mstatus, t0
 
+  # Set vtype.vill=0 by running a dummy vsetvl instruction.
+  # There are vector instructions (such as vmv1r.v) that
+  # can run without running a vsetvl instruction first so we
+  # need to make sure that the reset value of vill=1 has been cleared.
+  vsetivli        zero, 8, e8, m1, ta, ma
+
   ret
 
 .global delegate_mmode_resources_to_smode
