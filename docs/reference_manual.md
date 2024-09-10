@@ -53,7 +53,9 @@ Default: `False`.
 
 ### `satp_mode`, `vstap_mode`, `hgatp_mode`
 
-The MMU mode (SV39, SV48, etc.) that will be programmed into the corresponding *ATP register.
+The MMU mode that will be programmed into the corresponding *ATP register.
+
+Valid values: `bare`, `sv39`, `sv48`, `sv39x4`, `sv48x4`.
 
 ### `start_test_in_mmode`
 
