@@ -42,6 +42,7 @@ start_in_smode_tests += [
   ['test048', 'Run C/Assembly functions with run_function_in_vumode() from VS mode.'],
   ['test049', 'Exit with jumpstart_vumode_fail() to test umode fail path.', '', true],
   ['test050', 'Exit with jumpstart_vsmode_fail() to test fail path.', '', true],
+  ['test051', 'MMU with SATP.mode = bare.'],
 ]
 
 start_in_mmode_tests += [

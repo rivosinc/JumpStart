@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
+# SPDX-FileCopyrightText: 2023 - 2025 Rivos Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -150,10 +150,13 @@ class SourceGenerator:
     def create_page_tables_data(self):
         self.page_tables = {}
         for stage in TranslationStage.get_enabled_stages():
+            translation_mode = TranslationStage.get_selected_mode_for_stage(stage)
+            if translation_mode == "bare":
+                # No pagetable mappings for the bare mode.
+                continue
+
             self.page_tables[stage] = PageTables(
-                self.jumpstart_source_attributes["diag_attributes"][
-                    f"{TranslationStage.get_atp_register(stage)}_mode"
-                ],
+                translation_mode,
                 self.jumpstart_source_attributes["diag_attributes"][
                     "max_num_pagetable_pages_per_stage"
                 ],
@@ -186,15 +189,17 @@ class SourceGenerator:
         per_stage_pagetable_mappings = {}
 
         for stage in TranslationStage.get_enabled_stages():
+            translation_mode = TranslationStage.get_selected_mode_for_stage(stage)
+            if translation_mode == "bare":
+                # No pagetable mappings for the bare mode.
+                continue
+
             section_mapping = common_attributes.copy()
             source_address_type = TranslationStage.get_translates_from(stage)
             dest_address_type = TranslationStage.get_translates_to(stage)
 
             # The start of the pagetables have to be aligned to the size of the
             # root (first level) page table.
-            translation_mode = self.jumpstart_source_attributes["diag_attributes"][
-                f"{TranslationStage.get_atp_register(stage)}_mode"
-            ]
             root_page_table_size = PageTableAttributes.mode_attributes[translation_mode][
                 "pagetable_sizes"
             ][0]
@@ -328,6 +333,11 @@ class SourceGenerator:
         for section_name in self.jumpstart_source_attributes[area_name]:
             section_mapping = self.jumpstart_source_attributes[area_name][section_name].copy()
             section_mapping["translation_stage"] = stage
+
+            if TranslationStage.get_selected_mode_for_stage(stage) == "bare":
+                section_mapping["no_pte_allocation"] = True
+                section_mapping.pop("xwr", None)
+                section_mapping.pop("umode", None)
 
             # This is where we pick up num_pages_for_jumpstart_*mode_* attributes from the diag_attributes
             #   Example: num_pages_for_jumpstart_smode_bss, num_pages_for_jumpstart_smode_rodata, etc.
@@ -571,10 +581,13 @@ sync_all_harts_from_{mode}:
                 atp_register = TranslationStage.get_atp_register(stage)
                 file_descriptor.write(f"    li   t0, {atp_register.upper()}_MODE\n")
                 file_descriptor.write(f"    slli  t0, t0, {atp_register.upper()}64_MODE_SHIFT\n")
-                file_descriptor.write(f"    la t1, {self.page_tables[stage].get_asm_label()}\n")
-                file_descriptor.write("    srai t1, t1, PAGE_OFFSET\n")
-                file_descriptor.write("    add  t1, t1, t0\n")
-                file_descriptor.write(f"    csrw  {atp_register}, t1\n")
+                if stage in self.page_tables:
+                    file_descriptor.write(f"    la t1, {self.page_tables[stage].get_asm_label()}\n")
+                    file_descriptor.write("    srai t1, t1, PAGE_OFFSET\n")
+                    file_descriptor.write("    add  t0, t1, t0\n")
+                else:
+                    assert TranslationStage.get_selected_mode_for_stage(stage) == "bare"
+                file_descriptor.write(f"    csrw  {atp_register}, t0\n")
 
             file_descriptor.write("    sfence.vma\n")
             if self.jumpstart_source_attributes["diag_attributes"]["enable_virtualization"] is True:
@@ -584,6 +597,8 @@ sync_all_harts_from_{mode}:
 
     def generate_page_tables(self, file_descriptor):
         for stage in TranslationStage.get_enabled_stages():
+            if stage not in self.page_tables:
+                continue
 
             file_descriptor.write(f'.section .jumpstart.rodata.{stage}_stage.pagetables, "a"\n\n')
 

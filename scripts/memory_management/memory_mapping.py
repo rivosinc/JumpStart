@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2024 Rivos Inc.
+# SPDX-FileCopyrightText: 2024 - 2025 Rivos Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -184,17 +184,23 @@ class MemoryMapping:
                 f"{destination_address_type.upper()} value {self.get_field(destination_address_type)} is not aligned with page_size {self.get_field('page_size')}"
             )
 
-        # Remove the source and destination addresses from the list of address types.
+        # Check that we only have the allowed set of address types set for this
+        # mapping.
         disallowed_address_types = AddressType.get_all_address_types()
-        disallowed_address_types.remove(source_address_type)
         disallowed_address_types.remove(destination_address_type)
+        if (
+            TranslationStage.get_selected_mode_for_stage(self.get_field("translation_stage"))
+            != "bare"
+        ):
+            # Only non-bare mappings can have source address type set.
+            disallowed_address_types.remove(source_address_type)
 
-        assert all(
-            [
-                address_type in self.fields.keys() and self.get_field(address_type) is None
-                for address_type in disallowed_address_types
-            ]
-        ), f"Disallowed address type in: {disallowed_address_types} when translation_stage is set to {self.get_field('translation_stage')}"
+        for address_type in disallowed_address_types:
+            assert address_type in self.fields.keys()
+            if self.get_field(address_type) is not None:
+                raise ValueError(
+                    f"Address type '{address_type}' invalid for translation stage '{self.get_field('translation_stage')}' with translation mode '{TranslationStage.get_selected_mode_for_stage(self.get_field('translation_stage'))}' in mapping:\n{self}\n\n"
+                )
 
         # Make sure that there are only 2 address types set for this mapping.
         address_types = [
