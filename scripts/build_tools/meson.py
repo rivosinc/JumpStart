@@ -192,7 +192,12 @@ class Meson:
         )
 
         log.debug(f"Running meson setup command: {meson_setup_command}")
-        system_functions.run_command(meson_setup_command, self.jumpstart_dir)
+        return_code = system_functions.run_command(meson_setup_command, self.jumpstart_dir)
+        if return_code != 0:
+            log.error(
+                f"Meson setup failed for diag: {self.diag_build_target.diag_source.diag_name}"
+            )
+            sys.exit(return_code)
 
         if self.keep_meson_builddir is True:
             self.diag_build_target.add_build_asset(
@@ -205,18 +210,32 @@ class Meson:
         )
 
         meson_compile_command = ["meson", "compile", "-C", self.meson_builddir]
-        system_functions.run_command(meson_compile_command, self.jumpstart_dir)
+        return_code = system_functions.run_command(meson_compile_command, self.jumpstart_dir)
 
         diag_binary = os.path.join(self.meson_builddir, self.diag_binary_name)
-        if not os.path.exists(diag_binary):
-            raise Exception("diag binary not created by meson compile")
-
         diag_disasm = os.path.join(self.meson_builddir, self.diag_binary_name + ".dis")
-        if not os.path.exists(diag_disasm):
-            raise Exception("diag disasm not created by meson compile")
 
-        self.diag_build_target.add_build_asset("disasm", diag_disasm)
-        self.diag_build_target.add_build_asset("binary", diag_binary)
+        if return_code == 0:
+            if not os.path.exists(diag_binary):
+                raise Exception("diag binary not created by meson compile")
+
+            if not os.path.exists(diag_disasm):
+                raise Exception("diag disasm not created by meson compile")
+
+        # We've already checked that these exist for the passing case.
+        # They may not exist if the compile failed so check that they
+        # exist before copying them. Allows us to get partial build assets.
+        if os.path.exists(diag_disasm):
+            self.diag_build_target.add_build_asset("disasm", diag_disasm)
+        if os.path.exists(diag_binary):
+            self.diag_build_target.add_build_asset("binary", diag_binary)
+
+        if return_code != 0:
+            log.error(
+                f"meson compile failed for diag: {self.diag_build_target.diag_source.diag_name}"
+            )
+            sys.exit(return_code)
+
         log.debug(f"Diag compiled: {self.diag_build_target.get_build_asset('binary')}")
         log.debug(f"Diag disassembly: {self.diag_build_target.get_build_asset('disasm')}")
 
@@ -226,22 +245,33 @@ class Meson:
         )
 
         meson_test_command = ["meson", "test", "-C", self.meson_builddir]
-        system_functions.run_command(meson_test_command, self.jumpstart_dir)
+        return_code = system_functions.run_command(meson_test_command, self.jumpstart_dir)
 
+        expected_trace_file = None
         if self.diag_build_target.target == "spike":
-            if not os.path.exists(self.spike_trace_file):
-                raise Exception(
-                    f"Spike trace file not created by meson test: {self.spike_trace_file}"
-                )
-            self.diag_build_target.add_build_asset("spike_trace", self.spike_trace_file)
-            log.debug(f"Diag trace file: {self.diag_build_target.get_build_asset('spike_trace')}")
+            expected_trace_file = self.spike_trace_file
         elif self.diag_build_target.target == "qemu":
-            if not os.path.exists(self.qemu_trace_file):
-                raise Exception(
-                    f"Qemu trace file not created by meson test: {self.qemu_trace_file}"
-                )
-            self.diag_build_target.add_build_asset("qemu_trace", self.qemu_trace_file)
-            log.debug(f"Diag trace file: {self.diag_build_target.get_build_asset('qemu_trace')}")
+            expected_trace_file = self.qemu_trace_file
+        else:
+            raise Exception(f"Unknown target: {self.diag_build_target.target}")
+
+        if return_code == 0 and not os.path.exists(expected_trace_file):
+            raise Exception(
+                f"meson test passed but trace file not created by diag: {expected_trace_file}"
+            )
+
+        self.diag_build_target.add_build_asset(
+            f"{self.diag_build_target.target}_trace", expected_trace_file
+        )
+        log.debug(
+            f"Diag trace file: {self.diag_build_target.get_build_asset(f'{self.diag_build_target.target}_trace')}"
+        )
+
+        if return_code != 0:
+            log.error(
+                f"meson test failed for diag: {self.diag_build_target.diag_source.diag_name}.\nPartial diag build assets may have been generated in {self.diag_build_target.build_dir}\n"
+            )
+            sys.exit(return_code)
 
     def get_generated_diag(self):
         return self.diag_build_target

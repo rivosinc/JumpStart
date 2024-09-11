@@ -37,6 +37,8 @@ def find_files_with_extensions_in_dir(root, extensions):
 def run_command(command, run_directory):
     log.debug(f"Running command: {' '.join(command)}")
     group_pid = None
+    returncode = None
+
     try:
         p = subprocess.Popen(
             command,
@@ -49,12 +51,12 @@ def run_command(command, run_directory):
         stdout, stderr = p.communicate()
         returncode = p.wait()
         if returncode != 0:
-            log.error(f"Command: {' '.join(command)} failed.")
+            log.error(f"COMMAND FAILED: {' '.join(command)}")
             log.error(stdout.decode())
             log.error(stderr.decode())
-
-        log.debug(stdout.decode())
-        log.debug(stderr.decode())
+        else:
+            log.debug(stdout.decode())
+            log.debug(stderr.decode())
 
     except KeyboardInterrupt:
         log.error(f"Command: {' '.join(command)} interrupted.")
@@ -68,3 +70,5 @@ def run_command(command, run_directory):
             # and it's subprocesses.
             os.killpg(group_pid, signal.SIGTERM)
         raise Exception(f"Command: {' '.join(command)} interrupted.")
+
+    return returncode
