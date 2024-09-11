@@ -5,6 +5,9 @@
 #include "cpu_bits.h"
 #include "jumpstart.h"
 
+extern uint64_t vs_stage_pagetables_start;
+extern uint64_t g_stage_pagetables_start;
+
 // vsmode mode functions
 // The assembly functions are already tagged with the .text.vsmode section
 // attribute.
@@ -66,6 +69,28 @@ int main(void) {
   }
 
   if (get_thread_attributes_current_v_bit_from_smode() != 0) {
+    return DIAG_FAILED;
+  }
+
+  uint64_t vsatp_value = read_csr(vsatp);
+  if (get_field(vsatp_value, VSATP64_MODE) != VM_1_10_SV39) {
+    return DIAG_FAILED;
+  }
+
+  uint64_t expected_vsatp_ppn =
+      ((uint64_t)&vs_stage_pagetables_start) >> PAGE_OFFSET;
+  if (get_field(vsatp_value, VSATP64_PPN) != expected_vsatp_ppn) {
+    return DIAG_FAILED;
+  }
+
+  uint64_t hgatp_value = read_csr(hgatp);
+  if (get_field(hgatp_value, HGATP64_MODE) != VM_1_10_SV39) {
+    return DIAG_FAILED;
+  }
+
+  uint64_t expected_hgatp_ppn =
+      ((uint64_t)&g_stage_pagetables_start) >> PAGE_OFFSET;
+  if (get_field(hgatp_value, HGATP64_PPN) != expected_hgatp_ppn) {
     return DIAG_FAILED;
   }
 
