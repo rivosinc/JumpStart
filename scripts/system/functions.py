@@ -52,7 +52,6 @@ def run_command(command, run_directory):
             log.error(f"Command: {' '.join(command)} failed.")
             log.error(stdout.decode())
             log.error(stderr.decode())
-            raise Exception(f"Command: {' '.join(command)} failed.")
 
         log.debug(stdout.decode())
         log.debug(stderr.decode())
