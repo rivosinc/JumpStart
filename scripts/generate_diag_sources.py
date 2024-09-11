@@ -110,11 +110,20 @@ class SourceGenerator:
                 cmd_line_diag_attribute_override_dict,
             )
 
+        assert "enable_virtualization" in self.jumpstart_source_attributes["diag_attributes"]
         TranslationStage.set_virtualization_enabled(
             self.jumpstart_source_attributes["diag_attributes"]["enable_virtualization"]
         )
 
         self.sanity_check_diag_attributes()
+
+        for stage in TranslationStage.get_enabled_stages():
+            TranslationStage.set_selected_mode_for_stage(
+                stage,
+                self.jumpstart_source_attributes["diag_attributes"][
+                    f"{TranslationStage.get_atp_register(stage)}_mode"
+                ],
+            )
 
     def process_memory_map(self):
         self.memory_map = {stage: [] for stage in TranslationStage.get_enabled_stages()}
@@ -429,9 +438,8 @@ class SourceGenerator:
 
             for stage in TranslationStage.get_enabled_stages():
                 atp_register = TranslationStage.get_atp_register(stage)
-                assert f"{atp_register}_mode" in diag_attributes
                 diag_attributes[f"{atp_register}_mode"] = TranslationMode.get_encoding(
-                    diag_attributes[f"{atp_register}_mode"]
+                    TranslationStage.get_selected_mode_for_stage(stage)
                 )
 
             for attribute in diag_attributes:
@@ -634,9 +642,7 @@ sync_all_harts_from_{mode}:
                 log.warning(f"{stage} Stage: Translation FAILED: {e}\n\n")
 
     def translate_stage(self, stage, source_address):
-        translation_mode = self.jumpstart_source_attributes["diag_attributes"][
-            f"{TranslationStage.get_atp_register(stage)}_mode"
-        ]
+        translation_mode = TranslationStage.get_selected_mode_for_stage(stage)
         log.info(
             f"{stage} Stage: Translating Address {hex(source_address)}. Translation.translation_mode = {translation_mode}."
         )

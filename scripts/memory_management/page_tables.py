@@ -77,28 +77,32 @@ class TranslationStage:
 
     stages = {
         "s": {
-            "modes": ["bare", "sv39", "sv48"],
+            "valid_modes": ["bare", "sv39", "sv48"],
+            "selected_mode": None,
             "translates": ["va", "pa"],
             "virtualization_enabled": False,
             "next_stage": None,
             "atp_register": "satp",
         },
         "hs": {
-            "modes": ["bare", "sv39", "sv48"],
+            "valid_modes": ["bare", "sv39", "sv48"],
+            "selected_mode": None,
             "translates": ["va", "pa"],
             "virtualization_enabled": True,
             "next_stage": None,
             "atp_register": "satp",
         },
         "vs": {
-            "modes": ["bare", "sv39", "sv48"],
+            "valid_modes": ["bare", "sv39", "sv48"],
+            "selected_mode": None,
             "translates": ["va", "gpa"],
             "virtualization_enabled": True,
             "next_stage": "g",
             "atp_register": "vsatp",
         },
         "g": {
-            "modes": ["bare", "sv39x4", "sv48x4"],
+            "valid_modes": ["bare", "sv39x4", "sv48x4"],
+            "selected_mode": None,
             "translates": ["gpa", "spa"],
             "virtualization_enabled": True,
             "next_stage": None,
@@ -143,7 +147,34 @@ class TranslationStage:
         if TranslationMode.is_valid_mode(mode) is False:
             raise ValueError(f"Invalid TranslationMode: {mode}")
 
-        return TranslationMode.get_encoding(mode) in cls.stages[stage]["modes"]
+        return mode in cls.stages[stage]["valid_modes"]
+
+    @classmethod
+    def set_selected_mode_for_stage(cls, stage: str, mode: str):
+        if not cls.is_valid_stage(stage):
+            raise ValueError(
+                f"Invalid TranslationStage: {stage} with virtualization enabled: {cls.virtualization_enabled}"
+            )
+
+        if TranslationMode.is_valid_mode(mode) is False:
+            raise ValueError(f"Invalid TranslationMode: {mode}")
+
+        if not TranslationStage.is_valid_mode_for_stage(stage, mode):
+            raise ValueError(f"Invalid TranslationMode: {mode} for TranslationStage: {stage}")
+
+        cls.stages[stage]["selected_mode"] = mode
+
+    @classmethod
+    def get_selected_mode_for_stage(cls, stage: str):
+        if not cls.is_valid_stage(stage):
+            raise ValueError(
+                f"Invalid TranslationStage: {stage} with virtualization enabled: {cls.virtualization_enabled}"
+            )
+
+        if cls.stages[stage]["selected_mode"] is None:
+            raise ValueError(f"TranslationMode not set for TranslationStage: {stage}")
+
+        return cls.stages[stage]["selected_mode"]
 
     @classmethod
     def get_address_types(cls, stage: str):
