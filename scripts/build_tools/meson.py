@@ -101,18 +101,16 @@ class Meson:
             self.meson_options["spike_binary"] = "spike"
             self.meson_options["generate_trace"] = "true"
 
-            self.spike_trace_file = (
-                f"{self.meson_builddir}/{self.diag_build_target.diag_source.diag_name}.itrace"
+            self.trace_file = (
+                f"{self.meson_builddir}/{self.diag_build_target.diag_source.diag_name}.spike.trace"
             )
-            self.meson_options["spike_additional_arguments"].append(
-                f"--log={self.spike_trace_file}"
-            )
+            self.meson_options["spike_additional_arguments"].append(f"--log={self.trace_file}")
 
         elif self.diag_build_target.target == "qemu":
             self.meson_options["qemu_additional_arguments"] = []
 
             trace_file_name = f"{self.diag_build_target.diag_source.diag_name}.qemu.trace"
-            self.qemu_trace_file = f"{self.meson_builddir}/{trace_file_name}"
+            self.trace_file = f"{self.meson_builddir}/{trace_file_name}"
 
             self.meson_options["qemu_additional_arguments"].extend(
                 [
@@ -247,25 +245,13 @@ class Meson:
         meson_test_command = ["meson", "test", "-C", self.meson_builddir]
         return_code = system_functions.run_command(meson_test_command, self.jumpstart_dir)
 
-        expected_trace_file = None
-        if self.diag_build_target.target == "spike":
-            expected_trace_file = self.spike_trace_file
-        elif self.diag_build_target.target == "qemu":
-            expected_trace_file = self.qemu_trace_file
-        else:
-            raise Exception(f"Unknown target: {self.diag_build_target.target}")
-
-        if return_code == 0 and not os.path.exists(expected_trace_file):
+        if return_code == 0 and not os.path.exists(self.trace_file):
             raise Exception(
-                f"meson test passed but trace file not created by diag: {expected_trace_file}"
+                f"meson test passed but trace file not created by diag: {self.trace_file}"
             )
 
-        self.diag_build_target.add_build_asset(
-            f"{self.diag_build_target.target}_trace", expected_trace_file
-        )
-        log.debug(
-            f"Diag trace file: {self.diag_build_target.get_build_asset(f'{self.diag_build_target.target}_trace')}"
-        )
+        self.diag_build_target.add_build_asset("trace", self.trace_file)
+        log.debug(f"Diag trace file: {self.diag_build_target.get_build_asset('trace')}")
 
         if return_code != 0:
             log.error(
