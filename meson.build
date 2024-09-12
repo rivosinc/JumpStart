@@ -194,24 +194,7 @@ if diag_attributes_yaml != '' and diag_sources.length() > 0
     test('🧪 ' + diag_name,
           spike,
           args : [default_spike_args, diag_exe],
-          timeout: get_option('spike_timeout'),
-          is_parallel : false) # Parallel runs of the test turns off terminal
-                               # feedback and requires `reset` to be run to
-                               # restore the terminal.
-  elif get_option('diag_target') == 'qemu'
-    qemu_args = default_qemu_args
-
-    if get_option('generate_trace') == true
-      qemu_args += [
-          '--var', 'ap-logfile:' + diag_name + '.trace',
-          '--var', 'out:' + meson.current_build_dir()
-        ]
-    endif
-
-    test('🧪 ' + diag_name,
-          qemu,
-          timeout: get_option('qemu_timeout'),
-          args : [qemu_args, '--var', 'ap-payload:' + diag_exe.full_path()])
+          timeout: get_option('spike_timeout'))
   endif
 
 else
