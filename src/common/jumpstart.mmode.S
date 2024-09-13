@@ -78,6 +78,7 @@ _mmode_start:
   jal program_mstateen
 
   jal program_menvcfg
+  jal program_mseccfg
 
   jal enable_mmode_float_and_vector_instructions
 
@@ -174,6 +175,12 @@ program_menvcfg:
   li t0, (MENVCFG_CBIE | MENVCFG_CBCFE | MENVCFG_CBZE | MENVCFG_PBMTE | MENVCFG_CDE)
   csrrs t1, menvcfg, t0
 
+  ret
+
+.global program_mseccfg
+program_mseccfg:
+  li t0, MSECCFG_SSEED | MSECCFG_USEED
+  csrs mseccfg, t0
   ret
 
 .global reset_csrs
