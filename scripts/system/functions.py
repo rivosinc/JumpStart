@@ -7,6 +7,7 @@ import os
 import shutil
 import signal
 import subprocess
+import threading
 
 
 def create_empty_directory(directory):
@@ -34,6 +35,11 @@ def find_files_with_extensions_in_dir(root, extensions):
     return sources
 
 
+def read_io_stream(stream, callback):
+    for line in iter(stream.readline, b""):
+        callback(line)
+
+
 def run_command(command, run_directory):
     log.debug(f"Running command: {' '.join(command)}")
     group_pid = None
@@ -46,16 +52,19 @@ def run_command(command, run_directory):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             preexec_fn=os.setsid,  # Assign the child and all its subprocesses to a new process group.
-            universal_newlines=True,  # Ensures output is returned as a string rather than bytes.
         )
         group_pid = os.getpgid(p.pid)
 
         # Print stdout and stderr in real-time as they are produced
-        for stdout_line in iter(p.stdout.readline, ""):
-            log.debug(stdout_line.strip())
+        stdout_thread = threading.Thread(
+            target=read_io_stream, args=(p.stdout, lambda x: log.debug(x.decode().strip()))
+        )
+        stderr_thread = threading.Thread(
+            target=read_io_stream, args=(p.stderr, lambda x: log.error(x.decode().strip()))
+        )
 
-        for stderr_line in iter(p.stderr.readline, ""):
-            log.error(stderr_line.strip())
+        stdout_thread.start()
+        stderr_thread.start()
 
         returncode = p.wait()
 
@@ -63,6 +72,9 @@ def run_command(command, run_directory):
             log.error(f"COMMAND FAILED: {' '.join(command)}")
         else:
             log.debug("Command executed successfully.")
+
+        stdout_thread.join()
+        stderr_thread.join()
 
     except KeyboardInterrupt:
         log.error(f"Command: {' '.join(command)} interrupted.")
