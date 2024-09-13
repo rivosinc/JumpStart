@@ -165,7 +165,7 @@ class DiagBuildTarget:
         if no_copy is True:
             self.build_assets[build_asset_type] = build_asset_src_file_path
         else:
-            self.build_assets[build_asset_type] = shutil.copy(
+            self.build_assets[build_asset_type] = shutil.move(
                 build_asset_src_file_path, f"{self.build_dir}/{build_asset_file_name}"
             )
 
