@@ -11,6 +11,8 @@ import tempfile
 
 import yaml
 
+from .diag import AssetAction
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
 from data_structures import DictUtils  # noqa
 from system import functions as system_functions  # noqa
@@ -199,7 +201,7 @@ class Meson:
 
         if self.keep_meson_builddir is True:
             self.diag_build_target.add_build_asset(
-                "meson_builddir", self.meson_builddir, None, True
+                "meson_builddir", self.meson_builddir, None, AssetAction.NO_COPY
             )
 
     def compile(self):

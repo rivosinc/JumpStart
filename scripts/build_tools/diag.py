@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import enum
 import logging as log
 import os
 import shutil
@@ -99,6 +100,12 @@ class DiagSource:
         return True
 
 
+class AssetAction(enum.IntEnum):
+    MOVE = 0
+    COPY = 1
+    NO_COPY = 2
+
+
 class DiagBuildTarget:
     supported_targets = ["qemu", "spike"]
     supported_toolchains = ["gcc", "llvm"]
@@ -151,8 +158,11 @@ class DiagBuildTarget:
         build_asset_type,
         build_asset_src_file_path,
         build_asset_file_name=None,
-        no_copy=False,
+        asset_action=AssetAction.MOVE,
     ):
+        if not isinstance(asset_action, AssetAction):
+            raise TypeError("asset_action must be an instance of AssetAction Enum")
+
         if build_asset_type in self.build_assets:
             raise Exception(f"Asset already exists: {build_asset_type}")
 
@@ -162,12 +172,18 @@ class DiagBuildTarget:
         if not os.path.exists(build_asset_src_file_path):
             raise Exception(f"Asset does not exist: {build_asset_src_file_path}")
 
-        if no_copy is True:
+        if asset_action == AssetAction.NO_COPY:
             self.build_assets[build_asset_type] = build_asset_src_file_path
-        else:
+        elif asset_action == AssetAction.MOVE:
             self.build_assets[build_asset_type] = shutil.move(
                 build_asset_src_file_path, f"{self.build_dir}/{build_asset_file_name}"
             )
+        elif asset_action == AssetAction.COPY:
+            self.build_assets[build_asset_type] = shutil.copy(
+                build_asset_src_file_path, f"{self.build_dir}/{build_asset_file_name}"
+            )
+        else:
+            raise Exception(f"Invalid Asset action type: {asset_action}")
 
     def get_build_asset(self, build_asset_type):
         if build_asset_type not in self.build_assets:

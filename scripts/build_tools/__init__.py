@@ -4,7 +4,7 @@
 
 # __init__.py
 
-from .diag import DiagBuildTarget, DiagSource
+from .diag import AssetAction, DiagBuildTarget, DiagSource
 from .meson import build_jumpstart_diag
 
 # PEP8 guideline:
@@ -13,6 +13,7 @@ from .meson import build_jumpstart_diag
 # the names in their public API using the __all__ attribute.
 
 __all__ = [
+    "AssetAction",
     "DiagSource",
     "DiagBuildTarget",
     "build_jumpstart_diag",
