@@ -148,7 +148,7 @@ class DiagBuildTarget:
     def __str__(self) -> str:
         print_string = f"\n\tName: {self.diag_source.diag_name}\n\tDirectory: {self.build_dir}\n\tAssets: {self.build_assets}\n\tBuildType: {self.buildtype},\n\tTarget: {self.target},\n\tBootConfig: {self.boot_config},"
         if self.rng_seed is not None:
-            print_string += f"\n\tRNG Seed: {self.rng_seed}"
+            print_string += f"\n\tRNG Seed: {hex(self.rng_seed)}"
         print_string += f"\n\tSource Info:\n{self.diag_source}"
 
         return print_string

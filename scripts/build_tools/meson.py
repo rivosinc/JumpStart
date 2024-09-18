@@ -135,6 +135,10 @@ class Meson:
                     f"-p{convert_hart_mask_to_num_active_harts(active_hart_mask)}"
                 )
 
+        self.meson_options["diag_attribute_overrides"].append(
+            f"build_rng_seed={self.diag_build_target.rng_seed}"
+        )
+
         if self.diag_build_target.diag_attributes_cmd_line_overrides is not None:
             self.meson_options["diag_attribute_overrides"].extend(
                 self.diag_build_target.diag_attributes_cmd_line_overrides

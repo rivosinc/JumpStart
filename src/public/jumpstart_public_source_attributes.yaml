@@ -112,6 +112,7 @@ diag_attributes:
   vsatp_mode: 'sv39'
   hgatp_mode: 'sv39x4'
   mappings: null
+  build_rng_seed: 0xdeadbeef
 
 c_structs:
   thread_attributes:

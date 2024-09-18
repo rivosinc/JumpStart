@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
+// SPDX-FileCopyrightText: 2023 - 2025 Rivos Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -66,7 +66,7 @@ __attribute__((section(".text.smode"))) int smode_main(void) {
   if (random < 0 || fault_count_s[hart_id] != 0)
     jumpstart_smode_fail();
 
-  set_random_seed_from_smode((int)random);
+  set_random_seed_from_smode((int)random * BUILD_RNG_SEED);
   for (int i = 0; i < 1024; i++) {
     rand = get_random_number_from_smode();
     if (rand == last_rand)
@@ -197,7 +197,7 @@ int main(void) {
   if (random < 0 || fault_count[hart_id] != 0)
     jumpstart_mmode_fail();
 
-  set_random_seed_from_mmode((int)random);
+  set_random_seed_from_mmode((int)random * BUILD_RNG_SEED);
   for (int i = 0; i < 1024; i++) {
     rand = get_random_number_from_mmode();
     if (rand == last_rand)

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
+# SPDX-FileCopyrightText: 2023 - 2025 Rivos Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -105,7 +105,7 @@ def main():
         "--rng_seed",
         help="RNG seed for the diag builder.",
         required=False,
-        type=int,
+        type=lambda x: int(x, 0),
         default=None,
     )
     parser.add_argument(
