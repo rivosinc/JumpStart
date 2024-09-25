@@ -60,7 +60,7 @@ def run_command(command, run_directory):
             target=read_io_stream, args=(p.stdout, lambda x: log.debug(x.decode().strip()))
         )
         stderr_thread = threading.Thread(
-            target=read_io_stream, args=(p.stderr, lambda x: log.error(x.decode().strip()))
+            target=read_io_stream, args=(p.stderr, lambda x: log.warning(x.decode().strip()))
         )
 
         stdout_thread.start()
