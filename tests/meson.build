@@ -106,22 +106,6 @@ foreach unit_test : unit_tests
           suite:'basic',
           timeout: get_option('spike_timeout'),
           should_fail: test_expected_to_fail)
-  elif get_option('diag_target') == 'qemu'
-    qemu_args = default_qemu_args
-
-    if get_option('generate_trace') == true
-      qemu_args += [
-          '--var', 'ap-logfile:' + test_name + '.trace',
-          '--var', 'out:' + meson.current_build_dir()
-        ]
-    endif
-
-    test(test_name + ' 🧪 ' + test_description,
-          qemu,
-          args : [qemu_args, '--var', 'ap-payload:' + test_exe.full_path()],
-          suite:'basic',
-          timeout: get_option('qemu_timeout'),
-          should_fail: test_expected_to_fail)
   endif
 
 endforeach

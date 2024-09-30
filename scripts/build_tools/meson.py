@@ -104,14 +104,14 @@ class Meson:
             self.meson_options["generate_trace"] = "true"
 
             self.trace_file = (
-                f"{self.meson_builddir}/{self.diag_build_target.diag_source.diag_name}.spike.trace"
+                f"{self.meson_builddir}/{self.diag_build_target.diag_source.diag_name}.itrace"
             )
             self.meson_options["spike_additional_arguments"].append(f"--log={self.trace_file}")
 
         elif self.diag_build_target.target == "qemu":
             self.meson_options["qemu_additional_arguments"] = []
 
-            trace_file_name = f"{self.diag_build_target.diag_source.diag_name}.qemu.trace"
+            trace_file_name = f"{self.diag_build_target.diag_source.diag_name}.qemu.itrace"
             self.trace_file = f"{self.meson_builddir}/{trace_file_name}"
 
             self.meson_options["qemu_additional_arguments"].extend(
