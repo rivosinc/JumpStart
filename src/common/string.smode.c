@@ -35,6 +35,42 @@ toupper(int c) {
   return islower(c) ? c + ('A' - 'a') : c;
 }
 
+#pragma GCC diagnostic push
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wtautological-pointer-compare"
+#endif
+
+__attribute__((section(".jumpstart.text.smode"))) char *
+strcpy(char *dest, const char *src) {
+  if (dest == NULL || src == NULL) {
+    return NULL;
+  }
+
+  char *original_dest = dest;
+  while (*src != '\0') {
+    *dest = *src;
+    dest++;
+    src++;
+  }
+  *dest = '\0';
+  return original_dest;
+}
+
+__attribute__((section(".jumpstart.text.smode"))) int strcmp(const char *s1,
+                                                             const char *s2) {
+  if (s1 == NULL || s2 == NULL) {
+    return -1;
+  }
+
+  while (*s1 && (*s1 == *s2)) {
+    s1++;
+    s2++;
+  }
+  return *(const unsigned char *)s1 - *(const unsigned char *)s2;
+}
+
+#pragma GCC diagnostic pop
+
 __attribute__((section(".jumpstart.text.smode"))) size_t
 strlen(const char *str) {
   size_t len = 0;
