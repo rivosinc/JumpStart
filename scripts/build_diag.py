@@ -38,14 +38,14 @@ def main():
     )
     parser.add_argument(
         "--override_meson_options",
-        help="Meson options to override.",
+        help="Override the meson options from meson.options.",
         required=False,
         nargs="+",
         default=None,
     )
     parser.add_argument(
         "--override_diag_attributes",
-        help="Diag attributes to override.",
+        help="Override the diag attributes specified in the diag's attributes file.",
         required=False,
         nargs="+",
         default=None,
