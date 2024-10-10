@@ -44,6 +44,7 @@ start_in_smode_tests += [
   ['test050', 'Exit with jumpstart_vsmode_fail() to test fail path.', '', true],
   ['test051', 'MMU with SATP.mode = bare.'],
   ['test052', 'Test string.h functions.'],
+  ['test053', 'Test time() and gettimeofday().'],
 ]
 
 start_in_mmode_tests += [
