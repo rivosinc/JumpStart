@@ -44,7 +44,8 @@ def run_command(command, run_directory):
     log.debug(f"Running command: {' '.join(command)}")
     group_pid = None
     returncode = None
-
+    stdout_output = []
+    stderr_output = []
     try:
         p = subprocess.Popen(
             command,
@@ -55,21 +56,31 @@ def run_command(command, run_directory):
         )
         group_pid = os.getpgid(p.pid)
 
+        # Function to capture output
+        def capture_output(stream, log_func, output_list):
+            for line in iter(stream.readline, b""):
+                decoded_line = line.decode().strip()
+                log_func(decoded_line)
+                output_list.append(decoded_line)
+
         # Print stdout and stderr in real-time as they are produced
         stdout_thread = threading.Thread(
-            target=read_io_stream, args=(p.stdout, lambda x: log.debug(x.decode().strip()))
+            target=capture_output, args=(p.stdout, lambda x: log.debug(x), stdout_output)
         )
         stderr_thread = threading.Thread(
-            target=read_io_stream, args=(p.stderr, lambda x: log.warning(x.decode().strip()))
+            target=capture_output, args=(p.stderr, lambda x: log.debug(x), stderr_output)
         )
-
         stdout_thread.start()
         stderr_thread.start()
 
         returncode = p.wait()
-
         if returncode != 0:
             log.error(f"COMMAND FAILED: {' '.join(command)}")
+            full_output = f"STDOUT:\n{'-' * 40}\n"
+            full_output += "\n".join(stdout_output)
+            full_output += f"\n\nSTDERR:\n{'-' * 40}\n"
+            full_output += "\n".join(stderr_output)
+            log.error(full_output)
         else:
             log.debug("Command executed successfully.")
 
