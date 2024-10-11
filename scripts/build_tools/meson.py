@@ -160,10 +160,6 @@ class Meson:
             )
 
     def setup(self):
-        log.info(
-            f"Running meson setup for diag: {self.diag_build_target.diag_source.get_diag_src_dir()}"
-        )
-
         self.meson_setup_flags = {}
         self.meson_setup_flags["--buildtype"] = self.diag_build_target.buildtype
         self.meson_setup_flags["-Ddiag_generate_disassembly"] = "true"
@@ -195,7 +191,11 @@ class Meson:
             ]
         )
 
-        log.debug(f"Running meson setup command: {meson_setup_command}")
+        # Print the meson setup command in a format that can be copy-pasted to
+        # reproduce the build.
+        printable_meson_setup_command = " ".join(meson_setup_command)
+        printable_meson_setup_command = printable_meson_setup_command.replace("'", "\\'")
+        log.info(f"Running meson setup.\n{printable_meson_setup_command}")
         return_code = system_functions.run_command(meson_setup_command, self.jumpstart_dir)
         if return_code != 0:
             log.error(
@@ -209,11 +209,8 @@ class Meson:
             )
 
     def compile(self):
-        log.info(
-            f"Running meson compile for diag: {self.diag_build_target.diag_source.get_diag_src_dir()}"
-        )
-
         meson_compile_command = ["meson", "compile", "-v", "-C", self.meson_builddir]
+        log.info(f"Running meson compile.\n{' '.join(meson_compile_command)}")
         return_code = system_functions.run_command(meson_compile_command, self.jumpstart_dir)
 
         diag_binary = os.path.join(self.meson_builddir, self.diag_binary_name)
@@ -244,11 +241,8 @@ class Meson:
         log.debug(f"Diag disassembly: {self.diag_build_target.get_build_asset('disasm')}")
 
     def test(self):
-        log.info(
-            f"Running meson test for diag: {self.diag_build_target.diag_source.get_diag_src_dir()}"
-        )
-
         meson_test_command = ["meson", "test", "-v", "-C", self.meson_builddir]
+        log.info(f"Running meson test.\n{' '.join(meson_test_command)}")
         return_code = system_functions.run_command(meson_test_command, self.jumpstart_dir)
 
         if return_code == 0 and not os.path.exists(self.trace_file):
