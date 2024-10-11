@@ -2,6 +2,9 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+# Provides targets to build and run the jumpstart unit tests for development
+# and CI purposes.
+
 # To build and run the unit tests with all possible configurations:
 # just test-all
 
