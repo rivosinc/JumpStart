@@ -127,6 +127,8 @@ c_structs:
       num_context_saves_remaining_in_mmode: uint8_t
       smode_reg_context_save_region_address: uint64_t
       num_context_saves_remaining_in_smode: uint8_t
+      marchid: uint64_t
+      mimpid: uint64_t
       bookend_magic_number: uint64_t
   trap_override_attributes:
     fields:

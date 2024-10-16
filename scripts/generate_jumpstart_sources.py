@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
+# SPDX-FileCopyrightText: 2023 - 2025 Rivos Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -325,6 +325,13 @@ class JumpStartGeneratedSource:
                     "  SET_THREAD_ATTRIBUTES_NUM_CONTEXT_SAVES_REMAINING_IN_MMODE(t1)\n"
                 )
                 self.assembly_file_fd.write("\n")
+
+                self.assembly_file_fd.write("  csrr t1, marchid\n")
+                self.assembly_file_fd.write("  SET_THREAD_ATTRIBUTES_MARCHID(t1)\n")
+                self.assembly_file_fd.write("  csrr t1, mimpid\n")
+                self.assembly_file_fd.write("  SET_THREAD_ATTRIBUTES_MIMPID(t1)\n")
+                self.assembly_file_fd.write("\n")
+
             self.assembly_file_fd.write("  la t1, smode_reg_context_save_region\n")
             self.assembly_file_fd.write("  add t1, t1, t0\n")
             self.assembly_file_fd.write("  la t2, smode_reg_context_save_region_end\n")
