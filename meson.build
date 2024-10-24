@@ -23,7 +23,12 @@ add_project_arguments('-Wno-pedantic',
                       '-mcmodel=medany',
                       language: 'c')
 
+diag_custom_defines = get_option('diag_custom_defines')
+foreach diag_custom_define : diag_custom_defines
+  add_project_arguments('-D' + diag_custom_define, language : 'c')
+endforeach
 
+default_c_args = []
 
 jumpstart_source_attribute_overrides = get_option('jumpstart_source_attribute_overrides')
 diag_attribute_overrides = get_option('diag_attribute_overrides')

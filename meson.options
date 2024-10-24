@@ -31,6 +31,10 @@ option('diag_target',
        value : 'spike',
        description : 'Target to build the diag for.')
 
+option('diag_custom_defines',
+       type : 'array',
+       description : 'Custom diag specific defines.')
+
 option('jumpstart_source_attribute_overrides',
        type : 'array',
        description : 'Overrides specified JumpStart source attributes.')

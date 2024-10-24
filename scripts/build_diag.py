@@ -51,6 +51,13 @@ def main():
         default=None,
     )
     parser.add_argument(
+        "--diag_custom_defines",
+        help="Set diag specific defines.",
+        required=False,
+        nargs="+",
+        default=None,
+    )
+    parser.add_argument(
         "--active_hart_mask_override",
         "-c",
         help="Override the default hart mask for the diag.",
@@ -117,6 +124,12 @@ def main():
         log.basicConfig(format="%(levelname)s: [%(threadName)s]: %(message)s", level=log.DEBUG)
     else:
         log.basicConfig(format="%(levelname)s: [%(threadName)s]: %(message)s", level=log.INFO)
+
+    if args.diag_custom_defines:
+        args.override_meson_options = args.override_meson_options or []
+        args.override_meson_options.append(
+            f"diag_custom_defines={','.join(args.diag_custom_defines)}"
+        )
 
     diag_build_target = DiagBuildTarget(
         args.diag_src_dir,
