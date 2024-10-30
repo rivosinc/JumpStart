@@ -233,28 +233,29 @@ class LinkerScript:
         # The linker script lays out the diag in physical memory. The
         # mappings are already sorted by PA.
         for section in self.get_sections():
-            file.write(f"   /* {','.join(section.get_subsections())}:\n")
+            file.write(f"\n\n   /* {','.join(section.get_subsections())}:\n")
             file.write(
                 f"       PA Range: {hex(section.get_start_address())} - {hex(section.get_start_address() + section.get_size())}\n"
             )
             file.write("   */\n")
             file.write(f"   . = {hex(section.get_start_address())};\n")
 
-            file.write(f"   {section.get_top_level_name()} {section.get_type()} : {{\n")
             top_level_section_variable_name_prefix = (
                 section.get_top_level_name().replace(".", "_").upper()
             )
             file.write(f"   {top_level_section_variable_name_prefix}_START = .;\n")
+            file.write(f"   {section.get_top_level_name()} {section.get_type()} : {{\n")
             for section_name in section.get_subsections():
                 assert section_name not in defined_sections
                 file.write(f"      *({section_name})\n")
                 defined_sections.append(section_name)
             if section.is_padded():
                 file.write("      BYTE(0)\n")
-            file.write(f"   }} : {section.get_top_level_name()}\n\n")
+            file.write(f"   }} : {section.get_top_level_name()}\n")
             file.write(f"   . = {hex(section.get_start_address() + section.get_size() - 1)};\n")
             file.write(f"  {top_level_section_variable_name_prefix}_END = .;\n")
-        file.write("/DISCARD/ : { *(" + " ".join(self.get_discard_sections()) + ") }\n")
+
+        file.write("\n\n/DISCARD/ : { *(" + " ".join(self.get_discard_sections()) + ") }\n")
         file.write("\n}\n")
 
         # Specify separate load segments in the program headers for the
