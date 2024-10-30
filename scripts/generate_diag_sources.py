@@ -40,6 +40,8 @@ class SourceGenerator:
         override_diag_attributes,
         priv_modes_enabled,
     ):
+        self.linker_script = None
+
         self.priv_modes_enabled = priv_modes_enabled
 
         self.process_source_attributes(
@@ -422,11 +424,12 @@ class SourceGenerator:
         )
 
     def generate_linker_script(self, output_linker_script):
-        LinkerScript(
+        self.linker_script = LinkerScript(
             self.jumpstart_source_attributes["diag_entry_label"],
             self.memory_map,
             self.diag_attributes_yaml,
-        ).generate(output_linker_script)
+        )
+        self.linker_script.generate(output_linker_script)
 
     def generate_defines_file(self, output_defines_file):
         with open(output_defines_file, "w") as file_descriptor:
@@ -813,10 +816,10 @@ def main():
         args.priv_modes_enabled,
     )
 
-    if args.output_assembly_file is not None:
-        source_generator.generate_assembly_file(args.output_assembly_file)
     if args.output_linker_script is not None:
         source_generator.generate_linker_script(args.output_linker_script)
+    if args.output_assembly_file is not None:
+        source_generator.generate_assembly_file(args.output_assembly_file)
     if args.output_defines_file is not None:
         source_generator.generate_defines_file(args.output_defines_file)
 
