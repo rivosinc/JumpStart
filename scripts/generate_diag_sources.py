@@ -627,6 +627,15 @@ sync_all_harts_from_{mode}:
 
                 last_filled_address = address
 
+    def generate_linker_guard_sections(self, file_descriptor):
+        assert self.linker_script.get_guard_sections() is not None
+        for guard_section in self.linker_script.get_guard_sections():
+            file_descriptor.write(f'\n\n.section {guard_section.get_top_level_name()}, "a"\n\n')
+            file_descriptor.write(f"dummy_data_for_{guard_section.get_top_level_name()}:\n")
+            file_descriptor.write(
+                f".fill {int(guard_section.get_size() / 8)}, 8, 0xF00D44C0DE44F00D\n\n"
+            )
+
     def generate_assembly_file(self, output_assembly_file):
         with open(output_assembly_file, "w") as file:
             file.write(
@@ -648,6 +657,8 @@ sync_all_harts_from_{mode}:
                 )
 
             self.generate_page_tables(file)
+
+            self.generate_linker_guard_sections(file)
 
             file.close()
 

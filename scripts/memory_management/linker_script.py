@@ -5,6 +5,8 @@
 import logging as log
 import sys
 
+from .memory_mapping import MemoryMapping
+from .page_size import PageSize
 from .page_tables import TranslationStage
 
 
@@ -110,6 +112,8 @@ class LinkerScript:
         self.entry_label = entry_label
         self.attributes_file = attributes_file
 
+        self.guard_sections = None
+
         mappings_with_linker_sections = []
         for stage in TranslationStage.get_enabled_stages():
             mappings_with_linker_sections.extend(
@@ -140,7 +144,35 @@ class LinkerScript:
                     f"Section names in {new_section} are used in {len(existing_sections_with_matching_subsections)} other sections."
                 )
 
-        # sort the self.sections by start address
+        self.sections.sort(key=lambda x: x.get_start_address())
+
+        # Add guard sections after each section that isn't immediately followed
+        # by another section.
+        # The linker can detect overruns of a section if there is a section
+        # immediately following it in the memory layout.
+        # We will also need to generate the corresponding assembly code
+        # for each guard section. Otherwise the linker will ignore the guard section.
+        self.guard_sections = []
+        for i in range(len(self.sections) - 1):
+            if self.sections[i].get_end_address() < self.sections[i + 1].get_start_address():
+                self.guard_sections.append(
+                    LinkerScriptSection(
+                        MemoryMapping(
+                            {
+                                "translation_stage": TranslationStage.get_enabled_stages()[
+                                    0
+                                ],  # any stage works. We just need a valid one.
+                                TranslationStage.get_translates_to(
+                                    TranslationStage.get_enabled_stages()[0]
+                                ): self.sections[i].get_end_address(),
+                                "num_pages": 1,
+                                "page_size": PageSize.SIZE_4K,
+                                "linker_script_section": f".linker_guard_section_{len(self.guard_sections)}",
+                            }
+                        )
+                    )
+                )
+        self.sections.extend(self.guard_sections)
         self.sections.sort(key=lambda x: x.get_start_address())
 
         # check for overlaps in the sections
@@ -180,6 +212,9 @@ class LinkerScript:
 
     def get_attributes_file(self):
         return self.attributes_file
+
+    def get_guard_sections(self):
+        return self.guard_sections
 
     def generate(self, output_linker_script):
         file = open(output_linker_script, "w")
