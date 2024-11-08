@@ -20,8 +20,7 @@ __attr_stext int gettimeofday(struct timeval *tv,
 
   // Convert timer ticks to seconds and microseconds
   uint64_t seconds = timer_ticks / (CPU_CLOCK_FREQUENCY_IN_MHZ * 1000000);
-  uint64_t microseconds =
-      (timer_ticks % (CPU_CLOCK_FREQUENCY_IN_MHZ * 1000000));
+  uint64_t microseconds = timer_ticks / (CPU_CLOCK_FREQUENCY_IN_MHZ);
 
   tv->tv_sec = seconds;
   tv->tv_usec = microseconds;

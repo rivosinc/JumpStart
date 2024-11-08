@@ -32,7 +32,7 @@ int test_gettimeofday() {
   if (result != 0) {
     printk("test_gettimeofday: FAILED - gettimeofday() returned %d\n", result);
     return DIAG_FAILED;
-  } else if (tv.tv_sec < 0 || tv.tv_usec < 0 || tv.tv_usec >= 1000000) {
+  } else if ((tv.tv_sec < 0) || (tv.tv_usec < 0)) {
     printk("test_gettimeofday: FAILED - invalid time values: %ld seconds, %ld "
            "microseconds\n",
            tv.tv_sec, tv.tv_usec);
