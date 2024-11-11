@@ -26,6 +26,9 @@ int test_gettimeofday() {
   struct timeval tv;
   int result = gettimeofday(&tv, NULL);
 
+  printk("test_gettimeofday: define CPU_CLOCK_FREQUENCY_IN_MHZ %d\n",
+         CPU_CLOCK_FREQUENCY_IN_MHZ);
+
   if (result != 0) {
     printk("test_gettimeofday: FAILED - gettimeofday() returned %d\n", result);
     return DIAG_FAILED;
