@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 Rivos Inc.
+// SPDX-FileCopyrightText: 2024 - 2025 Rivos Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -6,24 +6,21 @@
 #include "cpu_bits.h"
 #include "jumpstart.h"
 
-__attribute__((section(".jumpstart.text.smode"))) __attribute__((const))
-uint64_t
+__attr_stext __attribute__((const)) uint64_t
 extract_bits(uint64_t value, struct bit_range range) {
   uint8_t msb = range.msb;
   uint8_t lsb = range.lsb;
   return ((value >> lsb) & ((1ULL << (msb - lsb + 1)) - 1));
 }
 
-__attribute__((section(".jumpstart.text.smode"))) __attribute__((const))
-uint64_t
+__attr_stext __attribute__((const)) uint64_t
 place_bits(uint64_t value, uint64_t bits, struct bit_range range) {
   uint8_t msb = range.msb;
   uint8_t lsb = range.lsb;
   return (value & ~(((1ULL << (msb - lsb + 1)) - 1) << lsb)) | (bits << lsb);
 }
 
-__attribute__((section(".jumpstart.text.smode"))) int32_t
-smode_try_get_seed(void) {
+__attr_stext int32_t smode_try_get_seed(void) {
   uint32_t seed;
   uint32_t i = 100;
 
@@ -43,10 +40,9 @@ smode_try_get_seed(void) {
 }
 
 #define RAND_MAX 0x7fffffff
-__attribute__((section(".jumpstart.data.smode"))) uint64_t snext = 1;
+__attr_sdata uint64_t snext = 1;
 
-__attribute__((section(".jumpstart.text.smode"))) uint64_t
-__smode_random(void) {
+__attr_stext uint64_t __smode_random(void) {
   /* Based on rand in diags/perf/membw/libc_replacement.h */
   /* This multiplier was obtained from Knuth, D.E., "The Art of
      Computer Programming," Vol 2, Seminumerical Algorithms, Third
@@ -55,12 +51,10 @@ __smode_random(void) {
   return (int64_t)((snext >> 32) & RAND_MAX);
 }
 
-__attribute__((section(".jumpstart.text.smode"))) int32_t
-get_random_number_from_smode(void) {
+__attr_stext int32_t get_random_number_from_smode(void) {
   return (int32_t)__smode_random();
 }
 
-__attribute__((section(".jumpstart.text.smode"))) void
-set_random_seed_from_smode(int32_t seed) {
+__attr_stext void set_random_seed_from_smode(int32_t seed) {
   snext = (uint64_t)seed;
 }

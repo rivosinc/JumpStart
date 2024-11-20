@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
+# SPDX-FileCopyrightText: 2023 - 2025 Rivos Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -6,7 +6,7 @@
 
 # The supervisor data section is can be accessed from both
 # machine and supervisor mode.
-.section .jumpstart.data.smode, "aw"
+.section .jumpstart.cpu.data.smode, "aw"
 
 .global hart_status_tracker
 hart_status_tracker:

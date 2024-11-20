@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
+// SPDX-FileCopyrightText: 2023 - 2025 Rivos Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -17,8 +17,8 @@ We expect all the pointers across harts for a given iteration to be unique.
 #define NUM_INTERATIONS     8
 #define ALLOCS_PER_HART     12
 #define HEAP_STRUCT_PADDING 16
-extern uint64_t _JUMPSTART_SMODE_HEAP_START;
-extern uint64_t _JUMPSTART_SMODE_HEAP_END;
+extern uint64_t _JUMPSTART_CPU_SMODE_HEAP_START;
+extern uint64_t _JUMPSTART_CPU_SMODE_HEAP_END;
 // Sorted in ascending order
 const uint64_t alloc_sizes[] = {8, 16, 32, 48, 64};
 const uint64_t aligns[] = {0x8, 0x10, 0x80};
@@ -176,8 +176,8 @@ int test_memalign(uint64_t hart_id) {
 static int check_heap_size(void) {
   // This check ensures that all planned allocation for the worst case will fit
   // in available heap size.
-  const uint64_t max_heap_size = (uint64_t)&_JUMPSTART_SMODE_HEAP_END -
-                                 (uint64_t)&_JUMPSTART_SMODE_HEAP_START;
+  const uint64_t max_heap_size = (uint64_t)&_JUMPSTART_CPU_SMODE_HEAP_END -
+                                 (uint64_t)&_JUMPSTART_CPU_SMODE_HEAP_START;
   const uint64_t max_align = aligns[ARRAY_LEN(aligns, uint64_t) - 1];
   const uint64_t max_alloc = alloc_sizes[ARRAY_LEN(alloc_sizes, uint64_t) - 1];
   if (max_heap_size / max_align / ALLOCS_PER_HART / NUM_INTERATIONS /

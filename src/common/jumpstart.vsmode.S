@@ -1,11 +1,11 @@
-# SPDX-FileCopyrightText: 2024 Rivos Inc.
+# SPDX-FileCopyrightText: 2024 - 2025 Rivos Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 
 #include "jumpstart_defines.h"
 #include "cpu_bits.h"
 
-.section .jumpstart.text.smode, "ax"
+.section .jumpstart.cpu.text.smode, "ax"
 
 .global setup_vsmode
 setup_vsmode:

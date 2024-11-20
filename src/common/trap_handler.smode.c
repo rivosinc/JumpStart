@@ -1,11 +1,11 @@
-// SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
+// SPDX-FileCopyrightText: 2023 - 2025 Rivos Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 
 #include "cpu_bits.h"
 #include "jumpstart.h"
 
-__attribute__((section(".jumpstart.text.smode"))) void
+__attr_stext void
 register_smode_trap_handler_override(uint64_t mcause,
                                      uint64_t handler_address) {
   uint64_t trap_override_struct_address =
@@ -34,8 +34,7 @@ register_smode_trap_handler_override(uint64_t mcause,
   }
 }
 
-__attribute__((section(".jumpstart.text.smode"))) void
-deregister_smode_trap_handler_override(uint64_t mcause) {
+__attr_stext void deregister_smode_trap_handler_override(uint64_t mcause) {
   uint64_t trap_override_struct_address =
       get_thread_attributes_trap_override_struct_address_from_smode();
 
@@ -70,8 +69,7 @@ deregister_smode_trap_handler_override(uint64_t mcause) {
   }
 }
 
-__attribute__((section(".jumpstart.text.smode"))) uint64_t
-get_smode_trap_handler_override(uint64_t mcause) {
+__attr_stext uint64_t get_smode_trap_handler_override(uint64_t mcause) {
   uint64_t trap_override_struct_address =
       get_thread_attributes_trap_override_struct_address_from_smode();
 
@@ -96,7 +94,7 @@ get_smode_trap_handler_override(uint64_t mcause) {
   return trap_overrides->smode_exception_handler_overrides[exception_code];
 }
 
-__attribute__((section(".jumpstart.text.smode"))) void
+__attr_stext void
 register_vsmode_trap_handler_override(uint64_t mcause,
                                       uint64_t handler_address) {
   if (get_thread_attributes_current_v_bit_from_smode() != 1) {
@@ -129,8 +127,7 @@ register_vsmode_trap_handler_override(uint64_t mcause,
   }
 }
 
-__attribute__((section(".jumpstart.text.smode"))) void
-deregister_vsmode_trap_handler_override(uint64_t mcause) {
+__attr_stext void deregister_vsmode_trap_handler_override(uint64_t mcause) {
   if (get_thread_attributes_current_v_bit_from_smode() != 1) {
     jumpstart_vsmode_fail();
   }
@@ -169,8 +166,7 @@ deregister_vsmode_trap_handler_override(uint64_t mcause) {
   }
 }
 
-__attribute__((section(".jumpstart.text.smode"))) uint64_t
-get_vsmode_trap_handler_override(uint64_t mcause) {
+__attr_stext uint64_t get_vsmode_trap_handler_override(uint64_t mcause) {
   if (get_thread_attributes_current_v_bit_from_smode() != 1) {
     jumpstart_vsmode_fail();
   }

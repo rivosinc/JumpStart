@@ -135,5 +135,11 @@ void set_sepc_for_current_exception(uint64_t new_sepc);
 
 void exit_from_smode(uint64_t return_code) __attribute__((noreturn));
 
-#define __attr_stext __attribute__((section(".jumpstart.text.smode")))
-#define __attr_mtext __attribute__((section(".jumpstart.text.mmode")))
+#define __attr_stext __attribute__((section(".jumpstart.cpu.text.smode")))
+#define __attr_sdata __attribute__((section(".jumpstart.cpu.data.smode")))
+#define __attr_mtext __attribute__((section(".jumpstart.cpu.text.mmode")))
+#define __attr_mtext_init                                                      \
+  __attribute__((section(".jumpstart.cpu.text.mmode.init")))
+#define __attr_mtext_init_end                                                  \
+  __attribute__((section(".jumpstart.cpu.text.mmode.init.end")))
+#define __attr_mdata __attribute__((section(".jumpstart.cpu.data.mmode")))

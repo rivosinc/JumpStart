@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
+// SPDX-FileCopyrightText: 2023 - 2025 Rivos Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -15,26 +15,23 @@ extern void putch(char c);
 
 int toupper(int c);
 static int vprintk(const char *fmt, va_list args)
-    __attribute__((format(printf, 1, 0)))
-    __attribute__((section(".jumpstart.text.smode")));
+    __attribute__((format(printf, 1, 0))) __attr_stext;
 void mark_uart_as_enabled(void);
 
 __attribute__((section(
-    ".jumpstart.data.smode"))) static volatile uint8_t uart_initialized = 0;
+    ".jumpstart.cpu.data.smode"))) static volatile uint8_t uart_initialized = 0;
 
-__attribute__((
-    section(".jumpstart.data.smode"))) static spinlock_t printk_lock = 0;
+__attr_sdata static spinlock_t printk_lock = 0;
 
-__attribute__((section(".jumpstart.text.smode"))) void
-mark_uart_as_enabled(void) {
+__attr_stext void mark_uart_as_enabled(void) {
   uart_initialized = 1;
 }
 
-__attribute__((section(".jumpstart.text.smode"))) int is_uart_enabled(void) {
+__attr_stext int is_uart_enabled(void) {
   return uart_initialized == 1;
 }
 
-__attribute__((section(".jumpstart.text.smode"))) int puts(const char *str) {
+__attr_stext int puts(const char *str) {
   if (uart_initialized == 0) {
     jumpstart_smode_fail();
   }
@@ -66,8 +63,7 @@ static int vprintk(const char *fmt, va_list args) {
   return puts(buf);
 }
 
-__attribute__((section(".jumpstart.text.smode"))) int printk(const char *fmt,
-                                                             ...) {
+__attr_stext int printk(const char *fmt, ...) {
   if (uart_initialized == 0) {
     return 0;
   }

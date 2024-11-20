@@ -171,7 +171,7 @@ class JumpStartGeneratedSource:
                 f"#define {c_struct.upper()}_STRUCT_SIZE_IN_BYTES {current_offset}\n\n"
             )
 
-            self.assembly_file_fd.write('.section .jumpstart.c_structs.smode, "aw"\n\n')
+            self.assembly_file_fd.write('.section .jumpstart.cpu.c_structs.smode, "aw"\n\n')
             self.assembly_file_fd.write(f".global {c_struct}_region\n")
             self.assembly_file_fd.write(f"{c_struct}_region:\n")
             for i in range(self.attributes_data["max_num_harts_supported"]):
@@ -221,7 +221,7 @@ class JumpStartGeneratedSource:
                 f"#define {stack_type.upper()}_STACK_PAGE_SIZE {stack_page_size}\n\n"
             )
 
-            self.assembly_file_fd.write(f'.section .jumpstart.stack.{stack_type}, "aw"\n')
+            self.assembly_file_fd.write(f'.section .jumpstart.cpu.stack.{stack_type}, "aw"\n')
             self.assembly_file_fd.write(".align 12\n")
             self.assembly_file_fd.write(f".global {stack_type}_stack_top\n")
             self.assembly_file_fd.write(f"{stack_type}_stack_top:\n")
@@ -268,7 +268,7 @@ class JumpStartGeneratedSource:
 
         modes = ListUtils.intersection(["smode", "mmode"], self.priv_modes_enabled)
         for mode in modes:
-            self.assembly_file_fd.write(f'.section .jumpstart.text.{mode}, "ax"\n')
+            self.assembly_file_fd.write(f'.section .jumpstart.cpu.text.{mode}, "ax"\n')
             getter_method = f"get_{c_struct}_{field_name}_from_{mode}"
             self.assembly_file_fd.write(f".global {getter_method}\n")
             self.assembly_file_fd.write(f"{getter_method}:\n")
@@ -284,7 +284,7 @@ class JumpStartGeneratedSource:
         modes = ListUtils.intersection(["smode", "mmode"], self.priv_modes_enabled)
         mode_encodings = {"smode": "PRV_S", "mmode": "PRV_M"}
         for mode in modes:
-            self.assembly_file_fd.write(f'.section .jumpstart.text.{mode}.init, "ax"\n')
+            self.assembly_file_fd.write(f'.section .jumpstart.cpu.text.{mode}.init, "ax"\n')
             self.assembly_file_fd.write("# Inputs:\n")
             self.assembly_file_fd.write("#   a0: hart id\n")
             self.assembly_file_fd.write(f".global setup_thread_attributes_from_{mode}\n")
@@ -406,7 +406,7 @@ class JumpStartGeneratedSource:
             )
         self.defines_file_fd.write("\n\n")
 
-        self.assembly_file_fd.write('\n\n.section .jumpstart.data.smode, "aw"\n')
+        self.assembly_file_fd.write('\n\n.section .jumpstart.cpu.data.smode, "aw"\n')
         modes = ListUtils.intersection(["mmode", "smode"], self.priv_modes_enabled)
         self.assembly_file_fd.write(
             f"\n# {modes} context saved registers:\n# {self.attributes_data['reg_context_to_save_across_exceptions']['registers']}\n"

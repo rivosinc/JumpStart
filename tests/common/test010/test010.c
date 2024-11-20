@@ -1,13 +1,13 @@
-// SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
+// SPDX-FileCopyrightText: 2023 - 2025 Rivos Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 
 #include "cpu_bits.h"
 #include "jumpstart.h"
 
-extern uint64_t _JUMPSTART_TEXT_MMODE_INIT_ENTER_START;
-extern uint64_t _JUMPSTART_TEXT_SMODE_INIT_ENTER_START;
-extern uint64_t _JUMPSTART_TEXT_UMODE_START;
+extern uint64_t _JUMPSTART_CPU_TEXT_MMODE_INIT_ENTER_START;
+extern uint64_t _JUMPSTART_CPU_TEXT_SMODE_INIT_ENTER_START;
+extern uint64_t _JUMPSTART_CPU_TEXT_UMODE_START;
 extern uint64_t _BSS_START;
 extern uint64_t _BSS_END;
 
@@ -46,18 +46,18 @@ static void skip_faulting_store_instruction(void) {
 __attribute__((section(".text.startup"))) __attribute__((pure)) int main(void) {
   // Check that the M-mode, S-mode, U-mode start address overrides worked.
   uint64_t mmode_start_address =
-      (uint64_t)&_JUMPSTART_TEXT_MMODE_INIT_ENTER_START;
+      (uint64_t)&_JUMPSTART_CPU_TEXT_MMODE_INIT_ENTER_START;
   if (mmode_start_address != MMODE_START_ADDRESS) {
     return DIAG_FAILED;
   }
 
   uint64_t smode_start_address =
-      (uint64_t)&_JUMPSTART_TEXT_SMODE_INIT_ENTER_START;
+      (uint64_t)&_JUMPSTART_CPU_TEXT_SMODE_INIT_ENTER_START;
   if (smode_start_address != SMODE_START_ADDRESS) {
     return DIAG_FAILED;
   }
 
-  uint64_t umode_start_address = (uint64_t)&_JUMPSTART_TEXT_UMODE_START;
+  uint64_t umode_start_address = (uint64_t)&_JUMPSTART_CPU_TEXT_UMODE_START;
   if (umode_start_address != UMODE_START_ADDRESS) {
     return DIAG_FAILED;
   }

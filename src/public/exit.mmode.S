@@ -5,7 +5,7 @@
 #include "jumpstart_defines.h"
 #include "cpu_bits.h"
 
-.section .jumpstart.text.mmode.init.exit, "ax"
+.section .jumpstart.cpu.text.mmode.init.exit, "ax"
 
 .global _mmode_end
 _mmode_end:
@@ -85,7 +85,7 @@ just_wfi_from_mmode:
   wfi
   j just_wfi_from_mmode
 
-.section .jumpstart.data.smode, "aw", @progbits
+.section .jumpstart.cpu.data.smode, "aw", @progbits
 
 .align 6
 .globl tohost

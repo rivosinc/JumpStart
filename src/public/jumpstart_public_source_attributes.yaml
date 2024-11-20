@@ -18,7 +18,7 @@ jumpstart_mmode:
   text:
     page_size: 0x1000
     num_pages: 4
-    linker_script_section: ".jumpstart.text.mmode.init.enter,.jumpstart.text.mmode.init.exit,.jumpstart.text.mmode.init,.jumpstart.text.mmode.init.end,.jumpstart.text.mmode"
+    linker_script_section: ".jumpstart.cpu.text.mmode.init.enter,.jumpstart.cpu.text.mmode.init.exit,.jumpstart.cpu.text.mmode.init,.jumpstart.cpu.text.mmode.init.end,.jumpstart.cpu.text.mmode"
     pma_memory_type: "wb"
     no_pte_allocation: True
 jumpstart_smode:
@@ -28,28 +28,28 @@ jumpstart_smode:
     xwr: "0b101"
     umode: "0b0"
     pma_memory_type: "wb"
-    linker_script_section: ".jumpstart.text.smode.init.enter,.jumpstart.text.smode.init,.jumpstart.text.smode"
+    linker_script_section: ".jumpstart.cpu.text.smode.init.enter,.jumpstart.cpu.text.smode.init,.jumpstart.cpu.text.smode"
   stack:
     page_size: 0x1000
     num_pages: 4
     xwr: "0b011"
     umode: "0b0"
     pma_memory_type: "wb"
-    linker_script_section: ".jumpstart.stack.smode"
+    linker_script_section: ".jumpstart.cpu.stack.smode"
   c_structs:
     page_size: 0x1000
     num_pages: 2
     xwr: "0b011"
     umode: "0b0"
     pma_memory_type: "wb"
-    linker_script_section: ".jumpstart.c_structs.smode"
+    linker_script_section: ".jumpstart.cpu.c_structs.smode"
   data:
     page_size: 0x1000
     num_pages: 3
     xwr: "0b011"
     umode: "0b0"
     pma_memory_type: "wb"
-    linker_script_section: ".jumpstart.data.smode"
+    linker_script_section: ".jumpstart.cpu.data.smode"
   sdata:
     page_size: 0x1000
     num_pages: 1
@@ -75,7 +75,7 @@ jumpstart_smode:
     xwr: "0b011"
     umode: "0b0"
     pma_memory_type: "wb"
-    linker_script_section: ".jumpstart.smode.heap"
+    linker_script_section: ".jumpstart.cpu.smode.heap"
 jumpstart_umode:
   text:
     page_size: 0x1000
@@ -83,14 +83,14 @@ jumpstart_umode:
     xwr: "0b101"
     umode: "0b1"
     pma_memory_type: "wb"
-    linker_script_section: ".jumpstart.text.umode"
+    linker_script_section: ".jumpstart.cpu.text.umode"
   stack:
     page_size: 0x1000
     num_pages: 4
     xwr: "0b011"
     umode: "0b1"
     pma_memory_type: "wb"
-    linker_script_section: ".jumpstart.stack.umode"
+    linker_script_section: ".jumpstart.cpu.stack.umode"
 
 
 # These attributes can be overriden by the test attributes file or

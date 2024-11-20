@@ -476,7 +476,7 @@ class SourceGenerator:
         for mode in modes:
             file_descriptor.write(
                 f"""
-.section .jumpstart.text.{mode}, "ax"
+.section .jumpstart.cpu.text.{mode}, "ax"
 # Inputs:
 #   a0: hart id of current hart
 #   a1: hart mask of harts to sync.
@@ -559,7 +559,7 @@ sync_all_harts_from_{mode}:
 
     def generate_smode_fail_functions(self, file_descriptor):
         if "smode" in self.priv_modes_enabled:
-            file_descriptor.write('.section .jumpstart.text.smode, "ax"\n\n')
+            file_descriptor.write('.section .jumpstart.cpu.text.smode, "ax"\n\n')
             file_descriptor.write(".global jumpstart_smode_fail\n")
             file_descriptor.write("jumpstart_smode_fail:\n")
 
@@ -577,7 +577,7 @@ sync_all_harts_from_{mode}:
     def generate_mmu_functions(self, file_descriptor):
         modes = ListUtils.intersection(["mmode", "smode"], self.priv_modes_enabled)
         for mode in modes:
-            file_descriptor.write(f'.section .jumpstart.text.{mode}, "ax"\n\n')
+            file_descriptor.write(f'.section .jumpstart.cpu.text.{mode}, "ax"\n\n')
             file_descriptor.write(f".global setup_mmu_from_{mode}\n")
             file_descriptor.write(f"setup_mmu_from_{mode}:\n\n")
             for stage in TranslationStage.get_enabled_stages():

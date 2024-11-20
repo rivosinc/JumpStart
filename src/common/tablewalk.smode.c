@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
+// SPDX-FileCopyrightText: 2023 - 2025 Rivos Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -33,8 +33,8 @@ const struct mmu_mode_attribute mmu_mode_attributes[] = {
      .pte_ppn_bits = {{53, 37}, {36, 28}, {27, 19}, {18, 10}}},
 };
 
-__attribute__((section(".jumpstart.text.smode"))) void
-translate_VA(uint64_t va, struct translation_info *xlate_info) {
+__attr_stext void translate_VA(uint64_t va,
+                               struct translation_info *xlate_info) {
   // C reimplementation of the DiagSource.translate_VA() from
   // generate_diag_sources.py.
   uint64_t satp_value = read_csr(satp);

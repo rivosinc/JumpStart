@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
+// SPDX-FileCopyrightText: 2023 - 2025 Rivos Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -10,8 +10,8 @@ typedef enum {
   AMOSWAP_RELEASE,
 } amoswapKind_t;
 
-__attribute__((section(".jumpstart.text.smode"))) static uint64_t
-swap_atomic(uint64_t *val, uint64_t new_value, amoswapKind_t kind) {
+__attr_stext static uint64_t swap_atomic(uint64_t *val, uint64_t new_value,
+                                         amoswapKind_t kind) {
   uint64_t result;
   switch (kind) {
   case AMOSWAP_RELEASE:
@@ -33,8 +33,7 @@ swap_atomic(uint64_t *val, uint64_t new_value, amoswapKind_t kind) {
   return result;
 }
 
-__attribute__((section(".jumpstart.text.smode"))) void
-acquire_lock(spinlock_t *lock) {
+__attr_stext void acquire_lock(spinlock_t *lock) {
   disable_checktc();
   while (1) {
     if (*(volatile uint64_t *)lock) {
@@ -47,7 +46,6 @@ acquire_lock(spinlock_t *lock) {
   enable_checktc();
 }
 
-__attribute__((section(".jumpstart.text.smode"))) void
-release_lock(spinlock_t *lock) {
+__attr_stext void release_lock(spinlock_t *lock) {
   swap_atomic(lock, 0, AMOSWAP_RELEASE);
 }

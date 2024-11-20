@@ -1,11 +1,11 @@
-# SPDX-FileCopyrightText: 2024 Rivos Inc.
+# SPDX-FileCopyrightText: 2024 - 2025 Rivos Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 
 #include "jumpstart_defines.h"
 #include "cpu_bits.h"
 
-.section .jumpstart.text.smode.init.enter, "ax"
+.section .jumpstart.cpu.text.smode.init.enter, "ax"
 
 # In sbi_firmware_boot mode, other firmwares run in M-mode and drop hand over control
 # to JumpStart in S-mode. This code is the entry point for such environments.
@@ -63,7 +63,7 @@ start_active_harts_loop_end:
 
   j just_wfi_from_smode # should never get here.
 
-.section .jumpstart.text.smode, "ax"
+.section .jumpstart.cpu.text.smode, "ax"
 
 # Inputs:
 #   a0: hart id.
@@ -191,7 +191,7 @@ invoke_sbi_reset:
 #define SBI_SRST_EID              0x53525354
 #define SBI_SRST_SYSTEM_RESET_FID 0
 
-.section .jumpstart.text.smode, "ax"
+.section .jumpstart.cpu.text.smode, "ax"
 
 # Reference:
 # https://github.com/riscv-non-isa/riscv-sbi-doc/blob/master/src/ext-hsm.adoc
@@ -235,7 +235,7 @@ sbi_system_reset:
   ret
 
 
-.section .jumpstart.data.smode, "aw", @progbits
+.section .jumpstart.cpu.data.smode, "aw", @progbits
 
 .align 6
 .globl tohost
