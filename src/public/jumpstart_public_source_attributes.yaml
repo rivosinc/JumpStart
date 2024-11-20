@@ -15,14 +15,12 @@ priv_modes_supported: [mmode, smode, umode]
 jumpstart_mmode:
   text:
     page_size: 0x1000
-    num_pages: 4
     linker_script_section: ".jumpstart.cpu.text.mmode.init.enter,.jumpstart.cpu.text.mmode.init.exit,.jumpstart.cpu.text.mmode.init,.jumpstart.cpu.text.mmode.init.end,.jumpstart.cpu.text.mmode"
     pma_memory_type: "wb"
     no_pte_allocation: True
 jumpstart_smode:
   text:
     page_size: 0x1000
-    num_pages: 3
     xwr: "0b101"
     umode: "0b0"
     pma_memory_type: "wb"
@@ -43,14 +41,12 @@ jumpstart_smode:
     linker_script_section: ".jumpstart.cpu.c_structs.smode"
   data:
     page_size: 0x1000
-    num_pages: 3
     xwr: "0b011"
     umode: "0b0"
     pma_memory_type: "wb"
     linker_script_section: ".jumpstart.cpu.data.smode"
   sdata:
     page_size: 0x1000
-    num_pages: 1
     xwr: "0b011"
     umode: "0b0"
     pma_memory_type: "wb"
@@ -68,8 +64,6 @@ jumpstart_smode:
     pma_memory_type: "wb"
     linker_script_section: ".rodata"
   heap:
-    page_size: 0x200000
-    num_pages: 2
     xwr: "0b011"
     umode: "0b0"
     pma_memory_type: "wb"
@@ -77,7 +71,6 @@ jumpstart_smode:
 jumpstart_umode:
   text:
     page_size: 0x1000
-    num_pages: 1
     xwr: "0b101"
     umode: "0b1"
     pma_memory_type: "wb"
@@ -97,15 +90,22 @@ diag_attributes:
   diag_entry_label: null
   start_test_in_mmode: false
   enable_virtualization: false
-  max_num_pagetable_pages_per_stage: 30
-  num_pages_for_jumpstart_smode_bss: 7
-  num_pages_for_jumpstart_smode_rodata: 1
-  allow_page_table_modifications: false
   mmode_start_address: 0x80000000
   # By default smode and umode areas will be placed after the mmode area
   # unless given values by a diag.
   smode_start_address: null
   umode_start_address: null
+  num_pages_for_jumpstart_mmode_text: 4
+  num_pages_for_jumpstart_smode_text: 3
+  num_pages_for_jumpstart_smode_data: 3
+  num_pages_for_jumpstart_smode_sdata: 1
+  num_pages_for_jumpstart_smode_bss: 7
+  page_size_for_jumpstart_smode_heap: 0x200000
+  num_pages_for_jumpstart_smode_heap: 2
+  num_pages_for_jumpstart_smode_rodata: 2
+  num_pages_for_jumpstart_umode_text: 1
+  max_num_pagetable_pages_per_stage: 30
+  allow_page_table_modifications: false
   active_hart_mask: '0b1'
   # We'll pick the lowest hart id as the primary hart id if the diag
   # doesn't explicitly specify it or it's not overriden on the command line.

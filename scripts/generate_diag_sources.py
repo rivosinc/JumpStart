@@ -323,10 +323,17 @@ class SourceGenerator:
     def get_next_available_dest_addr_after_last_mapping(
         self, target_mmu, stage, page_size, pma_memory_type
     ):
-        assert len(self.memory_map[target_mmu][stage]) > 0, "No previous mappings found."
-
-        previous_mapping_id = len(self.memory_map[target_mmu][stage]) - 1
-        previous_mapping = self.memory_map[target_mmu][stage][previous_mapping_id]
+        # Handle both memory_map structures: {stage: []} and {target_mmu: {stage: []}}
+        if target_mmu in self.memory_map and isinstance(self.memory_map[target_mmu], dict):
+            # New structure: {target_mmu: {stage: []}}
+            assert len(self.memory_map[target_mmu][stage]) > 0, "No previous mappings found."
+            previous_mapping_id = len(self.memory_map[target_mmu][stage]) - 1
+            previous_mapping = self.memory_map[target_mmu][stage][previous_mapping_id]
+        else:
+            # Old structure: {stage: []}
+            assert len(self.memory_map[stage]) > 0, "No previous mappings found."
+            previous_mapping_id = len(self.memory_map[stage]) - 1
+            previous_mapping = self.memory_map[stage][previous_mapping_id]
 
         previous_mapping_size = previous_mapping.get_field(
             "page_size"
@@ -376,22 +383,23 @@ class SourceGenerator:
                 section_mapping.pop("xwr", None)
                 section_mapping.pop("umode", None)
 
-            # This is where we pick up num_pages_for_jumpstart_*mode_* attributes from the diag_attributes
-            #   Example: num_pages_for_jumpstart_smode_bss, num_pages_for_jumpstart_smode_rodata, etc.
-            num_pages_diag_attribute_name = f"num_pages_for_{area_name}_{section_name}"
-            if (
-                "num_pages" in section_mapping
-                and num_pages_diag_attribute_name
-                in self.jumpstart_source_attributes["diag_attributes"]
-            ):
-                raise Exception(
-                    f"num_pages specified for {section_name} in {area_name} and {num_pages_diag_attribute_name} specified in diag_attributes."
-                )
+            for attribute in ["num_pages", "page_size"]:
+                # This is where we allow the diag to override the attributes of jumpstart sections.
+                # We can change the page size and num_pages of the section.
+                #   Example: num_pages_for_jumpstart_smode_bss, num_pages_for_jumpstart_smode_rodata, etc.
+                attribute_name = f"{attribute}_for_{area_name}_{section_name}"
+                if (
+                    attribute in section_mapping
+                    and attribute_name in self.jumpstart_source_attributes["diag_attributes"]
+                ):
+                    raise Exception(
+                        f"{attribute} specified for {section_name} in {area_name} and {attribute_name} specified in diag_attributes."
+                    )
 
-            if num_pages_diag_attribute_name in self.jumpstart_source_attributes["diag_attributes"]:
-                section_mapping["num_pages"] = self.jumpstart_source_attributes["diag_attributes"][
-                    num_pages_diag_attribute_name
-                ]
+                if attribute_name in self.jumpstart_source_attributes["diag_attributes"]:
+                    section_mapping[attribute] = self.jumpstart_source_attributes[
+                        "diag_attributes"
+                    ][attribute_name]
 
             dest_address_type = TranslationStage.get_translates_to(stage)
             assert dest_address_type not in section_mapping
@@ -405,11 +413,10 @@ class SourceGenerator:
                 # # of the last mapping.
                 section_mapping[dest_address_type] = (
                     self.get_next_available_dest_addr_after_last_mapping(
+                        "cpu",
                         stage,
-                        self.jumpstart_source_attributes[area_name][section_name]["page_size"],
-                        self.jumpstart_source_attributes[area_name][section_name][
-                            "pma_memory_type"
-                        ],
+                        section_mapping["page_size"],
+                        section_mapping["pma_memory_type"],
                     )
                 )
 
@@ -449,7 +456,7 @@ class SourceGenerator:
         dest_address_type = TranslationStage.get_translates_to(stage)
         guard_page_mapping[dest_address_type] = (
             self.get_next_available_dest_addr_after_last_mapping(
-                stage, guard_page_mapping["page_size"], guard_page_mapping["pma_memory_type"]
+                "cpu", stage, guard_page_mapping["page_size"], guard_page_mapping["pma_memory_type"]
             )
         )
         guard_page_mapping["num_pages"] = 1
