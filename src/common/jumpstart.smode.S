@@ -52,7 +52,7 @@ setup_smode_trap_vector:
 .global setup_smode_interrupt_enables
 setup_smode_interrupt_enables:
   # Enable interrupts.
-  li t0, SSTATUS_SIE | SSTATUS_SPP
+  li t0, SSTATUS_SIE | SSTATUS_SPIE
   csrs sstatus, t0
 
   # Enable external interrupts.
