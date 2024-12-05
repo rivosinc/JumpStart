@@ -108,6 +108,9 @@ diag_attributes:
   smode_start_address: null
   umode_start_address: null
   active_hart_mask: '0b1'
+  # We'll pick the lowest hart id as the primary hart id if the diag
+  # doesn't explicitly specify it or it's not overriden on the command line.
+  primary_hart_id: null
   satp_mode: 'sv39'
   vsatp_mode: 'sv39'
   hgatp_mode: 'sv39x4'
@@ -147,7 +150,6 @@ defines:
   # These are the various states that a hart can be in.
   HART_RUNNING: 2
   HART_INACTIVE: 3
-  PRIMARY_HART_ID: 0
   CHECKTC_DISABLE: nop
   CHECKTC_ENABLE: nop
   MMODE_ROLE_DISABLE: nop

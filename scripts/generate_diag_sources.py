@@ -112,10 +112,22 @@ class SourceGenerator:
                 cmd_line_diag_attribute_override_dict,
             )
 
-        assert "enable_virtualization" in self.jumpstart_source_attributes["diag_attributes"]
         TranslationStage.set_virtualization_enabled(
             self.jumpstart_source_attributes["diag_attributes"]["enable_virtualization"]
         )
+
+        self.jumpstart_source_attributes["diag_attributes"]["active_hart_mask"] = int(
+            self.jumpstart_source_attributes["diag_attributes"]["active_hart_mask"], 2
+        )
+
+        if self.jumpstart_source_attributes["diag_attributes"]["primary_hart_id"] is None:
+            active_hart_mask = self.jumpstart_source_attributes["diag_attributes"][
+                "active_hart_mask"
+            ]
+            # Set the lowest index of the lowest bit set in active_hart_mask as the primary hart id.
+            self.jumpstart_source_attributes["diag_attributes"]["primary_hart_id"] = (
+                active_hart_mask & -active_hart_mask
+            ).bit_length() - 1
 
         self.sanity_check_diag_attributes()
 
@@ -289,9 +301,25 @@ class SourceGenerator:
                 self.jumpstart_source_attributes["diag_attributes"]
             )
 
-    def get_next_available_dest_addr_after_last_mapping(self, stage, page_size, pma_memory_type):
-        previous_mapping_id = len(self.memory_map[stage]) - 1
-        previous_mapping = self.memory_map[stage][previous_mapping_id]
+        assert (
+            self.jumpstart_source_attributes["diag_attributes"]["active_hart_mask"].bit_count()
+            <= self.jumpstart_source_attributes["max_num_harts_supported"]
+        )
+        primary_hart_id = int(
+            self.jumpstart_source_attributes["diag_attributes"]["primary_hart_id"]
+        )
+        assert (
+            self.jumpstart_source_attributes["diag_attributes"]["active_hart_mask"]
+            & (1 << primary_hart_id)
+        ) != 0
+
+    def get_next_available_dest_addr_after_last_mapping(
+        self, target_mmu, stage, page_size, pma_memory_type
+    ):
+        assert len(self.memory_map[target_mmu][stage]) > 0, "No previous mappings found."
+
+        previous_mapping_id = len(self.memory_map[target_mmu][stage]) - 1
+        previous_mapping = self.memory_map[target_mmu][stage][previous_mapping_id]
 
         previous_mapping_size = previous_mapping.get_field(
             "page_size"
@@ -441,13 +469,6 @@ class SourceGenerator:
 
             # Perform some transformations so that we can print them as defines.
             diag_attributes = self.jumpstart_source_attributes["diag_attributes"].copy()
-            assert "active_hart_mask" in diag_attributes
-            active_hart_mask = int(diag_attributes["active_hart_mask"], 2)
-            assert (
-                active_hart_mask.bit_count()
-                <= self.jumpstart_source_attributes["max_num_harts_supported"]
-            )
-            diag_attributes["active_hart_mask"] = int(active_hart_mask)
 
             for stage in TranslationStage.get_enabled_stages():
                 atp_register = TranslationStage.get_atp_register(stage)
@@ -468,9 +489,8 @@ class SourceGenerator:
             file_descriptor.close()
 
     def generate_hart_sync_functions(self, file_descriptor):
-        active_hart_mask = int(
-            self.jumpstart_source_attributes["diag_attributes"]["active_hart_mask"], 2
-        )
+        active_hart_mask = self.jumpstart_source_attributes["diag_attributes"]["active_hart_mask"]
+        primary_hart_id = self.jumpstart_source_attributes["diag_attributes"]["primary_hart_id"]
 
         modes = ListUtils.intersection(["mmode", "smode"], self.priv_modes_enabled)
         for mode in modes:
@@ -545,7 +565,7 @@ sync_all_harts_from_{mode}:
 
   jal get_thread_attributes_hart_id_from_{mode}
   li a1, {active_hart_mask}
-  li a2, PRIMARY_HART_ID
+  li a2, {primary_hart_id}
   la a3, hart_sync_point
 
   jal sync_harts_in_mask_from_{mode}
