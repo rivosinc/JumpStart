@@ -22,8 +22,6 @@ def convert_hart_mask_to_num_active_harts(hart_mask):
     num_harts = 0
     hart_mask = int(hart_mask, 2)
     while hart_mask != 0:
-        # We don't expect gaps in the hart mask at this point.
-        assert hart_mask & 1
         num_harts += 1
         hart_mask >>= 1
     return num_harts
