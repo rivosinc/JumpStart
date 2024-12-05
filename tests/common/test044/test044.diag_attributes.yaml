@@ -5,6 +5,8 @@
 satp_mode: "sv39"
 start_test_in_mmode: true
 
+active_hart_mask: "0b1111"
+
 mappings:
   -
     pa: 0xC0020000
