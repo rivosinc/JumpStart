@@ -92,3 +92,9 @@ option('rivos_internal_build',
        type : 'boolean',
        value : false,
        description : 'Build the Rivos internal version of JumpStart.')
+
+option('soc_rev',
+       type : 'combo',
+       choices: ['A0', 'B0'],
+       value : 'A0',
+       description : 'SOC Revision.')
