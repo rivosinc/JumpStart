@@ -18,6 +18,29 @@ JumpStart requires the following tools to be available in your path:
 * [Spike](https://github.com/riscv-software-src/riscv-isa-sim)
 * [just](https://github.com/casey/just) (command runner)
 
+### Ubuntu
+
+Install required packages:
+```shell
+# gcc toolchain
+# Install riscv-gnu-toolchain from source or use a prebuilt version
+
+# just tool
+curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -- --to /usr/local/bin
+
+# meson
+sudo apt install meson
+
+# Build Spike from source
+# See: https://github.com/riscv-software-src/riscv-isa-sim
+```
+
+### macOS
+
+* Install the `gcc` toolchain to your path. Prebuilt binaries are available [HERE](https://docs.google.com/document/d/1-JRewN5ZJpFXSk_LkgvxqhzMnwZ_uRjPUb27tfEKRxc/edit#heading=h.jjddp8rb7042).
+* Build a local copy of Spike and add it to your path. Instructions are available [HERE](https://docs.google.com/document/d/1egDH-BwAMEFCFvj3amu_VHRASCihpsHv70khnG6gojU/edit#heading=h.t75kh88x3knz).
+* [brew](https://brew.sh) install `meson` and `just`.
+
 JumpStart has been tested on Ubuntu 22.04 and macOS.
 
 ## Test the Environment
