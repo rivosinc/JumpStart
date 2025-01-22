@@ -15,6 +15,13 @@ The JumpStart [`Unit Tests`](../tests) are a good reference on writing diags:
 
 **For a Quick Start Guide, see [Anatomy of a Diag](quick_start_anatomy_of_a_diag.md)** which provides a detailed explanation of `test021` which is a 2-core diag that modifies a shared page table in memory and checks that the change is visible to both cores.
 
+## Table of Contents
+
+* [Diag Sources](#diag-sources)
+* [Diag Attributes](#diag-attributes)
+* [JumpStart APIs](#jumpstart-apis)
+* [Building and Running Diags](#building-and-running-diags)
+
 ## Diag Sources
 
 Diags are written in C and/or Assembly.
@@ -26,6 +33,7 @@ Machine, Supervisor and User mode cannot share code so the code for different mo
 JumpStart provides a set of basic API functions that the diag can use. Details [HERE](#jumpstart-apis).
 
 The diag exits by returning from `main()` with a `DIAG_PASSED` or `DIAG_FAILED` return code. Alternatively, the diag can call `jumpstart_mmode_fail()` or `jumpstart_smode_fail()` functions if a clean return from `main()` is not possible. On return from the diag, JumpStart will exit the simulation with the appropriate exit code and exit sequence for the simulation environment.
+
 
 **Diags are expected to follow the [RISC-V ABI Calling Convention](https://github.com/riscv-non-isa/riscv-elf-psabi-doc/blob/master/riscv-cc.adoc).**
 
