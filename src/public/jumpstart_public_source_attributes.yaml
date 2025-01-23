@@ -2,8 +2,6 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-diag_entry_label: _mmode_start
-
 rivos_internal_build: false
 
 max_num_harts_supported: 4
@@ -96,6 +94,7 @@ jumpstart_umode:
 # These attributes can be overriden by the test attributes file or
 # at build time.
 diag_attributes:
+  diag_entry_label: null
   start_test_in_mmode: false
   enable_virtualization: false
   max_num_pagetable_pages_per_stage: 30

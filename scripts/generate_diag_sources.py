@@ -41,9 +41,14 @@ class SourceGenerator:
     ):
         self.linker_script = None
 
-        self.priv_modes_enabled = priv_modes_enabled
+        self.priv_modes_enabled = None
 
         self.process_source_attributes(jumpstart_source_attributes_yaml)
+
+        self.priv_modes_enabled = ListUtils.intersection(
+            self.jumpstart_source_attributes["priv_modes_supported"],
+            priv_modes_enabled,
+        )
 
         self.process_diag_attributes(diag_attributes_yaml, override_diag_attributes)
 
@@ -83,6 +88,12 @@ class SourceGenerator:
         DictUtils.override_dict(
             self.jumpstart_source_attributes["diag_attributes"], diag_attributes
         )
+
+        # Set the default diag entry label to start label of the highest privilege mode.
+        if self.jumpstart_source_attributes["diag_attributes"]["diag_entry_label"] is None:
+            self.jumpstart_source_attributes["diag_attributes"][
+                "diag_entry_label"
+            ] = f"_{self.priv_modes_enabled[0]}_start"
 
         if override_diag_attributes is not None:
             # Override the diag attributes with the values specified on the
@@ -259,19 +270,28 @@ class SourceGenerator:
                     )
                 )
 
-            for mode in ListUtils.intersection(
-                self.jumpstart_source_attributes["priv_modes_supported"], self.priv_modes_enabled
-            ):
+            for mode in self.priv_modes_enabled:
                 self.add_jumpstart_mode_mappings_for_stage(stage, mode)
 
-                # Pagetables for each stage are placed consecutively in the physical address
-                # space. We will place the pagetables after the last physical address
-                # used by the jumpstart mappings in any stage.
-                next_available_dest_address = self.get_next_available_dest_addr_after_last_mapping(
-                    stage, PageSize.SIZE_4K, "wb"
+            # Pagetables for each stage are placed consecutively in the physical address
+            # space. We will place the pagetables after the last physical address
+            # used by the jumpstart mappings in any stage.
+            # Note: get_next_available_dest_addr_after_last_mapping expects target_mmu but
+            # current memory_map structure is {stage: []}, so we use stage directly
+            if len(self.memory_map[stage]) > 0:
+                previous_mapping_id = len(self.memory_map[stage]) - 1
+                previous_mapping = self.memory_map[stage][previous_mapping_id]
+                previous_mapping_size = previous_mapping.get_field(
+                    "page_size"
+                ) * previous_mapping.get_field("num_pages")
+                dest_address_type = TranslationStage.get_translates_to(stage)
+                next_available_dest_address = (
+                    previous_mapping.get_field(dest_address_type) + previous_mapping_size
                 )
-                if next_available_dest_address > pagetables_start_address:
-                    pagetables_start_address = next_available_dest_address
+            else:
+                next_available_dest_address = 0
+            if next_available_dest_address > pagetables_start_address:
+                pagetables_start_address = next_available_dest_address
 
         self.add_pagetable_mappings(pagetables_start_address)
 
@@ -440,7 +460,7 @@ class SourceGenerator:
 
     def generate_linker_script(self, output_linker_script):
         self.linker_script = LinkerScript(
-            self.jumpstart_source_attributes["diag_entry_label"],
+            self.jumpstart_source_attributes["diag_attributes"]["diag_entry_label"],
             self.memory_map,
             self.diag_attributes_yaml,
         )
