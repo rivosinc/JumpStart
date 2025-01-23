@@ -13,7 +13,7 @@ import sys
 from enum import Enum
 
 import yaml
-from data_structures import DictUtils, ListUtils
+from data_structures import ListUtils
 
 
 class MemoryOp(Enum):
@@ -53,7 +53,6 @@ class JumpStartGeneratedSource:
     def __init__(
         self,
         jumpstart_source_attributes_yaml,
-        override_jumpstart_source_attributes,
         defines_file,
         data_structures_file,
         assembly_file,
@@ -67,14 +66,6 @@ class JumpStartGeneratedSource:
         with open(jumpstart_source_attributes_yaml) as f:
             self.attributes_data = yaml.safe_load(f)
             f.close()
-
-        if override_jumpstart_source_attributes:
-            # Override the default jumpstart source attribute values with the values
-            # specified on the command line.
-            DictUtils.override_dict(
-                self.attributes_data,
-                DictUtils.create_dict(override_jumpstart_source_attributes),
-            )
 
         self.defines_file_fd = open(defines_file, "w")
         self.data_structures_file_fd = open(data_structures_file, "w")
@@ -438,13 +429,6 @@ def main():
         type=str,
     )
     parser.add_argument(
-        "--override_jumpstart_source_attributes",
-        help="Overrides the JumpStart source attributes.",
-        required=False,
-        nargs="+",
-        default=None,
-    )
-    parser.add_argument(
         "--priv_modes_enabled",
         help=".",
         required=True,
@@ -475,7 +459,6 @@ def main():
 
     source_generator = JumpStartGeneratedSource(
         args.jumpstart_source_attributes_yaml,
-        args.override_jumpstart_source_attributes,
         args.defines_file,
         args.data_structures_file,
         args.assembly_file,

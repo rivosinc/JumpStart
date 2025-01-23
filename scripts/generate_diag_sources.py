@@ -35,7 +35,6 @@ class SourceGenerator:
     def __init__(
         self,
         jumpstart_source_attributes_yaml,
-        override_jumpstart_source_attributes,
         diag_attributes_yaml,
         override_diag_attributes,
         priv_modes_enabled,
@@ -44,9 +43,7 @@ class SourceGenerator:
 
         self.priv_modes_enabled = priv_modes_enabled
 
-        self.process_source_attributes(
-            jumpstart_source_attributes_yaml, override_jumpstart_source_attributes
-        )
+        self.process_source_attributes(jumpstart_source_attributes_yaml)
 
         self.process_diag_attributes(diag_attributes_yaml, override_diag_attributes)
 
@@ -54,9 +51,7 @@ class SourceGenerator:
 
         self.create_page_tables_data()
 
-    def process_source_attributes(
-        self, jumpstart_source_attributes_yaml, override_jumpstart_source_attributes
-    ):
+    def process_source_attributes(self, jumpstart_source_attributes_yaml):
         with open(jumpstart_source_attributes_yaml) as f:
             self.jumpstart_source_attributes = yaml.safe_load(f)
 
@@ -76,14 +71,6 @@ class SourceGenerator:
         ):
             log.warning(
                 f"rivos_internal/ exists but rivos_internal_build is set to False in {jumpstart_source_attributes_yaml}"
-            )
-
-        if override_jumpstart_source_attributes:
-            # Override the default jumpstart source attribute values with the values
-            # specified on the command line.
-            DictUtils.override_dict(
-                self.jumpstart_source_attributes,
-                DictUtils.create_dict(override_jumpstart_source_attributes),
             )
 
     def process_diag_attributes(self, diag_attributes_yaml, override_diag_attributes):
@@ -787,13 +774,6 @@ def main():
         type=str,
     )
     parser.add_argument(
-        "--override_jumpstart_source_attributes",
-        help="Overrides the JumpStart source attributes.",
-        required=False,
-        nargs="+",
-        default=None,
-    )
-    parser.add_argument(
         "--priv_modes_enabled",
         help=".",
         required=True,
@@ -841,7 +821,6 @@ def main():
 
     source_generator = SourceGenerator(
         args.jumpstart_source_attributes_yaml,
-        args.override_jumpstart_source_attributes,
         args.diag_attributes_yaml,
         args.override_diag_attributes,
         args.priv_modes_enabled,

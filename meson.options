@@ -35,10 +35,6 @@ option('diag_custom_defines',
        type : 'array',
        description : 'Custom diag specific defines.')
 
-option('jumpstart_source_attribute_overrides',
-       type : 'array',
-       description : 'Overrides specified JumpStart source attributes.')
-
 option('riscv_priv_modes_enabled',
        type : 'array',
        value : ['mmode', 'smode', 'umode'],

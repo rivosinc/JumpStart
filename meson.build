@@ -30,7 +30,6 @@ endforeach
 
 default_c_args = []
 
-jumpstart_source_attribute_overrides = get_option('jumpstart_source_attribute_overrides')
 diag_attribute_overrides = get_option('diag_attribute_overrides')
 
 compatible_priv_modes = []
@@ -64,16 +63,6 @@ jumpstart_source_generator_command = [prog_python,
                                               '--jumpstart_source_attributes_yaml', '@INPUT1@',
                                               '--priv_modes_enabled', riscv_priv_modes_enabled
                                               ]
-
-override_jumpstart_source_attributes_parameter = []
-if jumpstart_source_attribute_overrides.length() > 0
-  override_jumpstart_source_attributes_parameter += ['--override_jumpstart_source_attributes']
-
-  foreach override : jumpstart_source_attribute_overrides
-    override_jumpstart_source_attributes_parameter += [override]
-  endforeach
-endif
-jumpstart_source_generator_command += override_jumpstart_source_attributes_parameter
 
 jumpstart_source_generator_outputs = custom_target(
                                       'Generate jumpstart sources for build',
@@ -151,8 +140,6 @@ diag_source_generator_command = [prog_python,
 if get_option('diag_target') == 'qemu'
   diag_attribute_overrides += ['in_qemu_mode=True']
 endif
-
-diag_source_generator_command += override_jumpstart_source_attributes_parameter
 
 if diag_attribute_overrides.length() > 0
   diag_source_generator_command += ['--override_diag_attributes']
