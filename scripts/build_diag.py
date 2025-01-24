@@ -34,7 +34,7 @@ def main():
         help="--buildtype to pass to meson setup.",
         type=str,
         default="release",
-        choices=["release", "debug"],
+        choices=["release", "minsize", "debug", "debugoptimized"],
     )
     parser.add_argument(
         "--override_meson_options",
@@ -130,7 +130,6 @@ def main():
         args.override_meson_options.append(
             f"diag_custom_defines={','.join(args.diag_custom_defines)}"
         )
-
     diag_build_target = DiagBuildTarget(
         args.diag_src_dir,
         args.diag_build_dir,
