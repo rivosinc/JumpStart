@@ -173,6 +173,8 @@ class Meson:
                 self.meson_setup_flags[f"-D{option}"] = (
                     "[" + ",".join(f"'{x}'" for x in self.meson_options[option]) + "]"
                 )
+            elif isinstance(self.meson_options[option], bool):
+                self.meson_setup_flags[f"-D{option}"] = str(self.meson_options[option]).lower()
             else:
                 self.meson_setup_flags[f"-D{option}"] = self.meson_options[option]
 
