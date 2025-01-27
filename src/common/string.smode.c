@@ -11,6 +11,8 @@
 
 #include "jumpstart.h"
 
+#if DISABLE_UART == 0
+
 int toupper(int c);
 
 static char *ksprintn(char *nbuf, uintmax_t num, int base, int *lenp,
@@ -428,3 +430,5 @@ __attr_stext int snprintf(char *buf, size_t size, const char *fmt, ...) {
 
   return retval;
 }
+
+#endif // DISABLE_UART == 0

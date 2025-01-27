@@ -11,6 +11,8 @@
 #include <stdarg.h>
 #include <stdio.h>
 
+#if DISABLE_UART == 0
+
 extern void putch(char c);
 
 int toupper(int c);
@@ -81,3 +83,14 @@ __attr_stext int printk(const char *fmt, ...) {
 
   return rc;
 }
+
+#else // DISABLE_UART == 0
+
+__attr_stext int printk(const char *fmt, ...) {
+  if (fmt) {
+  }
+
+  return 0;
+}
+
+#endif // DISABLE_UART == 0
