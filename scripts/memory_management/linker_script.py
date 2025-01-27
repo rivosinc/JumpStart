@@ -108,9 +108,10 @@ class LinkerScriptSection:
 
 
 class LinkerScript:
-    def __init__(self, entry_label, mappings, attributes_file):
+    def __init__(self, entry_label, elf_address_range, mappings, attributes_file):
         self.entry_label = entry_label
         self.attributes_file = attributes_file
+        self.elf_start_address, self.elf_end_address = elf_address_range
 
         self.guard_sections = None
 
@@ -175,15 +176,24 @@ class LinkerScript:
         self.sections.extend(self.guard_sections)
         self.sections.sort(key=lambda x: x.get_start_address())
 
-        # check for overlaps in the sections
-        for i in range(len(self.sections) - 1):
-            if (
-                self.sections[i].get_start_address() + self.sections[i].get_size()
-                > self.sections[i + 1].get_start_address()
-            ):
-                raise ValueError(
-                    f"Linker sections overlap:\n\t{self.sections[i]}\n\t{self.sections[i + 1]}"
-                )
+        # check for overlaps in the sections and that sections are within ELF address range
+        for i in range(len(self.sections)):
+            section_start = self.sections[i].get_start_address()
+            section_end = section_start + self.sections[i].get_size()
+
+            # Check section is within allowed ELF address range if specified
+            if self.elf_start_address is not None and self.elf_end_address is not None:
+                if section_start < self.elf_start_address or section_end > self.elf_end_address:
+                    raise ValueError(
+                        f"{self.sections[i]} is outside allowed ELF address range [{hex(self.elf_start_address)}, {hex(self.elf_end_address)}]"
+                    )
+
+            # Check for overlap with next section
+            if i < len(self.sections) - 1:
+                if section_end > self.sections[i + 1].get_start_address():
+                    raise ValueError(
+                        f"Linker sections overlap:\n\t{self.sections[i]}\n\t{self.sections[i + 1]}"
+                    )
 
         self.program_headers = []
         for section in self.sections:

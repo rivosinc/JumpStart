@@ -467,9 +467,13 @@ class SourceGenerator:
 
     def generate_linker_script(self, output_linker_script):
         self.linker_script = LinkerScript(
-            self.jumpstart_source_attributes["diag_attributes"]["diag_entry_label"],
-            self.memory_map,
-            self.diag_attributes_yaml,
+            entry_label=self.jumpstart_source_attributes["diag_attributes"]["diag_entry_label"],
+            elf_address_range=(
+                self.jumpstart_source_attributes["diag_attributes"]["elf_start_address"],
+                self.jumpstart_source_attributes["diag_attributes"]["elf_end_address"],
+            ),
+            mappings=self.memory_map,
+            attributes_file=self.diag_attributes_yaml,
         )
         self.linker_script.generate(output_linker_script)
 

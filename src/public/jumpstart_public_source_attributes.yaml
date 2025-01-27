@@ -115,6 +115,10 @@ diag_attributes:
   hgatp_mode: 'sv39x4'
   mappings: null
   build_rng_seed: 0xdeadbeef
+  # Limit the range of the ELF load sections. If not set then
+  # no limit is applied.
+  elf_start_address: null
+  elf_end_address: null
 
 c_structs:
   thread_attributes:
