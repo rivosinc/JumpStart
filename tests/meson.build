@@ -100,13 +100,18 @@ foreach unit_test : unit_tests
       spike_args += spike_additional_arguments.split()
     endif
 
+    target = spike
+    args = [spike_args, test_exe]
+    timeout = get_option('spike_timeout')
+    should_fail = test_expected_to_fail
+
     test(test_name + ' 🧪 ' + test_description,
-          spike,
-          args : [spike_args, test_exe],
+          target,
+          args : args,
+          timeout: timeout,
           suite:'basic',
-          timeout: get_option('spike_timeout'),
           depends: test_exe,
-          should_fail: test_expected_to_fail)
+          should_fail: should_fail)
   endif
 
 endforeach

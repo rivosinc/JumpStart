@@ -183,11 +183,17 @@ if diag_attributes_yaml != '' and diag_sources.length() > 0
   endif
 
   if get_option('diag_target') == 'spike'
+    target = spike
+    args = [default_spike_args, diag_exe]
+    timeout = get_option('spike_timeout')
+
     test('🧪 ' + diag_name,
-          spike,
-          args : [default_spike_args, diag_exe],
-          timeout: get_option('spike_timeout'),
-          depends: diag_exe)
+          target,
+          args : args,
+          timeout: timeout,
+          depends: diag_exe,
+          should_fail: false
+        )
   endif
 
 else
