@@ -178,7 +178,7 @@ program_menvcfg:
   # PMBTE: Enables Svpbmt extension for S-mode and G-stage address translation.
   #        i.e., for page tables pointed to by satp or hgatp.
   # CDE: Counter Delegation Enable
-  li t0, (MENVCFG_CBIE | MENVCFG_CBCFE | MENVCFG_CBZE | MENVCFG_PBMTE | MENVCFG_CDE)
+  li t0, (MENVCFG_CBIE | MENVCFG_CBCFE | MENVCFG_CBZE | MENVCFG_PBMTE | MENVCFG_CDE | MENVCFG_STCE)
   csrrs t1, menvcfg, t0
 
   ret
