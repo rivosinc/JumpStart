@@ -105,6 +105,7 @@ foreach unit_test : unit_tests
           args : [spike_args, test_exe],
           suite:'basic',
           timeout: get_option('spike_timeout'),
+          depends: test_exe,
           should_fail: test_expected_to_fail)
   endif
 
