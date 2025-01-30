@@ -158,7 +158,7 @@ class DiagBuildTarget:
         build_asset_type,
         build_asset_src_file_path,
         build_asset_file_name=None,
-        asset_action=AssetAction.MOVE,
+        asset_action=AssetAction.COPY,
     ):
         if not isinstance(asset_action, AssetAction):
             raise TypeError("asset_action must be an instance of AssetAction Enum")
