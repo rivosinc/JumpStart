@@ -54,8 +54,8 @@ repos:
     hooks:
       - id: reuse-annotate
         args:
-          - -c=Rivos Inc.
-          - -l=Apache-2.0
+          - -c Rivos Inc.
+          - -l Apache-2.0
           - --merge-copyrights
           - --skip-unrecognised
       - id: reuse
