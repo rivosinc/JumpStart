@@ -29,7 +29,7 @@ repos:
       - id: isort
 
   - repo: https://github.com/psf/black-pre-commit-mirror
-    rev: 24.4.2
+    rev: 25.1.0
     hooks:
       - id: black
 
@@ -39,18 +39,18 @@ repos:
       - id: flynt
 
   - repo: https://github.com/asottile/pyupgrade
-    rev: v3.16.0
+    rev: v3.17.0
     hooks:
       - id: pyupgrade
 
   - repo: https://github.com/pre-commit/mirrors-clang-format
-    rev: v16.0.6
+    rev: v18.1.8
     hooks:
       - id: clang-format
 
   # pull mirror of https://github.com/fsfe/reuse-tool
   - repo: https://github.com/rivosinc/reuse-tool
-    rev: '092e17c7287dad33a3da7fde22185dea29698810'
+    rev: '16db23c9169973fc16199e6fdfa9e792276d219e'
     hooks:
       - id: reuse-annotate
         args:
@@ -61,6 +61,6 @@ repos:
       - id: reuse
 
   - repo: https://github.com/pycqa/flake8
-    rev: 6.1.0
+    rev: 7.1.0
     hooks:
       - id: flake8
