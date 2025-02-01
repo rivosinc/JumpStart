@@ -42,7 +42,7 @@ __attr_privdata static spinlock_t heap_lock = 0;
 // Allocate memory on the heap
 //------------------------------------------------------------------------------
 __attr_stext void *malloc(size_t size) {
-  if (head == 0 || size > MEMCHUNK_MAX_SIZE) {
+  if (head == 0 || size > MEMCHUNK_MAX_SIZE || size == 0) {
     return 0;
   }
   void *result = 0;
