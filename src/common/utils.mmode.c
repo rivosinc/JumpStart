@@ -28,7 +28,7 @@ __attr_mtext int32_t mmode_try_get_seed(void) {
 }
 
 #define RAND_MAX 0x7fffffff
-__attr_sdata uint64_t next = 1;
+__attr_privdata uint64_t next = 1;
 __attr_mtext uint64_t __mmode_random(void) {
   /* Based on rand in diags/perf/membw/libc_replacement.h */
   /* This multiplier was obtained from Knuth, D.E., "The Art of

@@ -6,8 +6,7 @@ mmode_sources += files('jumpstart.mmode.S',
                        'trap_handler.mmode.c',
                        'utils.mmode.c')
 
-smode_sources += files('data.smode.S',
-                              'jumpstart.smode.S',
+smode_sources += files('jumpstart.smode.S',
                               'jumpstart.vsmode.S',
                               'tablewalk.smode.c',
                               'trap_handler.smode.c',
@@ -18,6 +17,12 @@ smode_sources += files('data.smode.S',
                               'heap.smode.c',
                               'lock.smode.c')
 
+if get_option('boot_config') == 'fw-sbi'
+  smode_sources += files(
+                          'sbi_firmware_boot.smode.S',
+                          'data.privileged.S'
+                        )
+endif
 
 umode_sources += files('jumpstart.umode.S',
                        'jumpstart.vumode.S')

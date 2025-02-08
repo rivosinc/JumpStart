@@ -32,10 +32,10 @@ typedef struct memchunk memchunk;
 #define MIN_HEAP_ALLOCATION_BYTES 8
 #define MIN_HEAP_SEGMENT_BYTES    (sizeof(memchunk) + MIN_HEAP_ALLOCATION_BYTES)
 
-__attr_sdata static memchunk *head;
-__attr_sdata volatile uint8_t heap_setup_done = 0;
+__attr_privdata static memchunk *head;
+__attr_privdata volatile uint8_t heap_setup_done = 0;
 
-__attr_sdata static spinlock_t heap_lock = 0;
+__attr_privdata static spinlock_t heap_lock = 0;
 #define MEMCHUNK_USED     0x8000000000000000ULL
 #define MEMCHUNK_MAX_SIZE (MEMCHUNK_USED - 1)
 //------------------------------------------------------------------------------

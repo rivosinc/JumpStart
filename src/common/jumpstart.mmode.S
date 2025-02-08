@@ -26,9 +26,9 @@ _mmode_start:
 
   # Set up the stack.
   # S-mode and M-mode share the same stack.
-  li  t1, (NUM_PAGES_PER_HART_FOR_SMODE_STACK * SMODE_STACK_PAGE_SIZE)
+  li  t1, (NUM_PAGES_PER_HART_FOR_PRIVILEGED_STACK * PRIVILEGED_STACK_PAGE_SIZE)
   mul t3, t0, t1
-  la  t2, smode_stack_top
+  la  t2, privileged_stack_top
   add sp, t2, t3
   add sp, sp, t1 # We want the stack bottom.
 
@@ -240,10 +240,13 @@ jump_to_main:
   li t0, START_TEST_IN_MMODE
   bnez t0, jump_to_main_in_mmode
 
+#ifdef SMODE_MODE_ENABLED
   jal delegate_mmode_resources_to_smode
-
   la a0, main
   jal run_function_in_smode
+#else
+  li a0, DIAG_FAILED
+#endif
 
   j _mmode_end
 
@@ -252,11 +255,14 @@ jump_to_main:
 handle_env_call_from_smode:
   # a7 will contain the syscall number
 
+#ifdef SMODE_MODE_ENABLED
   li t0, SYSCALL_RUN_FUNC_IN_SMODE_COMPLETE
   beq a7, t0, handle_syscall_run_func_in_smode_complete
+#endif
 
   j jumpstart_mmode_fail
 
+#ifdef SMODE_MODE_ENABLED
 handle_syscall_run_func_in_smode_complete:
   # This is the return to machine path for run_function_in_smode().
 
@@ -353,6 +359,8 @@ run_function_in_smode_return_point:
   ld  fp, 0(sp)
   addi  sp, sp, 16
   ret
+
+#endif
 
 # The mtvec.base must always be 4 byte aligned.
 .align 2

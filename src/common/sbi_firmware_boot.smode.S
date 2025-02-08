@@ -95,9 +95,9 @@ _smode_start:
 
   # S-mode and M-mode share the same stack.
   GET_THREAD_ATTRIBUTES_HART_ID(t0)
-  li  t1, (NUM_PAGES_PER_HART_FOR_SMODE_STACK * SMODE_STACK_PAGE_SIZE)
+  li  t1, (NUM_PAGES_PER_HART_FOR_PRIVILEGED_STACK * PRIVILEGED_STACK_PAGE_SIZE)
   mul t0, t0, t1
-  la  t2, smode_stack_top
+  la  t2, privileged_stack_top
   add sp, t2, t0
   add sp, sp, t1 # We want the stack bottom.
 
@@ -241,7 +241,7 @@ sbi_system_reset:
   ret
 
 
-.section .jumpstart.cpu.data.smode, "aw", @progbits
+.section .jumpstart.cpu.data.privileged, "aw", @progbits
 
 .align 6
 .globl tohost

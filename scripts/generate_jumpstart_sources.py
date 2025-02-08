@@ -162,7 +162,7 @@ class JumpStartGeneratedSource:
                 f"#define {c_struct.upper()}_STRUCT_SIZE_IN_BYTES {current_offset}\n\n"
             )
 
-            self.assembly_file_fd.write('.section .jumpstart.cpu.c_structs.smode, "aw"\n\n')
+            self.assembly_file_fd.write('.section .jumpstart.cpu.c_structs.mmode, "aw"\n\n')
             self.assembly_file_fd.write(f".global {c_struct}_region\n")
             self.assembly_file_fd.write(f"{c_struct}_region:\n")
             for i in range(self.attributes_data["max_num_harts_supported"]):
@@ -175,8 +175,8 @@ class JumpStartGeneratedSource:
             total_size_of_c_structs += current_offset
 
         max_allowed_size_of_c_structs = (
-            self.attributes_data["jumpstart_smode"]["c_structs"]["num_pages"]
-            * self.attributes_data["jumpstart_smode"]["c_structs"]["page_size"]
+            self.attributes_data["jumpstart_mmode"]["c_structs"]["num_pages"]
+            * self.attributes_data["jumpstart_mmode"]["c_structs"]["page_size"]
         )
 
         if (
@@ -189,20 +189,32 @@ class JumpStartGeneratedSource:
             sys.exit(1)
 
     def generate_stack(self):
-        stack_types = ["smode", "umode"]
+        # This is a bit of a mess. Both mmode and smode share the same stack.
+        # We've named this stack "privileged" so we need to map the stack
+        # name to the mode.
+        stack_types = ListUtils.intersection(["umode"], self.priv_modes_enabled)
+        stack_types.append("privileged")
+        stack_types_to_priv_mode_map = {"umode": "umode", "privileged": "mmode"}
+
         for stack_type in stack_types:
             # Make sure we can equally distribute the number of total stack pages
             # among the harts.
             assert (
-                self.attributes_data[f"jumpstart_{stack_type}"]["stack"]["num_pages"]
+                self.attributes_data[f"jumpstart_{stack_types_to_priv_mode_map[stack_type]}"][
+                    "stack"
+                ]["num_pages"]
                 % self.attributes_data["max_num_harts_supported"]
                 == 0
             )
             num_pages_per_hart_for_stack = int(
-                self.attributes_data[f"jumpstart_{stack_type}"]["stack"]["num_pages"]
+                self.attributes_data[f"jumpstart_{stack_types_to_priv_mode_map[stack_type]}"][
+                    "stack"
+                ]["num_pages"]
                 / self.attributes_data["max_num_harts_supported"]
             )
-            stack_page_size = self.attributes_data[f"jumpstart_{stack_type}"]["stack"]["page_size"]
+            stack_page_size = self.attributes_data[
+                f"jumpstart_{stack_types_to_priv_mode_map[stack_type]}"
+            ]["stack"]["page_size"]
 
             self.defines_file_fd.write(
                 f"#define NUM_PAGES_PER_HART_FOR_{stack_type.upper()}_STACK {num_pages_per_hart_for_stack}\n\n"
@@ -212,6 +224,7 @@ class JumpStartGeneratedSource:
                 f"#define {stack_type.upper()}_STACK_PAGE_SIZE {stack_page_size}\n\n"
             )
 
+        for stack_type in stack_types:
             self.assembly_file_fd.write(f'.section .jumpstart.cpu.stack.{stack_type}, "aw"\n')
             self.assembly_file_fd.write(".align 12\n")
             self.assembly_file_fd.write(f".global {stack_type}_stack_top\n")
@@ -238,6 +251,9 @@ class JumpStartGeneratedSource:
         for syscall_name in self.attributes_data["syscall_numbers"]:
             self.defines_file_fd.write(f"#define {syscall_name} {current_syscall_number}\n")
             current_syscall_number += 1
+
+        for mod in self.priv_modes_enabled:
+            self.defines_file_fd.write(f"#define {mod.upper()}_MODE_ENABLED 1\n")
 
     def generate_getter_and_setter_methods_for_field(
         self,
@@ -323,13 +339,15 @@ class JumpStartGeneratedSource:
                 self.assembly_file_fd.write("  SET_THREAD_ATTRIBUTES_MIMPID(t1)\n")
                 self.assembly_file_fd.write("\n")
 
-            self.assembly_file_fd.write("  la t1, smode_reg_context_save_region\n")
-            self.assembly_file_fd.write("  add t1, t1, t0\n")
-            self.assembly_file_fd.write("  la t2, smode_reg_context_save_region_end\n")
-            self.assembly_file_fd.write(f"  bgeu t1, t2, jumpstart_{mode}_fail\n")
-            self.assembly_file_fd.write(
-                "  SET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(t1)\n"
-            )
+            if "smode" in modes:
+                self.assembly_file_fd.write("  la t1, smode_reg_context_save_region\n")
+                self.assembly_file_fd.write("  add t1, t1, t0\n")
+                self.assembly_file_fd.write("  la t2, smode_reg_context_save_region_end\n")
+                self.assembly_file_fd.write(f"  bgeu t1, t2, jumpstart_{mode}_fail\n")
+                self.assembly_file_fd.write(
+                    "  SET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(t1)\n"
+                )
+
             self.assembly_file_fd.write("  li t1, MAX_NUM_CONTEXT_SAVES\n")
             self.assembly_file_fd.write(
                 "  SET_THREAD_ATTRIBUTES_NUM_CONTEXT_SAVES_REMAINING_IN_SMODE(t1)\n"
@@ -397,7 +415,7 @@ class JumpStartGeneratedSource:
             )
         self.defines_file_fd.write("\n\n")
 
-        self.assembly_file_fd.write('\n\n.section .jumpstart.cpu.data.smode, "aw"\n')
+        self.assembly_file_fd.write('\n\n.section .jumpstart.cpu.data.privileged, "aw"\n')
         modes = ListUtils.intersection(["mmode", "smode"], self.priv_modes_enabled)
         self.assembly_file_fd.write(
             f"\n# {modes} context saved registers:\n# {self.attributes_data['reg_context_to_save_across_exceptions']['registers']}\n"

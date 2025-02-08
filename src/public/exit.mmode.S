@@ -91,7 +91,7 @@ just_wfi_from_mmode:
   wfi
   j just_wfi_from_mmode
 
-.section .jumpstart.cpu.data.smode, "aw", @progbits
+.section .jumpstart.cpu.data.privileged, "aw", @progbits
 
 .align 6
 .globl tohost

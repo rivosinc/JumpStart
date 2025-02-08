@@ -42,7 +42,7 @@ __attr_stext int32_t smode_try_get_seed(void) {
 }
 
 #define RAND_MAX 0x7fffffff
-__attr_sdata uint64_t snext = 1;
+__attr_privdata uint64_t snext = 1;
 
 __attr_stext uint64_t __smode_random(void) {
   /* Based on rand in diags/perf/membw/libc_replacement.h */

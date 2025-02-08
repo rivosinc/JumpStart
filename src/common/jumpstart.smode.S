@@ -309,8 +309,10 @@ check_for_env_call_requests:
 handle_env_call_from_umode:
   # a7 will contain the syscall number
 
+#ifdef UMODE_MODE_ENABLED
   li t0, SYSCALL_RUN_FUNC_IN_UMODE_COMPLETE
   beq a7, t0, handle_syscall_run_func_in_umode_complete
+#endif
 
   j jumpstart_smode_fail
 
@@ -321,45 +323,6 @@ handle_env_call_from_vsmode:
   beq a7, t0, handle_syscall_run_func_in_vsmode_complete
 
   j jumpstart_smode_fail
-
-handle_syscall_run_func_in_umode_complete:
-  # This is the return to supervisor path for run_function_in_umode().
-
-  # Re-enable interrupts that were disabled in run_function_in_umode().
-  # Set SPIE to 1, on sret this will set SIE to 1.
-  li  t0, (PRV_S << SSTATUS_SPP_SHIFT) | SSTATUS_SPIE
-  csrs  sstatus, t0
-
-  la  t0, run_function_in_umode_return_point
-  csrw sepc, t0
-
-  # Point to the address of the context save region we used when we
-  # took the RUN_FUNC_IN_UMODE_COMPLETE syscall.
-  GET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
-  addi gp, gp, -REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES
-
-  # The return value from the umode function is in the umode
-  # context saved for a0 when we took the ecall exception from umode to
-  # smode.
-  ld t0, A0_OFFSET_IN_SAVE_REGION(gp)
-
-  # Place it in the a0 location for the mmode context we saved before calling
-  # run_function_in_umode().
-  addi gp, gp, -REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES
-  sd t0, A0_OFFSET_IN_SAVE_REGION(gp)
-
-  # Restore S mode context from before the run_function_in_umode() call.
-  RESTORE_ALL_GPRS
-
-  # This location is now free to be used by the next trap handler entry.
-  SET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
-
-  # We've freed 2 context saves.
-  GET_THREAD_ATTRIBUTES_NUM_CONTEXT_SAVES_REMAINING_IN_SMODE(gp)
-  addi gp, gp, 2
-  SET_THREAD_ATTRIBUTES_NUM_CONTEXT_SAVES_REMAINING_IN_SMODE(gp)
-
-  sret
 
 handle_syscall_run_func_in_vsmode_complete:
   # This is the return to supervisor path for run_function_in_vsmode().
@@ -391,6 +354,46 @@ handle_syscall_run_func_in_vsmode_complete:
   sd t0, A0_OFFSET_IN_SAVE_REGION(gp)
 
   # Restore S mode context from before the run_function_in_vsmode() call.
+  RESTORE_ALL_GPRS
+
+  # This location is now free to be used by the next trap handler entry.
+  SET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
+
+  # We've freed 2 context saves.
+  GET_THREAD_ATTRIBUTES_NUM_CONTEXT_SAVES_REMAINING_IN_SMODE(gp)
+  addi gp, gp, 2
+  SET_THREAD_ATTRIBUTES_NUM_CONTEXT_SAVES_REMAINING_IN_SMODE(gp)
+
+  sret
+
+#ifdef UMODE_MODE_ENABLED
+handle_syscall_run_func_in_umode_complete:
+  # This is the return to supervisor path for run_function_in_umode().
+
+  # Re-enable interrupts that were disabled in run_function_in_umode().
+  # Set SPIE to 1, on sret this will set SIE to 1.
+  li  t0, (PRV_S << SSTATUS_SPP_SHIFT) | SSTATUS_SPIE
+  csrs  sstatus, t0
+
+  la  t0, run_function_in_umode_return_point
+  csrw sepc, t0
+
+  # Point to the address of the context save region we used when we
+  # took the RUN_FUNC_IN_UMODE_COMPLETE syscall.
+  GET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
+  addi gp, gp, -REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES
+
+  # The return value from the umode function is in the umode
+  # context saved for a0 when we took the ecall exception from umode to
+  # smode.
+  ld t0, A0_OFFSET_IN_SAVE_REGION(gp)
+
+  # Place it in the a0 location for the mmode context we saved before calling
+  # run_function_in_umode().
+  addi gp, gp, -REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES
+  sd t0, A0_OFFSET_IN_SAVE_REGION(gp)
+
+  # Restore S mode context from before the run_function_in_umode() call.
   RESTORE_ALL_GPRS
 
   # This location is now free to be used by the next trap handler entry.
@@ -464,6 +467,9 @@ run_function_in_umode_return_point:
   ld  fp, 0(sp)
   addi  sp, sp, 16
   ret
+
+#endif
+
 
 .global just_wfi_from_smode
 just_wfi_from_smode:

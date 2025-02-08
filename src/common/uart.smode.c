@@ -22,10 +22,11 @@ static int vprintk(const char *fmt, va_list args)
     __attribute__((format(printf, 1, 0))) __attr_stext;
 void mark_uart_as_enabled(void);
 
-__attribute__((section(
-    ".jumpstart.cpu.data.smode"))) static volatile uint8_t uart_initialized = 0;
+__attribute__((
+    section(".jumpstart.cpu.data.privileged"))) static volatile uint8_t
+    uart_initialized = 0;
 
-__attr_sdata static spinlock_t printk_lock = 0;
+__attr_privdata static spinlock_t printk_lock = 0;
 
 __attr_stext void mark_uart_as_enabled(void) {
   uart_initialized = 1;

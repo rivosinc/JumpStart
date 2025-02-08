@@ -215,8 +215,10 @@ check_for_env_call_requests:
 handle_env_call_from_vumode:
   # a7 will contain the syscall number
 
+#ifdef UMODE_MODE_ENABLED
   li t0, SYSCALL_RUN_FUNC_IN_VUMODE_COMPLETE
   beq a7, t0, handle_syscall_run_func_in_vumode_complete
+#endif
 
   j jumpstart_vsmode_fail
 
@@ -225,6 +227,7 @@ handle_env_call_from_vsmode:
 
   j jumpstart_vsmode_fail
 
+#ifdef UMODE_MODE_ENABLED
 handle_syscall_run_func_in_vumode_complete:
   # This is the return to supervisor path for run_function_in_vumode().
 
@@ -329,3 +332,4 @@ run_function_in_vumode_return_point:
   ld  fp, 0(sp)
   addi  sp, sp, 16
   ret
+#endif
