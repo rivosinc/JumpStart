@@ -159,7 +159,6 @@ class Meson:
 
     def setup(self):
         self.meson_setup_flags = {}
-        self.meson_setup_flags["-Ddiag_generate_disassembly"] = "true"
 
         self.setup_default_meson_options()
         self.apply_meson_option_overrides_from_diag()
@@ -228,25 +227,21 @@ class Meson:
             if not os.path.exists(diag_binary):
                 raise Exception("diag binary not created by meson compile")
 
-            if not os.path.exists(diag_disasm):
-                raise Exception("diag disasm not created by meson compile")
-
         # We've already checked that these exist for the passing case.
         # They may not exist if the compile failed so check that they
         # exist before copying them. Allows us to get partial build assets.
         if os.path.exists(diag_disasm):
             self.diag_build_target.add_build_asset("disasm", diag_disasm)
+            log.debug(f"Diag disassembly: {self.diag_build_target.get_build_asset('disasm')}")
         if os.path.exists(diag_binary):
             self.diag_build_target.add_build_asset("binary", diag_binary)
+            log.debug(f"Diag ELF: {self.diag_build_target.get_build_asset('binary')}")
 
         if return_code != 0:
             log.error(
                 f"meson compile failed for diag: {self.diag_build_target.diag_source.diag_name}"
             )
             sys.exit(return_code)
-
-        log.debug(f"Diag compiled: {self.diag_build_target.get_build_asset('binary')}")
-        log.debug(f"Diag disassembly: {self.diag_build_target.get_build_asset('disasm')}")
 
     def test(self):
         meson_test_command = ["meson", "test", "-v", "-C", self.meson_builddir]
