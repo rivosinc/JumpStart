@@ -125,11 +125,24 @@ def main():
     else:
         log.basicConfig(format="%(levelname)s: [%(threadName)s]: %(message)s", level=log.INFO)
 
+    script_meson_option_overrides = {}
+    script_meson_option_overrides["diag_generate_disassembly"] = "true"
+
     if args.diag_custom_defines:
-        args.override_meson_options = args.override_meson_options or []
-        args.override_meson_options.append(
-            f"diag_custom_defines={','.join(args.diag_custom_defines)}"
-        )
+        script_meson_option_overrides["diag_custom_defines"] = ",".join(args.diag_custom_defines)
+
+    args.override_meson_options = args.override_meson_options or []
+
+    # If the user has overridden a meson option, we don't want to override it
+    # with the script's default value.
+    for key, value in script_meson_option_overrides.items():
+        found_override = False
+        for override in args.override_meson_options:
+            if key in override:
+                found_override = True
+                break
+        if not found_override:
+            args.override_meson_options.append(f"{key}={value}")
     diag_build_target = DiagBuildTarget(
         args.diag_src_dir,
         args.diag_build_dir,
