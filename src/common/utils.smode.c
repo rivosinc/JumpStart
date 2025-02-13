@@ -45,12 +45,20 @@ __attr_stext int32_t smode_try_get_seed(void) {
 __attr_privdata uint64_t snext = 1;
 
 __attr_stext uint64_t __smode_random(void) {
+  uint64_t val;
+  int64_t ret;
   /* Based on rand in diags/perf/membw/libc_replacement.h */
   /* This multiplier was obtained from Knuth, D.E., "The Art of
      Computer Programming," Vol 2, Seminumerical Algorithms, Third
      Edition, Addison-Wesley, 1998, p. 106 (line 26) & p. 108 */
-  snext = snext * __extension__ 6364136223846793005LL + 1;
-  return (int64_t)((snext >> 32) & RAND_MAX);
+
+  do {
+    val = load_reserved_64(&snext);
+    val = val * __extension__ 6364136223846793005LL + 1;
+    ret = (int64_t)((val >> 32) & RAND_MAX);
+  } while (store_conditional_64(&snext, val) != 0);
+
+  return ret;
 }
 
 __attr_stext int32_t get_random_number_from_smode(void) {
