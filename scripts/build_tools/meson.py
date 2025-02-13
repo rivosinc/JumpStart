@@ -44,13 +44,11 @@ class Meson:
 
         self.diag_build_target = diag_build_target
 
-        self.diag_binary_name = self.diag_build_target.diag_source.diag_name + ".elf"
+        self.diag_name = self.diag_build_target.diag_source.diag_name
 
         self.meson_options = {}
 
-        self.meson_builddir = tempfile.mkdtemp(
-            prefix=f"{self.diag_build_target.diag_source.diag_name}_meson_builddir_"
-        )
+        self.meson_builddir = tempfile.mkdtemp(prefix=f"{self.diag_name}_meson_builddir_")
 
         self.keep_meson_builddir = keep_meson_builddir
 
@@ -59,7 +57,7 @@ class Meson:
         if self.diag_build_target.rng_seed is None:
             self.diag_build_target.rng_seed = random.randrange(sys.maxsize)
         log.debug(
-            f"Diag: {self.diag_build_target.diag_source.diag_name} Seeding builder RNG with: {self.diag_build_target.rng_seed}"
+            f"Diag: {self.diag_name} Seeding builder RNG with: {self.diag_build_target.rng_seed}"
         )
         self.rng = random.Random(self.diag_build_target.rng_seed)
 
@@ -86,7 +84,7 @@ class Meson:
         return active_hart_mask
 
     def setup_default_meson_options(self):
-        self.meson_options["diag_name"] = self.diag_binary_name
+        self.meson_options["diag_name"] = self.diag_name
         self.meson_options["diag_sources"] = self.diag_build_target.diag_source.get_sources()
         self.meson_options["diag_attributes_yaml"] = (
             self.diag_build_target.diag_source.get_diag_attributes_yaml()
@@ -96,29 +94,16 @@ class Meson:
 
         self.meson_options["spike_additional_arguments"] = []
 
+        self.meson_options["generate_trace"] = "true"
+        self.trace_file = (
+            f"{self.meson_builddir}/{self.diag_name}.{self.diag_build_target.target}.itrace"
+        )
+
         self.meson_options["diag_target"] = self.diag_build_target.target
         if self.diag_build_target.target == "spike":
             self.meson_options["spike_binary"] = "spike"
-            self.meson_options["generate_trace"] = "true"
-
-            self.trace_file = (
-                f"{self.meson_builddir}/{self.diag_build_target.diag_source.diag_name}.itrace"
-            )
-            self.meson_options["spike_additional_arguments"].append(f"--log={self.trace_file}")
-
-        elif self.diag_build_target.target == "qemu":
-            self.meson_options["qemu_additional_arguments"] = []
-
-            trace_file_name = f"{self.diag_build_target.diag_source.diag_name}.qemu.itrace"
-            self.trace_file = f"{self.meson_builddir}/{trace_file_name}"
-
-            self.meson_options["qemu_additional_arguments"].extend(
-                [
-                    "--var",
-                    f"out:{self.meson_builddir}",
-                    "--var",
-                    f"ap-logfile:{trace_file_name}",
-                ]
+            self.meson_options["spike_additional_arguments"].append(
+                "--interleave=" + str(self.rng.randint(1, 100))
             )
         else:
             raise Exception(f"Unknown target: {self.diag_build_target.target}")
@@ -220,12 +205,12 @@ class Meson:
         log.info(f"Running meson compile.\n{' '.join(meson_compile_command)}")
         return_code = system_functions.run_command(meson_compile_command, self.jumpstart_dir)
 
-        diag_binary = os.path.join(self.meson_builddir, self.diag_binary_name)
-        diag_disasm = os.path.join(self.meson_builddir, self.diag_binary_name + ".dis")
+        diag_binary = os.path.join(self.meson_builddir, self.diag_name + ".elf")
+        diag_disasm = os.path.join(self.meson_builddir, self.diag_name + ".dis")
 
         if return_code == 0:
             if not os.path.exists(diag_binary):
-                raise Exception("diag binary not created by meson compile")
+                raise Exception(f"diag binary: {diag_binary} not created by meson compile")
 
         # We've already checked that these exist for the passing case.
         # They may not exist if the compile failed so check that they

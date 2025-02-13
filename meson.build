@@ -164,7 +164,7 @@ if diag_attributes_yaml != '' and diag_sources.length() > 0
   linker_script = diag_source_generator_output[1]
   diag_defines = diag_source_generator_output[2]
 
-  diag_exe = executable(diag_name,
+  diag_exe = executable(diag_name + '.elf',
                         sources: [jumpstart_sources, diag_sources],
                         include_directories: jumpstart_includes,
                         c_args: ['-include', diag_defines.full_path()],
@@ -182,9 +182,13 @@ if diag_attributes_yaml != '' and diag_sources.length() > 0
                 depends          : [diag_exe])
   endif
 
+  trace_file = diag_name + '.' + get_option('diag_target') + '.itrace'
+
   if get_option('diag_target') == 'spike'
     target = spike
-    args = [default_spike_args, diag_exe]
+    args = [default_spike_args,
+            '--log=' + trace_file,
+            diag_exe]
     timeout = get_option('spike_timeout')
 
     test('🧪 ' + diag_name,
