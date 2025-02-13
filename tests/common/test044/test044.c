@@ -68,7 +68,10 @@ __attribute__((section(".text.smode"))) int smode_main(void) {
   if (random < 0 || fault_count_s[hart_id] != 0)
     jumpstart_smode_fail();
 
-  set_random_seed_from_smode((int)random * BUILD_RNG_SEED);
+  if (hart_id == 0)
+    set_random_seed_from_smode((int)random * BUILD_RNG_SEED);
+
+  sync_all_harts_from_smode();
   for (int i = 0; i < 50; i++) {
     rand = get_random_number_from_smode();
     if (rand == last_rand)
@@ -199,7 +202,10 @@ int main(void) {
   if (random < 0 || fault_count[hart_id] != 0)
     jumpstart_mmode_fail();
 
-  set_random_seed_from_mmode((int)random * BUILD_RNG_SEED);
+  if (hart_id == 0)
+    set_random_seed_from_mmode((int)random * BUILD_RNG_SEED);
+
+  sync_all_harts_from_mmode();
   for (int i = 0; i < 50; i++) {
     rand = get_random_number_from_mmode();
     if (rand == last_rand)
