@@ -61,6 +61,20 @@
     __v;                                                                       \
   })
 
+#define load_reserved_64(addr)                                                 \
+  ({                                                                           \
+    unsigned long __tmp;                                                       \
+    asm volatile("lr.d %0, (%1)" : "=r"(__tmp) : "r"(addr));                   \
+    __tmp;                                                                     \
+  })
+
+#define store_conditional_64(addr, val)                                        \
+  ({                                                                           \
+    unsigned long ret = 0;                                                     \
+    asm volatile("sc.d %0, %1, (%2)" : "=r"(ret) : "r"(val), "r"(addr));       \
+    ret;                                                                       \
+  })
+
 #define STRINGIFY(x)  #x
 #define ADD_QUOTES(x) STRINGIFY(x)
 // Disables instruction by instruction checking when running on the simulator,
