@@ -10,7 +10,7 @@
 
 #include "jumpstart.h"
 
-__attr_stext static inline uint64_t read_time() {
+__attr_stext uint64_t read_time(void) {
   uint64_t time_val;
   asm volatile("rdtime %0" : "=r"(time_val));
   return time_val;

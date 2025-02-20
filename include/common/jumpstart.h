@@ -159,3 +159,5 @@ void exit_from_smode(uint64_t return_code) __attribute__((noreturn));
   __attribute__((section(".jumpstart.cpu.text.mmode.init")))
 #define __attr_mtext_init_end                                                  \
   __attribute__((section(".jumpstart.cpu.text.mmode.init.end")))
+
+__attr_stext uint64_t read_time(void);
