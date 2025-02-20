@@ -43,6 +43,10 @@ _mmode_start:
   li t3, 0x1000 # 4KB
   bgt t2, t3, jumpstart_mmode_fail
 
+  # Any C code we run can be compiled down to use floating point and
+  # vector instructions so we need to make sure that we have these enabled.
+  jal enable_mmode_float_and_vector_instructions
+
   # Run the setup_mmode before running any more code. Only the first
   # 4K page of mmode code is set up to run right now. setup_mmode()
   # will enable the rest of the mmode code.
@@ -86,8 +90,6 @@ _mmode_start:
   jal program_menvcfg
   jal program_mseccfg
 
-  jal enable_mmode_float_and_vector_instructions
-
   jal setup_smode_trap_delegation
 
   li  t0, ENABLE_VIRTUALIZATION
@@ -99,6 +101,21 @@ _mmode_start:
 
 1:
   j jump_to_main
+
+
+.global enable_mmode_float_and_vector_instructions
+enable_mmode_float_and_vector_instructions:
+  li t0, (MSTATUS_VS | MSTATUS_FS)
+  csrrs t1, mstatus, t0
+
+  # Set vtype.vill=0 by running a dummy vsetvl instruction.
+  # There are vector instructions (such as vmv1r.v) that
+  # can run without running a vsetvl instruction first so we
+  # need to make sure that the reset value of vill=1 has been cleared.
+  vsetivli        zero, 8, e8, m1, ta, ma
+
+  ret
+
 
 .section .jumpstart.cpu.text.mmode, "ax"
 
@@ -204,19 +221,6 @@ reset_csrs:
   csrw sip, zero
   csrw stvec, zero
   STIMER_RESET
-
-  ret
-
-.global enable_mmode_float_and_vector_instructions
-enable_mmode_float_and_vector_instructions:
-  li t0, (MSTATUS_VS | MSTATUS_FS)
-  csrrs t1, mstatus, t0
-
-  # Set vtype.vill=0 by running a dummy vsetvl instruction.
-  # There are vector instructions (such as vmv1r.v) that
-  # can run without running a vsetvl instruction first so we
-  # need to make sure that the reset value of vill=1 has been cleared.
-  vsetivli        zero, 8, e8, m1, ta, ma
 
   ret
 
