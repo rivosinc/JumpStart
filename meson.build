@@ -185,10 +185,14 @@ if diag_attributes_yaml != '' and diag_sources.length() > 0
   trace_file = diag_name + '.' + get_option('diag_target') + '.itrace'
 
   if get_option('diag_target') == 'spike'
+    spike_args = default_spike_args
+
+    if get_option('generate_trace') == true
+      spike_args += ['--log=' + trace_file]
+    endif
+
     target = spike
-    args = [default_spike_args,
-            '--log=' + trace_file,
-            diag_exe]
+    args = [spike_args, diag_exe]
     timeout = get_option('spike_timeout')
 
     test('🧪 ' + diag_name,
