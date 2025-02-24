@@ -701,6 +701,10 @@
 #define PTE_RESERVED        0x1FC0000000000000ULL /* Reserved bits */
 #define PTE_ATTR            (PTE_N | PTE_PBMT) /* All attributes bits */
 
+#define PTE_PBMT_PMA        0x0000000000000000ULL
+#define PTE_PBMT_NC         0x0000000000000001ULL
+#define PTE_PBMT_IO         0x0000000000000002ULL
+
 /* Page table PPN shift amount */
 #define PTE_PPN_SHIFT       10
 

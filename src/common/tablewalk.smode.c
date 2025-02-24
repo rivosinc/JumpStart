@@ -16,23 +16,27 @@ struct mmu_mode_attribute {
   struct bit_range va_vpn_bits[MAX_NUM_PAGE_TABLE_LEVELS];
   struct bit_range pa_ppn_bits[MAX_NUM_PAGE_TABLE_LEVELS];
   struct bit_range pte_ppn_bits[MAX_NUM_PAGE_TABLE_LEVELS];
+  struct bit_range pbmt_mode_bits;
 };
 
 // TODO: generate this from the Python.
+
 const struct mmu_mode_attribute mmu_mode_attributes[] = {
     {.satp_mode = VM_1_10_SV39,
      .pte_size_in_bytes = 8,
      .num_levels = 3,
      .va_vpn_bits = {{38, 30}, {29, 21}, {20, 12}},
      .pa_ppn_bits = {{55, 30}, {29, 21}, {20, 12}},
-     .pte_ppn_bits = {{53, 28}, {27, 19}, {18, 10}}},
+     .pte_ppn_bits = {{53, 28}, {27, 19}, {18, 10}},
+     .pbmt_mode_bits = {62, 61}},
 
     {.satp_mode = VM_1_10_SV48,
      .pte_size_in_bytes = 8,
      .num_levels = 4,
      .va_vpn_bits = {{47, 39}, {38, 30}, {29, 21}, {20, 12}},
      .pa_ppn_bits = {{55, 39}, {38, 30}, {29, 21}, {20, 12}},
-     .pte_ppn_bits = {{53, 37}, {36, 28}, {27, 19}, {18, 10}}},
+     .pte_ppn_bits = {{53, 37}, {36, 28}, {27, 19}, {18, 10}},
+     .pbmt_mode_bits = {62, 61}},
 };
 
 __attr_stext void translate_VA(uint64_t va,
@@ -127,6 +131,9 @@ __attr_stext void translate_VA(uint64_t va,
     }
   }
 
+  xlate_info->pbmt_mode =
+      extract_bits(xlate_info->pte_value[xlate_info->levels_traversed - 1],
+                   mmu_mode_attribute->pbmt_mode_bits);
   xlate_info->pa = a + extract_bits(va, (struct bit_range){PAGE_OFFSET - 1, 0});
   xlate_info->walk_successful = 1;
 }

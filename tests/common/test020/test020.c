@@ -54,5 +54,30 @@ int main(void) {
     return DIAG_FAILED;
   }
 
+  translate_VA(0xC0022000, &xlate_info);
+  if (xlate_info.walk_successful != 1) {
+    return DIAG_FAILED;
+  }
+  if (xlate_info.pbmt_mode != PTE_PBMT_IO) {
+    return DIAG_FAILED;
+  }
+
+  translate_VA(0xC0023000, &xlate_info);
+  if (xlate_info.walk_successful != 1) {
+    return DIAG_FAILED;
+  }
+  if (xlate_info.pbmt_mode != PTE_PBMT_NC) {
+    return DIAG_FAILED;
+  }
+
+  // The default PBMT mode is PMA if not specified.
+  translate_VA(0xC0024000, &xlate_info);
+  if (xlate_info.walk_successful != 1) {
+    return DIAG_FAILED;
+  }
+  if (xlate_info.pbmt_mode != PTE_PBMT_PMA) {
+    return DIAG_FAILED;
+  }
+
   return DIAG_PASSED;
 }

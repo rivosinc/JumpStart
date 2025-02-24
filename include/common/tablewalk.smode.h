@@ -14,6 +14,7 @@ struct translation_info {
   uint8_t satp_mode;
   uint8_t levels_traversed;
   uint8_t walk_successful;
+  uint8_t pbmt_mode;
   uint64_t va;
   uint64_t pa;
   uint64_t pte_address[MAX_NUM_PAGE_TABLE_LEVELS];
