@@ -3,8 +3,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 satp_mode: "sv39"
-
 active_hart_mask: "0b1111"
+enable_heap: true
 
 mappings:
   -

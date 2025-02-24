@@ -6,6 +6,8 @@ satp_mode: "sv39"
 
 active_hart_mask: "0b1"
 
+enable_heap: true
+
 mappings:
   -
     va: 0xc0020000

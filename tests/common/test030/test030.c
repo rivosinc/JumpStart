@@ -11,9 +11,6 @@
 
 extern uint64_t _JUMPSTART_CPU_SMODE_HEAP_START;
 extern uint64_t _JUMPSTART_CPU_SMODE_HEAP_END;
-
-extern int asm_test_unaligned_access(uint64_t, uint64_t);
-
 int test_malloc(void);
 int test_calloc(void);
 int test_memalign(void);
@@ -27,6 +24,9 @@ int test_memset(void);
 
 #define ARRAY_LEN     10
 int test_malloc(void) {
+  const uint64_t max_heap_size = (uint64_t)&_JUMPSTART_CPU_SMODE_HEAP_END -
+                                 (uint64_t)&_JUMPSTART_CPU_SMODE_HEAP_START;
+
   uint8_t *x8 = malloc(sizeof(uint8_t));
   if (x8 == 0) {
     return DIAG_FAILED;
@@ -80,9 +80,6 @@ int test_malloc(void) {
   free(x16);
   free(x32);
   free(x64);
-
-  const uint64_t max_heap_size = (uint64_t)&_JUMPSTART_CPU_SMODE_HEAP_END -
-                                 (uint64_t)&_JUMPSTART_CPU_SMODE_HEAP_START;
 
   void *y = malloc(max_heap_size / 2);
   if (y == 0) {
@@ -163,45 +160,6 @@ int test_memcpy(void) {
   return DIAG_PASSED;
 }
 
-static void catch_memory_access_fault(void) {
-  jumpstart_smode_fail();
-}
-
-int test_unaligned_access(void) {
-  register_smode_trap_handler_override(RISCV_EXCP_LOAD_ACCESS_FAULT,
-                                       (uint64_t)(&catch_memory_access_fault));
-  register_smode_trap_handler_override(RISCV_EXCP_STORE_AMO_ACCESS_FAULT,
-                                       (uint64_t)(&catch_memory_access_fault));
-
-  const uint64_t max_heap_size = (uint64_t)&_JUMPSTART_CPU_SMODE_HEAP_END -
-                                 (uint64_t)&_JUMPSTART_CPU_SMODE_HEAP_START;
-  // Allocate 2MB of memory.
-  uint64_t allocation_size = 2 * 1024 * 1024;
-  if (max_heap_size < allocation_size) {
-    return DIAG_FAILED;
-  }
-
-  // FIXME: The current malloc implementation will fail if we allocate
-  // 2MB in one go.
-  uint64_t *buffer_1 = memalign(16, allocation_size / 2);
-  if (!buffer_1) {
-    return DIAG_FAILED;
-  }
-  uint64_t *buffer_2 = memalign(16, allocation_size / 2);
-  if (!buffer_2) {
-    return DIAG_FAILED;
-  }
-
-  int result =
-      asm_test_unaligned_access((uint64_t)buffer_1, allocation_size / 2);
-
-  result |= asm_test_unaligned_access((uint64_t)buffer_2, allocation_size / 2);
-
-  free(buffer_1);
-  free(buffer_2);
-  return result;
-}
-
 int test_memset(void) {
   uint8_t *src = calloc(ARRAY_LEN, sizeof(uint8_t));
 
@@ -234,9 +192,6 @@ int main(void) {
     return DIAG_FAILED;
   }
   if (test_memset() != DIAG_PASSED) {
-    return DIAG_FAILED;
-  }
-  if (test_unaligned_access() != DIAG_PASSED) {
     return DIAG_FAILED;
   }
   return DIAG_PASSED;

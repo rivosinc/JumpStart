@@ -193,6 +193,45 @@ These are listed in the header files in the [include](../include) directory.
 
 Functions with names that end in `_from_smode()` or `_from_mmode()` can only be called from the respective modes.
 
+### Memory Management APIs
+
+JumpStart provides a heap-based memory management system that supports allocations from DDR memory with different memory attributes (WB, WC, UC). A DDR WB heap is set up by default, but other heaps must be explicitly initialized before use.
+
+#### Basic Memory Functions
+- `malloc()`, `free()`, `calloc()`, `memalign()`: Default memory allocation functions that use DDR WB memory.
+
+#### Memory Type Specific Functions
+- `malloc_from_memory()`, `free_from_memory()`, `calloc_from_memory()`, `memalign_from_memory()`: Memory allocation functions that allow specifying the backing memory and memory type.
+
+#### Heap Management
+- `setup_heap()`: Initialize a new heap with specified backing memory and memory type.
+- `deregister_heap()`: Clean up and remove a previously initialized heap.
+- `get_heap_size()`: Get the total size of a specific heap.
+
+The following constants are defined for use with these functions:
+
+**Backing Memory Types:**
+- `BACKING_MEMORY_DDR`: Standard DDR memory
+
+**Memory Types:**
+- `MEMORY_TYPE_WB`: Write-Back cached memory
+- `MEMORY_TYPE_WC`: Write-Combining memory
+- `MEMORY_TYPE_UC`: Uncached memory
+
+Example usage:
+```c
+// Set up a 4MB uncached DDR heap
+setup_heap(0xA0200000, 0xA0200000 + 4 * 1024 * 1024,
+          BACKING_MEMORY_DDR, MEMORY_TYPE_UC);
+
+// Allocate from the uncached heap
+void* buf = malloc_from_memory(size, BACKING_MEMORY_DDR, MEMORY_TYPE_UC);
+
+// Clean up when done
+free_from_memory(buf, BACKING_MEMORY_DDR, MEMORY_TYPE_UC);
+deregister_heap(BACKING_MEMORY_DDR, MEMORY_TYPE_UC);
+```
+
 ### `get_thread_attributes_hart_id_from_smode()`
 
 Returns the hart id of the hart calling the function. Can only be called from S-mode.

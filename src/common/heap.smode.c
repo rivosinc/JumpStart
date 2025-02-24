@@ -7,18 +7,23 @@
 // SPDX-FileCopyrightText: 2016 by Lukasz Janyst <lukasz@jany.st>
 
 #include "heap.smode.h"
+
+#include "cpu_bits.h"
 #include "jumpstart.h"
 #include "jumpstart_defines.h"
 #include "lock.smode.h"
+#include "tablewalk.smode.h"
 #include "uart.smode.h"
 
-#include <stdint.h>
+#if ENABLE_HEAP == 1
 
-extern uint64_t _JUMPSTART_CPU_SMODE_HEAP_START[];
-extern uint64_t _JUMPSTART_CPU_SMODE_HEAP_END[];
+#define MIN_HEAP_ALLOCATION_BYTES 8
+#define MIN_HEAP_SEGMENT_BYTES    (sizeof(memchunk) + MIN_HEAP_ALLOCATION_BYTES)
+#define MEMCHUNK_USED             0x8000000000000000ULL
+#define MEMCHUNK_MAX_SIZE         (MEMCHUNK_USED - 1)
 
-void setup_heap(void);
-void print_heap(void);
+#define NUM_HEAPS_SUPPORTED       3
+
 //------------------------------------------------------------------------------
 // Malloc helper structs
 //------------------------------------------------------------------------------
@@ -29,24 +34,48 @@ struct memchunk {
 
 typedef struct memchunk memchunk;
 
-#define MIN_HEAP_ALLOCATION_BYTES 8
-#define MIN_HEAP_SEGMENT_BYTES    (sizeof(memchunk) + MIN_HEAP_ALLOCATION_BYTES)
+struct heap_info {
+  uint8_t backing_memory;
+  uint8_t memory_type;
+  memchunk *head;
+  size_t size;
+  spinlock_t lock;
+  volatile uint8_t setup_done;
+};
 
-__attr_privdata static memchunk *head;
-__attr_privdata volatile uint8_t heap_setup_done = 0;
+__attr_privdata struct heap_info heaps[NUM_HEAPS_SUPPORTED] = {
+    {BACKING_MEMORY_DDR, MEMORY_TYPE_WB, NULL, 0, 0, 0},
+    {BACKING_MEMORY_DDR, MEMORY_TYPE_WC, NULL, 0, 0, 0},
+    {BACKING_MEMORY_DDR, MEMORY_TYPE_UC, NULL, 0, 0, 0},
+};
 
-__attr_privdata static spinlock_t heap_lock = 0;
-#define MEMCHUNK_USED     0x8000000000000000ULL
-#define MEMCHUNK_MAX_SIZE (MEMCHUNK_USED - 1)
+__attr_stext static struct heap_info *find_matching_heap(uint8_t backing_memory,
+                                                         uint8_t memory_type) {
+  for (int i = 0; i < NUM_HEAPS_SUPPORTED; i++) {
+    if (heaps[i].backing_memory == backing_memory &&
+        heaps[i].memory_type == memory_type) {
+      return &heaps[i];
+    }
+  }
+  return NULL;
+}
+
 //------------------------------------------------------------------------------
 // Allocate memory on the heap
 //------------------------------------------------------------------------------
-__attr_stext void *malloc(size_t size) {
-  if (head == 0 || size > MEMCHUNK_MAX_SIZE || size == 0) {
+__attr_stext void *malloc_from_memory(size_t size, uint8_t backing_memory,
+                                      uint8_t memory_type) {
+  struct heap_info *target_heap =
+      find_matching_heap(backing_memory, memory_type);
+
+  if (!target_heap || !target_heap->setup_done) {
+    return 0;
+  }
+  if (target_heap->head == 0 || size > MEMCHUNK_MAX_SIZE || size == 0) {
     return 0;
   }
   void *result = 0;
-  acquire_lock(&heap_lock);
+  acquire_lock(&target_heap->lock);
   //----------------------------------------------------------------------------
   // Allocating anything less than 8 bytes is kind of pointless, the
   // book-keeping overhead is too big.
@@ -56,7 +85,7 @@ __attr_stext void *malloc(size_t size) {
   //----------------------------------------------------------------------------
   // Try to find a suitable chunk that is unused
   //----------------------------------------------------------------------------
-  memchunk *chunk = head;
+  memchunk *chunk = target_heap->head;
   while (chunk) {
     if (!(chunk->size & MEMCHUNK_USED) && chunk->size >= alloc_size) {
       break;
@@ -87,77 +116,219 @@ __attr_stext void *malloc(size_t size) {
   chunk->size |= MEMCHUNK_USED;
   result = (void *)chunk + sizeof(memchunk);
 exit_malloc:
-  release_lock(&heap_lock);
+  release_lock(&target_heap->lock);
   return result;
 }
 
-//------------------------------------------------------------------------------
-// Free the memory
-//------------------------------------------------------------------------------
-__attr_stext void free(void *ptr) {
+__attr_stext void free_from_memory(void *ptr, uint8_t backing_memory,
+                                   uint8_t memory_type) {
   if (!ptr) {
     return;
   }
 
-  acquire_lock(&heap_lock);
+  struct heap_info *target_heap =
+      find_matching_heap(backing_memory, memory_type);
+
+  if (!target_heap || !target_heap->setup_done) {
+    return;
+  }
+  acquire_lock(&target_heap->lock);
+
+  // Validate that ptr is within heap bounds
   memchunk *chunk = (memchunk *)((void *)ptr - sizeof(memchunk));
+  if (chunk < target_heap->head || !target_heap->head) {
+    printk("Error: Invalid free - address below heap start\n");
+    goto exit_free;
+  }
+
+  // Verify this is actually a used chunk
+  if (!(chunk->size & MEMCHUNK_USED)) {
+    printk("Error: Double free detected\n");
+    goto exit_free;
+  }
+
+  // Basic sanity check on chunk size
+  if ((chunk->size & MEMCHUNK_MAX_SIZE) > MEMCHUNK_MAX_SIZE) {
+    printk("Error: Invalid chunk size in free\n");
+    goto exit_free;
+  }
+
   chunk->size &= ~MEMCHUNK_USED;
-  release_lock(&heap_lock);
+
+exit_free:
+  release_lock(&target_heap->lock);
 }
 
 //------------------------------------------------------------------------------
 // Set up the heap
 //------------------------------------------------------------------------------
-__attr_stext void setup_heap(void) {
+__attr_stext void setup_heap(uint64_t heap_start, uint64_t heap_end,
+                             uint8_t backing_memory, uint8_t memory_type) {
   disable_checktc();
-  if (heap_setup_done) {
+
+  struct heap_info *target_heap =
+      find_matching_heap(backing_memory, memory_type);
+  if (target_heap == NULL) {
+    printk(
+        "Error: No matching heap found for backing_memory=%d, memory_type=%d\n",
+        backing_memory, memory_type);
+    jumpstart_smode_fail();
+  }
+
+  if (target_heap->setup_done) {
+    // Verify the heap address matches what was previously set up
+    if (target_heap->head != (memchunk *)heap_start) {
+      printk("Error: Heap already initialized at different address. "
+             "Expected: 0x%lx, Got: 0x%lx\n",
+             (uint64_t)target_heap->head, heap_start);
+      jumpstart_smode_fail();
+    }
     return;
   }
 
-  acquire_lock(&heap_lock);
+  acquire_lock(&target_heap->lock);
 
   // Prevent double initialization. A hart might have been waiting for the lock
   // while the heap was initialized by another hart.
-  if (heap_setup_done == 0) {
-    uint64_t *heap_start = (uint64_t *)&_JUMPSTART_CPU_SMODE_HEAP_START;
-    uint64_t *heap_end = (uint64_t *)&_JUMPSTART_CPU_SMODE_HEAP_END;
+  if (target_heap->setup_done == 0) {
 
-    head = (memchunk *)heap_start;
-    head->next = NULL;
-    head->size =
-        (uint64_t)heap_end - (uint64_t)heap_start - (uint64_t)sizeof(memchunk);
+    // Translate the start and end of the heap sanity check it's memory type.
+    struct translation_info xlate_info;
+    translate_VA(heap_start, &xlate_info);
+    // WB = PMA in PBMT
+    // UC = IO in PBMT
+    // WC = NC in PBMT
+    if ((memory_type == MEMORY_TYPE_WB &&
+         xlate_info.pbmt_mode != PTE_PBMT_PMA) ||
+        (memory_type == MEMORY_TYPE_UC &&
+         xlate_info.pbmt_mode != PTE_PBMT_IO) ||
+        (memory_type == MEMORY_TYPE_WC &&
+         xlate_info.pbmt_mode != PTE_PBMT_NC)) {
+      printk("Error: Heap start address is not correct memory type.");
+      jumpstart_smode_fail();
+    }
+    translate_VA(heap_end - 1, &xlate_info);
+    if ((memory_type == MEMORY_TYPE_WB &&
+         xlate_info.pbmt_mode != PTE_PBMT_PMA) ||
+        (memory_type == MEMORY_TYPE_UC &&
+         xlate_info.pbmt_mode != PTE_PBMT_IO) ||
+        (memory_type == MEMORY_TYPE_WC &&
+         xlate_info.pbmt_mode != PTE_PBMT_NC)) {
+      printk("Error: Heap end address is not correct memory type.");
+      jumpstart_smode_fail();
+    }
 
-    heap_setup_done = 1;
+    target_heap->head = (memchunk *)heap_start;
+    target_heap->head->next = NULL;
+    target_heap->head->size = heap_end - heap_start - sizeof(memchunk);
+    target_heap->size = heap_end - heap_start;
+
+    target_heap->setup_done = 1;
+  } else {
+    // Verify the heap address matches what was previously set up
+    if (target_heap->head != (memchunk *)heap_start) {
+      printk("Error: Heap already initialized at different address. "
+             "Expected: 0x%lx, Got: 0x%lx\n",
+             (uint64_t)target_heap->head, heap_start);
+      jumpstart_smode_fail();
+    }
+    if (target_heap->size != heap_end - heap_start) {
+      printk("Error: Heap size mismatch. Expected: 0x%lx, Got: 0x%lx\n",
+             target_heap->size, heap_end - heap_start);
+      jumpstart_smode_fail();
+    }
   }
 
-  release_lock(&heap_lock);
+  release_lock(&target_heap->lock);
   enable_checktc();
 }
 
-__attr_stext void *calloc(size_t nmemb, size_t size) {
-  uint8_t *data = malloc(nmemb * size);
-  for (size_t i = 0; i < nmemb * size; ++i) {
-    data[i] = 0;
+__attr_stext void deregister_heap(uint8_t backing_memory, uint8_t memory_type) {
+  struct heap_info *target_heap =
+      find_matching_heap(backing_memory, memory_type);
+  if (target_heap == NULL) {
+    printk(
+        "Error: No matching heap found for backing_memory=%d, memory_type=%d\n",
+        backing_memory, memory_type);
+    jumpstart_smode_fail();
+  }
+
+  if (target_heap->setup_done == 0) {
+    return;
+  }
+
+  acquire_lock(&target_heap->lock);
+
+  size_t size_of_all_chunks = 0;
+
+  memchunk *chunk = target_heap->head;
+  while (chunk) {
+    if (chunk->size & MEMCHUNK_USED) {
+      printk("Error: Chunk still in use\n");
+      jumpstart_smode_fail();
+    }
+    size_of_all_chunks += chunk->size + sizeof(memchunk);
+    chunk = chunk->next;
+  }
+
+  if (size_of_all_chunks != target_heap->size) {
+    printk("Error: Heap size mismatch. Expected: 0x%lx, Got: 0x%lx\n",
+           target_heap->size, size_of_all_chunks);
+    jumpstart_smode_fail();
+  }
+
+  target_heap->setup_done = 0;
+  target_heap->head = NULL;
+  target_heap->size = 0;
+  release_lock(&target_heap->lock);
+}
+
+__attr_stext size_t get_heap_size(uint8_t backing_memory, uint8_t memory_type) {
+  struct heap_info *target_heap =
+      find_matching_heap(backing_memory, memory_type);
+  if (!target_heap || !target_heap->setup_done) {
+    printk("Error: Heap not initialized\n");
+    jumpstart_smode_fail();
+  }
+  return target_heap->size;
+}
+
+__attr_stext void *calloc_from_memory(size_t nmemb, size_t size,
+                                      uint8_t backing_memory,
+                                      uint8_t memory_type) {
+  uint8_t *data = malloc_from_memory(nmemb * size, backing_memory, memory_type);
+  if (data) {
+    for (size_t i = 0; i < nmemb * size; ++i) {
+      *(data + i) = 0;
+    }
   }
   return data;
 }
 
-__attr_stext void *memalign(size_t alignment, size_t size) {
+__attr_stext void *memalign_from_memory(size_t alignment, size_t size,
+                                        uint8_t backing_memory,
+                                        uint8_t memory_type) {
   if (alignment & (alignment - 1)) {
     // alignment is not a power of 2
     return 0;
   }
 
-  if (head == 0 || size > MEMCHUNK_MAX_SIZE) {
+  struct heap_info *target_heap =
+      find_matching_heap(backing_memory, memory_type);
+
+  if (!target_heap || !target_heap->setup_done) {
+    return 0;
+  }
+  if (target_heap->head == 0 || size > MEMCHUNK_MAX_SIZE) {
     return 0;
   }
 
   if (alignment <= 8) {
-    return malloc(size);
+    return malloc_from_memory(size, backing_memory, memory_type);
   }
 
   void *result = 0;
-  acquire_lock(&heap_lock);
+  acquire_lock(&target_heap->lock);
   //----------------------------------------------------------------------------
   // Allocating anything less than 8 bytes is kind of pointless, the
   // book-keeping overhead is too big.
@@ -171,7 +342,7 @@ __attr_stext void *memalign(size_t alignment, size_t size) {
   uint8_t aligned = 0;
   uint64_t aligned_start = 0, start = 0, end = 0;
   memchunk *chunk;
-  for (chunk = head; chunk; chunk = chunk->next) {
+  for (chunk = target_heap->head; chunk; chunk = chunk->next) {
     // Chunk used
     if (chunk->size & MEMCHUNK_USED) {
       continue;
@@ -237,9 +408,54 @@ __attr_stext void *memalign(size_t alignment, size_t size) {
   chunk->size |= MEMCHUNK_USED;
   result = (void *)chunk + sizeof(memchunk);
 exit_memalign:
-  release_lock(&heap_lock);
+  release_lock(&target_heap->lock);
   return result;
 }
+
+__attr_stext void print_heap(void) {
+  struct heap_info *target_heap =
+      find_matching_heap(BACKING_MEMORY_DDR, MEMORY_TYPE_WB);
+
+  if (!target_heap || !target_heap->setup_done) {
+    printk("Error: Heap not initialized\n");
+    return;
+  }
+  acquire_lock(&target_heap->lock);
+  printk("===================\n");
+  memchunk *chunk = target_heap->head;
+  while (chunk != 0) {
+    if (chunk->size & MEMCHUNK_USED) {
+      printk("[USED] Size:0x%llx\n", (chunk->size & MEMCHUNK_MAX_SIZE));
+    } else {
+      printk("[FREE] Size:0x%lx    Start:0x%lx\n", chunk->size,
+             (uint64_t)((void *)chunk + sizeof(memchunk)));
+    }
+    chunk = chunk->next;
+  }
+
+  printk("===================\n");
+  release_lock(&target_heap->lock);
+}
+
+// The default versions of the functions use the DDR and WB memory type.
+__attr_stext void *malloc(size_t size) {
+  return malloc_from_memory(size, BACKING_MEMORY_DDR, MEMORY_TYPE_WB);
+}
+
+__attr_stext void free(void *ptr) {
+  free_from_memory(ptr, BACKING_MEMORY_DDR, MEMORY_TYPE_WB);
+}
+
+__attr_stext void *calloc(size_t nmemb, size_t size) {
+  return calloc_from_memory(nmemb, size, BACKING_MEMORY_DDR, MEMORY_TYPE_WB);
+}
+
+__attr_stext void *memalign(size_t alignment, size_t size) {
+  return memalign_from_memory(alignment, size, BACKING_MEMORY_DDR,
+                              MEMORY_TYPE_WB);
+}
+
+#endif // ENABLE_HEAP == 1
 
 __attr_stext void *memset(void *s, int c, size_t n) {
   uint8_t *p = s;
@@ -266,22 +482,4 @@ __attr_stext void *memcpy(void *dest, const void *src, size_t n) {
   }
 
   return dest;
-}
-
-__attr_stext void print_heap(void) {
-  acquire_lock(&heap_lock);
-  printk("===================\n");
-  memchunk *chunk = head;
-  while (chunk != 0) {
-    if (chunk->size & MEMCHUNK_USED) {
-      printk("[USED] Size:0x%llx\n", (chunk->size & MEMCHUNK_MAX_SIZE));
-    } else {
-      printk("[FREE] Size:0x%lx    Start:0x%lx\n", chunk->size,
-             (uint64_t)((void *)chunk + sizeof(memchunk)));
-    }
-    chunk = chunk->next;
-  }
-
-  printk("===================\n");
-  release_lock(&heap_lock);
 }

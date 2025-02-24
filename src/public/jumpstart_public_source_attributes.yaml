@@ -96,8 +96,8 @@ diag_attributes:
   smode_start_address: null
   umode_start_address: null
   num_pages_for_jumpstart_mmode_text: 4
-  num_pages_for_jumpstart_mmode_data: 3
-  num_pages_for_jumpstart_smode_text: 3
+  num_pages_for_jumpstart_mmode_data: 5
+  num_pages_for_jumpstart_smode_text: 4
   num_pages_for_jumpstart_smode_sdata: 1
   num_pages_for_jumpstart_smode_bss: 7
   page_size_for_jumpstart_smode_heap: 0x200000
@@ -114,6 +114,7 @@ diag_attributes:
   vsatp_mode: 'sv39'
   hgatp_mode: 'sv39x4'
   mappings: null
+  enable_heap: false
   build_rng_seed: 0xdeadbeef
   # Limit the range of the ELF load sections. If not set then
   # no limit is applied.
@@ -160,6 +161,10 @@ defines:
   STIMER_RESET: nop
   MTIMER_RESET: nop
   CPU_CLOCK_FREQUENCY_IN_MHZ: 1
+  BACKING_MEMORY_DDR: 1
+  MEMORY_TYPE_WB: 3
+  MEMORY_TYPE_WC: 1
+  MEMORY_TYPE_UC: 0
 
 syscall_numbers:
   - SYSCALL_RUN_FUNC_IN_UMODE_COMPLETE

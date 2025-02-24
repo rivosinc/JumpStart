@@ -16,6 +16,7 @@ smode_sources += files('jumpstart.smode.S',
                               'utils.smode.c',
                               'uart.smode.c',
                               'heap.smode.c',
+                              'heap.smode.S',
                               'lock.smode.c')
 
 if get_option('boot_config') == 'fw-sbi'

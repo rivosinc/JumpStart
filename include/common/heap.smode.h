@@ -9,6 +9,7 @@
 #pragma once
 
 #include <stddef.h>
+#include <stdint.h>
 
 //------------------------------------------------------------------------------
 //! Allocate memory on the heap
@@ -32,3 +33,24 @@ void *memcpy(void *dest, const void *src, size_t n);
 //! Debug Features
 //------------------------------------------------------------------------------
 void print_heap(void);
+
+//------------------------------------------------------------------------------
+// Memory type and backing memory specific versions
+//------------------------------------------------------------------------------
+void *malloc_from_memory(size_t size, uint8_t backing_memory,
+                         uint8_t memory_type);
+
+void free_from_memory(void *ptr, uint8_t backing_memory, uint8_t memory_type);
+
+void *calloc_from_memory(size_t nmemb, size_t size, uint8_t backing_memory,
+                         uint8_t memory_type);
+
+void *memalign_from_memory(size_t alignment, size_t size,
+                           uint8_t backing_memory, uint8_t memory_type);
+
+void setup_heap(uint64_t heap_start, uint64_t heap_end, uint8_t backing_memory,
+                uint8_t memory_type);
+
+void deregister_heap(uint8_t backing_memory, uint8_t memory_type);
+
+size_t get_heap_size(uint8_t backing_memory, uint8_t memory_type);

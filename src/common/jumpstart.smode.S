@@ -28,7 +28,7 @@ setup_smode:
 
   jal setup_mmu_from_smode
 
-  jal setup_heap
+  jal setup_default_heap
 
   jal setup_uart
 
