@@ -78,7 +78,7 @@ class MemoryMapping:
             "pma_memory_type": MappingField(
                 "pma_memory_type", str, str, ["uc", "wc", "wb"], None, False
             ),
-            "pbmt_mode": MappingField("pbmt_mode", str, str, ["io", "nc"], None, False),
+            "pbmt_mode": MappingField("pbmt_mode", str, str, ["pma", "io", "nc"], "pma", False),
             "linker_script_section": MappingField(
                 "linker_script_section", str, str, None, None, False
             ),

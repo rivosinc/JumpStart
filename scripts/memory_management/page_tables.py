@@ -528,11 +528,10 @@ class PageTables:
                         pte_value, 1, self.attributes.common_attributes["d_bit"]
                     )
 
-                    if entry.get_field("pbmt_mode") is not None:
-                        pbmt_mode = PbmtMode.get_encoding(entry.get_field("pbmt_mode").lower())
-                        pte_value = BitField.place_bits(
-                            pte_value, pbmt_mode, self.attributes.common_attributes["pbmt_bits"]
-                        )
+                    pbmt_mode = PbmtMode.get_encoding(entry.get_field("pbmt_mode").lower())
+                    pte_value = BitField.place_bits(
+                        pte_value, pbmt_mode, self.attributes.common_attributes["pbmt_bits"]
+                    )
 
                     pte_value = BitField.place_bits(
                         pte_value,
