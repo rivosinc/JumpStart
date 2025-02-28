@@ -14,13 +14,7 @@
 
 #include "jumpstart.h"
 
-#if DISABLE_UART == 0
-
 int toupper(int c);
-
-static char *ksprintn(char *nbuf, uintmax_t num, int base, int *lenp,
-                      int upper) __attr_stext;
-
 int islower(int c) __attr_stext;
 int isupper(int c) __attr_stext;
 int tolower(int c) __attr_stext;
@@ -84,6 +78,8 @@ __attr_stext size_t strlen(const char *str) {
   return len;
 }
 
+#if ENABLE_UART
+
 static char const hex2ascii_data[] = "0123456789abcdefghijklmnopqrstuvwxyz";
 
 #pragma GCC diagnostic push
@@ -97,8 +93,8 @@ static char const hex2ascii_data[] = "0123456789abcdefghijklmnopqrstuvwxyz";
  * written in the buffer (i.e., the first character of the string).
  * The buffer pointed to by `nbuf' must have length >= MAXNBUF.
  */
-static char *ksprintn(char *nbuf, uintmax_t num, int base, int *lenp,
-                      int upper) {
+__attr_stext static char *ksprintn(char *nbuf, uintmax_t num, int base,
+                                   int *lenp, int upper) {
   char *p, c;
 
   p = nbuf;
@@ -434,4 +430,4 @@ __attr_stext int snprintf(char *buf, size_t size, const char *fmt, ...) {
   return retval;
 }
 
-#endif // DISABLE_UART == 0
+#endif // ENABLE_UART
