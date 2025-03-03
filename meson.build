@@ -182,7 +182,7 @@ if diag_attributes_yaml != '' and diag_sources.length() > 0
                 depends          : [diag_exe])
   endif
 
-  trace_file = diag_name + '.' + get_option('diag_target') + '.itrace'
+  trace_file = diag_name + '.itrace'
 
   if get_option('diag_target') == 'spike'
     spike_args = default_spike_args
