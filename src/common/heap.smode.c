@@ -195,27 +195,41 @@ __attr_stext void setup_heap(uint64_t heap_start, uint64_t heap_end,
     // Translate the start and end of the heap sanity check it's memory type.
     struct translation_info xlate_info;
     translate_VA(heap_start, &xlate_info);
-    // WB = PMA in PBMT
-    // UC = IO in PBMT
-    // WC = NC in PBMT
-    if ((memory_type == MEMORY_TYPE_WB &&
-         xlate_info.pbmt_mode != PTE_PBMT_PMA) ||
-        (memory_type == MEMORY_TYPE_UC &&
-         xlate_info.pbmt_mode != PTE_PBMT_IO) ||
-        (memory_type == MEMORY_TYPE_WC &&
-         xlate_info.pbmt_mode != PTE_PBMT_NC)) {
-      printk("Error: Heap start address is not correct memory type.");
+    if (xlate_info.walk_successful == 0) {
+      printk("Error: Unable to translate heap start address.\n");
       jumpstart_smode_fail();
     }
-    translate_VA(heap_end - 1, &xlate_info);
-    if ((memory_type == MEMORY_TYPE_WB &&
-         xlate_info.pbmt_mode != PTE_PBMT_PMA) ||
-        (memory_type == MEMORY_TYPE_UC &&
-         xlate_info.pbmt_mode != PTE_PBMT_IO) ||
-        (memory_type == MEMORY_TYPE_WC &&
-         xlate_info.pbmt_mode != PTE_PBMT_NC)) {
-      printk("Error: Heap end address is not correct memory type.");
-      jumpstart_smode_fail();
+
+    if (xlate_info.satp_mode != VM_1_10_MBARE) {
+      // Only sanity check the memory type if the SATP mode is not Bare.
+
+      // WB = PMA in PBMT
+      // UC = IO in PBMT
+      // WC = NC in PBMT
+      if ((memory_type == MEMORY_TYPE_WB &&
+           xlate_info.pbmt_mode != PTE_PBMT_PMA) ||
+          (memory_type == MEMORY_TYPE_UC &&
+           xlate_info.pbmt_mode != PTE_PBMT_IO) ||
+          (memory_type == MEMORY_TYPE_WC &&
+           xlate_info.pbmt_mode != PTE_PBMT_NC)) {
+        printk("Error: Heap start address is not correct memory type.");
+        jumpstart_smode_fail();
+      }
+
+      translate_VA(heap_end - 1, &xlate_info);
+      if (xlate_info.walk_successful == 0) {
+        printk("Error: Unable to translate heap end address.\n");
+        jumpstart_smode_fail();
+      }
+      if ((memory_type == MEMORY_TYPE_WB &&
+           xlate_info.pbmt_mode != PTE_PBMT_PMA) ||
+          (memory_type == MEMORY_TYPE_UC &&
+           xlate_info.pbmt_mode != PTE_PBMT_IO) ||
+          (memory_type == MEMORY_TYPE_WC &&
+           xlate_info.pbmt_mode != PTE_PBMT_NC)) {
+        printk("Error: Heap end address is not correct memory type.");
+        jumpstart_smode_fail();
+      }
     }
 
     target_heap->head = (memchunk *)heap_start;
