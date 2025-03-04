@@ -28,9 +28,9 @@ setup_smode:
 
   jal setup_mmu_from_smode
 
-  jal setup_default_heap
-
   jal setup_uart
+
+  jal setup_default_heap
 
   li t0, 1
   SET_THREAD_ATTRIBUTES_SMODE_SETUP_DONE(t0)
