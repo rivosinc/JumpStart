@@ -68,10 +68,15 @@ __attr_stext void *malloc_from_memory(size_t size, uint8_t backing_memory,
   struct heap_info *target_heap =
       find_matching_heap(backing_memory, memory_type);
 
-  if (!target_heap || !target_heap->setup_done) {
+  if (!target_heap || !target_heap->setup_done || target_heap->head == 0) {
+    printk("Error: Heap not initialized. Ensure that the diag attribute is set "
+           "to true\n");
+    jumpstart_smode_fail();
     return 0;
   }
-  if (target_heap->head == 0 || size > MEMCHUNK_MAX_SIZE || size == 0) {
+  if (size > MEMCHUNK_MAX_SIZE || size == 0) {
+    printk("Error: Invalid size for malloc request\n");
+    jumpstart_smode_fail();
     return 0;
   }
   void *result = 0;
@@ -129,9 +134,12 @@ __attr_stext void free_from_memory(void *ptr, uint8_t backing_memory,
   struct heap_info *target_heap =
       find_matching_heap(backing_memory, memory_type);
 
-  if (!target_heap || !target_heap->setup_done) {
-    return;
+  if (!target_heap || !target_heap->setup_done || target_heap->head == 0) {
+    printk("Error: Heap not initialized. Ensure that the diag attribute is set "
+           "to true\n");
+    jumpstart_smode_fail();
   }
+
   acquire_lock(&target_heap->lock);
 
   // Validate that ptr is within heap bounds
@@ -300,9 +308,11 @@ __attr_stext void deregister_heap(uint8_t backing_memory, uint8_t memory_type) {
 __attr_stext size_t get_heap_size(uint8_t backing_memory, uint8_t memory_type) {
   struct heap_info *target_heap =
       find_matching_heap(backing_memory, memory_type);
-  if (!target_heap || !target_heap->setup_done) {
-    printk("Error: Heap not initialized\n");
+  if (!target_heap || !target_heap->setup_done || target_heap->head == 0) {
+    printk("Error: Heap not initialized. Ensure that the diag attribute is set "
+           "to true\n");
     jumpstart_smode_fail();
+    return 0;
   }
   return target_heap->size;
 }
@@ -330,10 +340,15 @@ __attr_stext void *memalign_from_memory(size_t alignment, size_t size,
   struct heap_info *target_heap =
       find_matching_heap(backing_memory, memory_type);
 
-  if (!target_heap || !target_heap->setup_done) {
+  if (!target_heap || !target_heap->setup_done || target_heap->head == 0) {
+    printk("Error: Heap not initialized. Ensure that the diag attribute is set "
+           "to true\n");
+    jumpstart_smode_fail();
     return 0;
   }
-  if (target_heap->head == 0 || size > MEMCHUNK_MAX_SIZE) {
+  if (size > MEMCHUNK_MAX_SIZE) {
+    printk("Error: Invalid size for memalign request\n");
+    jumpstart_smode_fail();
     return 0;
   }
 
@@ -430,10 +445,12 @@ __attr_stext void print_heap(void) {
   struct heap_info *target_heap =
       find_matching_heap(BACKING_MEMORY_DDR, MEMORY_TYPE_WB);
 
-  if (!target_heap || !target_heap->setup_done) {
-    printk("Error: Heap not initialized\n");
-    return;
+  if (!target_heap || !target_heap->setup_done || target_heap->head == 0) {
+    printk("Error: Heap not initialized. Ensure that the diag attribute is set "
+           "to true\n");
+    jumpstart_smode_fail();
   }
+
   acquire_lock(&target_heap->lock);
   printk("===================\n");
   memchunk *chunk = target_heap->head;
