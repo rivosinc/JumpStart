@@ -340,7 +340,8 @@ class PageTables:
         # List of PageTablePage objects
         self.pages = []
         self.translation_mode = translation_mode
-        self.translation_stage = memory_mappings[0].get_field("translation_stage")
+        self.mappings = memory_mappings
+        self.translation_stage = self.mappings[0].get_field("translation_stage")
         self.max_num_4K_pages = max_num_4K_pages
 
         self.asm_label = f"{self.translation_stage}_stage_pagetables_start"
@@ -349,7 +350,7 @@ class PageTables:
         self.pte_memory = {}
 
         self.start_address = None
-        for mapping in memory_mappings:
+        for mapping in self.mappings:
             if mapping.get_field(
                 "linker_script_section"
             ) is not None and f"{self.translation_stage}_stage.pagetables" in mapping.get_field(
@@ -364,9 +365,7 @@ class PageTables:
             log.error("No pagetables section found in memory mappings")
             sys.exit(1)
 
-        self.create_from_mappings(
-            mapping for mapping in memory_mappings if mapping.is_bare_mapping() is False
-        )
+        self.create_from_mappings()
 
     def get_asm_label(self):
         return self.asm_label
@@ -465,11 +464,14 @@ class PageTables:
         return None
 
     # Populates the sparse memory with the pagetable entries
-    def create_from_mappings(self, memory_mappings):
+    def create_from_mappings(self):
         source_address_type = TranslationStage.get_translates_from(self.translation_stage)
         dest_address_type = TranslationStage.get_translates_to(self.translation_stage)
 
-        for entry in self.split_mappings_at_page_granularity(memory_mappings):
+        # No page tables for the bare mappings.
+        mappings = [mapping for mapping in self.mappings if mapping.is_bare_mapping() is False]
+
+        for entry in self.split_mappings_at_page_granularity(mappings):
             assert self.translation_stage == entry.get_field("translation_stage")
             assert entry.get_field("page_size") in self.get_attribute("page_sizes")
             leaf_level = self.get_attribute("page_sizes").index(entry.get_field("page_size"))
@@ -577,3 +579,6 @@ class PageTables:
             self.pte_memory[pte_region_sparse_memory_start] = 0
         if pte_region_sparse_memory_end not in self.pte_memory:
             self.pte_memory[pte_region_sparse_memory_end] = 0
+
+    def get_mappings(self):
+        return self.mappings

@@ -646,6 +646,12 @@ sync_all_harts_from_{mode}:
             file_descriptor.write(f".global {self.page_tables[stage].get_asm_label()}\n")
             file_descriptor.write(f"{self.page_tables[stage].get_asm_label()}:\n\n")
 
+            file_descriptor.write("/* Memory mappings in this page table:\n")
+            for mapping in self.page_tables[stage].get_mappings():
+                if not mapping.is_bare_mapping():
+                    file_descriptor.write(f"{mapping}\n")
+            file_descriptor.write("*/\n")
+
             pte_size_in_bytes = self.page_tables[stage].get_attribute("pte_size_in_bytes")
             last_filled_address = None
             for address in list(sorted(self.page_tables[stage].get_pte_addresses())):
