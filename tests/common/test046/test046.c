@@ -18,9 +18,12 @@ int vsmode_main(void) __attribute__((section(".text.vsmode")));
 // Nest as many exceptions as are allowed.
 // We have saved the smode context to jump into vsmode so we have
 // 1 less context save to take.
-uint8_t num_context_saves_to_take = MAX_NUM_CONTEXT_SAVES - 1;
+uint8_t num_context_saves_to_take[MAX_NUM_HARTS_SUPPORTED] = {
+    [0 ... MAX_NUM_HARTS_SUPPORTED - 1] = MAX_NUM_CONTEXT_SAVES - 1};
 
 void test046_illegal_instruction_handler(void) {
+  uint64_t hart_id = get_thread_attributes_hart_id_from_smode();
+
   if (get_thread_attributes_current_mode_from_smode() != PRV_S) {
     jumpstart_vsmode_fail();
   }
@@ -28,15 +31,15 @@ void test046_illegal_instruction_handler(void) {
     jumpstart_vsmode_fail();
   }
 
-  --num_context_saves_to_take;
+  --num_context_saves_to_take[hart_id];
 
-  if (num_context_saves_to_take !=
+  if (num_context_saves_to_take[hart_id] !=
       get_thread_attributes_num_context_saves_remaining_in_smode_from_smode()) {
     jumpstart_vsmode_fail();
   }
 
-  if (num_context_saves_to_take > 0) {
-    if (num_context_saves_to_take % 2) {
+  if (num_context_saves_to_take[hart_id] > 0) {
+    if (num_context_saves_to_take[hart_id] % 2) {
       if (alt_test046_illegal_instruction_function() != DIAG_PASSED) {
         jumpstart_vsmode_fail();
       }
@@ -84,6 +87,7 @@ int vsmode_main() {
 }
 
 int main(void) {
+  uint64_t hart_id = get_thread_attributes_hart_id_from_smode();
   if (get_thread_attributes_current_mode_from_smode() != PRV_S) {
     return DIAG_FAILED;
   }
@@ -91,7 +95,7 @@ int main(void) {
     return DIAG_FAILED;
   }
 
-  if (num_context_saves_to_take < 2) {
+  if (num_context_saves_to_take[hart_id] < 2) {
     // We test 2 different types of illegal instruction functions
     // and require at least 2 levels of nesting to test both.
     return DIAG_FAILED;

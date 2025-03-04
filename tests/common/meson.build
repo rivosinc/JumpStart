@@ -37,7 +37,7 @@ start_in_smode_tests += [
   ['test037', 'FP/Vector test.'],
   ['test039', 'MP heap malloc test.', '-p4'],
   ['test045', 'Run C/Assembly functions with run_function_in_vsmode() from supervisor mode.'],
-  ['test046', 'Register and run vsmode illegal instruction exception handler.'],
+  ['test046', 'Register and run vsmode illegal instruction exception handler.', '-p4'],
   ['test047', 'Hypervisor load/store.'],
   ['test048', 'Run C/Assembly functions with run_function_in_vumode() from VS mode.'],
   ['test049', 'Exit with jumpstart_vumode_fail() to test umode fail path.', '', true],
