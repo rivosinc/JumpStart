@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 start_test_in_mmode: true
+
 satp_mode: "sv39"
 
 mappings:

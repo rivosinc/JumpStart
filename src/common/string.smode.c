@@ -14,6 +14,8 @@
 
 #include "jumpstart.h"
 
+#if ENABLE_UART == 1
+
 int toupper(int c);
 int islower(int c) __attr_stext;
 int isupper(int c) __attr_stext;
@@ -77,8 +79,6 @@ __attr_stext size_t strlen(const char *str) {
 
   return len;
 }
-
-#if ENABLE_UART
 
 static char const hex2ascii_data[] = "0123456789abcdefghijklmnopqrstuvwxyz";
 
@@ -430,4 +430,4 @@ __attr_stext int snprintf(char *buf, size_t size, const char *fmt, ...) {
   return retval;
 }
 
-#endif // ENABLE_UART
+#endif // ENABLE_UART == 1

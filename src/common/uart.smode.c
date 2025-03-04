@@ -13,7 +13,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-#if ENABLE_UART
+#if ENABLE_UART == 1
 
 extern void putch(char c);
 
@@ -87,13 +87,4 @@ __attr_stext int printk(const char *fmt, ...) {
   return rc;
 }
 
-#else // ENABLE_UART
-
-__attr_stext int printk(const char *fmt, ...) {
-  if (fmt) {
-  }
-
-  return 0;
-}
-
-#endif // ENABLE_UART
+#endif // ENABLE_UART == 1
