@@ -197,6 +197,11 @@ Functions with names that end in `_from_smode()` or `_from_mmode()` can only be 
 
 JumpStart provides a heap-based memory management system that supports allocations from DDR memory with different memory attributes (WB, WC, UC). A DDR WB heap is set up by default, but other heaps must be explicitly initialized before use.
 
+If the diag attribute `enable_heap` is set to `True` a DDR WB heap will be initialized for use.
+
+Custom heaps (of any memory type and size) must be explicitly set up to point to memory regions in the memory map of the diag.
+Note that multiple heaps can be active at a time but only one heap of a particular type (memory backing and memory attribute) can be set up at at time.
+
 #### Basic Memory Functions
 - `malloc()`, `free()`, `calloc()`, `memalign()`: Default memory allocation functions that use DDR WB memory.
 
@@ -205,7 +210,7 @@ JumpStart provides a heap-based memory management system that supports allocatio
 
 #### Heap Management
 - `setup_heap()`: Initialize a new heap with specified backing memory and memory type.
-- `deregister_heap()`: Clean up and remove a previously initialized heap.
+- `deregister_heap()`: Clean up and remove a previously initialized heap. All allocations from this heap have to be freed before deregistering the heap.
 - `get_heap_size()`: Get the total size of a specific heap.
 
 The following constants are defined for use with these functions:
