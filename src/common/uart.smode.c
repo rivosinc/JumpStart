@@ -13,8 +13,6 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-#if ENABLE_UART == 1
-
 extern void putch(char c);
 
 int toupper(int c);
@@ -86,5 +84,3 @@ __attr_stext int printk(const char *fmt, ...) {
 
   return rc;
 }
-
-#endif // ENABLE_UART == 1
