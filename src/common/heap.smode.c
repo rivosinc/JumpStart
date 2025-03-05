@@ -15,8 +15,6 @@
 #include "tablewalk.smode.h"
 #include "uart.smode.h"
 
-#if ENABLE_HEAP == 1
-
 #define MIN_HEAP_ALLOCATION_BYTES 8
 #define MIN_HEAP_SEGMENT_BYTES    (sizeof(memchunk) + MIN_HEAP_ALLOCATION_BYTES)
 #define MEMCHUNK_USED             0x8000000000000000ULL
@@ -485,8 +483,6 @@ __attr_stext void *memalign(size_t alignment, size_t size) {
   return memalign_from_memory(alignment, size, BACKING_MEMORY_DDR,
                               MEMORY_TYPE_WB);
 }
-
-#endif // ENABLE_HEAP == 1
 
 __attr_stext void *memset(void *s, int c, size_t n) {
   uint8_t *p = s;
