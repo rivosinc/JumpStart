@@ -10,7 +10,7 @@
 #include "utils.smode.h"
 
 struct mmu_mode_attribute {
-  uint8_t satp_mode;
+  uint8_t xatp_mode;
   uint8_t pte_size_in_bytes;
   uint8_t num_levels;
   struct bit_range va_vpn_bits[MAX_NUM_PAGE_TABLE_LEVELS];
@@ -21,8 +21,26 @@ struct mmu_mode_attribute {
 
 // TODO: generate this from the Python.
 
-const struct mmu_mode_attribute mmu_mode_attributes[] = {
-    {.satp_mode = VM_1_10_SV39,
+const struct mmu_mode_attribute mmu_hsmode_attributes[] = {
+    {.xatp_mode = VM_1_10_SV39x4,
+     .pte_size_in_bytes = 8,
+     .num_levels = 3,
+     .va_vpn_bits = {{40, 30}, {29, 21}, {20, 12}},
+     .pa_ppn_bits = {{55, 30}, {29, 21}, {20, 12}},
+     .pte_ppn_bits = {{53, 28}, {27, 19}, {18, 10}},
+     .pbmt_mode_bits = {62, 61}},
+
+    {.xatp_mode = VM_1_10_SV48x4,
+     .pte_size_in_bytes = 8,
+     .num_levels = 4,
+     .va_vpn_bits = {{49, 39}, {38, 30}, {29, 21}, {20, 12}},
+     .pa_ppn_bits = {{55, 39}, {38, 30}, {29, 21}, {20, 12}},
+     .pte_ppn_bits = {{53, 37}, {36, 28}, {27, 19}, {18, 10}},
+     .pbmt_mode_bits = {62, 61}},
+};
+
+const struct mmu_mode_attribute mmu_smode_attributes[] = {
+    {.xatp_mode = VM_1_10_SV39,
      .pte_size_in_bytes = 8,
      .num_levels = 3,
      .va_vpn_bits = {{38, 30}, {29, 21}, {20, 12}},
@@ -30,7 +48,7 @@ const struct mmu_mode_attribute mmu_mode_attributes[] = {
      .pte_ppn_bits = {{53, 28}, {27, 19}, {18, 10}},
      .pbmt_mode_bits = {62, 61}},
 
-    {.satp_mode = VM_1_10_SV48,
+    {.xatp_mode = VM_1_10_SV48,
      .pte_size_in_bytes = 8,
      .num_levels = 4,
      .va_vpn_bits = {{47, 39}, {38, 30}, {29, 21}, {20, 12}},
@@ -39,15 +57,14 @@ const struct mmu_mode_attribute mmu_mode_attributes[] = {
      .pbmt_mode_bits = {62, 61}},
 };
 
-__attr_stext void translate_VA(uint64_t va,
-                               struct translation_info *xlate_info) {
+__attr_stext static void
+translate(uint64_t xatp, const struct mmu_mode_attribute *mmu_mode_attribute,
+          uint64_t va, struct translation_info *xlate_info) {
   // C reimplementation of the DiagSource.translate_VA() from
   // generate_diag_sources.py.
-  uint64_t satp_value = read_csr(satp);
-  xlate_info->satp_mode = (uint8_t)get_field(satp_value, SATP64_MODE);
 
+  xlate_info->xatp_mode = (uint8_t)get_field(xatp, SATP64_MODE);
   xlate_info->va = va;
-
   xlate_info->pa = 0;
   xlate_info->levels_traversed = 0;
   xlate_info->walk_successful = 0;
@@ -56,28 +73,14 @@ __attr_stext void translate_VA(uint64_t va,
     xlate_info->pte_value[i] = 0;
   }
 
-  if (xlate_info->satp_mode == VM_1_10_MBARE) {
+  if (xlate_info->xatp_mode == VM_1_10_MBARE) {
     xlate_info->pa = va;
     xlate_info->walk_successful = 1;
     return;
   }
 
-  const struct mmu_mode_attribute *mmu_mode_attribute = 0;
-  for (uint8_t i = 0;
-       i < sizeof(mmu_mode_attributes) / sizeof(struct mmu_mode_attribute);
-       ++i) {
-    if (mmu_mode_attributes[i].satp_mode == xlate_info->satp_mode) {
-      mmu_mode_attribute = &mmu_mode_attributes[i];
-      break;
-    }
-  }
-
-  if (mmu_mode_attribute == 0) {
-    jumpstart_smode_fail();
-  }
-
   // Step 1
-  uint64_t a = (satp_value & SATP64_PPN) << PAGE_OFFSET;
+  uint64_t a = (xatp & SATP64_PPN) << PAGE_OFFSET;
 
   uint8_t current_level = 0;
 
@@ -136,4 +139,48 @@ __attr_stext void translate_VA(uint64_t va,
                    mmu_mode_attribute->pbmt_mode_bits);
   xlate_info->pa = a + extract_bits(va, (struct bit_range){PAGE_OFFSET - 1, 0});
   xlate_info->walk_successful = 1;
+}
+
+__attr_stext void translate_GPA(uint64_t gpa,
+                                struct translation_info *xlate_info) {
+  uint64_t hgatp_value = read_csr(hgatp);
+  uint8_t mode = (uint8_t)get_field(hgatp_value, HGATP64_MODE);
+
+  const struct mmu_mode_attribute *attribute = 0;
+  for (uint8_t i = 0;
+       i < sizeof(mmu_hsmode_attributes) / sizeof(mmu_hsmode_attributes[0]);
+       ++i) {
+    if (mmu_hsmode_attributes[i].xatp_mode == mode) {
+      attribute = &mmu_hsmode_attributes[i];
+      break;
+    }
+  }
+
+  if (!attribute) {
+    jumpstart_smode_fail();
+  }
+
+  translate(hgatp_value, attribute, gpa, xlate_info);
+}
+
+__attr_stext void translate_VA(uint64_t va,
+                               struct translation_info *xlate_info) {
+  uint64_t satp_value = read_csr(satp);
+  uint8_t mode = (uint8_t)get_field(satp_value, SATP64_MODE);
+
+  const struct mmu_mode_attribute *attribute = 0;
+  for (uint8_t i = 0;
+       i < sizeof(mmu_smode_attributes) / sizeof(mmu_smode_attributes[0]);
+       ++i) {
+    if (mmu_smode_attributes[i].xatp_mode == mode) {
+      attribute = &mmu_smode_attributes[i];
+      break;
+    }
+  }
+
+  if (!attribute) {
+    jumpstart_smode_fail();
+  }
+
+  translate(satp_value, attribute, va, xlate_info);
 }

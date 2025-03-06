@@ -686,6 +686,11 @@
 #define VM_1_10_SV57        10
 #define VM_1_10_SV64        11
 
+/* VM modes (hgsatp.mode) */
+#define VM_1_10_SV39x4      8
+#define VM_1_10_SV48x4      9
+#define VM_1_10_SV57x4      10
+
 /* Page table entry (PTE) fields */
 #define PTE_V               0x001 /* Valid */
 #define PTE_R               0x002 /* Read */

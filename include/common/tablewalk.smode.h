@@ -11,7 +11,7 @@
 #define MAX_NUM_PAGE_TABLE_LEVELS 4
 
 struct translation_info {
-  uint8_t satp_mode;
+  uint8_t xatp_mode;
   uint8_t levels_traversed;
   uint8_t walk_successful;
   uint8_t pbmt_mode;
@@ -21,4 +21,5 @@ struct translation_info {
   uint64_t pte_value[MAX_NUM_PAGE_TABLE_LEVELS];
 };
 
+void translate_GPA(uint64_t gpa, struct translation_info *xlate_info);
 void translate_VA(uint64_t va, struct translation_info *xlate_info);

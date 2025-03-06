@@ -23,7 +23,7 @@ int main(void) {
     return DIAG_FAILED;
   }
 
-  if (xlate_info.satp_mode != VM_1_10_SV39) {
+  if (xlate_info.xatp_mode != VM_1_10_SV39) {
     return DIAG_FAILED;
   }
 

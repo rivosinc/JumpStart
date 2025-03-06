@@ -230,7 +230,7 @@ __attr_stext void setup_heap(uint64_t heap_start, uint64_t heap_end,
       jumpstart_smode_fail();
     }
 
-    if (xlate_info.satp_mode != VM_1_10_MBARE) {
+    if (xlate_info.xatp_mode != VM_1_10_MBARE) {
       // Only sanity check the memory type if the SATP mode is not Bare.
 
       // WB = PMA in PBMT
