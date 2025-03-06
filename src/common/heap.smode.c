@@ -36,15 +36,16 @@ struct heap_info {
   uint8_t backing_memory;
   uint8_t memory_type;
   memchunk *head;
+  memchunk *last_allocated; // Track where we last allocated from
   size_t size;
   spinlock_t lock;
   volatile uint8_t setup_done;
 };
 
 __attr_privdata struct heap_info heaps[NUM_HEAPS_SUPPORTED] = {
-    {BACKING_MEMORY_DDR, MEMORY_TYPE_WB, NULL, 0, 0, 0},
-    {BACKING_MEMORY_DDR, MEMORY_TYPE_WC, NULL, 0, 0, 0},
-    {BACKING_MEMORY_DDR, MEMORY_TYPE_UC, NULL, 0, 0, 0},
+    {BACKING_MEMORY_DDR, MEMORY_TYPE_WB, NULL, NULL, 0, 0, 0},
+    {BACKING_MEMORY_DDR, MEMORY_TYPE_WC, NULL, NULL, 0, 0, 0},
+    {BACKING_MEMORY_DDR, MEMORY_TYPE_UC, NULL, NULL, 0, 0, 0},
 };
 
 __attr_stext static struct heap_info *find_matching_heap(uint8_t backing_memory,
@@ -86,14 +87,36 @@ __attr_stext void *malloc_from_memory(size_t size, uint8_t backing_memory,
   uint64_t alloc_size = (((size - 1) >> 3) << 3) + 8;
 
   //----------------------------------------------------------------------------
-  // Try to find a suitable chunk that is unused
+  // Try to find a suitable chunk that is unused, starting from last allocation
   //----------------------------------------------------------------------------
-  memchunk *chunk = target_heap->head;
+  memchunk *start = target_heap->last_allocated
+                        ? target_heap->last_allocated->next
+                        : target_heap->head;
+  if (!start)
+    start = target_heap->head; // Wrap around if at end
+  memchunk *chunk = start;
+
+  // First try searching from last allocation to end
   while (chunk) {
     if (!(chunk->size & MEMCHUNK_USED) && chunk->size >= alloc_size) {
       break;
     }
     chunk = chunk->next;
+  }
+
+  // If not found, search from beginning to where we started
+  if (!chunk && start != target_heap->head) {
+    chunk = target_heap->head;
+    while (chunk && chunk != start) {
+      if (!(chunk->size & MEMCHUNK_USED) && chunk->size >= alloc_size) {
+        break;
+      }
+      chunk = chunk->next;
+    }
+    // If we reached start without finding a chunk, set chunk to NULL
+    if (chunk == start) {
+      chunk = NULL;
+    }
   }
 
   if (!chunk) {
@@ -114,9 +137,10 @@ __attr_stext void *malloc_from_memory(size_t size, uint8_t backing_memory,
   }
 
   //----------------------------------------------------------------------------
-  // Mark the chunk as used and return the memory
+  // Mark the chunk as used, update last_allocated, and return the memory
   //----------------------------------------------------------------------------
   chunk->size |= MEMCHUNK_USED;
+  target_heap->last_allocated = chunk;
   result = (void *)chunk + sizeof(memchunk);
 exit_malloc:
   release_lock(&target_heap->lock);
@@ -239,6 +263,7 @@ __attr_stext void setup_heap(uint64_t heap_start, uint64_t heap_end,
     }
 
     target_heap->head = (memchunk *)heap_start;
+    target_heap->last_allocated = NULL; // Initialize last_allocated to NULL
     target_heap->head->next = NULL;
     target_heap->head->size = heap_end - heap_start - sizeof(memchunk);
     target_heap->size = heap_end - heap_start;
@@ -299,6 +324,7 @@ __attr_stext void deregister_heap(uint8_t backing_memory, uint8_t memory_type) {
 
   target_heap->setup_done = 0;
   target_heap->head = NULL;
+  target_heap->last_allocated = NULL; // Clear last_allocated pointer
   target_heap->size = 0;
   release_lock(&target_heap->lock);
 }
