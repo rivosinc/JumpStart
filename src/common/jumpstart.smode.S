@@ -102,11 +102,8 @@ run_function_in_vsmode:
   SET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
 
   # Setup VS-mode in sstatus and hstatus. sepc will contain the address of
-  # the function to run in VS-mode. Given we support single guest at the moment
-  # we just set vgien to 1.
+  # the function to run in VS-mode.
   li t0, HSTATUS_SPV
-  li t1, 1 << HSTATUS_VGEIN_SHIFT
-  or t0, t0, t1
   csrs hstatus, t0
 
   li t0, (SMSTATEEN0_IMSIC | SMSTATEEN0_AIA | SMSTATEEN0_SVSLCT)
