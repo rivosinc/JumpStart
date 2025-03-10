@@ -175,6 +175,11 @@ __attr_stext void free_from_memory(void *ptr, uint8_t backing_memory,
     goto exit_free;
   }
 
+  // Update last_allocated if it points to the freed chunk
+  if (target_heap->last_allocated == chunk) {
+    target_heap->last_allocated = NULL;
+  }
+
   // Verify this is actually a used chunk
   if (!(chunk->size & MEMCHUNK_USED)) {
     printk("Error: Double free detected\n");
@@ -187,7 +192,24 @@ __attr_stext void free_from_memory(void *ptr, uint8_t backing_memory,
     goto exit_free;
   }
 
+  // Mark the chunk as free
   chunk->size &= ~MEMCHUNK_USED;
+
+  // Coalesce with next chunk if it exists and is free
+  if (chunk->next && !(chunk->next->size & MEMCHUNK_USED)) {
+    chunk->size += chunk->next->size + sizeof(memchunk);
+    chunk->next = chunk->next->next;
+  }
+
+  // Coalesce with previous chunk if it exists and is free
+  memchunk *prev = target_heap->head;
+  while (prev && prev->next != chunk) {
+    prev = prev->next;
+  }
+  if (prev && !(prev->size & MEMCHUNK_USED)) {
+    prev->size += chunk->size + sizeof(memchunk);
+    prev->next = chunk->next;
+  }
 
 exit_free:
   release_lock(&target_heap->lock);
