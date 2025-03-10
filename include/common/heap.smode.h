@@ -12,6 +12,24 @@
 #include <stdint.h>
 
 //------------------------------------------------------------------------------
+// Heap Constants
+//------------------------------------------------------------------------------
+// Allocating anything less than 8 bytes is kind of pointless, the
+// book-keeping overhead is too big.
+//------------------------------------------------------------------------------
+#define MIN_HEAP_ALLOCATION_BYTES 8
+#define MEMCHUNK_SIZE             16 // Size of internal memchunk structure
+#define MIN_HEAP_SEGMENT_BYTES    (MEMCHUNK_SIZE + MIN_HEAP_ALLOCATION_BYTES)
+#define MEMCHUNK_USED             0x8000000000000000ULL
+#define MEMCHUNK_MAX_SIZE         (MEMCHUNK_USED - 1)
+
+// Helper macro to align size to minimum allocation size
+#define ALIGN_TO_MIN_ALLOC(size)                                               \
+  ((((size - 1) >> __builtin_ctzll(MIN_HEAP_ALLOCATION_BYTES))                 \
+    << __builtin_ctzll(MIN_HEAP_ALLOCATION_BYTES)) +                           \
+   MIN_HEAP_ALLOCATION_BYTES)
+
+//------------------------------------------------------------------------------
 //! Allocate memory on the heap
 //------------------------------------------------------------------------------
 void *malloc(size_t size);

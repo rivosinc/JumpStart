@@ -8,6 +8,8 @@
 
 #include "heap.smode.h"
 
+#include <assert.h>
+
 #include "cpu_bits.h"
 #include "jumpstart.h"
 #include "jumpstart_defines.h"
@@ -32,6 +34,11 @@ struct memchunk {
 
 typedef struct memchunk memchunk;
 
+static_assert(sizeof(memchunk) == MEMCHUNK_SIZE, "MEMCHUNK_SIZE mismatch");
+
+//------------------------------------------------------------------------------
+// Heap info struct
+//------------------------------------------------------------------------------
 struct heap_info {
   uint8_t backing_memory;
   uint8_t memory_type;
@@ -80,11 +87,8 @@ __attr_stext void *malloc_from_memory(size_t size, uint8_t backing_memory,
   }
   void *result = 0;
   acquire_lock(&target_heap->lock);
-  //----------------------------------------------------------------------------
-  // Allocating anything less than 8 bytes is kind of pointless, the
-  // book-keeping overhead is too big.
-  //----------------------------------------------------------------------------
-  uint64_t alloc_size = (((size - 1) >> 3) << 3) + 8;
+
+  uint64_t alloc_size = ALIGN_TO_MIN_ALLOC(size);
 
   //----------------------------------------------------------------------------
   // Try to find a suitable chunk that is unused, starting from last allocation
@@ -382,11 +386,8 @@ __attr_stext void *memalign_from_memory(size_t alignment, size_t size,
 
   void *result = 0;
   acquire_lock(&target_heap->lock);
-  //----------------------------------------------------------------------------
-  // Allocating anything less than 8 bytes is kind of pointless, the
-  // book-keeping overhead is too big.
-  //----------------------------------------------------------------------------
-  uint64_t alloc_size = (((size - 1) >> 3) << 3) + 8;
+
+  uint64_t alloc_size = ALIGN_TO_MIN_ALLOC(size);
 
   //----------------------------------------------------------------------------
   // Try to find a suitable chunk that is unused
