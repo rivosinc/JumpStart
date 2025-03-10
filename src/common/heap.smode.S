@@ -17,7 +17,10 @@ setup_default_heap:
   addi  fp, sp, 16
 
   la a0, _JUMPSTART_CPU_SMODE_HEAP_START
+  # The heap end is set to the last byte of the heap.
+  # Add 1 to the heap end to include the last byte.
   la a1, _JUMPSTART_CPU_SMODE_HEAP_END
+  addi a1, a1, 1
   li a2, BACKING_MEMORY_DDR
   li a3, MEMORY_TYPE_WB
   jal setup_heap
