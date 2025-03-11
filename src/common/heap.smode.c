@@ -22,6 +22,17 @@
 
 #define NUM_HEAPS_SUPPORTED 3
 
+#define MEMCHUNK_USED       0x8000000000000000ULL
+#define MEMCHUNK_MAX_SIZE   (MEMCHUNK_USED - 1)
+#define MIN_HEAP_SEGMENT_BYTES                                                 \
+  (PER_HEAP_ALLOCATION_METADATA_SIZE + MIN_HEAP_ALLOCATION_SIZE)
+
+// Helper macro to align size to minimum allocation size
+#define ALIGN_TO_MIN_ALLOC(size)                                               \
+  ((((size - 1) >> __builtin_ctzll(MIN_HEAP_ALLOCATION_SIZE))                  \
+    << __builtin_ctzll(MIN_HEAP_ALLOCATION_SIZE)) +                            \
+   MIN_HEAP_ALLOCATION_SIZE)
+
 //------------------------------------------------------------------------------
 // Malloc helper structs
 //------------------------------------------------------------------------------
@@ -32,7 +43,8 @@ struct memchunk {
 
 typedef struct memchunk memchunk;
 
-static_assert(sizeof(memchunk) == MEMCHUNK_SIZE, "MEMCHUNK_SIZE mismatch");
+static_assert(sizeof(memchunk) == PER_HEAP_ALLOCATION_METADATA_SIZE,
+              "PER_HEAP_ALLOCATION_METADATA_SIZE mismatch");
 
 //------------------------------------------------------------------------------
 // Heap info struct
@@ -131,8 +143,10 @@ __attr_stext void *malloc_from_memory(size_t size, uint8_t backing_memory,
   //----------------------------------------------------------------------------
   if (chunk->size >= alloc_size + MIN_HEAP_SEGMENT_BYTES) {
     memchunk *new_chunk =
-        (memchunk *)((void *)chunk + MEMCHUNK_SIZE + alloc_size);
-    new_chunk->size = chunk->size - alloc_size - MEMCHUNK_SIZE;
+        (memchunk *)((void *)chunk + PER_HEAP_ALLOCATION_METADATA_SIZE +
+                     alloc_size);
+    new_chunk->size =
+        chunk->size - alloc_size - PER_HEAP_ALLOCATION_METADATA_SIZE;
     new_chunk->next = chunk->next;
     chunk->next = new_chunk;
     chunk->size = alloc_size;
@@ -143,7 +157,7 @@ __attr_stext void *malloc_from_memory(size_t size, uint8_t backing_memory,
   //----------------------------------------------------------------------------
   chunk->size |= MEMCHUNK_USED;
   target_heap->last_allocated = chunk;
-  result = (void *)chunk + MEMCHUNK_SIZE;
+  result = (void *)chunk + PER_HEAP_ALLOCATION_METADATA_SIZE;
 exit_malloc:
   release_lock(&target_heap->lock);
   return result;
@@ -167,7 +181,8 @@ __attr_stext void free_from_memory(void *ptr, uint8_t backing_memory,
   acquire_lock(&target_heap->lock);
 
   // Validate that ptr is within heap bounds
-  memchunk *chunk = (memchunk *)((void *)ptr - MEMCHUNK_SIZE);
+  memchunk *chunk =
+      (memchunk *)((void *)ptr - PER_HEAP_ALLOCATION_METADATA_SIZE);
   if (chunk < target_heap->head || !target_heap->head) {
     printk("Error: Invalid free - address below heap start\n");
     goto exit_free;
@@ -195,7 +210,7 @@ __attr_stext void free_from_memory(void *ptr, uint8_t backing_memory,
 
   // Coalesce with next chunk if it exists and is free
   if (chunk->next && !(chunk->next->size & MEMCHUNK_USED)) {
-    chunk->size += chunk->next->size + MEMCHUNK_SIZE;
+    chunk->size += chunk->next->size + PER_HEAP_ALLOCATION_METADATA_SIZE;
     chunk->next = chunk->next->next;
   }
 
@@ -205,7 +220,7 @@ __attr_stext void free_from_memory(void *ptr, uint8_t backing_memory,
     prev = prev->next;
   }
   if (prev && !(prev->size & MEMCHUNK_USED)) {
-    prev->size += chunk->size + MEMCHUNK_SIZE;
+    prev->size += chunk->size + PER_HEAP_ALLOCATION_METADATA_SIZE;
     prev->next = chunk->next;
   }
 
@@ -289,7 +304,8 @@ __attr_stext void setup_heap(uint64_t heap_start, uint64_t heap_end,
     target_heap->head = (memchunk *)heap_start;
     target_heap->last_allocated = NULL; // Initialize last_allocated to NULL
     target_heap->head->next = NULL;
-    target_heap->head->size = heap_end - heap_start - MEMCHUNK_SIZE;
+    target_heap->head->size =
+        heap_end - heap_start - PER_HEAP_ALLOCATION_METADATA_SIZE;
     target_heap->size = heap_end - heap_start;
 
     target_heap->setup_done = 1;
@@ -336,7 +352,7 @@ __attr_stext void deregister_heap(uint8_t backing_memory, uint8_t memory_type) {
       printk("Error: Chunk still in use\n");
       jumpstart_smode_fail();
     }
-    size_of_all_chunks += chunk->size + MEMCHUNK_SIZE;
+    size_of_all_chunks += chunk->size + PER_HEAP_ALLOCATION_METADATA_SIZE;
     chunk = chunk->next;
   }
 
@@ -427,8 +443,9 @@ __attr_stext void *memalign_from_memory(size_t alignment, size_t size,
       continue;
     }
 
-    start = (uint64_t)((char *)chunk + MEMCHUNK_SIZE);
-    end = (uint64_t)((char *)chunk + MEMCHUNK_SIZE + chunk->size);
+    start = (uint64_t)((char *)chunk + PER_HEAP_ALLOCATION_METADATA_SIZE);
+    end = (uint64_t)((char *)chunk + PER_HEAP_ALLOCATION_METADATA_SIZE +
+                     chunk->size);
     aligned_start = (((start - 1) >> pow2) << pow2) + alignment;
 
     // The current chunk is already aligned so just allocate it
@@ -461,10 +478,11 @@ __attr_stext void *memalign_from_memory(size_t alignment, size_t size,
 
   // If chunk is not aligned we need to allecate a new chunk just before it
   if (!aligned) {
-    memchunk *new_chunk = (memchunk *)((void *)aligned_start - MEMCHUNK_SIZE);
+    memchunk *new_chunk =
+        (memchunk *)((void *)aligned_start - PER_HEAP_ALLOCATION_METADATA_SIZE);
     new_chunk->size = end - aligned_start;
     new_chunk->next = chunk->next;
-    chunk->size -= (new_chunk->size + MEMCHUNK_SIZE);
+    chunk->size -= (new_chunk->size + PER_HEAP_ALLOCATION_METADATA_SIZE);
     chunk->next = new_chunk;
     chunk = chunk->next;
   }
@@ -472,14 +490,16 @@ __attr_stext void *memalign_from_memory(size_t alignment, size_t size,
   // If the chunk needs to be trimmed
   if (chunk->size >= alloc_size + MIN_HEAP_SEGMENT_BYTES) {
     memchunk *new_chunk =
-        (memchunk *)((void *)chunk + MEMCHUNK_SIZE + alloc_size);
-    new_chunk->size = chunk->size - alloc_size - MEMCHUNK_SIZE;
+        (memchunk *)((void *)chunk + PER_HEAP_ALLOCATION_METADATA_SIZE +
+                     alloc_size);
+    new_chunk->size =
+        chunk->size - alloc_size - PER_HEAP_ALLOCATION_METADATA_SIZE;
     new_chunk->next = chunk->next;
     chunk->next = new_chunk;
     chunk->size = alloc_size;
   }
   chunk->size |= MEMCHUNK_USED;
-  result = (void *)chunk + MEMCHUNK_SIZE;
+  result = (void *)chunk + PER_HEAP_ALLOCATION_METADATA_SIZE;
 exit_memalign:
   release_lock(&target_heap->lock);
   return result;
@@ -503,7 +523,7 @@ __attr_stext void print_heap(void) {
       printk("[USED] Size:0x%llx\n", (chunk->size & MEMCHUNK_MAX_SIZE));
     } else {
       printk("[FREE] Size:0x%lx    Start:0x%lx\n", chunk->size,
-             (uint64_t)((void *)chunk + MEMCHUNK_SIZE));
+             (uint64_t)((void *)chunk + PER_HEAP_ALLOCATION_METADATA_SIZE));
     }
     chunk = chunk->next;
   }
