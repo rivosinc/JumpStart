@@ -101,7 +101,7 @@ class Meson:
         if self.diag_build_target.target == "spike":
             self.meson_options["spike_binary"] = "spike"
             self.meson_options["spike_additional_arguments"].append(
-                "--interleave=" + str(self.rng.randint(1, 100))
+                "--interleave=" + str(self.rng.randint(1, 400))
             )
         else:
             raise Exception(f"Unknown target: {self.diag_build_target.target}")
