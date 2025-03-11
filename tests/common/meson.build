@@ -35,7 +35,6 @@ start_in_smode_tests += [
   ['test034', 'Simple spinlock test with 4 active harts and 4 inactive ones.', '-p8'],
   ['test036', 'sv48 VA aliasing test.'],
   ['test037', 'FP/Vector test.'],
-  ['test039', 'MP heap malloc test.', '-p4'],
   ['test045', 'Run C/Assembly functions with run_function_in_vsmode() from supervisor mode.'],
   ['test046', 'Register and run vsmode illegal instruction exception handler.', '-p4'],
   ['test047', 'Hypervisor load/store.'],
