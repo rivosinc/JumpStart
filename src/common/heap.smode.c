@@ -196,13 +196,13 @@ __attr_stext void free_from_memory(void *ptr, uint8_t backing_memory,
   // Verify this is actually a used chunk
   if (!(chunk->size & MEMCHUNK_USED)) {
     printk("Error: Double free detected\n");
-    goto exit_free;
+    jumpstart_smode_fail();
   }
 
   // Basic sanity check on chunk size
   if ((chunk->size & MEMCHUNK_MAX_SIZE) > MEMCHUNK_MAX_SIZE) {
     printk("Error: Invalid chunk size in free\n");
-    goto exit_free;
+    jumpstart_smode_fail();
   }
 
   // Mark the chunk as free
