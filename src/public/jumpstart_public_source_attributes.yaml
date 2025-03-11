@@ -143,9 +143,9 @@ c_structs:
       vsmode_interrupt_handler_overrides: uint64_t,46
       vsmode_exception_handler_overrides: uint64_t,20
       smode_interrupt_handler_overrides: uint64_t,46
-      smode_exception_handler_overrides: uint64_t,20
+      smode_exception_handler_overrides: uint64_t,24
       mmode_interrupt_handler_overrides: uint64_t,46
-      mmode_exception_handler_overrides: uint64_t,20
+      mmode_exception_handler_overrides: uint64_t,24
 
 defines:
   THREAD_ATTRIBUTES_BOOKEND_MAGIC_NUMBER_VALUE: 0x3317150533171505
