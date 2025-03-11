@@ -129,7 +129,7 @@ __attr_stext void *malloc_from_memory(size_t size, uint8_t backing_memory,
   // Split the chunk if it's big enough to contain one more header and at
   // least 8 more bytes
   //----------------------------------------------------------------------------
-  if (chunk->size > alloc_size + MIN_HEAP_SEGMENT_BYTES) {
+  if (chunk->size >= alloc_size + MIN_HEAP_SEGMENT_BYTES) {
     memchunk *new_chunk =
         (memchunk *)((void *)chunk + MEMCHUNK_SIZE + alloc_size);
     new_chunk->size = chunk->size - alloc_size - MEMCHUNK_SIZE;
@@ -470,7 +470,7 @@ __attr_stext void *memalign_from_memory(size_t alignment, size_t size,
   }
 
   // If the chunk needs to be trimmed
-  if (chunk->size > alloc_size + MIN_HEAP_SEGMENT_BYTES) {
+  if (chunk->size >= alloc_size + MIN_HEAP_SEGMENT_BYTES) {
     memchunk *new_chunk =
         (memchunk *)((void *)chunk + MEMCHUNK_SIZE + alloc_size);
     new_chunk->size = chunk->size - alloc_size - MEMCHUNK_SIZE;
