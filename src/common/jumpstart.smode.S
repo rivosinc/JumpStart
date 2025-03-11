@@ -262,14 +262,18 @@ restore_context:
   ld t0, EPC_OFFSET_IN_SAVE_REGION(gp)
   csrw sepc, t0
 
+  ld t0, HSTATUS_OFFSET_IN_SAVE_REGION(gp)
+  csrw hstatus, t0
+
+  # We could be returning back to VS or VU mode. Set the V bit.
+  bexti t0, t0, HSTATUS_SPV_SHIFT
+  SET_THREAD_ATTRIBUTES_CURRENT_V_BIT(t0)
+
   ld t0, STATUS_OFFSET_IN_SAVE_REGION(gp)
   csrw sstatus, t0
 
   bexti t0, t0, SSTATUS_SPP_SHIFT
   beqz  t0, restore_umode_context
-
-  ld t0, HSTATUS_OFFSET_IN_SAVE_REGION(gp)
-  csrw hstatus, t0
 
   j restore_all_gprs
 

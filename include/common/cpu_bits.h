@@ -631,6 +631,7 @@
 #define HSTATUS_VSBE         0x00000020
 #define HSTATUS_GVA          0x00000040
 #define HSTATUS_SPV          0x00000080
+#define HSTATUS_SPV_SHIFT    7
 #define HSTATUS_SPVP         0x00000100
 #define HSTATUS_HU           0x00000200
 #define HSTATUS_VGEIN        0x0003F000
