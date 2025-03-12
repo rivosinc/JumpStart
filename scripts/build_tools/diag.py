@@ -139,11 +139,38 @@ class DiagBuildTarget:
         assert boot_config in self.supported_boot_configs
         self.boot_config = boot_config
 
-        self.active_hart_mask_override = active_hart_mask_override
+        if self.target == "spike" and self.boot_config != "fw-none":
+            raise Exception(
+                f"Invalid boot_config {self.boot_config} for spike. Only fw-none is supported for spike."
+            )
 
         self.meson_options_cmd_line_overrides = meson_options_cmd_line_overrides
 
         self.diag_attributes_cmd_line_overrides = diag_attributes_cmd_line_overrides
+
+        if self.diag_attributes_cmd_line_overrides is not None:
+            for override in self.diag_attributes_cmd_line_overrides:
+                if override.startswith("active_hart_mask="):
+                    override_value = override.split("=", 1)[1]
+                    if self.diag_source.active_hart_mask is not None:
+                        log.warning(
+                            f"Overriding active_hart_mask {self.diag_source.active_hart_mask} with: {override_value}"
+                        )
+                    self.diag_source.active_hart_mask = override_value
+
+        # TODO: we don't really need 2 ways to override the active hart mask.
+        if active_hart_mask_override is not None:
+            log.warning(
+                f"Overriding active_hart_mask {self.diag_source.active_hart_mask} to {active_hart_mask_override}"
+            )
+            self.diag_source.active_hart_mask = active_hart_mask_override
+            # append active_hart_mask to the diag attributes cmd line overrides
+            # as this is used by the meson build system.
+            if self.diag_attributes_cmd_line_overrides is None:
+                self.diag_attributes_cmd_line_overrides = []
+            self.diag_attributes_cmd_line_overrides.append(
+                f"active_hart_mask={self.diag_source.active_hart_mask}"
+            )
 
     def __str__(self) -> str:
         print_string = f"\n\tName: {self.diag_source.diag_name}\n\tDirectory: {self.build_dir}\n\tAssets: {self.build_assets}\n\tBuildType: {self.buildtype},\n\tTarget: {self.target},\n\tBootConfig: {self.boot_config},"

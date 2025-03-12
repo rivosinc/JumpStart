@@ -66,23 +66,6 @@ class Meson:
             log.debug(f"Removing meson build directory: {self.meson_builddir}")
             shutil.rmtree(self.meson_builddir)
 
-    def get_active_hart_mask(self):
-        active_hart_mask = None
-
-        # 1. If the diag has an active_hart_mask defined, set active_hart_mask to that.
-        active_hart_mask = self.diag_build_target.diag_source.active_hart_mask
-
-        # NOTE: The active_hart_mask can only be overriden if allow_active_hart_mask_override is set to True in the diag.
-        # 2. If the --active_hart_mask_override is specified on the command line, set active_hart_mask to active_hart_mask_override.
-        if self.diag_build_target.active_hart_mask_override is not None:
-            if active_hart_mask is not None:
-                log.warning(
-                    f"Overriding active_hart_mask {active_hart_mask} with: {self.diag_build_target.active_hart_mask_override}"
-                )
-            active_hart_mask = self.diag_build_target.active_hart_mask_override
-
-        return active_hart_mask
-
     def setup_default_meson_options(self):
         self.meson_options["diag_name"] = self.diag_name
         self.meson_options["diag_sources"] = self.diag_build_target.diag_source.get_sources()
@@ -106,15 +89,13 @@ class Meson:
         else:
             raise Exception(f"Unknown target: {self.diag_build_target.target}")
 
-        active_hart_mask = self.get_active_hart_mask()
-        if active_hart_mask is not None:
-            self.meson_options["diag_attribute_overrides"].append(
-                f"active_hart_mask={active_hart_mask}"
+        if (
+            self.diag_build_target.diag_source.active_hart_mask is not None
+            and self.diag_build_target.target == "spike"
+        ):
+            self.meson_options["spike_additional_arguments"].append(
+                f"-p{convert_hart_mask_to_num_active_harts(self.diag_build_target.diag_source.active_hart_mask)}"
             )
-            if self.diag_build_target.target == "spike":
-                self.meson_options["spike_additional_arguments"].append(
-                    f"-p{convert_hart_mask_to_num_active_harts(active_hart_mask)}"
-                )
 
         self.meson_options["diag_attribute_overrides"].append(
             f"build_rng_seed={self.diag_build_target.rng_seed}"
