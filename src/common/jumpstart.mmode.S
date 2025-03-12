@@ -78,6 +78,8 @@ _mmode_start:
   jal setup_thread_attributes_from_mmode
 
   # Enable interrupts in machine mode.
+  li t0, MSTATUS_MDT | MSTATUS_SDT
+  csrc mstatus, t0
   li t0, MSTATUS_MIE
   csrs mstatus, t0
   li t0, MSTATUS_MPIE
