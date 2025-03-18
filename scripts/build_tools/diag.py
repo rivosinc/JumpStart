@@ -146,17 +146,16 @@ class DiagBuildTarget:
 
         self.meson_options_cmd_line_overrides = meson_options_cmd_line_overrides
 
-        self.diag_attributes_cmd_line_overrides = diag_attributes_cmd_line_overrides
+        self.diag_attributes_cmd_line_overrides = diag_attributes_cmd_line_overrides or []
 
-        if self.diag_attributes_cmd_line_overrides is not None:
-            for override in self.diag_attributes_cmd_line_overrides:
-                if override.startswith("active_hart_mask="):
-                    override_value = override.split("=", 1)[1]
-                    if self.diag_source.active_hart_mask is not None:
-                        log.warning(
-                            f"Overriding active_hart_mask {self.diag_source.active_hart_mask} with: {override_value}"
-                        )
-                    self.diag_source.active_hart_mask = override_value
+        for override in self.diag_attributes_cmd_line_overrides:
+            if override.startswith("active_hart_mask="):
+                override_value = override.split("=", 1)[1]
+                if self.diag_source.active_hart_mask is not None:
+                    log.warning(
+                        f"Overriding active_hart_mask {self.diag_source.active_hart_mask} with: {override_value}"
+                    )
+                self.diag_source.active_hart_mask = override_value
 
         # TODO: we don't really need 2 ways to override the active hart mask.
         if active_hart_mask_override is not None:
