@@ -166,6 +166,22 @@ The script takes as input a diag source directory containing the diag's sources 
 
 Run `--help` for all options.
 
+#### `--target`
+
+Targets define the environment to run the diag. Targets also have Meson options
+that can influence their behavior that are enabled by passing the args with
+[--override_meson_options](#--override_meson_options).
+
+* `spike`: Run diag in spike.
+   * `spike_binary=<spike binary>`
+   * `spike_isa_string=<spike isa string>`
+   * `spike_additional_arguments=<spike args>`
+   * `spike_timeout=<spike timeout>`
+
+#### `--boot_config`
+
+* `fw-none` (default): JumpStart starts running from hardware reset. No system firmware is expected to be present.
+
 #### `--override_meson_options`
 
 Used to override the meson options specified in [meson.options](../meson.options).
