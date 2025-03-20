@@ -41,7 +41,7 @@ def main():
         help="Override the meson options from meson.options.",
         required=False,
         nargs="+",
-        default=None,
+        default=[],
     )
     parser.add_argument(
         "--override_diag_attributes",
@@ -125,23 +125,14 @@ def main():
     else:
         log.basicConfig(format="%(levelname)s: [%(threadName)s]: %(message)s", level=log.INFO)
 
-    script_meson_option_overrides = {}
-    script_meson_option_overrides["diag_generate_disassembly"] = "true"
+    script_meson_option_overrides = {"diag_generate_disassembly": "true"}
 
     if args.diag_custom_defines:
         script_meson_option_overrides["diag_custom_defines"] = ",".join(args.diag_custom_defines)
 
-    args.override_meson_options = args.override_meson_options or []
-
-    # If the user has overridden a meson option, we don't want to override it
-    # with the script's default value.
+    # Only add script defaults for options that haven't been explicitly overridden
     for key, value in script_meson_option_overrides.items():
-        found_override = False
-        for override in args.override_meson_options:
-            if key in override:
-                found_override = True
-                break
-        if not found_override:
+        if not any(key in override for override in args.override_meson_options):
             args.override_meson_options.append(f"{key}={value}")
     diag_build_target = DiagBuildTarget(
         args.diag_src_dir,
