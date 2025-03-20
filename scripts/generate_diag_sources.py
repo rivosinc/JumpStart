@@ -496,13 +496,17 @@ class SourceGenerator:
 
             for attribute in diag_attributes:
                 if isinstance(diag_attributes[attribute], bool):
+                    file_descriptor.write(f"#ifndef {attribute.upper()}\n")
                     file_descriptor.write(
                         f"#define {attribute.upper()} {int(diag_attributes[attribute])}\n"
                     )
+                    file_descriptor.write("#endif\n")
                 elif isinstance(diag_attributes[attribute], int):
+                    file_descriptor.write(f"#ifndef {attribute.upper()}\n")
                     file_descriptor.write(
                         f"#define {attribute.upper()} {hex(diag_attributes[attribute])}\n"
                     )
+                    file_descriptor.write("#endif\n")
 
             file_descriptor.close()
 
