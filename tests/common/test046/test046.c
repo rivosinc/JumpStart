@@ -7,18 +7,18 @@
 #include "cpu_bits.h"
 #include "jumpstart.h"
 
-void test046_illegal_instruction_handler(void)
-    __attribute__((section(".text.vsmode")));
-int test046_illegal_instruction_function(void)
-    __attribute__((section(".text.vsmode")));
-int alt_test046_illegal_instruction_function(void)
-    __attribute__((section(".text.vsmode")));
-int vsmode_main(void) __attribute__((section(".text.vsmode")));
+#define __vs_text __attribute__((section(".text.vsmode")))
+#define __vs_data __attribute__((section(".data.vsmode")))
+
+void test046_illegal_instruction_handler(void) __vs_text;
+int test046_illegal_instruction_function(void) __vs_text;
+int alt_test046_illegal_instruction_function(void) __vs_text;
+int vsmode_main(void) __vs_text;
 
 // Nest as many exceptions as are allowed.
 // We have saved the smode context to jump into vsmode so we have
 // 1 less context save to take.
-uint8_t num_context_saves_to_take[MAX_NUM_HARTS_SUPPORTED] = {
+uint8_t __vs_data num_context_saves_to_take[MAX_NUM_HARTS_SUPPORTED] = {
     [0 ... MAX_NUM_HARTS_SUPPORTED - 1] = MAX_NUM_CONTEXT_SAVES - 1};
 
 void test046_illegal_instruction_handler(void) {
@@ -61,6 +61,8 @@ void test046_illegal_instruction_handler(void) {
 }
 
 int vsmode_main() {
+  uint64_t hart_id = get_thread_attributes_hart_id_from_smode();
+
   if (get_thread_attributes_current_v_bit_from_smode() != 1) {
     return DIAG_FAILED;
   }
@@ -68,6 +70,12 @@ int vsmode_main() {
   register_vsmode_trap_handler_override(
       RISCV_EXCP_ILLEGAL_INST,
       (uint64_t)(&test046_illegal_instruction_handler));
+
+  if (num_context_saves_to_take[hart_id] < 2) {
+    // We test 2 different types of illegal instruction functions
+    // and require at least 2 levels of nesting to test both.
+    return DIAG_FAILED;
+  }
 
   if (test046_illegal_instruction_function() != DIAG_PASSED) {
     return DIAG_FAILED;
@@ -87,17 +95,10 @@ int vsmode_main() {
 }
 
 int main(void) {
-  uint64_t hart_id = get_thread_attributes_hart_id_from_smode();
   if (get_thread_attributes_current_mode_from_smode() != PRV_S) {
     return DIAG_FAILED;
   }
   if (get_thread_attributes_current_v_bit_from_smode() != 0) {
-    return DIAG_FAILED;
-  }
-
-  if (num_context_saves_to_take[hart_id] < 2) {
-    // We test 2 different types of illegal instruction functions
-    // and require at least 2 levels of nesting to test both.
     return DIAG_FAILED;
   }
 

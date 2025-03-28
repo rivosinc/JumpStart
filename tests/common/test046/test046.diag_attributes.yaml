@@ -42,3 +42,21 @@ mappings:
     num_pages: 2
     pma_memory_type: "wb"
     linker_script_section: ".text.vsmode"
+
+  -
+    va: 0xD0026000
+    gpa: 0xD0026000
+    xwr: "0b011"
+    page_size: 0x1000
+    num_pages: 2
+    pma_memory_type: "wb"
+
+  -
+    gpa: 0xD0026000
+    spa: 0xD0026000
+    xwr: "0b011"
+    umode: "0b1"
+    page_size: 0x1000
+    num_pages: 2
+    pma_memory_type: "wb"
+    linker_script_section: ".data.vsmode"
