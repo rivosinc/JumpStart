@@ -212,7 +212,8 @@ class Meson:
         log.info(f"Running meson test.\n{' '.join(meson_test_command)}")
         return_code = system_functions.run_command(meson_test_command, self.jumpstart_dir)
 
-        if self.meson_options["generate_trace"] == "true":
+        generate_trace = bool(self.meson_options.get("generate_trace", False))
+        if generate_trace:
             if return_code == 0 and not os.path.exists(self.trace_file):
                 raise Exception(
                     f"meson test passed but trace file not created by diag: {self.trace_file}"
