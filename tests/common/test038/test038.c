@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include <malloc.h>
+
 #include "cpu_bits.h"
 #include "heap.smode.h"
 #include "jumpstart.h"

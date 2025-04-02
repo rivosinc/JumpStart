@@ -21,24 +21,6 @@
 #define PER_HEAP_ALLOCATION_METADATA_SIZE 16 // Per allocation metadata size
 
 //------------------------------------------------------------------------------
-//! Allocate memory on the heap
-//------------------------------------------------------------------------------
-void *malloc(size_t size);
-
-//------------------------------------------------------------------------------
-//! Free the memory
-//------------------------------------------------------------------------------
-void free(void *ptr);
-
-void *calloc(size_t nmemb, size_t size);
-
-void *memalign(size_t alignment, size_t size);
-
-void *memset(void *s, int c, size_t n);
-
-void *memcpy(void *dest, const void *src, size_t n);
-
-//------------------------------------------------------------------------------
 //! Debug Features
 //------------------------------------------------------------------------------
 void print_heap(void);
