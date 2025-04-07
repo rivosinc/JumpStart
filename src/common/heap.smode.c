@@ -33,16 +33,6 @@
     << __builtin_ctzll(MIN_HEAP_ALLOCATION_SIZE)) +                            \
    MIN_HEAP_ALLOCATION_SIZE)
 
-//------------------------------------------------------------------------------
-// Malloc helper structs
-//------------------------------------------------------------------------------
-struct memchunk {
-  struct memchunk *next;
-  uint64_t size;
-};
-
-typedef struct memchunk memchunk;
-
 static_assert(sizeof(memchunk) == PER_HEAP_ALLOCATION_METADATA_SIZE,
               "PER_HEAP_ALLOCATION_METADATA_SIZE mismatch");
 

@@ -12,13 +12,24 @@
 #include <stdint.h>
 
 //------------------------------------------------------------------------------
+// Malloc helper structs
+//------------------------------------------------------------------------------
+struct memchunk {
+  struct memchunk *next;
+  uint64_t size;
+};
+
+typedef struct memchunk memchunk;
+
+//------------------------------------------------------------------------------
 // Heap Constants
 //------------------------------------------------------------------------------
 // Allocating anything less than 8 bytes is kind of pointless, the
 // book-keeping overhead is too big.
 //------------------------------------------------------------------------------
-#define MIN_HEAP_ALLOCATION_SIZE          8
-#define PER_HEAP_ALLOCATION_METADATA_SIZE 16 // Per allocation metadata size
+#define MIN_HEAP_ALLOCATION_SIZE 8
+#define PER_HEAP_ALLOCATION_METADATA_SIZE                                      \
+  sizeof(struct memchunk) // Per allocation metadata size
 
 //------------------------------------------------------------------------------
 //! Debug Features
