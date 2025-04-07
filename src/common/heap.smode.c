@@ -386,8 +386,8 @@ __attr_stext void *calloc_from_memory(size_t nmemb, size_t size,
 __attr_stext void *memalign_from_memory(size_t alignment, size_t size,
                                         uint8_t backing_memory,
                                         uint8_t memory_type) {
-  if (alignment & (alignment - 1)) {
-    // alignment is not a power of 2
+  // Validate alignment is non-zero and a power of 2
+  if (alignment == 0 || alignment & (alignment - 1)) {
     return 0;
   }
 
@@ -406,7 +406,9 @@ __attr_stext void *memalign_from_memory(size_t alignment, size_t size,
     return 0;
   }
 
-  if (alignment <= 8) {
+  // For small alignments, use regular malloc since heap ensures
+  // MIN_HEAP_ALLOCATION_SIZE alignment
+  if (alignment <= MIN_HEAP_ALLOCATION_SIZE) {
     return malloc_from_memory(size, backing_memory, memory_type);
   }
 
@@ -423,42 +425,42 @@ __attr_stext void *memalign_from_memory(size_t alignment, size_t size,
   uint64_t aligned_start = 0, start = 0, end = 0;
   memchunk *chunk;
   for (chunk = target_heap->head; chunk; chunk = chunk->next) {
-    // Chunk used
-    if (chunk->size & MEMCHUNK_USED) {
+    // Skip if chunk is used or too small
+    if (chunk->size & MEMCHUNK_USED || chunk->size < alloc_size) {
       continue;
     }
 
-    // Chunk too small
-    if (chunk->size < alloc_size) {
-      continue;
-    }
-
+    // Calculate chunk boundaries
     start = (uint64_t)((char *)chunk + PER_HEAP_ALLOCATION_METADATA_SIZE);
     end = (uint64_t)((char *)chunk + PER_HEAP_ALLOCATION_METADATA_SIZE +
                      chunk->size);
-    aligned_start = (((start - 1) >> pow2) << pow2) + alignment;
 
-    // The current chunk is already aligned so just allocate it
+    // First try: Check if chunk's start address can be used directly after
+    // alignment
+    aligned_start = (((start - 1) >> pow2) << pow2) + alignment;
     if (start == aligned_start) {
+      // Current chunk is already properly aligned - use it as-is
       aligned = 1;
       break;
     }
 
-    // The start of the allocated chunk must leave space for the 8 bytes of data
-    // payload and metadata of the new chunk
+    // Second try: Check if we can split this chunk to create an aligned
+    // allocation We need space for: metadata + minimum allocation before the
+    // aligned address
     aligned_start =
         ((((start + MIN_HEAP_SEGMENT_BYTES) - 1) >> pow2) << pow2) + alignment;
 
-    // Aligned start must be within the chunk
+    // Verify the aligned address fits within the chunk
     if (aligned_start >= end) {
       continue;
     }
 
-    // The current chunk is too small
+    // Verify there's enough space for the requested allocation
     if (aligned_start + alloc_size > end) {
       continue;
     }
 
+    // Found a suitable chunk we can split
     break;
   }
 
@@ -466,7 +468,14 @@ __attr_stext void *memalign_from_memory(size_t alignment, size_t size,
     goto exit_memalign;
   }
 
-  // If chunk is not aligned we need to allecate a new chunk just before it
+  //----------------------------------------------------------------------------
+  // Handle chunk allocation based on alignment result
+  //----------------------------------------------------------------------------
+  // If the chunk's start address is not naturally aligned, we need to split it:
+  // 1. The first chunk contains the unaligned portion before aligned_start
+  // 2. The second chunk starts at aligned_start and will be used for allocation
+  // This ensures the allocated memory satisfies the alignment requirement while
+  // preserving the rest of the chunk for future allocations
   if (!aligned) {
     memchunk *new_chunk =
         (memchunk *)((void *)aligned_start - PER_HEAP_ALLOCATION_METADATA_SIZE);
@@ -477,7 +486,7 @@ __attr_stext void *memalign_from_memory(size_t alignment, size_t size,
     chunk = chunk->next;
   }
 
-  // If the chunk needs to be trimmed
+  // Trim excess space from the aligned chunk if possible
   if (chunk->size >= alloc_size + MIN_HEAP_SEGMENT_BYTES) {
     memchunk *new_chunk =
         (memchunk *)((void *)chunk + PER_HEAP_ALLOCATION_METADATA_SIZE +
@@ -488,8 +497,14 @@ __attr_stext void *memalign_from_memory(size_t alignment, size_t size,
     chunk->next = new_chunk;
     chunk->size = alloc_size;
   }
+
+  //----------------------------------------------------------------------------
+  // Finalize allocation
+  //----------------------------------------------------------------------------
   chunk->size |= MEMCHUNK_USED;
+  target_heap->last_allocated = chunk;
   result = (void *)chunk + PER_HEAP_ALLOCATION_METADATA_SIZE;
+
 exit_memalign:
   release_lock(&target_heap->lock);
   return result;
