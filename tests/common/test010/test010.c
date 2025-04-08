@@ -20,8 +20,9 @@ extern uint64_t _BSS_END;
 uint64_t uninitialized_var;
 uint64_t zero_initialized_var = 0;
 
-uint8_t uninitialized_arr[128];
-uint8_t zero_initialized_arr[128] = {0};
+#define NUM_ARRAY_ELEMENTS 128
+uint8_t uninitialized_arr[NUM_ARRAY_ELEMENTS];
+uint8_t zero_initialized_arr[NUM_ARRAY_ELEMENTS] = {0};
 
 uint8_t store_faulted = 0;
 
@@ -97,7 +98,7 @@ __attribute__((section(".text.startup"))) __attribute__((pure)) int main(void) {
     return DIAG_FAILED;
   }
 
-  for (uint8_t i = 0; i < 128; i++) {
+  for (uint8_t i = 0; i < NUM_ARRAY_ELEMENTS; i++) {
     if (uninitialized_arr[i] || zero_initialized_arr[i]) {
       return DIAG_FAILED;
     }
