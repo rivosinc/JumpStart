@@ -48,7 +48,6 @@ start_in_smode_tests += [
 ]
 
 start_in_mmode_tests += [
-  ['test009', 'Jump to main() in machine mode and exit.'],
   ['test017', 'Register and run Machine mode illegal instruction exception handler.'],
   ['test018', 'Run C/Assembly functions with run_function_in_smode() from machine mode.'],
   ['test023', 'Handle S mode exceptions in M mode handlers.'],

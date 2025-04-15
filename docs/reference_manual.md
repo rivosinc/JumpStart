@@ -71,8 +71,6 @@ Controls whether the diag's `main()` will be called in M-mode or S-mode.
 
 Default: `False`. The diag's `main()` will be called in S-mode.
 
-Example: [test009](../tests/common/test009.diag_attributes.yaml).
-
 ### `mmode_start_address`, `smode_start_address` and `umode_start_address`
 
 The address at which the start of the Machine, Supervisor and User mode sections will be placed by the linker.
