@@ -6,7 +6,6 @@ import copy
 import enum
 import logging as log
 import math
-import sys
 import typing
 
 from data_structures import BitField
@@ -362,8 +361,7 @@ class PageTables:
                 break
 
         if self.start_address is None:
-            log.error("No pagetables section found in memory mappings")
-            sys.exit(1)
+            raise Exception("No pagetables section found in memory mappings")
 
         self.create_from_mappings()
 
@@ -447,10 +445,9 @@ class PageTables:
 
         if address in self.pte_memory:
             if self.pte_memory[address] != value:
-                log.error(
+                raise Exception(
                     f"[{hex(address)}] already contains a different value {hex(self.pte_memory[address])}. Cannot update to {hex(value)}"
                 )
-                sys.exit(1)
             log.debug(f"[{hex(address)}] already contains {hex(value)}. No update needed.")
         else:
             self.pte_memory[address] = value
