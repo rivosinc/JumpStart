@@ -386,7 +386,7 @@ class SourceGenerator:
             for attribute in ["num_pages", "page_size"]:
                 # This is where we allow the diag to override the attributes of jumpstart sections.
                 # We can change the page size and num_pages of the section.
-                #   Example: num_pages_for_jumpstart_smode_bss, num_pages_for_jumpstart_smode_rodata, etc.
+                #   Example: num_pages_for_jumpstart_smode_bss, num_pages_for_jumpstart_mmode_rodata, etc.
                 attribute_name = f"{attribute}_for_{area_name}_{section_name}"
                 if (
                     attribute in section_mapping

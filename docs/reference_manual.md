@@ -79,7 +79,7 @@ The address at which the start of the Machine, Supervisor and User mode sections
 
 The maximum number of 4K pages that can be used to allocate Page Tables for each translation stage.
 
-### `num_pages_for_jumpstart_smode_bss` and `num_pages_for_jumpstart_smode_rodata`
+### `num_pages_for_jumpstart_smode_bss` and `num_pages_for_jumpstart_mmode_rodata`
 
 The number of 4K pages allowed for the `.bss` and `.rodata` sections respectively.
 

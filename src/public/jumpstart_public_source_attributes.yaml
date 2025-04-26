@@ -38,6 +38,18 @@ jumpstart_mmode:
     umode: "0b0"
     pma_memory_type: "wb"
     linker_script_section: ".jumpstart.cpu.data.privileged"
+  rodata:
+    page_size: 0x1000
+    xwr: "0b001"
+    umode: "0b0"
+    pma_memory_type: "wb"
+    linker_script_section: ".rodata"
+  sdata:
+    page_size: 0x1000
+    xwr: "0b011"
+    umode: "0b0"
+    pma_memory_type: "wb"
+    linker_script_section: ".sdata"
 jumpstart_smode:
   text:
     page_size: 0x1000
@@ -45,24 +57,12 @@ jumpstart_smode:
     umode: "0b0"
     pma_memory_type: "wb"
     linker_script_section: ".jumpstart.cpu.text.smode.init.enter,.jumpstart.cpu.text.smode.init,.jumpstart.cpu.text.smode"
-  sdata:
-    page_size: 0x1000
-    xwr: "0b011"
-    umode: "0b0"
-    pma_memory_type: "wb"
-    linker_script_section: ".sdata"
   bss:
     page_size: 0x1000
     xwr: "0b011"
     umode: "0b0"
     pma_memory_type: "wb"
     linker_script_section: ".bss,.sbss,.sbss.*"
-  rodata:
-    page_size: 0x1000
-    xwr: "0b001"
-    umode: "0b0"
-    pma_memory_type: "wb"
-    linker_script_section: ".rodata"
   heap:
     xwr: "0b011"
     umode: "0b0"
@@ -98,11 +98,11 @@ diag_attributes:
   num_pages_for_jumpstart_mmode_text: 4
   num_pages_for_jumpstart_mmode_data: 5
   num_pages_for_jumpstart_smode_text: 4
-  num_pages_for_jumpstart_smode_sdata: 1
+  num_pages_for_jumpstart_mmode_sdata: 1
   num_pages_for_jumpstart_smode_bss: 7
   page_size_for_jumpstart_smode_heap: 0x200000
   num_pages_for_jumpstart_smode_heap: 2
-  num_pages_for_jumpstart_smode_rodata: 2
+  num_pages_for_jumpstart_mmode_rodata: 2
   num_pages_for_jumpstart_umode_text: 1
   max_num_pagetable_pages_per_stage: 30
   allow_page_table_modifications: false
