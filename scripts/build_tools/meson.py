@@ -18,6 +18,15 @@ from data_structures import DictUtils  # noqa
 from system import functions as system_functions  # noqa
 
 
+class MesonBuildError(Exception):
+    """Custom exception for Meson build failures."""
+
+    def __init__(self, message, return_code=1):
+        self.message = message
+        self.return_code = return_code
+        super().__init__(self.message)
+
+
 def convert_hart_mask_to_num_active_harts(hart_mask):
     num_harts = 0
     hart_mask = int(hart_mask, 2)
@@ -131,10 +140,12 @@ class Meson:
         if self.diag_build_target.buildtype is None and (
             "debug" not in self.meson_options or "optimization" not in self.meson_options
         ):
-            raise Exception("Both debug and optimization must be set when buildtype is not set")
+            raise MesonBuildError(
+                "Both debug and optimization must be set when buildtype is not set"
+            )
         elif self.diag_build_target.buildtype is not None:
             if "debug" in self.meson_options or "optimization" in self.meson_options:
-                raise Exception("Cannot set debug or optimization when buildtype is set")
+                raise MesonBuildError("Cannot set debug or optimization when buildtype is set")
             self.meson_setup_flags["--buildtype"] = self.diag_build_target.buildtype
 
         for option in self.meson_options:
@@ -169,10 +180,11 @@ class Meson:
         log.info(f"Running meson setup.\n{printable_meson_setup_command}")
         return_code = system_functions.run_command(meson_setup_command, self.jumpstart_dir)
         if return_code != 0:
-            log.error(
+            error_msg = (
                 f"Meson setup failed for diag: {self.diag_build_target.diag_source.diag_name}"
             )
-            sys.exit(return_code)
+            log.error(error_msg)
+            raise MesonBuildError(error_msg, return_code)
 
         if self.keep_meson_builddir is True:
             self.diag_build_target.add_build_asset(
@@ -189,7 +201,8 @@ class Meson:
 
         if return_code == 0:
             if not os.path.exists(diag_binary):
-                raise Exception(f"diag binary: {diag_binary} not created by meson compile")
+                error_msg = f"diag binary: {diag_binary} not created by meson compile"
+                raise MesonBuildError(error_msg)
 
         # We've already checked that these exist for the passing case.
         # They may not exist if the compile failed so check that they
@@ -202,10 +215,11 @@ class Meson:
             log.debug(f"Diag ELF: {self.diag_build_target.get_build_asset('binary')}")
 
         if return_code != 0:
-            log.error(
+            error_msg = (
                 f"meson compile failed for diag: {self.diag_build_target.diag_source.diag_name}"
             )
-            sys.exit(return_code)
+            log.error(error_msg)
+            raise MesonBuildError(error_msg, return_code)
 
     def test(self):
         meson_test_command = ["meson", "test", "-v", "-C", self.meson_builddir]
@@ -215,21 +229,22 @@ class Meson:
         generate_trace = bool(self.meson_options.get("generate_trace", False))
         if generate_trace:
             if return_code == 0 and not os.path.exists(self.trace_file):
-                raise Exception(
+                error_msg = (
                     f"meson test passed but trace file not created by diag: {self.trace_file}"
                 )
+                raise MesonBuildError(error_msg)
             self.diag_build_target.add_build_asset("trace", self.trace_file)
             log.debug(f"Diag trace file: {self.diag_build_target.get_build_asset('trace')}")
         elif os.path.exists(self.trace_file):
-            raise Exception(
+            error_msg = (
                 f"Trace generation was disabled but trace file was created: {self.trace_file}"
             )
+            raise MesonBuildError(error_msg)
 
         if return_code != 0:
-            log.error(
-                f"meson test failed for diag: {self.diag_build_target.diag_source.diag_name}.\nPartial diag build assets may have been generated in {self.diag_build_target.build_dir}\n"
-            )
-            sys.exit(return_code)
+            error_msg = f"meson test failed for diag: {self.diag_build_target.diag_source.diag_name}.\nPartial diag build assets may have been generated in {self.diag_build_target.build_dir}\n"
+            log.error(error_msg)
+            raise MesonBuildError(error_msg, return_code)
 
     def get_generated_diag(self):
         return self.diag_build_target
