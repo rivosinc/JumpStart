@@ -86,7 +86,6 @@ class Meson:
 
         self.meson_options["spike_additional_arguments"] = []
 
-        self.meson_options["generate_trace"] = "true"
         self.trace_file = f"{self.meson_builddir}/{self.diag_name}.itrace"
 
         self.meson_options["diag_target"] = self.diag_build_target.target
