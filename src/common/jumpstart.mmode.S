@@ -137,7 +137,7 @@ setup_smode_trap_delegation:
             (1 << RISCV_EXCP_INST_PAGE_FAULT) | \
             (1 << RISCV_EXCP_LOAD_PAGE_FAULT) | \
             (1 << RISCV_EXCP_STORE_PAGE_FAULT) | \
-            (1 << RISCV_EXCP_DATA_CORRUPTION_EXCEPTION) | \
+            (1 << RISCV_EXCP_HW_ERR) | \
             (1 << RISCV_EXCP_INST_GUEST_PAGE_FAULT) | \
             (1 << RISCV_EXCP_LOAD_GUEST_ACCESS_FAULT) | \
             (1 << RISCV_EXCP_VIRT_INSTRUCTION_FAULT) | \
