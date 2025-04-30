@@ -38,8 +38,12 @@ __attr_stext __attribute__((const)) int toupper(int c) {
 #pragma GCC diagnostic push
 #if defined(__clang__)
 #pragma GCC diagnostic ignored "-Wtautological-pointer-compare"
+#elif defined(__GNUC__)
+#pragma GCC diagnostic ignored "-Wnonnull-compare"
 #endif
 
+/* Disable nonnull warning for these functions since we want to keep NULL checks
+ * for bare-metal safety, even though the functions are marked as nonnull */
 __attr_stext char *strcpy(char *dest, const char *src) {
   if (dest == NULL || src == NULL) {
     return NULL;
@@ -66,8 +70,6 @@ __attr_stext int strcmp(const char *s1, const char *s2) {
   }
   return *(const unsigned char *)s1 - *(const unsigned char *)s2;
 }
-
-#pragma GCC diagnostic pop
 
 __attr_stext size_t strlen(const char *str) {
   size_t len = 0;
