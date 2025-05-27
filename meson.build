@@ -11,6 +11,13 @@ project('JumpStart', 'c',
         meson_version: '>=1.3.0'
 )
 
+# Check compiler support for mcmodel options
+cc = meson.get_compiler('c')
+mcmodel = get_option('mcmodel')
+if not cc.has_argument('-mcmodel=' + mcmodel)
+  error('Selected mcmodel=' + mcmodel + ' but compiler does not support it. Please use a different mcmodel option.')
+endif
+
 add_project_arguments('-Wno-pedantic',
                       # Require that all enums are covered by a switch statement.
                       '-Wswitch-enum',
@@ -20,7 +27,7 @@ add_project_arguments('-Wno-pedantic',
                       # Let GCC know we are using our own malloc/calloc implementation. Otherwise
                       # it makes assumptions about using it's own.
                       '-fno-builtin',
-                      '-mcmodel=medany',
+                      '-mcmodel=' + mcmodel,
                       language: 'c')
 
 diag_custom_defines = get_option('diag_custom_defines')

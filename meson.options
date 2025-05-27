@@ -98,3 +98,12 @@ option('soc_rev',
        choices: ['A0', 'B0'],
        value : 'A0',
        description : 'SOC Revision.')
+
+option('mcmodel',
+       type : 'combo',
+       choices: ['medlow', 'medany', 'large'],
+       value : 'medany',
+       description : 'RISC-V code model to use. \n' +
+                     '- medlow : Code and data must be within 2GB of the program counter. \n' +
+                     '- medany : Code and data must be within 2GB of the program counter or global pointer. \n' +
+                     '- large  : No restrictions on code and data placement.')
