@@ -10,9 +10,10 @@ class DictUtils:
         original_dict, overrides_dict, original_is_superset=True, append_to_lists=False
     ):
         if original_is_superset is True:
-            assert set(original_dict.keys()).issuperset(
-                set(overrides_dict.keys())
-            ), "Overrides contain keys not present in the original dictionary"
+            extra_keys = set(overrides_dict.keys()) - set(original_dict.keys())
+            assert (
+                not extra_keys
+            ), f"Overrides contain keys not present in the original dictionary: {extra_keys}"
 
         if append_to_lists is False:
             original_dict.update(overrides_dict)
