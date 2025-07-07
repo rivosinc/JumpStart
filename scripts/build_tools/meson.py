@@ -84,6 +84,8 @@ class Meson:
         self.meson_options["boot_config"] = self.diag_build_target.boot_config
         self.meson_options["diag_attribute_overrides"] = []
 
+        self.meson_options["buildtype"] = "release"
+
         self.meson_options["spike_additional_arguments"] = []
 
         self.trace_file = f"{self.meson_builddir}/{self.diag_name}.itrace"
@@ -139,16 +141,8 @@ class Meson:
         self.apply_meson_option_overrides_from_diag()
         self.apply_meson_option_overrides_from_cmd_line()
 
-        if self.diag_build_target.buildtype is None and (
-            "debug" not in self.meson_options or "optimization" not in self.meson_options
-        ):
-            raise MesonBuildError(
-                "Both debug and optimization must be set when buildtype is not set"
-            )
-        elif self.diag_build_target.buildtype is not None:
-            if "debug" in self.meson_options or "optimization" in self.meson_options:
-                raise MesonBuildError("Cannot set debug or optimization when buildtype is set")
-            self.meson_setup_flags["--buildtype"] = self.diag_build_target.buildtype
+        # Update the DiagBuildTarget with the final buildtype value
+        self.diag_build_target.buildtype = self.meson_options.get("buildtype", "release")
 
         for option in self.meson_options:
             if isinstance(self.meson_options[option], list):

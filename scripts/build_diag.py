@@ -33,7 +33,7 @@ def main():
         "--buildtype",
         help="--buildtype to pass to meson setup.",
         type=str,
-        default="release",
+        default=None,
         choices=["release", "minsize", "debug", "debugoptimized"],
     )
     parser.add_argument(
@@ -139,10 +139,14 @@ def main():
     for key, value in script_meson_option_overrides.items():
         if not any(key in override for override in args.override_meson_options):
             args.override_meson_options.append(f"{key}={value}")
+
+    # Add buildtype to the override_meson_options list if it's provided
+    if args.buildtype is not None:
+        args.override_meson_options.append(f"buildtype={args.buildtype}")
     diag_build_target = DiagBuildTarget(
         args.diag_src_dir,
         args.diag_build_dir,
-        args.buildtype,
+        None,
         args.target,
         args.toolchain,
         args.boot_config,
