@@ -554,6 +554,8 @@ sync_harts_in_mask_from_{mode}:
 
 wait_for_all_harts_to_set_sync_point_bits_{mode}:
   # Primary hart waits till all the harts have set their bits in the sync point.
+  # twiddle thumbs to avoid excessive spinning
+  pause
   lw t0, (a3)
   bne t0, a1, wait_for_all_harts_to_set_sync_point_bits_{mode}
 
@@ -565,6 +567,8 @@ wait_for_all_harts_to_set_sync_point_bits_{mode}:
 
 wait_for_primary_hart_to_clear_sync_point_bits_{mode}:
   # non-primary harts wait for the primary hart to clear the sync point bits.
+  # twiddle thumbs to avoid excessive spinning
+  pause
   lw t0, (a3)
   srl t0, t0, a0
   andi t0, t0, 1
