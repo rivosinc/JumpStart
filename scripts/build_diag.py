@@ -146,7 +146,6 @@ def main():
     diag_build_target = DiagBuildTarget(
         args.diag_src_dir,
         args.diag_build_dir,
-        None,
         args.target,
         args.toolchain,
         args.boot_config,

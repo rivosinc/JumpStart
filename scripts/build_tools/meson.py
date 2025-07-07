@@ -142,7 +142,7 @@ class Meson:
         self.apply_meson_option_overrides_from_cmd_line()
 
         # Update the DiagBuildTarget with the final buildtype value
-        self.diag_build_target.buildtype = self.meson_options.get("buildtype", "release")
+        self.diag_build_target.set_buildtype(self.meson_options.get("buildtype", "release"))
 
         for option in self.meson_options:
             if isinstance(self.meson_options[option], list):

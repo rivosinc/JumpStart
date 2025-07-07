@@ -115,7 +115,6 @@ class DiagBuildTarget:
         self,
         diag_src_dir,
         build_dir,
-        buildtype,
         target,
         toolchain,
         boot_config,
@@ -128,7 +127,9 @@ class DiagBuildTarget:
         self.build_assets = {}
         self.diag_source = DiagSource(diag_src_dir)
 
-        self.buildtype = buildtype
+        # This will be set once we parse the meson options.
+        self.buildtype = None
+
         assert target in self.supported_targets
         self.target = target
         self.rng_seed = rng_seed
@@ -178,6 +179,12 @@ class DiagBuildTarget:
         print_string += f"\n\tSource Info:\n{self.diag_source}"
 
         return print_string
+
+    def set_buildtype(self, buildtype):
+        self.buildtype = buildtype
+
+    def get_buildtype(self):
+        return self.buildtype
 
     def add_build_asset(
         self,
