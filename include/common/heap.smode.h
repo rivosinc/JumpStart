@@ -58,3 +58,9 @@ void setup_heap(uint64_t heap_start, uint64_t heap_end, uint8_t backing_memory,
 void deregister_heap(uint8_t backing_memory, uint8_t memory_type);
 
 size_t get_heap_size(uint8_t backing_memory, uint8_t memory_type);
+
+//------------------------------------------------------------------------------
+// Helper functions to convert numeric values to readable strings
+//------------------------------------------------------------------------------
+const char *backing_memory_to_string(uint8_t backing_memory);
+const char *memory_type_to_string(uint8_t memory_type);
