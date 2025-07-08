@@ -11,6 +11,14 @@ project('JumpStart', 'c',
         meson_version: '>=1.3.0'
 )
 
+# Environment variables to work around SW-12133: The MALLOC_PERTURB_ environment
+# variable set by meson is causing QEMU to behave differently, affecting the
+# flash data provided to RoT, causing the invalid digest error.
+# See: https://rivosinc.atlassian.net/browse/SW-12133
+sw_12133_workaround_env = {'MALLOC_PERTURB_': '0'}
+
+test_env = environment(sw_12133_workaround_env)
+
 # Check compiler support for mcmodel options
 cc = meson.get_compiler('c')
 mcmodel = get_option('mcmodel')
