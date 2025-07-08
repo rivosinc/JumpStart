@@ -636,6 +636,32 @@
 #define MSTATUS64_SD        0x8000000000000000ULL
 #define MSTATUSH128_SD      0x8000000000000000ULL
 
+/* mvien CSR bits */
+#define MVIEN_LCOFIEN  0x2000
+#define MVIEN_LPRIEN   0x800000000
+#define MVIEN_HPRIEN   0x80000000000
+#define MVIEN_PTIEN    0x200000000000
+
+/* mvip CSR bits */
+#define MVIP_LCOFIP    0x2000
+#define MVIP_LPRIP     0x800000000
+#define MVIP_HPRIP     0x80000000000
+#define MVIP_PTIP      0x200000000000
+
+/* hvien CSR bits */
+#define HVIEN_LCOFIEN  0x2000
+#define HVIEN_LPRIEN   0x800000000
+#define HVIEN_HPRIEN   0x80000000000
+#define HVIEN_PTIEN    0x200000000000
+
+/* hvip CSR bits */
+#define HVIP_VSTIP     0x40
+#define HVIP_VSEIP     0x400
+#define HVIP_LCOFIP    0x2000
+#define HVIP_LPRIP     0x800000000
+#define HVIP_HPRIP     0x80000000000
+#define HVIP_PTIP      0x200000000000
+
 #define MISA32_MXL          0xC0000000
 #define MISA64_MXL          0xC000000000000000ULL
 
@@ -675,13 +701,56 @@
 #define HSTATUS32_WPRI       0xFF8FF87E
 #define HSTATUS64_WPRI       0xFFFFFFFFFF8FF87EULL
 
+/* hie CSR bits */
+#define HIE_VSTIE 0x40
+#define HIE_VSEIE 0x400
+#define HIE_SGEIE 0x1000
+
 #define COUNTEREN_CY         (1 << 0)
 #define COUNTEREN_TM         (1 << 1)
 #define COUNTEREN_IR         (1 << 2)
 #define COUNTEREN_HPM3       (1 << 3)
+#define COUNTEREN_HPM4       (1 << 4)
+#define COUNTEREN_HPM5       (1 << 5)
+#define COUNTEREN_HPM6       (1 << 6)
+#define COUNTEREN_HPM7       (1 << 7)
+#define COUNTEREN_HPM8       (1UL << 8)
+#define COUNTEREN_HPM9       (1UL << 9)
+#define COUNTEREN_HPM10       (1UL << 10)
+#define COUNTEREN_HPM11       (1UL << 11)
+#define COUNTEREN_HPM12       (1UL << 12)
+#define COUNTEREN_HPM13       (1UL << 13)
+#define COUNTEREN_HPM14       (1UL << 14)
+#define COUNTEREN_HPM15       (1UL << 15)
+#define COUNTEREN_HPM16       (1UL << 16)
+#define COUNTEREN_HPM17       (1UL << 17)
+#define COUNTEREN_HPM18       (1UL << 18)
+#define COUNTEREN_HPM19       (1UL << 19)
+#define COUNTEREN_HPM20       (1UL << 20)
+#define COUNTEREN_HPM21       (1UL << 21)
+#define COUNTEREN_HPM22       (1UL << 22)
+#define COUNTEREN_HPM23       (1UL << 23)
+#define COUNTEREN_HPM24       (1UL << 24)
+#define COUNTEREN_HPM25       (1UL << 25)
+#define COUNTEREN_HPM26       (1UL << 26)
+#define COUNTEREN_HPM27       (1UL << 27)
+#define COUNTEREN_HPM28       (1UL << 28)
+#define COUNTEREN_HPM29       (1UL << 29)
+#define COUNTEREN_HPM30       (1UL << 30)
+#define COUNTEREN_HPM31       (1UL << 31)
 
 /* vsstatus CSR bits */
-#define VSSTATUS64_UXL       0x0000000300000000ULL
+#define VSSTATUS_SIE         0x2
+#define VSSTATUS_SPIE        0x20
+#define VSSTATUS_UBE         0x40
+#define VSSTATUS_SPP         0x100
+#define VSSTATUS_VS          0x600
+#define VSSTATUS_FS          0x6000
+#define VSSTATUS_SUM         0x40000
+#define VSSTATUS_MXR         0x80000
+#define VSSTATUS_XS          0x18000
+#define VSSTATUS_UXL         0x300000000ULL
+#define VSSTATUS_SD          0x8000000000000000ULL
 
 /* Privilege modes */
 #define PRV_U 0
@@ -803,25 +872,27 @@
 #define IRQ_M_EXT                          11
 #define IRQ_S_GEXT                         12
 #define IRQ_PMU_OVF                        13
+#define IRQ_PWR                            45
 #define IRQ_LOCAL_MAX                      64
 /* -1 is due to bit zero of hgeip and hgeie being ROZ. */
 #define IRQ_LOCAL_GUEST_MAX                (TARGET_LONG_BITS - 1)
 
 /* mip masks */
-#define MIP_USIP                           (1 << IRQ_U_SOFT)
-#define MIP_SSIP                           (1 << IRQ_S_SOFT)
-#define MIP_VSSIP                          (1 << IRQ_VS_SOFT)
-#define MIP_MSIP                           (1 << IRQ_M_SOFT)
-#define MIP_UTIP                           (1 << IRQ_U_TIMER)
-#define MIP_STIP                           (1 << IRQ_S_TIMER)
-#define MIP_VSTIP                          (1 << IRQ_VS_TIMER)
-#define MIP_MTIP                           (1 << IRQ_M_TIMER)
-#define MIP_UEIP                           (1 << IRQ_U_EXT)
-#define MIP_SEIP                           (1 << IRQ_S_EXT)
-#define MIP_VSEIP                          (1 << IRQ_VS_EXT)
-#define MIP_MEIP                           (1 << IRQ_M_EXT)
-#define MIP_SGEIP                          (1 << IRQ_S_GEXT)
-#define MIP_LCOFIP                         (1 << IRQ_PMU_OVF)
+#define MIP_USIP                           (1ULL << IRQ_U_SOFT)
+#define MIP_SSIP                           (1ULL << IRQ_S_SOFT)
+#define MIP_VSSIP                          (1ULL << IRQ_VS_SOFT)
+#define MIP_MSIP                           (1ULL << IRQ_M_SOFT)
+#define MIP_UTIP                           (1ULL << IRQ_U_TIMER)
+#define MIP_STIP                           (1ULL << IRQ_S_TIMER)
+#define MIP_VSTIP                          (1ULL << IRQ_VS_TIMER)
+#define MIP_MTIP                           (1ULL << IRQ_M_TIMER)
+#define MIP_UEIP                           (1ULL << IRQ_U_EXT)
+#define MIP_SEIP                           (1ULL << IRQ_S_EXT)
+#define MIP_VSEIP                          (1ULL << IRQ_VS_EXT)
+#define MIP_MEIP                           (1ULL << IRQ_M_EXT)
+#define MIP_SGEIP                          (1ULL << IRQ_S_GEXT)
+#define MIP_LCOFIP                         (1ULL << IRQ_PMU_OVF)
+#define MIP_PTIP                           (1ULL << IRQ_PWR)
 
 /* sip masks */
 #define SIP_SSIP                           MIP_SSIP
@@ -831,13 +902,16 @@
 #define SIP_LCOFIP                         MIP_LCOFIP
 
 /* MIE masks */
-#define MIE_SEIE                           (1 << IRQ_S_EXT)
-#define MIE_UEIE                           (1 << IRQ_U_EXT)
-#define MIE_MTIE                           (1 << IRQ_M_TIMER)
-#define MIE_STIE                           (1 << IRQ_S_TIMER)
-#define MIE_UTIE                           (1 << IRQ_U_TIMER)
-#define MIE_SSIE                           (1 << IRQ_S_SOFT)
-#define MIE_USIE                           (1 << IRQ_U_SOFT)
+#define MIE_SEIE                           (1ULL << IRQ_S_EXT)
+#define MIE_MEIE                           (1ULL << IRQ_M_EXT)
+#define MIE_UEIE                           (1ULL << IRQ_U_EXT)
+#define MIE_MTIE                           (1ULL << IRQ_M_TIMER)
+#define MIE_STIE                           (1ULL << IRQ_S_TIMER)
+#define MIE_UTIE                           (1ULL << IRQ_U_TIMER)
+#define MIE_SSIE                           (1ULL << IRQ_S_SOFT)
+#define MIE_USIE                           (1ULL << IRQ_U_SOFT)
+#define MIE_LCOFIE                         (1ULL << IRQ_PMU_OVF)
+#define MIE_PTIE                           (1ULL << IRQ_PWR)
 
 /* General PointerMasking CSR bits */
 #define PM_ENABLE       0x00000001ULL
@@ -999,9 +1073,6 @@
 #define SEED_OPST_ES16                     0b10U
 #define SEED_OPST_DEAD                     0b11U
 #define SEED_ENTROPY_MASK                  0xFFFFU
-
-/* PMU related bits */
-#define MIE_LCOFIE                         (1 << IRQ_PMU_OVF)
 
 #define MCYCLECFG_BIT_MINH                 BIT_ULL(62)
 #define MCYCLECFGH_BIT_MINH                BIT(30)
