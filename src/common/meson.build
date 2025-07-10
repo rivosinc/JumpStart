@@ -5,6 +5,8 @@
 mmode_sources += files('jumpstart.mmode.S',
                        'trap_handler.mmode.c',
                        'utils.mmode.c',
+                       'uart.mmode.c',
+                       'lock.mmode.c',
                        'data.privileged.S')
 
 smode_sources += files('jumpstart.smode.S',
