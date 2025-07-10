@@ -8,6 +8,7 @@
 #include "jumpstart.h"
 #include "jumpstart_defines.h"
 #include "lock.smode.h"
+#include "uart.h"
 
 #include <inttypes.h>
 #include <stdarg.h>
@@ -35,52 +36,19 @@ __attr_stext int is_uart_enabled(void) {
 }
 
 __attr_stext int puts(const char *str) {
-  if (uart_initialized == 0) {
-    jumpstart_smode_fail();
-  }
+  return _puts(uart_initialized, putch, str);
 
-  int count = 0;
-
-  while (*str != '\0') {
-    putch(*str);
-    count++;
-    str++;
-  }
-
-  return count;
+fail:
+  jumpstart_smode_fail();
 }
 
 #define VPRINTK_BUFFER_SIZE 1024
 
 static int vprintk(const char *fmt, va_list args) {
-  static char buf[VPRINTK_BUFFER_SIZE];
-  int rc;
-
-  rc = vsnprintf(buf, sizeof(buf), fmt, args);
-
-  if (rc > (int)sizeof(buf)) {
-    puts("vprintk() buffer overflow\n");
-    return -1;
-  }
-
-  return puts(buf);
+  return _vprintk(puts, fmt, args);
 }
 
 __attr_stext int printk(const char *fmt, ...) {
-  if (uart_initialized == 0) {
-    return 0;
-  }
-
-  va_list args;
-  int rc;
-
-  acquire_lock(&printk_lock);
-
-  va_start(args, fmt);
-  rc = vprintk(fmt, args);
-  va_end(args);
-
-  release_lock(&printk_lock);
-
-  return rc;
+  return _printk(printk_lock, acquire_lock, release_lock, uart_initialized,
+                 vprintk, fmt);
 }
