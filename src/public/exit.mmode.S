@@ -18,7 +18,7 @@ _mmode_end:
   # a0 will contain diag pass/fail status.
 
   # Store pass/fail status into the hart status tracker.
-  csrr t0, mhartid
+  GET_THREAD_ATTRIBUTES_HART_ID(t0)
   la t1, hart_status_tracker
   add t1, t1, t0
   sb a0, 0(t1)

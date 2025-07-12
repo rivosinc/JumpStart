@@ -291,7 +291,7 @@ class JumpStartGeneratedSource:
         modes = ListUtils.intersection(["smode", "mmode"], self.priv_modes_enabled)
         mode_encodings = {"smode": "PRV_S", "mmode": "PRV_M"}
         for mode in modes:
-            self.assembly_file_fd.write(f'.section .jumpstart.cpu.text.{mode}, "ax"\n')
+            self.assembly_file_fd.write(f'.section .jumpstart.cpu.text.{mode}.init, "ax"\n')
             self.assembly_file_fd.write("# Inputs:\n")
             self.assembly_file_fd.write("#   a0: hart id\n")
             self.assembly_file_fd.write(f".global setup_thread_attributes_from_{mode}\n")

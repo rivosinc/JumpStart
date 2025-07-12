@@ -19,10 +19,10 @@ _mmode_start:
   la t0, mtvec_trap_handler
   csrw mtvec, t0
 
-  csrr t0, mhartid
+  csrr a0, mhartid
 
   li t1, MAX_NUM_HARTS_SUPPORTED
-  bge t0, t1, just_wfi_from_mmode
+  bge a0, t1, just_wfi_from_mmode
 
   # The mmode init code is expected to fit in a 4KB page for Rivos internal
   # reasons.
@@ -30,12 +30,15 @@ _mmode_start:
   la t1, _JUMPSTART_CPU_TEXT_MMODE_INIT_ENTER_START
   sub t2, t4, t1
   li t3, 0x1000 # 4KB
-  blt t2, t3, setup_stack
-1:
-  wfi
-  j 1b
+  blt t2, t3, setup_thread_attributes
+  j just_wfi_from_mmode
 
-setup_stack:
+setup_thread_attributes:
+  # a0: cpu id
+  jal setup_thread_attributes_from_mmode
+
+  GET_THREAD_ATTRIBUTES_HART_ID(t0)
+
   # Set up the stack.
   # S-mode and M-mode share the same stack.
   li  t1, (NUM_PAGES_PER_HART_FOR_PRIVILEGED_STACK * PRIVILEGED_STACK_PAGE_SIZE)
@@ -46,7 +49,6 @@ setup_stack:
 
   mv  fp, sp
 
-1:
   # Any C code we run can be compiled down to use floating point and
   # vector instructions so we need to make sure that we have these enabled.
   jal enable_mmode_float_and_vector_instructions
@@ -60,7 +62,7 @@ setup_stack:
 
   jal reset_csrs
 
-  csrr  t0, mhartid
+  GET_THREAD_ATTRIBUTES_HART_ID(t0)
 
   # Check if this hart is in the active hart mask.
   li a0, ACTIVE_HART_MASK
@@ -80,8 +82,6 @@ setup_stack:
   li t2, HART_RUNNING
   sb t2, 0(t1)
 
-  mv a0, t0
-  jal setup_thread_attributes_from_mmode
 
   # Enable interrupts in machine mode.
   li t0, MSTATUS_MDT | MSTATUS_SDT
