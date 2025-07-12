@@ -34,8 +34,9 @@ _mmode_start:
   j just_wfi_from_mmode
 
 setup_thread_attributes:
-  # a0: cpu id
-  # a1: physical cpu id
+  # Returns cpu id in a0
+  jal convert_hart_id_to_cpu_id
+
   csrr a1, mhartid
   jal setup_thread_attributes_from_mmode
 
