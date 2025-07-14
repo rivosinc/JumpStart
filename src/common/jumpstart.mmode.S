@@ -52,21 +52,10 @@ setup_thread_attributes:
 
   jal reset_csrs
 
-  GET_THREAD_ATTRIBUTES_HART_ID(t0)
+  jal handle_inactive_harts
 
-  # Check if this hart is in the active hart mask.
-  li a0, ACTIVE_HART_MASK
-  li t1, 1
-  sll t1, t1, t0
-  and a0, a0, t1
-  bnez a0, 2f
-
-  # Inactive hart.
-  # Send the hart to WFI.
-  j just_wfi_from_mmode
-
-2:
   # Have the hart mark itself as running.
+  GET_THREAD_ATTRIBUTES_HART_ID(t0)
   la t1, hart_status_tracker
   add t1, t1, t0
   li t2, HART_RUNNING
@@ -100,6 +89,29 @@ setup_thread_attributes:
 
 1:
   j jump_to_main
+
+.global handle_inactive_harts
+handle_inactive_harts:
+  GET_THREAD_ATTRIBUTES_HART_ID(t0)
+
+  # Check if this hart is in the active hart mask.
+  li a0, ACTIVE_HART_MASK
+  li t1, 1
+  sll t1, t1, t0
+  and a0, a0, t1
+  bnez a0, 1f
+
+  # Inactive hart.
+
+  # If running in batch mode, return the inactive hart.
+  li t2, BATCH_MODE
+  bnez t2, batch_mode_return_unused_hart
+
+  # Send the hart to WFI if not running in batch mode.
+  j just_wfi_from_mmode
+
+1:
+  ret
 
 
 .global setup_stack
