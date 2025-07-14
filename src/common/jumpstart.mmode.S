@@ -61,16 +61,7 @@ setup_thread_attributes:
   li t2, HART_RUNNING
   sb t2, 0(t1)
 
-
-  # Enable interrupts in machine mode.
-  li t0, MSTATUS_MDT | MSTATUS_SDT
-  csrc mstatus, t0
-  li t0, MSTATUS_MIE
-  csrs mstatus, t0
-  li t0, MSTATUS_MPIE
-  csrc mstatus, t0
-  li t0, MIP_MEIP
-  csrw mie, t0
+  jal enable_mmode_interrupts
 
   jal program_mstateen
   jal program_hstateen
@@ -89,6 +80,21 @@ setup_thread_attributes:
 
 1:
   j jump_to_main
+
+.global enable_mmode_interrupts
+enable_mmode_interrupts:
+  # Enable interrupts in machine mode.
+  li t0, MSTATUS_MDT | MSTATUS_SDT
+  csrc mstatus, t0
+  li t0, MSTATUS_MIE
+  csrs mstatus, t0
+  li t0, MSTATUS_MPIE
+  csrc mstatus, t0
+  li t0, MIP_MEIP
+  csrw mie, t0
+
+  ret
+
 
 .global handle_inactive_harts
 handle_inactive_harts:
