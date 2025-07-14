@@ -37,17 +37,7 @@ setup_thread_attributes:
   # a0: cpu id
   jal setup_thread_attributes_from_mmode
 
-  GET_THREAD_ATTRIBUTES_HART_ID(t0)
-
-  # Set up the stack.
-  # S-mode and M-mode share the same stack.
-  li  t1, (NUM_PAGES_PER_HART_FOR_PRIVILEGED_STACK * PRIVILEGED_STACK_PAGE_SIZE)
-  mul t3, t0, t1
-  la  t2, privileged_stack_top
-  add sp, t2, t3
-  add sp, sp, t1 # We want the stack bottom.
-
-  mv  fp, sp
+  jal setup_stack
 
   # Any C code we run can be compiled down to use floating point and
   # vector instructions so we need to make sure that we have these enabled.
@@ -111,6 +101,23 @@ setup_thread_attributes:
 1:
   j jump_to_main
 
+
+.global setup_stack
+setup_stack:
+
+  GET_THREAD_ATTRIBUTES_HART_ID(t0)
+
+  # Set up the stack.
+  # S-mode and M-mode share the same stack.
+  li  t1, (NUM_PAGES_PER_HART_FOR_PRIVILEGED_STACK * PRIVILEGED_STACK_PAGE_SIZE)
+  mul t3, t0, t1
+  la  t2, privileged_stack_top
+  add sp, t2, t3
+  add sp, sp, t1 # We want the stack bottom.
+
+  mv  fp, sp
+
+  ret
 
 .global enable_mmode_float_and_vector_instructions
 enable_mmode_float_and_vector_instructions:
