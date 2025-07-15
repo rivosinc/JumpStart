@@ -30,17 +30,21 @@ _mmode_start:
   la t1, _JUMPSTART_CPU_TEXT_MMODE_INIT_ENTER_START
   sub t2, t4, t1
   li t3, 0x1000 # 4KB
-  blt t2, t3, setup_thread_attributes
+  blt t2, t3, setup_logical_cpu_id
   j just_wfi_from_mmode
 
-setup_thread_attributes:
+setup_logical_cpu_id:
   # Returns cpu id in a0
   jal convert_hart_id_to_cpu_id
 
+setup_thread_attributes:
   csrr a1, mhartid
   jal setup_thread_attributes_from_mmode
 
   jal setup_stack
+
+  GET_THREAD_ATTRIBUTES_CPU_ID(a0)
+  jal handle_inactive_cpus
 
   # Any C code we run can be compiled down to use floating point and
   # vector instructions so we need to make sure that we have these enabled.
@@ -54,8 +58,6 @@ setup_thread_attributes:
   jal setup_mmode
 
   jal reset_csrs
-
-  jal handle_inactive_cpus
 
   # Have the cpu mark itself as running.
   GET_THREAD_ATTRIBUTES_CPU_ID(t0)
@@ -114,6 +116,28 @@ enable_mmode_float_and_vector_instructions:
 
   ret
 
+# Input: a0: logical cpu id
+.global handle_inactive_cpus
+handle_inactive_cpus:
+  # Check if this cpu is in the active cpu mask.
+  li t2, ACTIVE_CPU_MASK
+  li t1, 1
+  sll t1, t1, a0
+  and t2, t2, t1
+  bnez t2, 1f
+
+  # Inactive cpu.
+
+  # If running in batch mode, return the inactive cpu.
+  li t2, BATCH_MODE
+  bnez t2, batch_mode_return_unused_cpu
+
+  # Send the cpu to WFI if not running in batch mode.
+  j just_wfi_from_mmode
+
+1:
+  ret
+
 
 .section .jumpstart.cpu.text.mmode, "ax"
 
@@ -129,30 +153,6 @@ enable_mmode_interrupts:
   li t0, MIP_MEIP
   csrw mie, t0
 
-  ret
-
-
-.global handle_inactive_cpus
-handle_inactive_cpus:
-  GET_THREAD_ATTRIBUTES_CPU_ID(t0)
-
-  # Check if this cpu is in the active cpu mask.
-  li a0, ACTIVE_CPU_MASK
-  li t1, 1
-  sll t1, t1, t0
-  and a0, a0, t1
-  bnez a0, 1f
-
-  # Inactive cpu.
-
-  # If running in batch mode, return the inactive cpu.
-  li t2, BATCH_MODE
-  bnez t2, batch_mode_return_unused_cpu
-
-  # Send the cpu to WFI if not running in batch mode.
-  j just_wfi_from_mmode
-
-1:
   ret
 
 
