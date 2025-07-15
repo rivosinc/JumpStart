@@ -84,6 +84,39 @@ setup_thread_attributes:
 1:
   j jump_to_main
 
+.global setup_stack
+setup_stack:
+
+  GET_THREAD_ATTRIBUTES_CPU_ID(t0)
+
+  # Set up the stack.
+  # S-mode and M-mode share the same stack.
+  li  t1, (NUM_PAGES_PER_CPU_FOR_PRIVILEGED_STACK * PRIVILEGED_STACK_PAGE_SIZE)
+  mul t3, t0, t1
+  la  t2, privileged_stack_top
+  add sp, t2, t3
+  add sp, sp, t1 # We want the stack bottom.
+
+  mv  fp, sp
+
+  ret
+
+.global enable_mmode_float_and_vector_instructions
+enable_mmode_float_and_vector_instructions:
+  li t0, (MSTATUS_VS | MSTATUS_FS)
+  csrrs t1, mstatus, t0
+
+  # Set vtype.vill=0 by running a dummy vsetvl instruction.
+  # There are vector instructions (such as vmv1r.v) that
+  # can run without running a vsetvl instruction first so we
+  # need to make sure that the reset value of vill=1 has been cleared.
+  vsetivli        zero, 8, e8, m1, ta, ma
+
+  ret
+
+
+.section .jumpstart.cpu.text.mmode, "ax"
+
 .global enable_mmode_interrupts
 enable_mmode_interrupts:
   # Enable interrupts in machine mode.
@@ -122,39 +155,6 @@ handle_inactive_cpus:
 1:
   ret
 
-
-.global setup_stack
-setup_stack:
-
-  GET_THREAD_ATTRIBUTES_CPU_ID(t0)
-
-  # Set up the stack.
-  # S-mode and M-mode share the same stack.
-  li  t1, (NUM_PAGES_PER_CPU_FOR_PRIVILEGED_STACK * PRIVILEGED_STACK_PAGE_SIZE)
-  mul t3, t0, t1
-  la  t2, privileged_stack_top
-  add sp, t2, t3
-  add sp, sp, t1 # We want the stack bottom.
-
-  mv  fp, sp
-
-  ret
-
-.global enable_mmode_float_and_vector_instructions
-enable_mmode_float_and_vector_instructions:
-  li t0, (MSTATUS_VS | MSTATUS_FS)
-  csrrs t1, mstatus, t0
-
-  # Set vtype.vill=0 by running a dummy vsetvl instruction.
-  # There are vector instructions (such as vmv1r.v) that
-  # can run without running a vsetvl instruction first so we
-  # need to make sure that the reset value of vill=1 has been cleared.
-  vsetivli        zero, 8, e8, m1, ta, ma
-
-  ret
-
-
-.section .jumpstart.cpu.text.mmode, "ax"
 
 .global setup_smode_trap_delegation
 setup_smode_trap_delegation:
