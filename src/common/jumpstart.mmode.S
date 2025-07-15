@@ -35,6 +35,8 @@ _mmode_start:
 
 setup_thread_attributes:
   # a0: cpu id
+  # a1: physical cpu id
+  csrr a1, mhartid
   jal setup_thread_attributes_from_mmode
 
   jal setup_stack

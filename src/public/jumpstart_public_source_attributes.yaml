@@ -126,6 +126,7 @@ c_structs:
   thread_attributes:
     fields:
       cpu_id: uint8_t
+      physical_cpu_id: uint8_t
       current_mode: uint8_t
       current_v_bit: uint8_t
       smode_setup_done: uint8_t
