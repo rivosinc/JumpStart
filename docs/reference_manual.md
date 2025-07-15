@@ -37,21 +37,21 @@ The diag exits by returning from `main()` with a `DIAG_PASSED` or `DIAG_FAILED` 
 
 **Diags are expected to follow the [RISC-V ABI Calling Convention](https://github.com/riscv-non-isa/riscv-elf-psabi-doc/blob/master/riscv-cc.adoc).**
 
-**The Thread Pointer (x4) and Global Pointer (x3) registers are reserved for JumpStart purposes and should not be used in diags.** TP is used to point to a per hart attributes structure and GP is used as a temporary in JumpStart routines.
+**The Thread Pointer (x4) and Global Pointer (x3) registers are reserved for JumpStart purposes and should not be used in diags.** TP is used to point to a per cpu attributes structure and GP is used as a temporary in JumpStart routines.
 
 ## Diag Attributes
 
-The Diag Attributes file specifies the memory layout and various attributes of the diag such as the MMU mode, number of active harts, etc.
+The Diag Attributes file specifies the memory layout and various attributes of the diag such as the MMU mode, number of active cpus, etc.
 
 The default diag attribute values are defined in the [Source Attributes YAML file](../src/public/jumpstart_public_source_attributes.yaml).
 
-### `active_hart_mask`
+### `active_cpu_mask`
 
-Binary bitmask controlling how many active harts are in the diag. Any hart that is not part of the bitmask will be sent to `wfi`.
+Binary bitmask controlling how many active cpus are in the diag. Any cpu that is not part of the bitmask will be sent to `wfi`.
 
-Default: `0b1` or 1 hart active.
+Default: `0b1` or 1 cpu active.
 
-Specifies the active harts in the diag. The default is `0b1` or 1 hart active.
+Specifies the active cpus in the diag. The default is `0b1` or 1 cpu active.
 
 ### `enable_virtualization`
 
@@ -179,7 +179,6 @@ that can influence their behavior that are enabled by passing the args with
 #### `--boot_config`
 
 * `fw-none` (default): JumpStart starts running from hardware reset. No system firmware is expected to be present.
-
 #### `--override_meson_options`
 
 Used to override the meson options specified in [meson.options](../meson.options).
@@ -251,9 +250,9 @@ free_from_memory(buf, BACKING_MEMORY_DDR, MEMORY_TYPE_UC);
 deregister_heap(BACKING_MEMORY_DDR, MEMORY_TYPE_UC);
 ```
 
-### `get_thread_attributes_hart_id_from_smode()`
+### `get_thread_attributes_cpu_id_from_smode()`
 
-Returns the hart id of the hart calling the function. Can only be called from S-mode.
+Returns the cpu id of the cpu calling the function. Can only be called from S-mode.
 
 ### `read_csr()`, `write_csr()`, `read_write_csr()`, `set_csr()`, `clear_csr()`, `read_set_csr()` and `read_clear_csr()`
 
@@ -279,9 +278,9 @@ Refer to Unit Tests `test002`, `test011`, `test018`, `test045`, `test048` for ex
 
 Disables the MMU. The page tables are set up and the MMU is enabled by default when the diag starts.
 
-### `sync_all_harts_from_smode()`
+### `sync_all_cpus_from_smode()`
 
-Synchronization point for all active harts in the diag.
+Synchronization point for all active cpus in the diag.
 
 ### `register_mmode_trap_handler_override()` and `get_mmode_trap_handler_override()`
 

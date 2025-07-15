@@ -443,8 +443,8 @@ run_function_in_umode:
   csrc sstatus, t0
 
   # Switch to the U-mode stack.
-  GET_THREAD_ATTRIBUTES_HART_ID(t0)
-  li  t1, (NUM_PAGES_PER_HART_FOR_UMODE_STACK * UMODE_STACK_PAGE_SIZE)
+  GET_THREAD_ATTRIBUTES_CPU_ID(t0)
+  li  t1, (NUM_PAGES_PER_CPU_FOR_UMODE_STACK * UMODE_STACK_PAGE_SIZE)
   mul t0, t0, t1
   la  t2, umode_stack_top
   add sp, t2, t0

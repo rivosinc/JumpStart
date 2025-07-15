@@ -4,7 +4,7 @@
 
 satp_mode: "sv48"
 
-active_hart_mask: "0b0001"
+active_cpu_mask: "0b0001"
 
 mappings:
   -

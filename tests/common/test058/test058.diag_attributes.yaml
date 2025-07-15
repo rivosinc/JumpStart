@@ -2,8 +2,8 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-# Enable harts 1 and 3
-active_hart_mask: "0b1010"
+# Enable cpus 1 and 3
+active_cpu_mask: "0b1010"
 
 satp_mode: "sv39"
 

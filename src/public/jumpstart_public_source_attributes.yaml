@@ -4,7 +4,7 @@
 
 rivos_internal_build: false
 
-max_num_harts_supported: 4
+max_num_cpus_supported: 4
 
 priv_modes_supported: [mmode, smode, umode]
 
@@ -106,10 +106,10 @@ diag_attributes:
   num_pages_for_jumpstart_umode_text: 1
   max_num_pagetable_pages_per_stage: 30
   allow_page_table_modifications: false
-  active_hart_mask: '0b1'
-  # We'll pick the lowest hart id as the primary hart id if the diag
+  active_cpu_mask: '0b1'
+  # We'll pick the lowest cpu id as the primary cpu id if the diag
   # doesn't explicitly specify it or it's not overriden on the command line.
-  primary_hart_id: null
+  primary_cpu_id: null
   satp_mode: 'sv39'
   vsatp_mode: 'sv39'
   hgatp_mode: 'sv39x4'
@@ -125,7 +125,7 @@ diag_attributes:
 c_structs:
   thread_attributes:
     fields:
-      hart_id: uint8_t
+      cpu_id: uint8_t
       current_mode: uint8_t
       current_v_bit: uint8_t
       smode_setup_done: uint8_t
@@ -152,9 +152,9 @@ defines:
   PAGE_OFFSET: 12
   DIAG_PASSED: 0
   DIAG_FAILED: 1
-  # These are the various states that a hart can be in.
-  HART_RUNNING: 2
-  HART_INACTIVE: 3
+  # These are the various states that a cpu can be in.
+  CPU_RUNNING: 2
+  CPU_INACTIVE: 3
   CHECKTC_DISABLE: nop
   CHECKTC_ENABLE: nop
   MMODE_ROLE_DISABLE: nop

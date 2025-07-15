@@ -18,11 +18,11 @@ int vsmode_main(void) __vs_text;
 // Nest as many exceptions as are allowed.
 // We have saved the smode context to jump into vsmode so we have
 // 1 less context save to take.
-uint8_t __vs_data num_context_saves_to_take[MAX_NUM_HARTS_SUPPORTED] = {
-    [0 ... MAX_NUM_HARTS_SUPPORTED - 1] = MAX_NUM_CONTEXT_SAVES - 1};
+uint8_t __vs_data num_context_saves_to_take[MAX_NUM_CPUS_SUPPORTED] = {
+    [0 ... MAX_NUM_CPUS_SUPPORTED - 1] = MAX_NUM_CONTEXT_SAVES - 1};
 
 void test046_illegal_instruction_handler(void) {
-  uint64_t hart_id = get_thread_attributes_hart_id_from_smode();
+  uint64_t cpu_id = get_thread_attributes_cpu_id_from_smode();
 
   if (get_thread_attributes_current_mode_from_smode() != PRV_S) {
     jumpstart_vsmode_fail();
@@ -31,15 +31,15 @@ void test046_illegal_instruction_handler(void) {
     jumpstart_vsmode_fail();
   }
 
-  --num_context_saves_to_take[hart_id];
+  --num_context_saves_to_take[cpu_id];
 
-  if (num_context_saves_to_take[hart_id] !=
+  if (num_context_saves_to_take[cpu_id] !=
       get_thread_attributes_num_context_saves_remaining_in_smode_from_smode()) {
     jumpstart_vsmode_fail();
   }
 
-  if (num_context_saves_to_take[hart_id] > 0) {
-    if (num_context_saves_to_take[hart_id] % 2) {
+  if (num_context_saves_to_take[cpu_id] > 0) {
+    if (num_context_saves_to_take[cpu_id] % 2) {
       if (alt_test046_illegal_instruction_function() != DIAG_PASSED) {
         jumpstart_vsmode_fail();
       }
@@ -61,7 +61,7 @@ void test046_illegal_instruction_handler(void) {
 }
 
 int vsmode_main() {
-  uint64_t hart_id = get_thread_attributes_hart_id_from_smode();
+  uint64_t cpu_id = get_thread_attributes_cpu_id_from_smode();
 
   if (get_thread_attributes_current_v_bit_from_smode() != 1) {
     return DIAG_FAILED;
@@ -71,7 +71,7 @@ int vsmode_main() {
       RISCV_EXCP_ILLEGAL_INST,
       (uint64_t)(&test046_illegal_instruction_handler));
 
-  if (num_context_saves_to_take[hart_id] < 2) {
+  if (num_context_saves_to_take[cpu_id] < 2) {
     // We test 2 different types of illegal instruction functions
     // and require at least 2 levels of nesting to test both.
     return DIAG_FAILED;

@@ -9,15 +9,15 @@
 #include "jumpstart.h"
 
 int main(void) {
-  uint8_t hart_id = get_thread_attributes_hart_id_from_smode();
+  uint8_t cpu_id = get_thread_attributes_cpu_id_from_smode();
 
-  if (hart_id != 1 && hart_id != 3) {
+  if (cpu_id != 1 && cpu_id != 3) {
     return DIAG_FAILED;
   }
 
-  if (PRIMARY_HART_ID != 1) {
-    // The hart with the lowest hart_id in the active hart mask is the primary
-    // hart.
+  if (PRIMARY_CPU_ID != 1) {
+    // The cpu with the lowest cpu_id in the active cpu mask is the primary
+    // cpu.
     return DIAG_FAILED;
   }
 

@@ -79,7 +79,7 @@ int main(void) {
     return DIAG_FAILED;
   }
 
-  if (get_thread_attributes_hart_id_from_mmode() != 0) {
+  if (get_thread_attributes_cpu_id_from_mmode() != 0) {
     return DIAG_FAILED;
   }
 

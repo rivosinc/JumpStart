@@ -106,7 +106,7 @@ class JumpStartGeneratedSource:
         self.assembly_file_fd.write('#include "cpu_bits.h"\n\n')
 
         self.defines_file_fd.write(
-            f"#define MAX_NUM_HARTS_SUPPORTED {self.attributes_data['max_num_harts_supported']}\n\n"
+            f"#define MAX_NUM_CPUS_SUPPORTED {self.attributes_data['max_num_cpus_supported']}\n\n"
         )
 
         self.data_structures_file_fd.write('#include "jumpstart_defines.h"\n\n')
@@ -165,9 +165,9 @@ class JumpStartGeneratedSource:
             self.assembly_file_fd.write('.section .jumpstart.cpu.c_structs.mmode, "aw"\n\n')
             self.assembly_file_fd.write(f".global {c_struct}_region\n")
             self.assembly_file_fd.write(f"{c_struct}_region:\n")
-            for i in range(self.attributes_data["max_num_harts_supported"]):
-                self.assembly_file_fd.write(f".global {c_struct}_region_hart_{i}\n")
-                self.assembly_file_fd.write(f"{c_struct}_region_hart_{i}:\n")
+            for i in range(self.attributes_data["max_num_cpus_supported"]):
+                self.assembly_file_fd.write(f".global {c_struct}_region_cpu_{i}\n")
+                self.assembly_file_fd.write(f"{c_struct}_region_cpu_{i}:\n")
                 self.assembly_file_fd.write(f"  .zero {current_offset}\n")
             self.assembly_file_fd.write(f".global {c_struct}_region_end\n")
             self.assembly_file_fd.write(f"{c_struct}_region_end:\n\n")
@@ -180,7 +180,7 @@ class JumpStartGeneratedSource:
         )
 
         if (
-            total_size_of_c_structs * self.attributes_data["max_num_harts_supported"]
+            total_size_of_c_structs * self.attributes_data["max_num_cpus_supported"]
             > max_allowed_size_of_c_structs
         ):
             log.error(
@@ -198,26 +198,26 @@ class JumpStartGeneratedSource:
 
         for stack_type in stack_types:
             # Make sure we can equally distribute the number of total stack pages
-            # among the harts.
+            # among the cpus.
             assert (
                 self.attributes_data[f"jumpstart_{stack_types_to_priv_mode_map[stack_type]}"][
                     "stack"
                 ]["num_pages"]
-                % self.attributes_data["max_num_harts_supported"]
+                % self.attributes_data["max_num_cpus_supported"]
                 == 0
             )
-            num_pages_per_hart_for_stack = int(
+            num_pages_per_cpu_for_stack = int(
                 self.attributes_data[f"jumpstart_{stack_types_to_priv_mode_map[stack_type]}"][
                     "stack"
                 ]["num_pages"]
-                / self.attributes_data["max_num_harts_supported"]
+                / self.attributes_data["max_num_cpus_supported"]
             )
             stack_page_size = self.attributes_data[
                 f"jumpstart_{stack_types_to_priv_mode_map[stack_type]}"
             ]["stack"]["page_size"]
 
             self.defines_file_fd.write(
-                f"#define NUM_PAGES_PER_HART_FOR_{stack_type.upper()}_STACK {num_pages_per_hart_for_stack}\n\n"
+                f"#define NUM_PAGES_PER_CPU_FOR_{stack_type.upper()}_STACK {num_pages_per_cpu_for_stack}\n\n"
             )
 
             self.defines_file_fd.write(
@@ -229,11 +229,11 @@ class JumpStartGeneratedSource:
             self.assembly_file_fd.write(".align 12\n")
             self.assembly_file_fd.write(f".global {stack_type}_stack_top\n")
             self.assembly_file_fd.write(f"{stack_type}_stack_top:\n")
-            for i in range(self.attributes_data["max_num_harts_supported"]):
-                self.assembly_file_fd.write(f".global {stack_type}_stack_top_hart_{i}\n")
-                self.assembly_file_fd.write(f"{stack_type}_stack_top_hart_{i}:\n")
+            for i in range(self.attributes_data["max_num_cpus_supported"]):
+                self.assembly_file_fd.write(f".global {stack_type}_stack_top_cpu_{i}\n")
+                self.assembly_file_fd.write(f"{stack_type}_stack_top_cpu_{i}:\n")
                 self.assembly_file_fd.write(
-                    f"  .zero {num_pages_per_hart_for_stack * stack_page_size}\n"
+                    f"  .zero {num_pages_per_cpu_for_stack * stack_page_size}\n"
                 )
             self.assembly_file_fd.write(f".global {stack_type}_stack_bottom\n")
             self.assembly_file_fd.write(f"{stack_type}_stack_bottom:\n\n")
@@ -293,10 +293,10 @@ class JumpStartGeneratedSource:
         for mode in modes:
             self.assembly_file_fd.write(f'.section .jumpstart.cpu.text.{mode}.init, "ax"\n')
             self.assembly_file_fd.write("# Inputs:\n")
-            self.assembly_file_fd.write("#   a0: hart id\n")
+            self.assembly_file_fd.write("#   a0: cpu id\n")
             self.assembly_file_fd.write(f".global setup_thread_attributes_from_{mode}\n")
             self.assembly_file_fd.write(f"setup_thread_attributes_from_{mode}:\n")
-            self.assembly_file_fd.write("  li t1, MAX_NUM_HARTS_SUPPORTED\n")
+            self.assembly_file_fd.write("  li t1, MAX_NUM_CPUS_SUPPORTED\n")
             self.assembly_file_fd.write(f"  bgeu a0, t1, jumpstart_{mode}_fail\n")
             self.assembly_file_fd.write("\n")
             self.assembly_file_fd.write("  li  t2, THREAD_ATTRIBUTES_STRUCT_SIZE_IN_BYTES\n")
@@ -304,7 +304,7 @@ class JumpStartGeneratedSource:
             self.assembly_file_fd.write("  la  t1, thread_attributes_region\n")
             self.assembly_file_fd.write("  add tp, t1, t2\n")
             self.assembly_file_fd.write("\n")
-            self.assembly_file_fd.write("  SET_THREAD_ATTRIBUTES_HART_ID(a0)\n")
+            self.assembly_file_fd.write("  SET_THREAD_ATTRIBUTES_CPU_ID(a0)\n")
             self.assembly_file_fd.write("\n")
             self.assembly_file_fd.write("  li t0, TRAP_OVERRIDE_ATTRIBUTES_STRUCT_SIZE_IN_BYTES\n")
             self.assembly_file_fd.write("  mul t0, a0, t0\n")
@@ -423,9 +423,9 @@ class JumpStartGeneratedSource:
         for mode in modes:
             self.assembly_file_fd.write(f".global {mode}_reg_context_save_region\n")
             self.assembly_file_fd.write(f"{mode}_reg_context_save_region:\n")
-            for i in range(self.attributes_data["max_num_harts_supported"]):
+            for i in range(self.attributes_data["max_num_cpus_supported"]):
                 self.assembly_file_fd.write(
-                    f"  # {mode} context save area for hart {i}'s {num_registers} registers. {self.attributes_data['reg_context_to_save_across_exceptions']['max_num_context_saves']} nested contexts supported.\n"
+                    f"  # {mode} context save area for cpu {i}'s {num_registers} registers. {self.attributes_data['reg_context_to_save_across_exceptions']['max_num_context_saves']} nested contexts supported.\n"
                 )
                 for i in range(
                     self.attributes_data["reg_context_to_save_across_exceptions"][

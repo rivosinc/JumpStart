@@ -58,9 +58,9 @@ def main():
         default=None,
     )
     parser.add_argument(
-        "--active_hart_mask_override",
+        "--active_cpu_mask_override",
         "-c",
-        help="Override the default hart mask for the diag.",
+        help="Override the default cpu mask for the diag.",
         required=False,
         type=str,
         default=None,
@@ -150,7 +150,7 @@ def main():
         args.toolchain,
         args.boot_config,
         args.rng_seed,
-        args.active_hart_mask_override,
+        args.active_cpu_mask_override,
         args.override_meson_options,
         args.override_diag_attributes,
     )

@@ -7,8 +7,8 @@
 #include "jumpstart.h"
 
 int main(void) {
-  uint8_t hart_id = get_thread_attributes_hart_id_from_smode();
-  if (hart_id == 2) {
+  uint8_t cpu_id = get_thread_attributes_cpu_id_from_smode();
+  if (cpu_id == 2) {
     return DIAG_FAILED;
   }
 

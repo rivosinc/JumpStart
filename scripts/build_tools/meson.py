@@ -27,13 +27,13 @@ class MesonBuildError(Exception):
         super().__init__(self.message)
 
 
-def convert_hart_mask_to_num_active_harts(hart_mask):
-    num_harts = 0
-    hart_mask = int(hart_mask, 2)
-    while hart_mask != 0:
-        num_harts += 1
-        hart_mask >>= 1
-    return num_harts
+def convert_cpu_mask_to_num_active_cpus(cpu_mask):
+    num_cpus = 0
+    cpu_mask = int(cpu_mask, 2)
+    while cpu_mask != 0:
+        num_cpus += 1
+        cpu_mask >>= 1
+    return num_cpus
 
 
 class Meson:
@@ -103,11 +103,11 @@ class Meson:
             raise Exception(f"Unknown target: {self.diag_build_target.target}")
 
         if (
-            self.diag_build_target.diag_source.active_hart_mask is not None
+            self.diag_build_target.diag_source.active_cpu_mask is not None
             and self.diag_build_target.target == "spike"
         ):
             self.meson_options["spike_additional_arguments"].append(
-                f"-p{convert_hart_mask_to_num_active_harts(self.diag_build_target.diag_source.active_hart_mask)}"
+                f"-p{convert_cpu_mask_to_num_active_cpus(self.diag_build_target.diag_source.active_cpu_mask)}"
             )
 
         self.meson_options["diag_attribute_overrides"].append(

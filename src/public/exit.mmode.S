@@ -17,55 +17,55 @@
 _mmode_end:
   # a0 will contain diag pass/fail status.
 
-  # Store pass/fail status into the hart status tracker.
-  GET_THREAD_ATTRIBUTES_HART_ID(t0)
-  la t1, hart_status_tracker
+  # Store pass/fail status into the cpu status tracker.
+  GET_THREAD_ATTRIBUTES_CPU_ID(t0)
+  la t1, cpu_status_tracker
   add t1, t1, t0
   sb a0, 0(t1)
 
-  # The primary hart will go through the exit routine.
-  li t1, PRIMARY_HART_ID
+  # The primary cpu will go through the exit routine.
+  li t1, PRIMARY_CPU_ID
   beq t0, t1, 1f
 
-  # Secondary hart.
-  # Have all the secondary harts wait on the wfi.
+  # Secondary cpu.
+  # Have all the secondary cpus wait on the wfi.
   j just_wfi_from_mmode
 
 1:
-  # Check the status of all the active harts.
-  # a0: Active hart mask. Gets shifted right as we check each hart.
-  # t0: hart_status_tracker address
-  # t1: Hart id of the current hart we're checking status of.
-  li  a0, ACTIVE_HART_MASK
-  la t0, hart_status_tracker
+  # Check the status of all the active cpus.
+  # a0: Active cpu mask. Gets shifted right as we check each cpu.
+  # t0: cpu_status_tracker address
+  # t1: CPU id of the current cpu we're checking status of.
+  li  a0, ACTIVE_CPU_MASK
+  la t0, cpu_status_tracker
   li t1, 0x0
 
-check_hart_status_loop:
+check_cpu_status_loop:
   andi t6, a0, 0x1
-  beqz t6, done_with_current_hart
+  beqz t6, done_with_current_cpu
 
   # Active core, check it's pass/fail status.
-  add t5, t0, t1 # pointer to the hart's status
+  add t5, t0, t1 # pointer to the cpu's status
 
-  li t6, HART_INACTIVE
-wait_for_inactive_hart_loop:
+  li t6, CPU_INACTIVE
+wait_for_inactive_cpu_loop:
   lb t4, 0(t5)
-  beq t4, t6, wait_for_inactive_hart_loop
+  beq t4, t6, wait_for_inactive_cpu_loop
 
-  li t6, HART_RUNNING
-wait_for_running_hart_loop:
+  li t6, CPU_RUNNING
+wait_for_running_cpu_loop:
   lb t4, 0(t5)
-  beq t4, t6, wait_for_running_hart_loop
+  beq t4, t6, wait_for_running_cpu_loop
 
   li t6, DIAG_PASSED
   bne t4, t6, jumpstart_mmode_fail
 
-done_with_current_hart:
+done_with_current_cpu:
   srli a0, a0, 1
   addi t1, t1, 1
-  bnez a0, check_hart_status_loop
+  bnez a0, check_cpu_status_loop
 
-  # All harts have passed, we're done.
+  # All cpus have passed, we're done.
   li t1, DIAG_PASSED
   bne a0, t1, jumpstart_mmode_fail
 

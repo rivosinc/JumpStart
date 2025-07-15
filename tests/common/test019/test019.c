@@ -8,7 +8,7 @@
 
 int main(void) {
   for (int i = 0; i < 10; ++i) {
-    sync_all_harts_from_smode();
+    sync_all_cpus_from_smode();
   }
 
   return DIAG_PASSED;

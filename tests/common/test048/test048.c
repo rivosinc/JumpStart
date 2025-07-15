@@ -128,7 +128,7 @@ uint8_t vsmode_function(void) {
 }
 
 int main(void) {
-  if (get_thread_attributes_hart_id_from_smode() != 0) {
+  if (get_thread_attributes_cpu_id_from_smode() != 0) {
     return DIAG_FAILED;
   }
 

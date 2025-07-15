@@ -21,7 +21,7 @@ _mmode_start:
 
   csrr a0, mhartid
 
-  li t1, MAX_NUM_HARTS_SUPPORTED
+  li t1, MAX_NUM_CPUS_SUPPORTED
   bge a0, t1, just_wfi_from_mmode
 
   # The mmode init code is expected to fit in a 4KB page for Rivos internal
@@ -52,13 +52,13 @@ setup_thread_attributes:
 
   jal reset_csrs
 
-  jal handle_inactive_harts
+  jal handle_inactive_cpus
 
-  # Have the hart mark itself as running.
-  GET_THREAD_ATTRIBUTES_HART_ID(t0)
-  la t1, hart_status_tracker
+  # Have the cpu mark itself as running.
+  GET_THREAD_ATTRIBUTES_CPU_ID(t0)
+  la t1, cpu_status_tracker
   add t1, t1, t0
-  li t2, HART_RUNNING
+  li t2, CPU_RUNNING
   sb t2, 0(t1)
 
   jal enable_mmode_interrupts
@@ -96,24 +96,24 @@ enable_mmode_interrupts:
   ret
 
 
-.global handle_inactive_harts
-handle_inactive_harts:
-  GET_THREAD_ATTRIBUTES_HART_ID(t0)
+.global handle_inactive_cpus
+handle_inactive_cpus:
+  GET_THREAD_ATTRIBUTES_CPU_ID(t0)
 
-  # Check if this hart is in the active hart mask.
-  li a0, ACTIVE_HART_MASK
+  # Check if this cpu is in the active cpu mask.
+  li a0, ACTIVE_CPU_MASK
   li t1, 1
   sll t1, t1, t0
   and a0, a0, t1
   bnez a0, 1f
 
-  # Inactive hart.
+  # Inactive cpu.
 
-  # If running in batch mode, return the inactive hart.
+  # If running in batch mode, return the inactive cpu.
   li t2, BATCH_MODE
-  bnez t2, batch_mode_return_unused_hart
+  bnez t2, batch_mode_return_unused_cpu
 
-  # Send the hart to WFI if not running in batch mode.
+  # Send the cpu to WFI if not running in batch mode.
   j just_wfi_from_mmode
 
 1:
@@ -123,11 +123,11 @@ handle_inactive_harts:
 .global setup_stack
 setup_stack:
 
-  GET_THREAD_ATTRIBUTES_HART_ID(t0)
+  GET_THREAD_ATTRIBUTES_CPU_ID(t0)
 
   # Set up the stack.
   # S-mode and M-mode share the same stack.
-  li  t1, (NUM_PAGES_PER_HART_FOR_PRIVILEGED_STACK * PRIVILEGED_STACK_PAGE_SIZE)
+  li  t1, (NUM_PAGES_PER_CPU_FOR_PRIVILEGED_STACK * PRIVILEGED_STACK_PAGE_SIZE)
   mul t3, t0, t1
   la  t2, privileged_stack_top
   add sp, t2, t3

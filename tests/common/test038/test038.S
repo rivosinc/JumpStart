@@ -48,6 +48,6 @@ asm_check_passed_in_arguments_return:
 
 .section .data.smode, "aw"
 
-.global non_primary_hart_done
-non_primary_hart_done:
+.global non_primary_cpu_done
+non_primary_cpu_done:
   .byte 0x0

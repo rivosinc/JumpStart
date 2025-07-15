@@ -62,14 +62,14 @@ class DiagSource:
 
         self.diag_name = os.path.basename(os.path.normpath(self.diag_src_dir))
 
-        self.active_hart_mask = None
+        self.active_cpu_mask = None
         with open(self.get_diag_attributes_yaml()) as f:
             diag_attributes = yaml.safe_load(f)
-            if "active_hart_mask" in diag_attributes:
+            if "active_cpu_mask" in diag_attributes:
                 log.debug(
-                    f"Found active_hart_mask specified by diag: {diag_attributes['active_hart_mask']}"
+                    f"Found active_cpu_mask specified by diag: {diag_attributes['active_cpu_mask']}"
                 )
-                self.active_hart_mask = diag_attributes["active_hart_mask"]
+                self.active_cpu_mask = diag_attributes["active_cpu_mask"]
 
     def __str__(self) -> str:
         return f"\t\tDiag: {self.diag_name}, Source Path: {self.diag_src_dir}\n\t\tSources: {self.diag_sources}\n\t\tAttributes: {self.diag_attributes_yaml}\n\t\tMeson options overrides file: {self.meson_options_override_yaml}"
@@ -119,7 +119,7 @@ class DiagBuildTarget:
         toolchain,
         boot_config,
         rng_seed,
-        active_hart_mask_override,
+        active_cpu_mask_override,
         meson_options_cmd_line_overrides,
         diag_attributes_cmd_line_overrides,
     ) -> None:
@@ -150,26 +150,26 @@ class DiagBuildTarget:
         self.diag_attributes_cmd_line_overrides = diag_attributes_cmd_line_overrides or []
 
         for override in self.diag_attributes_cmd_line_overrides:
-            if override.startswith("active_hart_mask="):
+            if override.startswith("active_cpu_mask="):
                 override_value = override.split("=", 1)[1]
-                if self.diag_source.active_hart_mask is not None:
+                if self.diag_source.active_cpu_mask is not None:
                     log.warning(
-                        f"Overriding active_hart_mask {self.diag_source.active_hart_mask} with: {override_value}"
+                        f"Overriding active_cpu_mask {self.diag_source.active_cpu_mask} with: {override_value}"
                     )
-                self.diag_source.active_hart_mask = override_value
+                self.diag_source.active_cpu_mask = override_value
 
-        # TODO: we don't really need 2 ways to override the active hart mask.
-        if active_hart_mask_override is not None:
+        # TODO: we don't really need 2 ways to override the active cpu mask.
+        if active_cpu_mask_override is not None:
             log.warning(
-                f"Overriding active_hart_mask {self.diag_source.active_hart_mask} to {active_hart_mask_override}"
+                f"Overriding active_cpu_mask {self.diag_source.active_cpu_mask} to {active_cpu_mask_override}"
             )
-            self.diag_source.active_hart_mask = active_hart_mask_override
-            # append active_hart_mask to the diag attributes cmd line overrides
+            self.diag_source.active_cpu_mask = active_cpu_mask_override
+            # append active_cpu_mask to the diag attributes cmd line overrides
             # as this is used by the meson build system.
             if self.diag_attributes_cmd_line_overrides is None:
                 self.diag_attributes_cmd_line_overrides = []
             self.diag_attributes_cmd_line_overrides.append(
-                f"active_hart_mask={self.diag_source.active_hart_mask}"
+                f"active_cpu_mask={self.diag_source.active_cpu_mask}"
             )
 
     def __str__(self) -> str:

@@ -10,12 +10,12 @@
 #include "heap.smode.h"
 #include "jumpstart.h"
 
-// We have smode init code that has to be run by one of the harts.
-// This test has the non-primary hart run smode code after starting in mmode
+// We have smode init code that has to be run by one of the cpus.
+// This test has the non-primary cpu run smode code after starting in mmode
 // to make sure that the initialization is done irrespective of which core
 // runs the smode code.
 
-extern volatile uint8_t non_primary_hart_done;
+extern volatile uint8_t non_primary_cpu_done;
 
 uint8_t asm_check_passed_in_arguments(uint8_t a0, uint8_t a1, uint8_t a2,
                                       uint8_t a3, uint8_t a4, uint8_t a5,
@@ -94,8 +94,8 @@ static int test_run_function_in_smode(void) {
 }
 
 int main(void) {
-  uint8_t hart_id = get_thread_attributes_hart_id_from_mmode();
-  if (hart_id > 1) {
+  uint8_t cpu_id = get_thread_attributes_cpu_id_from_mmode();
+  if (cpu_id > 1) {
     return DIAG_FAILED;
   }
 
@@ -108,7 +108,7 @@ int main(void) {
     return DIAG_FAILED;
   }
 
-  if (hart_id != PRIMARY_HART_ID) {
+  if (cpu_id != PRIMARY_CPU_ID) {
     // We haven't run any smode code so the smode setup should not be done.
     if (get_thread_attributes_smode_setup_done_from_mmode() != 0) {
       return DIAG_FAILED;
@@ -118,10 +118,10 @@ int main(void) {
       return DIAG_FAILED;
     }
 
-    non_primary_hart_done = 1;
+    non_primary_cpu_done = 1;
   } else {
-    while (non_primary_hart_done == 0) {
-      // Wait for the non-primary hart to finish.
+    while (non_primary_cpu_done == 0) {
+      // Wait for the non-primary cpu to finish.
     }
 
     // We haven't run any smode code so the smode setup should not be done.

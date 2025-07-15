@@ -14,16 +14,16 @@
 # machine and supervisor mode.
 .section .jumpstart.cpu.data.privileged, "aw"
 
-.global hart_status_tracker
-hart_status_tracker:
-  .rept MAX_NUM_HARTS_SUPPORTED
-    .byte HART_INACTIVE
+.global cpu_status_tracker
+cpu_status_tracker:
+  .rept MAX_NUM_CPUS_SUPPORTED
+    .byte CPU_INACTIVE
   .endr
 
 
 .align 2
-.global hart_sync_point
-hart_sync_point:
+.global cpu_sync_point
+cpu_sync_point:
   # We're going to use the amoor.w instruction to update the bits
   # so allocate 4 bytes.
   .4byte 0x0

@@ -32,7 +32,7 @@ static void update_variables(uint8_t tid) {
 }
 
 int main(void) {
-  uint8_t tid = get_thread_attributes_hart_id_from_smode();
+  uint8_t tid = get_thread_attributes_cpu_id_from_smode();
   if (tid > 3) {
     return DIAG_FAILED;
   }
@@ -48,7 +48,7 @@ int main(void) {
     release_lock(&lock);
   }
 
-  sync_all_harts_from_smode();
+  sync_all_cpus_from_smode();
 
   // Check final value
   if (new != NUM_ITER * (0 + 1 + 2 + 3)) {

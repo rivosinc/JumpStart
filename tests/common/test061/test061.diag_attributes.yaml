@@ -4,7 +4,7 @@
 
 satp_mode: "sv39"
 
-active_hart_mask: "0b11"
+active_cpu_mask: "0b11"
 allow_page_table_modifications: true
 enable_virtualization: True
 

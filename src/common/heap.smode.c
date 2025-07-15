@@ -274,8 +274,8 @@ __attr_stext void setup_heap(uint64_t heap_start, uint64_t heap_end,
 
   acquire_lock(&target_heap->lock);
 
-  // Prevent double initialization. A hart might have been waiting for the lock
-  // while the heap was initialized by another hart.
+  // Prevent double initialization. A cpu might have been waiting for the lock
+  // while the heap was initialized by another cpu.
   if (target_heap->setup_done == 0) {
 
     // Translate the start and end of the heap sanity check it's memory type.

@@ -11,10 +11,10 @@ Restoring translation-data coherence:
 Initial condition:
 PTE(X) = (OA=PA_X, V=0)
 
-Hart0’s instructions:
+CPU0’s instructions:
 (H0.0)	Store (OA=PA_X) to PTE(X)
 
-Hart1’s instructions:
+CPU1’s instructions:
 (H1.0) Load from PTE(X)
 (H1.1) Execute an SFENCE.VMA
 (H1.2) Load from X
@@ -33,10 +33,10 @@ uint8_t is_load_allowed_to_data_area(void);
 extern uint64_t data_area;
 uint64_t data_area_address = (uint64_t)&data_area;
 
-void hart1_load_page_fault_handler(void);
-void hart1_load_page_fault_handler(void) {
-  uint8_t hart_id = get_thread_attributes_hart_id_from_smode();
-  if (hart_id != 1) {
+void cpu1_load_page_fault_handler(void);
+void cpu1_load_page_fault_handler(void) {
+  uint8_t cpu_id = get_thread_attributes_cpu_id_from_smode();
+  if (cpu_id != 1) {
     jumpstart_smode_fail();
   }
 
@@ -51,8 +51,8 @@ void hart1_load_page_fault_handler(void) {
 }
 
 int main(void) {
-  uint8_t hart_id = get_thread_attributes_hart_id_from_smode();
-  if (hart_id > 1) {
+  uint8_t cpu_id = get_thread_attributes_cpu_id_from_smode();
+  if (cpu_id > 1) {
     return DIAG_FAILED;
   }
 
@@ -66,18 +66,18 @@ int main(void) {
     return DIAG_FAILED;
   }
 
-  if (hart_id == 1) {
+  if (cpu_id == 1) {
     register_smode_trap_handler_override(
-        RISCV_EXCP_LOAD_PAGE_FAULT, (uint64_t)(&hart1_load_page_fault_handler));
+        RISCV_EXCP_LOAD_PAGE_FAULT, (uint64_t)(&cpu1_load_page_fault_handler));
 
     if (is_load_allowed_to_data_area() == 1) {
       return DIAG_FAILED;
     }
   }
 
-  sync_all_harts_from_smode();
+  sync_all_cpus_from_smode();
 
-  if (hart_id == 0) {
+  if (cpu_id == 0) {
     *((uint64_t *)xlate_info.pte_address[2]) = xlate_info.pte_value[2] | PTE_V;
     asm volatile("sfence.vma");
   } else {

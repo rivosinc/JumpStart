@@ -114,17 +114,15 @@ class SourceGenerator:
             self.jumpstart_source_attributes["diag_attributes"]["enable_virtualization"]
         )
 
-        self.jumpstart_source_attributes["diag_attributes"]["active_hart_mask"] = int(
-            self.jumpstart_source_attributes["diag_attributes"]["active_hart_mask"], 2
+        self.jumpstart_source_attributes["diag_attributes"]["active_cpu_mask"] = int(
+            self.jumpstart_source_attributes["diag_attributes"]["active_cpu_mask"], 2
         )
 
-        if self.jumpstart_source_attributes["diag_attributes"]["primary_hart_id"] is None:
-            active_hart_mask = self.jumpstart_source_attributes["diag_attributes"][
-                "active_hart_mask"
-            ]
-            # Set the lowest index of the lowest bit set in active_hart_mask as the primary hart id.
-            self.jumpstart_source_attributes["diag_attributes"]["primary_hart_id"] = (
-                active_hart_mask & -active_hart_mask
+        if self.jumpstart_source_attributes["diag_attributes"]["primary_cpu_id"] is None:
+            active_cpu_mask = self.jumpstart_source_attributes["diag_attributes"]["active_cpu_mask"]
+            # Set the lowest index of the lowest bit set in active_cpu_mask as the primary cpu id.
+            self.jumpstart_source_attributes["diag_attributes"]["primary_cpu_id"] = (
+                active_cpu_mask & -active_cpu_mask
             ).bit_length() - 1
 
         self.sanity_check_diag_attributes()
@@ -309,15 +307,13 @@ class SourceGenerator:
             )
 
         assert (
-            self.jumpstart_source_attributes["diag_attributes"]["active_hart_mask"].bit_count()
-            <= self.jumpstart_source_attributes["max_num_harts_supported"]
+            self.jumpstart_source_attributes["diag_attributes"]["active_cpu_mask"].bit_count()
+            <= self.jumpstart_source_attributes["max_num_cpus_supported"]
         )
-        primary_hart_id = int(
-            self.jumpstart_source_attributes["diag_attributes"]["primary_hart_id"]
-        )
+        primary_cpu_id = int(self.jumpstart_source_attributes["diag_attributes"]["primary_cpu_id"])
         assert (
-            self.jumpstart_source_attributes["diag_attributes"]["active_hart_mask"]
-            & (1 << primary_hart_id)
+            self.jumpstart_source_attributes["diag_attributes"]["active_cpu_mask"]
+            & (1 << primary_cpu_id)
         ) != 0
 
     def get_next_available_dest_addr_after_last_mapping(
@@ -510,9 +506,9 @@ class SourceGenerator:
 
             file_descriptor.close()
 
-    def generate_hart_sync_functions(self, file_descriptor):
-        active_hart_mask = self.jumpstart_source_attributes["diag_attributes"]["active_hart_mask"]
-        primary_hart_id = self.jumpstart_source_attributes["diag_attributes"]["primary_hart_id"]
+    def generate_cpu_sync_functions(self, file_descriptor):
+        active_cpu_mask = self.jumpstart_source_attributes["diag_attributes"]["active_cpu_mask"]
+        primary_cpu_id = self.jumpstart_source_attributes["diag_attributes"]["primary_cpu_id"]
 
         modes = ListUtils.intersection(["mmode", "smode"], self.priv_modes_enabled)
         for mode in modes:
@@ -520,12 +516,12 @@ class SourceGenerator:
                 f"""
 .section .jumpstart.cpu.text.{mode}, "ax"
 # Inputs:
-#   a0: hart id of current hart
-#   a1: hart mask of harts to sync.
-#   a2: hart id of primary hart for sync
+#   a0: cpu id of current cpu
+#   a1: cpu mask of cpus to sync.
+#   a2: cpu id of primary cpu for sync
 #   a3: sync point address (4 byte aligned)
-.global sync_harts_in_mask_from_{mode}
-sync_harts_in_mask_from_{mode}:
+.global sync_cpus_in_mask_from_{mode}
+sync_cpus_in_mask_from_{mode}:
   addi  sp, sp, -16
   sd  ra, 8(sp)
   sd  fp, 0(sp)
@@ -537,8 +533,8 @@ sync_harts_in_mask_from_{mode}:
   sll t2, t0, a0
   sll t0, t0, a2
 
-  # Both this hart id and the primary hart id should be part of
-  # the mask of harts to sync
+  # Both this cpu id and the primary cpu id should be part of
+  # the mask of cpus to sync
   and t3, t2, a1
   beqz t3, jumpstart_{mode}_fail
   and t3, t0, a1
@@ -550,31 +546,31 @@ sync_harts_in_mask_from_{mode}:
   and t3, t3, t2
   bnez t3, jumpstart_{mode}_fail
 
-  bne t0, t2, wait_for_primary_hart_to_clear_sync_point_bits_{mode}
+  bne t0, t2, wait_for_primary_cpu_to_clear_sync_point_bits_{mode}
 
-wait_for_all_harts_to_set_sync_point_bits_{mode}:
-  # Primary hart waits till all the harts have set their bits in the sync point.
+wait_for_all_cpus_to_set_sync_point_bits_{mode}:
+  # Primary cpu waits till all the cpus have set their bits in the sync point.
   # twiddle thumbs to avoid excessive spinning
   pause
   lw t0, (a3)
-  bne t0, a1, wait_for_all_harts_to_set_sync_point_bits_{mode}
+  bne t0, a1, wait_for_all_cpus_to_set_sync_point_bits_{mode}
 
   amoswap.w t0, zero, (a3)
 
   bne t0, a1, jumpstart_{mode}_fail
 
-  j return_from_sync_harts_in_mask_from_{mode}
+  j return_from_sync_cpus_in_mask_from_{mode}
 
-wait_for_primary_hart_to_clear_sync_point_bits_{mode}:
-  # non-primary harts wait for the primary hart to clear the sync point bits.
+wait_for_primary_cpu_to_clear_sync_point_bits_{mode}:
+  # non-primary cpus wait for the primary cpu to clear the sync point bits.
   # twiddle thumbs to avoid excessive spinning
   pause
   lw t0, (a3)
   srl t0, t0, a0
   andi t0, t0, 1
-  bnez t0, wait_for_primary_hart_to_clear_sync_point_bits_{mode}
+  bnez t0, wait_for_primary_cpu_to_clear_sync_point_bits_{mode}
 
-return_from_sync_harts_in_mask_from_{mode}:
+return_from_sync_cpus_in_mask_from_{mode}:
   CHECKTC_ENABLE
 
   ld  ra, 8(sp)
@@ -582,19 +578,19 @@ return_from_sync_harts_in_mask_from_{mode}:
   addi  sp, sp, 16
   ret
 
-.global sync_all_harts_from_{mode}
-sync_all_harts_from_{mode}:
+.global sync_all_cpus_from_{mode}
+sync_all_cpus_from_{mode}:
   addi  sp, sp, -16
   sd  ra, 8(sp)
   sd  fp, 0(sp)
   addi    fp, sp, 16
 
-  jal get_thread_attributes_hart_id_from_{mode}
-  li a1, {active_hart_mask}
-  li a2, {primary_hart_id}
-  la a3, hart_sync_point
+  jal get_thread_attributes_cpu_id_from_{mode}
+  li a1, {active_cpu_mask}
+  li a2, {primary_cpu_id}
+  la a3, cpu_sync_point
 
-  jal sync_harts_in_mask_from_{mode}
+  jal sync_cpus_in_mask_from_{mode}
 
   ld  ra, 8(sp)
   ld  fp, 0(sp)
@@ -701,7 +697,7 @@ sync_all_harts_from_{mode}:
 
             self.generate_smode_fail_functions(file)
 
-            self.generate_hart_sync_functions(file)
+            self.generate_cpu_sync_functions(file)
 
             if self.jumpstart_source_attributes["rivos_internal_build"] is True:
                 rivos_internal_functions.generate_rivos_internal_mmu_functions(
