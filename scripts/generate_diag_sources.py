@@ -138,8 +138,10 @@ class SourceGenerator:
     def process_memory_map(self):
         self.memory_map = {stage: [] for stage in TranslationStage.get_enabled_stages()}
 
-        for mapping in self.jumpstart_source_attributes["diag_attributes"]["mappings"]:
-            mapping = MemoryMapping(mapping)
+        for mapping_dict in self.jumpstart_source_attributes["diag_attributes"]["mappings"]:
+            mapping = MemoryMapping(mapping_dict)
+            if mapping.get_field("num_pages") == 0:
+                continue
             self.memory_map[mapping.get_field("translation_stage")].append(mapping)
 
         self.add_jumpstart_sections_to_mappings()
@@ -433,6 +435,9 @@ class SourceGenerator:
                     # VS-stage address translation) are considered to be
                     # #user-level accesses, as though executed in U-mode.
                     section_mapping["umode"] = "0b1"
+
+            if section_mapping.get("num_pages") == 0:
+                continue
 
             self.memory_map[stage].insert(
                 len(self.memory_map[stage]), MemoryMapping(section_mapping)
