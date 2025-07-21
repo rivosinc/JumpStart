@@ -107,8 +107,8 @@ class AssetAction(enum.IntEnum):
 
 
 class DiagBuildTarget:
-    supported_targets = ["qemu", "spike"]
-    supported_toolchains = ["gcc", "llvm"]
+    supported_targets = ["spike"]
+    supported_toolchains = ["gcc"]
     supported_boot_configs = ["fw-none"]
 
     def __init__(

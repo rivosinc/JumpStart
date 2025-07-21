@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: 2025 Rivos Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+
+[binaries]
+c = '/rivos/toolchains/riscv64-rivos-linux-gnu-gcc-15-ga0/bin/riscv64-rivos-linux-gnu-gcc'
+strip = '/rivos/toolchains/riscv64-rivos-linux-gnu-gcc-15-ga0/bin/riscv64-rivos-linux-gnu-strip'
+objump = '/rivos/toolchains/riscv64-rivos-linux-gnu-gcc-15-ga0/bin/riscv64-rivos-linux-gnu-objdump'
+
+[built-in options]
+c_args = target_args
+c_link_args = ['-nostdlib', '-static']
