@@ -9,6 +9,7 @@
 #include "heap.smode.h"
 
 #include <assert.h>
+#include <stdbool.h>
 
 #include "cpu_bits.h"
 #include "jumpstart.h"
@@ -66,6 +67,13 @@ __attr_stext static struct heap_info *find_matching_heap(uint8_t backing_memory,
   return NULL;
 }
 
+__attr_stext bool is_valid_heap(uint8_t backing_memory, uint8_t memory_type) {
+  struct heap_info *target_heap =
+      find_matching_heap(backing_memory, memory_type);
+  return (target_heap != NULL && target_heap->setup_done &&
+          target_heap->head != 0);
+}
+
 //------------------------------------------------------------------------------
 // Helper functions to convert numeric values to readable strings
 //------------------------------------------------------------------------------
@@ -96,16 +104,15 @@ __attr_stext const char *memory_type_to_string(uint8_t memory_type) {
 //------------------------------------------------------------------------------
 __attr_stext void *malloc_from_memory(size_t size, uint8_t backing_memory,
                                       uint8_t memory_type) {
-  struct heap_info *target_heap =
-      find_matching_heap(backing_memory, memory_type);
-
-  if (!target_heap || !target_heap->setup_done || target_heap->head == 0) {
+  if (!is_valid_heap(backing_memory, memory_type)) {
     printk("Error: Heap not initialized for %s/%s.\n",
            backing_memory_to_string(backing_memory),
            memory_type_to_string(memory_type));
     jumpstart_smode_fail();
     return 0;
   }
+  struct heap_info *target_heap =
+      find_matching_heap(backing_memory, memory_type);
   if (size > MEMCHUNK_MAX_SIZE || size == 0) {
     printk("Error: Invalid size for malloc request\n");
     jumpstart_smode_fail();
@@ -185,15 +192,15 @@ __attr_stext void free_from_memory(void *ptr, uint8_t backing_memory,
     return;
   }
 
-  struct heap_info *target_heap =
-      find_matching_heap(backing_memory, memory_type);
-
-  if (!target_heap || !target_heap->setup_done || target_heap->head == 0) {
+  if (!is_valid_heap(backing_memory, memory_type)) {
     printk("Error: Heap not initialized for %s/%s.\n",
            backing_memory_to_string(backing_memory),
            memory_type_to_string(memory_type));
     jumpstart_smode_fail();
   }
+
+  struct heap_info *target_heap =
+      find_matching_heap(backing_memory, memory_type);
 
   acquire_lock(&target_heap->lock);
 
@@ -387,15 +394,23 @@ __attr_stext void deregister_heap(uint8_t backing_memory, uint8_t memory_type) {
 }
 
 __attr_stext size_t get_heap_size(uint8_t backing_memory, uint8_t memory_type) {
-  struct heap_info *target_heap =
-      find_matching_heap(backing_memory, memory_type);
-  if (!target_heap || !target_heap->setup_done || target_heap->head == 0) {
+  if (!is_valid_heap(backing_memory, memory_type)) {
     printk("Error: Heap not initialized for %s/%s.\n",
            backing_memory_to_string(backing_memory),
            memory_type_to_string(memory_type));
     jumpstart_smode_fail();
     return 0;
   }
+  struct heap_info *target_heap =
+      find_matching_heap(backing_memory, memory_type);
+  if (target_heap == NULL) {
+    printk("Error: Heap not initialized for %s/%s.\n",
+           backing_memory_to_string(backing_memory),
+           memory_type_to_string(memory_type));
+    jumpstart_smode_fail();
+    return 0;
+  }
+
   return target_heap->size;
 }
 
@@ -419,16 +434,24 @@ __attr_stext void *memalign_from_memory(size_t alignment, size_t size,
     return 0;
   }
 
-  struct heap_info *target_heap =
-      find_matching_heap(backing_memory, memory_type);
-
-  if (!target_heap || !target_heap->setup_done || target_heap->head == 0) {
+  if (!is_valid_heap(backing_memory, memory_type)) {
     printk("Error: Heap not initialized for %s/%s.\n",
            backing_memory_to_string(backing_memory),
            memory_type_to_string(memory_type));
     jumpstart_smode_fail();
     return 0;
   }
+
+  struct heap_info *target_heap =
+      find_matching_heap(backing_memory, memory_type);
+  if (target_heap == NULL) {
+    printk("Error: Heap not initialized for %s/%s.\n",
+           backing_memory_to_string(backing_memory),
+           memory_type_to_string(memory_type));
+    jumpstart_smode_fail();
+    return 0;
+  }
+
   if (size > MEMCHUNK_MAX_SIZE) {
     printk("Error: Invalid size for memalign request\n");
     jumpstart_smode_fail();
@@ -540,14 +563,21 @@ exit_memalign:
 }
 
 __attr_stext void print_heap(void) {
-  struct heap_info *target_heap =
-      find_matching_heap(BACKING_MEMORY_DDR, MEMORY_TYPE_WB);
-
-  if (!target_heap || !target_heap->setup_done || target_heap->head == 0) {
+  if (!is_valid_heap(BACKING_MEMORY_DDR, MEMORY_TYPE_WB)) {
     printk("Error: Heap not initialized for %s/%s.\n",
            backing_memory_to_string(BACKING_MEMORY_DDR),
            memory_type_to_string(MEMORY_TYPE_WB));
     jumpstart_smode_fail();
+  }
+
+  struct heap_info *target_heap =
+      find_matching_heap(BACKING_MEMORY_DDR, MEMORY_TYPE_WB);
+  if (target_heap == NULL) {
+    printk("Error: Heap not initialized for %s/%s.\n",
+           backing_memory_to_string(BACKING_MEMORY_DDR),
+           memory_type_to_string(MEMORY_TYPE_WB));
+    jumpstart_smode_fail();
+    return;
   }
 
   acquire_lock(&target_heap->lock);

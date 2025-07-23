@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -64,3 +65,5 @@ size_t get_heap_size(uint8_t backing_memory, uint8_t memory_type);
 //------------------------------------------------------------------------------
 const char *backing_memory_to_string(uint8_t backing_memory);
 const char *memory_type_to_string(uint8_t memory_type);
+
+bool is_valid_heap(uint8_t backing_memory, uint8_t memory_type);
