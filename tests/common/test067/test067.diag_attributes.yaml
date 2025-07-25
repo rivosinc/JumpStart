@@ -1,0 +1,50 @@
+# SPDX-FileCopyrightText: 2023 - 2025 Rivos Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+
+satp_mode: "sv39"
+
+active_cpu_mask: "0b1"
+
+# We expect jumpstart to sort the mappings by page_size first, then by mappings that don't have addresses.
+
+mappings:
+  -
+    xwr: "0b101"
+    page_size: 0x1000
+    num_pages: 2
+    pma_memory_type: "wb"
+    linker_script_section: ".text"
+  -
+    xwr: "0b011"
+    valid: "0b0"
+    page_size: 0x1000
+    num_pages: 1
+    pma_memory_type: "wb"
+    linker_script_section: ".data_4K"
+
+  -
+    va: 0xd0000000
+    pa: 0xd0000000
+    xwr: "0b011"
+    valid: "0b0"
+    page_size: 0x200000
+    num_pages: 1
+    pma_memory_type: "wb"
+    linker_script_section: ".data_2MB_with_explicit_address"
+
+  -
+    xwr: "0b011"
+    valid: "0b0"
+    page_size: 0x200000
+    num_pages: 1
+    pma_memory_type: "wb"
+    linker_script_section: ".data_2MB"
+
+  -
+    xwr: "0b011"
+    valid: "0b0"
+    page_size: 0x1000
+    num_pages: 2
+    pma_memory_type: "wb"
+    linker_script_section: ".data_4K_2"
