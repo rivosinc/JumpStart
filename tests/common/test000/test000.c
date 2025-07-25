@@ -9,9 +9,12 @@
 
 extern uint64_t s_stage_pagetables_start;
 
+extern uint64_t _TEXT_START;
+
 int main(void) {
   uint64_t main_function_address = (uint64_t)&main;
-  if (main_function_address != 0xD0020000) {
+  volatile uint64_t text_section_start = (uint64_t)(&_TEXT_START);
+  if (main_function_address != text_section_start) {
     return DIAG_FAILED;
   }
 
