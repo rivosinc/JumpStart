@@ -16,6 +16,7 @@ import public.functions as public_functions
 import yaml
 from data_structures import BitField, DictUtils, ListUtils
 from memory_management import (
+    AddressType,
     LinkerScript,
     MemoryMapping,
     PageSize,
@@ -135,17 +136,95 @@ class SourceGenerator:
                 ],
             )
 
+    def assign_addresses_to_mapping_for_stage(self, mapping_dict, stage):
+        if "page_size" not in mapping_dict:
+            raise Exception(f"page_size is not specified for mapping: {mapping_dict}")
+        if "pma_memory_type" not in mapping_dict:
+            raise Exception(f"pma_memory_type is not specified for mapping: {mapping_dict}")
+
+        # We want to find the next available physical address for the mapping.
+        # All the MMUs share the same physical address space so we need to find
+        # the next available address that is not already used by another mapping.
+        next_available_address = 0
+        for target_mmu in MemoryMapping.get_supported_targets():
+            temp_address = self.get_next_available_dest_addr_after_last_mapping(
+                target_mmu, stage, mapping_dict["page_size"], mapping_dict["pma_memory_type"]
+            )
+            if temp_address > next_available_address:
+                next_available_address = temp_address
+
+        mapping_dict[TranslationStage.get_translates_to(stage)] = next_available_address
+        mapping_dict[TranslationStage.get_translates_from(stage)] = next_available_address
+
+        return mapping_dict
+
+    def has_no_addresses(self, mapping_dict):
+        """Check if a mapping has no address types set."""
+        return not any(
+            address_type in mapping_dict and mapping_dict[address_type] is not None
+            for address_type in AddressType.get_all_address_types()
+        )
+
+    def get_sort_key_for_mapping(self, mapping_dict):
+        """Get a sort key for a mapping that sorts by page_size first, then by mappings that don't have addresses."""
+        # Get page_size as the first sort criterion
+        page_size = mapping_dict.get("page_size", float("inf"))
+
+        if self.has_no_addresses(mapping_dict):
+            # Mappings with no addresses come after page_size sorting
+            return (
+                page_size,
+                0,
+            )
+
+        # For mappings with addresses, sort by all address types in order
+        address_types = AddressType.types
+        sort_values = []
+        for address_type in address_types:
+            value = mapping_dict.get(address_type)
+            if value is not None:
+                sort_values.append(value)
+            else:
+                # Use a large number for None values to ensure they sort after valid values
+                sort_values.append(float("inf"))
+
+        # Mappings with addresses come after those without (1), then sort by address values
+        return (
+            page_size,
+            1,
+        ) + tuple(sort_values)
+
+    def sort_diag_mappings(self):
+        return sorted(
+            self.jumpstart_source_attributes["diag_attributes"]["mappings"],
+            key=self.get_sort_key_for_mapping,
+        )
+
+    def add_diag_sections_to_mappings(self):
+        for mapping_dict in self.sort_diag_mappings():
+            if self.has_no_addresses(mapping_dict):
+                if (
+                    self.jumpstart_source_attributes["diag_attributes"]["enable_virtualization"]
+                    is True
+                ):
+                    raise ValueError(
+                        f"The logic to assign addresses to mappings with no addresses specified in diags that enable virtualization is not implemented yet. Failed on mapping: {mapping_dict}"
+                    )
+                mapping_dict = self.assign_addresses_to_mapping_for_stage(
+                    mapping_dict, TranslationStage.get_enabled_stages()[0]
+                )
+
+            mapping = MemoryMapping(mapping_dict)
+            if mapping.get_field("num_pages") == 0:
+                continue
+            self.memory_map[mapping.get_field("translation_stage")].append(mapping)
+
     def process_memory_map(self):
         self.memory_map = {stage: [] for stage in TranslationStage.get_enabled_stages()}
 
         self.add_jumpstart_sections_to_mappings()
 
-        # Add the mappings from the diags.
-        for mapping_dict in self.jumpstart_source_attributes["diag_attributes"]["mappings"]:
-            mapping = MemoryMapping(mapping_dict)
-            if mapping.get_field("num_pages") == 0:
-                continue
-            self.memory_map[mapping.get_field("translation_stage")].append(mapping)
+        self.add_diag_sections_to_mappings()
 
         for stage in self.memory_map.keys():
             # Sort all the mappings by the destination address.

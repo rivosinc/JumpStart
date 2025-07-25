@@ -8,6 +8,12 @@ from .page_size import PageSize
 from .page_tables import AddressType, TranslationStage
 
 
+class TranslationStageNoAddressTypesError(ValueError):
+    """Raised when a translation stage cannot be assigned to a memory mapping."""
+
+    pass
+
+
 class MappingField:
     def __init__(
         self, name, field_type, input_yaml_type, allowed_values, default_value, required
@@ -116,9 +122,11 @@ class MemoryMapping:
             if self.get_field(address_type) is not None
         ]
 
-        assert (
-            len(address_types) <= 2
-        ), f"Mapping has more than 2 address types set: {address_types}"
+        if len(address_types) == 0:
+            raise TranslationStageNoAddressTypesError(f"No address types set for mapping: {self}")
+
+        if len(address_types) > 2:
+            raise ValueError(f"Mapping has more than 2 address types set: {address_types}")
 
         for stage in TranslationStage.get_enabled_stages():
             if (
