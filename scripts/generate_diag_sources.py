@@ -138,13 +138,14 @@ class SourceGenerator:
     def process_memory_map(self):
         self.memory_map = {stage: [] for stage in TranslationStage.get_enabled_stages()}
 
+        self.add_jumpstart_sections_to_mappings()
+
+        # Add the mappings from the diags.
         for mapping_dict in self.jumpstart_source_attributes["diag_attributes"]["mappings"]:
             mapping = MemoryMapping(mapping_dict)
             if mapping.get_field("num_pages") == 0:
                 continue
             self.memory_map[mapping.get_field("translation_stage")].append(mapping)
-
-        self.add_jumpstart_sections_to_mappings()
 
         for stage in self.memory_map.keys():
             # Sort all the mappings by the destination address.
