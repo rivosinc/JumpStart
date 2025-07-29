@@ -162,6 +162,29 @@ class SourceGenerator:
             if temp_address > next_available_address:
                 next_available_address = temp_address
 
+        if (
+            self.jumpstart_source_attributes["diag_attributes"]["start_test_in_mmode"] is True
+            and mapping_dict.get("linker_script_section") is not None
+            and ".text" in mapping_dict["linker_script_section"].split(",")
+        ):
+            # Calculate the total size of the region
+            region_size = mapping_dict["page_size"] * mapping_dict["num_pages"]
+
+            # Calculate the NAPOT size that will cover this region
+            # If the region size is not a NAPOT value, find the next larger NAPOT
+            napot_size = region_size
+            if region_size & (region_size - 1) != 0:
+                # Find the next larger NAPOT value that can cover this region
+                napot_size = 1
+                while napot_size < region_size:
+                    napot_size <<= 1
+
+            # Align the address to the NAPOT size
+            if next_available_address & (napot_size - 1) != 0:
+                # Find the next aligned address
+                next_aligned = (next_available_address + napot_size - 1) & ~(napot_size - 1)
+                next_available_address = next_aligned
+
         if self.jumpstart_source_attributes["diag_attributes"]["satp_mode"] != "bare":
             mapping_dict[TranslationStage.get_translates_from(stage)] = next_available_address
         mapping_dict[TranslationStage.get_translates_to(stage)] = next_available_address
