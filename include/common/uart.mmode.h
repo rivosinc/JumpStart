@@ -6,4 +6,5 @@
 
 #pragma once
 
+void m_putch(const char c);
 int m_puts(const char *str);

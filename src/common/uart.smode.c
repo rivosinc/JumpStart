@@ -14,8 +14,6 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-extern void putch(char c);
-
 int toupper(int c);
 static int vprintk(const char *fmt, va_list args)
     __attribute__((format(printf, 1, 0))) __attr_stext;

@@ -8,7 +8,6 @@
 #include "jumpstart_defines.h"
 #include <inttypes.h>
 
-void putch(char c);
 void setup_uart(void);
 
 __attr_stext __attribute__((noreturn)) void putch(char c) {
