@@ -6,4 +6,4 @@
 
 #pragma once
 
-int puts(const char *str);
+int m_puts(const char *str);
