@@ -7,6 +7,9 @@
 #include "cpu_bits.h"
 #include "jumpstart.h"
 
+__attribute__((section(".data_no_address"))) uint64_t data_no_address_var =
+    0x12345678;
+
 int main(void) {
   if (get_thread_attributes_cpu_id_from_smode() != 0) {
     return DIAG_FAILED;

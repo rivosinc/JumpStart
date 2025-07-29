@@ -272,3 +272,8 @@ class MemoryMapping:
 
     def copy(self):
         return copy.deepcopy(self)
+
+    @staticmethod
+    def get_supported_targets():
+        """Return the list of supported MMU targets (translation stages)."""
+        return TranslationStage.get_enabled_stages()

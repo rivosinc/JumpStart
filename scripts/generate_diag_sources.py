@@ -147,14 +147,24 @@ class SourceGenerator:
         # the next available address that is not already used by another mapping.
         next_available_address = 0
         for target_mmu in MemoryMapping.get_supported_targets():
+            # Handle both memory_map structures: {stage: []} and {target_mmu: {stage: []}}
+            if target_mmu in self.memory_map and isinstance(self.memory_map[target_mmu], dict):
+                # New structure: {target_mmu: {stage: []}}
+                if len(self.memory_map[target_mmu][stage]) == 0:
+                    continue
+            else:
+                # Old structure: {stage: []}
+                if target_mmu != stage or len(self.memory_map[stage]) == 0:
+                    continue
             temp_address = self.get_next_available_dest_addr_after_last_mapping(
                 target_mmu, stage, mapping_dict["page_size"], mapping_dict["pma_memory_type"]
             )
             if temp_address > next_available_address:
                 next_available_address = temp_address
 
+        if self.jumpstart_source_attributes["diag_attributes"]["satp_mode"] != "bare":
+            mapping_dict[TranslationStage.get_translates_from(stage)] = next_available_address
         mapping_dict[TranslationStage.get_translates_to(stage)] = next_available_address
-        mapping_dict[TranslationStage.get_translates_from(stage)] = next_available_address
 
         return mapping_dict
 

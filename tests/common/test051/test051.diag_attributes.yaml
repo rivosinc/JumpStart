@@ -15,8 +15,12 @@ mappings:
     linker_script_section: ".text"
   -
     pa: 0xD0022000
-    valid: "0b0"
     page_size: 0x1000
     num_pages: 1
     pma_memory_type: "wb"
     linker_script_section: ".data"
+  -
+    page_size: 0x1000
+    num_pages: 1
+    pma_memory_type: "wb"
+    linker_script_section: ".data_no_address"
