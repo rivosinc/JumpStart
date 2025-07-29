@@ -129,9 +129,6 @@ def main():
         "diag_generate_disassembly": "true",
     }
 
-    if args.target != "oswis":
-        script_meson_option_overrides["generate_trace"] = "true"
-
     if args.diag_custom_defines:
         script_meson_option_overrides["diag_custom_defines"] = ",".join(args.diag_custom_defines)
 
