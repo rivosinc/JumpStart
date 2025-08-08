@@ -40,12 +40,16 @@ def read_io_stream(stream, callback):
         callback(line)
 
 
-def run_command(command, run_directory):
+def run_command(command, run_directory, timeout=None, extra_env=None):
     log.debug(f"Running command: {' '.join(command)}")
     group_pid = None
     returncode = None
     stdout_output = []
     stderr_output = []
+    # Prepare environment
+    env = os.environ.copy()
+    if extra_env is not None:
+        env.update(extra_env)
     try:
         p = subprocess.Popen(
             command,
@@ -53,6 +57,7 @@ def run_command(command, run_directory):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             preexec_fn=os.setsid,  # Assign the child and all its subprocesses to a new process group.
+            env=env,
         )
         group_pid = os.getpgid(p.pid)
 
@@ -73,7 +78,7 @@ def run_command(command, run_directory):
         stdout_thread.start()
         stderr_thread.start()
 
-        returncode = p.wait()
+        returncode = p.wait(timeout=timeout)
         if returncode != 0:
             log.error(f"COMMAND FAILED: {' '.join(command)}")
             full_output = f"STDOUT:\n{'-' * 40}\n"
