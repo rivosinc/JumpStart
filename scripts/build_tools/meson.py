@@ -158,8 +158,9 @@ class Meson:
         log.info(f"Running meson setup.\n{printable_meson_setup_command}")
         return_code = system_functions.run_command(meson_setup_command, self.jumpstart_dir)
         if return_code != 0:
-            error_msg = f"Meson setup failed for diag: {self.diag_name}"
+            error_msg = f"Meson setup failed for diag: {self.diag_name}. Check the meson build directory for more information: {self.meson_builddir}"
             log.error(error_msg)
+            self.keep_meson_builddir = True
             raise MesonBuildError(error_msg, return_code)
 
     def compile(self):
@@ -173,11 +174,13 @@ class Meson:
         if return_code == 0:
             if not os.path.exists(diag_binary):
                 error_msg = f"diag binary: {diag_binary} not created by meson compile"
+                self.keep_meson_builddir = True
                 raise MesonBuildError(error_msg)
 
         if return_code != 0:
             error_msg = f"meson compile failed for diag: {self.diag_name}"
             log.error(error_msg)
+            self.keep_meson_builddir = True
             raise MesonBuildError(error_msg, return_code)
 
         compiled_assets = {}
@@ -200,6 +203,7 @@ class Meson:
                 error_msg = (
                     f"meson test passed but trace file not created by diag: {self.trace_file}"
                 )
+                self.keep_meson_builddir = True
                 raise MesonBuildError(error_msg)
 
             run_assets["trace"] = self.trace_file
@@ -207,11 +211,13 @@ class Meson:
             error_msg = (
                 f"Trace generation was disabled but trace file was created: {self.trace_file}"
             )
+            self.keep_meson_builddir = True
             raise MesonBuildError(error_msg)
 
         if return_code != 0:
-            error_msg = f"meson test failed for diag: {self.diag_name}.\n"
+            error_msg = f"meson test failed for diag: {self.diag_name}.\nPartial diag build assets may have been generated in {self.meson_builddir}\n"
             log.error(error_msg)
+            self.keep_meson_builddir = True
             raise MesonBuildError(error_msg, return_code)
 
         return run_assets
