@@ -48,7 +48,7 @@ def main():
         help="Override the diag attributes specified in the diag's attributes file.",
         required=False,
         nargs="+",
-        default=None,
+        default=[],
     )
     parser.add_argument(
         "--diag_custom_defines",
@@ -60,7 +60,7 @@ def main():
     parser.add_argument(
         "--active_cpu_mask_override",
         "-c",
-        help="Override the default cpu mask for the diag.",
+        help="Override the default CPU mask for the diag.",
         required=False,
         type=str,
         default=None,
@@ -141,6 +141,9 @@ def main():
     # Add buildtype to the override_meson_options list if it's provided
     if args.buildtype is not None:
         args.override_meson_options.append(f"buildtype={args.buildtype}")
+
+    if args.active_cpu_mask_override is not None:
+        args.override_diag_attributes.append(f"active_cpu_mask={args.active_cpu_mask_override}")
     diag_build_target = DiagBuildTarget(
         args.diag_src_dir,
         args.diag_build_dir,
@@ -148,7 +151,6 @@ def main():
         args.toolchain,
         args.boot_config,
         args.rng_seed,
-        args.active_cpu_mask_override,
         args.override_meson_options,
         args.override_diag_attributes,
     )

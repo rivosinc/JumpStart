@@ -119,7 +119,6 @@ class DiagBuildTarget:
         toolchain,
         boot_config,
         rng_seed,
-        active_cpu_mask_override,
         meson_options_cmd_line_overrides,
         diag_attributes_cmd_line_overrides,
     ) -> None:
@@ -157,20 +156,6 @@ class DiagBuildTarget:
                         f"Overriding active_cpu_mask {self.diag_source.active_cpu_mask} with: {override_value}"
                     )
                 self.diag_source.active_cpu_mask = override_value
-
-        # TODO: we don't really need 2 ways to override the active cpu mask.
-        if active_cpu_mask_override is not None:
-            log.warning(
-                f"Overriding active_cpu_mask {self.diag_source.active_cpu_mask} to {active_cpu_mask_override}"
-            )
-            self.diag_source.active_cpu_mask = active_cpu_mask_override
-            # append active_cpu_mask to the diag attributes cmd line overrides
-            # as this is used by the meson build system.
-            if self.diag_attributes_cmd_line_overrides is None:
-                self.diag_attributes_cmd_line_overrides = []
-            self.diag_attributes_cmd_line_overrides.append(
-                f"active_cpu_mask={self.diag_source.active_cpu_mask}"
-            )
 
     def __str__(self) -> str:
         print_string = f"\n\tName: {self.diag_source.diag_name}\n\tDirectory: {self.build_dir}\n\tAssets: {self.build_assets}\n\tBuildType: {self.buildtype},\n\tTarget: {self.target},\n\tBootConfig: {self.boot_config},"
