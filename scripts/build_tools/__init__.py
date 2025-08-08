@@ -5,7 +5,7 @@
 # __init__.py
 
 from .diag import AssetAction, DiagBuildTarget, DiagSource
-from .meson import build_jumpstart_diag
+from .meson import Meson
 
 # PEP8 guideline:
 # https://peps.python.org/pep-0008/#public-and-internal-interfaces
@@ -16,5 +16,5 @@ __all__ = [
     "AssetAction",
     "DiagSource",
     "DiagBuildTarget",
-    "build_jumpstart_diag",
+    "Meson",
 ]

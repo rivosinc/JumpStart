@@ -5,13 +5,14 @@
 import enum
 import logging as log
 import os
+import random
 import shutil
 import sys
 
 import yaml
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
 from system import functions as system_functions  # noqa
+
+from .meson import Meson  # noqa
 
 
 class DiagSource:
@@ -108,7 +109,6 @@ class AssetAction(enum.IntEnum):
 
 class DiagBuildTarget:
     supported_targets = ["spike"]
-    supported_toolchains = ["gcc"]
     supported_boot_configs = ["fw-none"]
 
     def __init__(
@@ -117,24 +117,27 @@ class DiagBuildTarget:
         build_dir,
         target,
         toolchain,
+        buildtype,
         boot_config,
         rng_seed,
+        jumpstart_dir,
         meson_options_cmd_line_overrides,
         diag_attributes_cmd_line_overrides,
+        keep_meson_builddir,
     ) -> None:
-        self.build_dir = os.path.abspath(build_dir)
         self.build_assets = {}
         self.diag_source = DiagSource(diag_src_dir)
 
-        # This will be set once we parse the meson options.
-        self.buildtype = None
-
         assert target in self.supported_targets
         self.target = target
-        self.rng_seed = rng_seed
 
-        assert toolchain in self.supported_toolchains
-        self.toolchain = toolchain
+        self.rng_seed = rng_seed
+        if self.rng_seed is None:
+            self.rng_seed = random.randrange(sys.maxsize)
+        log.debug(
+            f"DiagBuildTarget: {self.diag_source.diag_name} Seeding RNG with: {self.rng_seed}"
+        )
+        self.rng = random.Random(self.rng_seed)
 
         assert boot_config in self.supported_boot_configs
         self.boot_config = boot_config
@@ -144,11 +147,9 @@ class DiagBuildTarget:
                 f"Invalid boot_config {self.boot_config} for spike. Only fw-none is supported for spike."
             )
 
-        self.meson_options_cmd_line_overrides = meson_options_cmd_line_overrides
+        diag_attributes_cmd_line_overrides = diag_attributes_cmd_line_overrides or []
 
-        self.diag_attributes_cmd_line_overrides = diag_attributes_cmd_line_overrides or []
-
-        for override in self.diag_attributes_cmd_line_overrides:
+        for override in diag_attributes_cmd_line_overrides:
             if override.startswith("active_cpu_mask="):
                 override_value = override.split("=", 1)[1]
                 if self.diag_source.active_cpu_mask is not None:
@@ -157,19 +158,43 @@ class DiagBuildTarget:
                     )
                 self.diag_source.active_cpu_mask = override_value
 
+        self.build_dir = os.path.abspath(build_dir)
+        system_functions.create_empty_directory(self.build_dir)
+
+        self.meson = Meson(
+            toolchain,
+            jumpstart_dir,
+            self,
+            keep_meson_builddir,
+            buildtype,
+            meson_options_cmd_line_overrides,
+            diag_attributes_cmd_line_overrides,
+        )
+
+    def compile(self):
+        if self.meson is None:
+            raise Exception(f"Meson object does not exist for diag: {self.diag_source.diag_name}")
+
+        self.meson.setup()
+
+        compiled_assets = self.meson.compile()
+        for asset_type, asset_path in compiled_assets.items():
+            self.add_build_asset(asset_type, asset_path)
+
+    def run(self):
+        if self.meson is None:
+            raise Exception(f"Meson object does not exist for diag: {self.diag_source.diag_name}")
+
+        run_assets = self.meson.test()
+        for asset_type, asset_path in run_assets.items():
+            self.add_build_asset(asset_type, asset_path)
+
     def __str__(self) -> str:
-        print_string = f"\n\tName: {self.diag_source.diag_name}\n\tDirectory: {self.build_dir}\n\tAssets: {self.build_assets}\n\tBuildType: {self.buildtype},\n\tTarget: {self.target},\n\tBootConfig: {self.boot_config},"
-        if self.rng_seed is not None:
-            print_string += f"\n\tRNG Seed: {hex(self.rng_seed)}"
+        print_string = f"\n\tName: {self.diag_source.diag_name}\n\tDirectory: {self.build_dir}\n\tAssets: {self.build_assets}\n\tBuildType: {self.meson.buildtype},\n\tTarget: {self.target},\n\tBootConfig: {self.boot_config},"
+        print_string += f"\n\tRNG Seed: {hex(self.rng_seed)}"
         print_string += f"\n\tSource Info:\n{self.diag_source}"
 
         return print_string
-
-    def set_buildtype(self, buildtype):
-        self.buildtype = buildtype
-
-    def get_buildtype(self):
-        return self.buildtype
 
     def add_build_asset(
         self,

@@ -10,7 +10,7 @@ import argparse
 import logging as log
 import os
 
-from build_tools import DiagBuildTarget, build_jumpstart_diag
+from build_tools import DiagBuildTarget, Meson
 
 
 def main():
@@ -25,6 +25,7 @@ def main():
     parser.add_argument(
         "--diag_src_dir",
         "-d",
+        "--diag_src",
         help="Directory containing jumpstart diag to build.",
         required=True,
         type=str,
@@ -33,11 +34,12 @@ def main():
         "--buildtype",
         help="--buildtype to pass to meson setup.",
         type=str,
-        default=None,
+        default="release",
         choices=["release", "minsize", "debug", "debugoptimized"],
     )
     parser.add_argument(
         "--override_meson_options",
+        "--override_meson",
         help="Override the meson options from meson.options.",
         required=False,
         nargs="+",
@@ -76,11 +78,11 @@ def main():
     )
     parser.add_argument(
         "--toolchain",
-        help=f"Toolchain to build diag with. Options: {DiagBuildTarget.supported_toolchains}.",
+        help=f"Toolchain to build diag with. Options: {Meson.supported_toolchains}.",
         required=False,
         type=str,
         default="gcc",
-        choices=DiagBuildTarget.supported_toolchains,
+        choices=Meson.supported_toolchains,
     )
     parser.add_argument(
         "--boot_config",
@@ -98,6 +100,7 @@ def main():
     )
     parser.add_argument(
         "--diag_build_dir",
+        "--diag_build",
         help="Directory to place built diag in.",
         required=True,
         type=str,
@@ -138,10 +141,6 @@ def main():
         if not any(key in override for override in args.override_meson_options):
             args.override_meson_options.append(f"{key}={value}")
 
-    # Add buildtype to the override_meson_options list if it's provided
-    if args.buildtype is not None:
-        args.override_meson_options.append(f"buildtype={args.buildtype}")
-
     if args.active_cpu_mask_override is not None:
         args.override_diag_attributes.append(f"active_cpu_mask={args.active_cpu_mask_override}")
     diag_build_target = DiagBuildTarget(
@@ -149,20 +148,21 @@ def main():
         args.diag_build_dir,
         args.target,
         args.toolchain,
+        args.buildtype,
         args.boot_config,
         args.rng_seed,
+        args.jumpstart_dir,
         args.override_meson_options,
         args.override_diag_attributes,
-    )
-
-    generated_diag = build_jumpstart_diag(
-        args.jumpstart_dir,
-        diag_build_target,
-        args.disable_diag_run,
         args.keep_meson_builddir,
     )
 
-    log.info(f"Diag built: {generated_diag}")
+    diag_build_target.compile()
+
+    if args.disable_diag_run is False:
+        diag_build_target.run()
+
+    log.info(f"Diag built: {diag_build_target}")
 
 
 if __name__ == "__main__":

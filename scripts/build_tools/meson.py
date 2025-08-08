@@ -4,14 +4,11 @@
 
 import logging as log
 import os
-import random
 import shutil
 import sys
 import tempfile
 
 import yaml
-
-from .diag import AssetAction
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
 from data_structures import DictUtils  # noqa
@@ -37,23 +34,30 @@ def convert_cpu_mask_to_num_active_cpus(cpu_mask):
 
 
 class Meson:
+    supported_toolchains = ["gcc"]
+
     def __init__(
         self,
+        toolchain,
         jumpstart_dir,
         diag_build_target,
         keep_meson_builddir,
+        buildtype,
+        meson_options_cmd_line_overrides,
+        diag_attributes_cmd_line_overrides,
     ) -> None:
         self.meson_builddir = None
         self.keep_meson_builddir = None
 
+        assert toolchain in self.supported_toolchains
+        self.toolchain = toolchain
+
         if not os.path.exists(jumpstart_dir):
             raise Exception(f"Jumpstart directory does not exist: {jumpstart_dir}")
-
         self.jumpstart_dir = os.path.abspath(jumpstart_dir)
 
-        self.diag_build_target = diag_build_target
-
-        self.diag_name = self.diag_build_target.diag_source.diag_name
+        self.diag_name = diag_build_target.diag_source.diag_name
+        self.buildtype = buildtype
 
         self.meson_options = {}
 
@@ -61,89 +65,79 @@ class Meson:
 
         self.keep_meson_builddir = keep_meson_builddir
 
-        system_functions.create_empty_directory(self.diag_build_target.build_dir)
-
-        if self.diag_build_target.rng_seed is None:
-            self.diag_build_target.rng_seed = random.randrange(sys.maxsize)
-        log.debug(
-            f"Diag: {self.diag_name} Seeding builder RNG with: {self.diag_build_target.rng_seed}"
-        )
-        self.rng = random.Random(self.diag_build_target.rng_seed)
+        self.setup_default_meson_options(diag_build_target, diag_attributes_cmd_line_overrides)
+        self.apply_meson_option_overrides_from_diag(diag_build_target.diag_source)
+        self.apply_meson_option_overrides_from_cmd_line(meson_options_cmd_line_overrides)
 
     def __del__(self):
         if self.meson_builddir is not None and self.keep_meson_builddir is False:
             log.debug(f"Removing meson build directory: {self.meson_builddir}")
             shutil.rmtree(self.meson_builddir)
 
-    def setup_default_meson_options(self):
+    def setup_default_meson_options(self, diag_build_target, diag_attributes_cmd_line_overrides):
         self.meson_options["diag_name"] = self.diag_name
-        self.meson_options["diag_sources"] = self.diag_build_target.diag_source.get_sources()
+        self.meson_options["diag_sources"] = diag_build_target.diag_source.get_sources()
         self.meson_options["diag_attributes_yaml"] = (
-            self.diag_build_target.diag_source.get_diag_attributes_yaml()
+            diag_build_target.diag_source.get_diag_attributes_yaml()
         )
-        self.meson_options["boot_config"] = self.diag_build_target.boot_config
+        self.meson_options["boot_config"] = diag_build_target.boot_config
         self.meson_options["diag_attribute_overrides"] = []
 
-        self.meson_options["buildtype"] = "release"
+        self.meson_options["buildtype"] = self.buildtype
 
         self.meson_options["spike_additional_arguments"] = []
 
         self.trace_file = f"{self.meson_builddir}/{self.diag_name}.itrace"
 
-        self.meson_options["diag_target"] = self.diag_build_target.target
-        if self.diag_build_target.target == "spike":
+        self.meson_options["diag_target"] = diag_build_target.target
+        if diag_build_target.target == "spike":
             self.meson_options["spike_binary"] = "spike"
             self.meson_options["spike_additional_arguments"].append(
-                "--interleave=" + str(self.rng.randint(1, 400))
+                "--interleave=" + str(diag_build_target.rng.randint(1, 400))
             )
 
-        elif self.diag_build_target.target == "qemu":
-            self.meson_options["qemu_additional_arguments"] = []
         else:
-            raise Exception(f"Unknown target: {self.diag_build_target.target}")
+            raise Exception(f"Unknown target: {diag_build_target.target}")
 
         if (
-            self.diag_build_target.diag_source.active_cpu_mask is not None
-            and self.diag_build_target.target == "spike"
+            diag_build_target.diag_source.active_cpu_mask is not None
+            and diag_build_target.target == "spike"
         ):
             self.meson_options["spike_additional_arguments"].append(
-                f"-p{convert_cpu_mask_to_num_active_cpus(self.diag_build_target.diag_source.active_cpu_mask)}"
+                f"-p{convert_cpu_mask_to_num_active_cpus(diag_build_target.diag_source.active_cpu_mask)}"
             )
 
         self.meson_options["diag_attribute_overrides"].append(
-            f"build_rng_seed={self.diag_build_target.rng_seed}"
+            f"build_rng_seed={diag_build_target.rng_seed}"
         )
 
-        if self.diag_build_target.diag_attributes_cmd_line_overrides is not None:
+        if diag_attributes_cmd_line_overrides is not None:
             self.meson_options["diag_attribute_overrides"].extend(
-                self.diag_build_target.diag_attributes_cmd_line_overrides
+                diag_attributes_cmd_line_overrides
             )
 
-    def apply_meson_option_overrides_from_diag(self):
-        if self.diag_build_target.diag_source.get_meson_options_override_yaml() is not None:
-            with open(self.diag_build_target.diag_source.get_meson_options_override_yaml()) as f:
+    def apply_meson_option_overrides_from_diag(self, diag_source):
+        if diag_source.get_meson_options_override_yaml() is not None:
+            with open(diag_source.get_meson_options_override_yaml()) as f:
                 meson_option_overrides = yaml.safe_load(f)
                 DictUtils.override_dict(self.meson_options, meson_option_overrides, False, True)
 
-    def apply_meson_option_overrides_from_cmd_line(self):
-        if self.diag_build_target.meson_options_cmd_line_overrides is not None:
+    def apply_meson_option_overrides_from_cmd_line(self, meson_options_cmd_line_overrides):
+        if meson_options_cmd_line_overrides is not None:
             DictUtils.override_dict(
                 self.meson_options,
-                DictUtils.create_dict(self.diag_build_target.meson_options_cmd_line_overrides),
+                DictUtils.create_dict(meson_options_cmd_line_overrides),
                 False,
                 True,
             )
 
     def setup(self):
+        if self.meson_options["buildtype"] != self.buildtype:
+            raise Exception(
+                f"Buildtype in meson_options: {self.meson_options['buildtype']} does not match requested buildtype: {self.buildtype}. Always use the command line option to set the --buildtype."
+            )
+
         self.meson_setup_flags = {}
-
-        self.setup_default_meson_options()
-        self.apply_meson_option_overrides_from_diag()
-        self.apply_meson_option_overrides_from_cmd_line()
-
-        # Update the DiagBuildTarget with the final buildtype value
-        self.diag_build_target.set_buildtype(self.meson_options.get("buildtype", "release"))
-
         for option in self.meson_options:
             if isinstance(self.meson_options[option], list):
                 if len(self.meson_options[option]) == 0:
@@ -163,9 +157,9 @@ class Meson:
         meson_setup_command.extend(
             [
                 "--cross-file",
-                f"cross_compile/public/{self.diag_build_target.toolchain}_options.txt",
+                f"cross_compile/public/{self.toolchain}_options.txt",
                 "--cross-file",
-                f"cross_compile/{self.diag_build_target.toolchain}.txt",
+                f"cross_compile/{self.toolchain}.txt",
             ]
         )
 
@@ -176,13 +170,14 @@ class Meson:
         log.info(f"Running meson setup.\n{printable_meson_setup_command}")
         return_code = system_functions.run_command(meson_setup_command, self.jumpstart_dir)
         if return_code != 0:
-            error_msg = (
-                f"Meson setup failed for diag: {self.diag_build_target.diag_source.diag_name}"
-            )
+            error_msg = f"Meson setup failed for diag: {self.diag_name}"
             log.error(error_msg)
             raise MesonBuildError(error_msg, return_code)
 
         if self.keep_meson_builddir is True:
+            # import here to avoid a circular import at module import time
+            from .diag import AssetAction  # noqa
+
             self.diag_build_target.add_build_asset(
                 "meson_builddir", self.meson_builddir, None, AssetAction.NO_COPY
             )
@@ -200,27 +195,24 @@ class Meson:
                 error_msg = f"diag binary: {diag_binary} not created by meson compile"
                 raise MesonBuildError(error_msg)
 
-        # We've already checked that these exist for the passing case.
-        # They may not exist if the compile failed so check that they
-        # exist before copying them. Allows us to get partial build assets.
-        if os.path.exists(diag_disasm):
-            self.diag_build_target.add_build_asset("disasm", diag_disasm)
-            log.debug(f"Diag disassembly: {self.diag_build_target.get_build_asset('disasm')}")
-        if os.path.exists(diag_binary):
-            self.diag_build_target.add_build_asset("binary", diag_binary)
-            log.debug(f"Diag ELF: {self.diag_build_target.get_build_asset('binary')}")
-
         if return_code != 0:
-            error_msg = (
-                f"meson compile failed for diag: {self.diag_build_target.diag_source.diag_name}"
-            )
+            error_msg = f"meson compile failed for diag: {self.diag_name}"
             log.error(error_msg)
             raise MesonBuildError(error_msg, return_code)
+
+        compiled_assets = {}
+        if os.path.exists(diag_disasm):
+            compiled_assets["disasm"] = diag_disasm
+        if os.path.exists(diag_binary):
+            compiled_assets["binary"] = diag_binary
+        return compiled_assets
 
     def test(self):
         meson_test_command = ["meson", "test", "-v", "-C", self.meson_builddir]
         log.info(f"Running meson test.\n{' '.join(meson_test_command)}")
         return_code = system_functions.run_command(meson_test_command, self.jumpstart_dir)
+
+        run_assets = {}
 
         generate_trace = bool(self.meson_options.get("generate_trace", False))
         if generate_trace:
@@ -229,39 +221,17 @@ class Meson:
                     f"meson test passed but trace file not created by diag: {self.trace_file}"
                 )
                 raise MesonBuildError(error_msg)
-            self.diag_build_target.add_build_asset("trace", self.trace_file)
-            log.debug(f"Diag trace file: {self.diag_build_target.get_build_asset('trace')}")
-        elif os.path.exists(self.trace_file):
+
+            run_assets["trace"] = self.trace_file
+        elif self.trace_file and os.path.exists(self.trace_file):
             error_msg = (
                 f"Trace generation was disabled but trace file was created: {self.trace_file}"
             )
             raise MesonBuildError(error_msg)
 
         if return_code != 0:
-            error_msg = f"meson test failed for diag: {self.diag_build_target.diag_source.diag_name}.\nPartial diag build assets may have been generated in {self.diag_build_target.build_dir}\n"
+            error_msg = f"meson test failed for diag: {self.diag_name}.\nPartial diag build assets may have been generated in {self.diag_build_target.build_dir}\n"
             log.error(error_msg)
             raise MesonBuildError(error_msg, return_code)
 
-    def get_generated_diag(self):
-        return self.diag_build_target
-
-
-def build_jumpstart_diag(
-    jumpstart_dir,
-    diag_build_target,
-    disable_diag_run=False,
-    keep_meson_builddir=False,
-):
-    meson = Meson(jumpstart_dir, diag_build_target, keep_meson_builddir)
-
-    meson.setup()
-    meson.compile()
-
-    if disable_diag_run is True:
-        log.warning(
-            f"Skipping running diag {diag_build_target.diag_source.diag_name} on target {diag_build_target.target} as diag run is disabled."
-        )
-    else:
-        meson.test()
-
-    return meson.get_generated_diag()
+        return run_assets
