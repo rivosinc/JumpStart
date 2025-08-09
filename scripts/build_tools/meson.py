@@ -8,8 +8,6 @@ import shutil
 import sys
 import tempfile
 
-import yaml
-
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
 from data_structures import DictUtils  # noqa
 from system import functions as system_functions  # noqa
@@ -43,8 +41,6 @@ class Meson:
         diag_build_target,
         keep_meson_builddir,
         buildtype,
-        meson_options_cmd_line_overrides,
-        diag_attributes_cmd_line_overrides,
     ) -> None:
         self.meson_builddir = None
         self.keep_meson_builddir = None
@@ -65,16 +61,14 @@ class Meson:
 
         self.keep_meson_builddir = keep_meson_builddir
 
-        self.setup_default_meson_options(diag_build_target, diag_attributes_cmd_line_overrides)
-        self.apply_meson_option_overrides_from_diag(diag_build_target.diag_source)
-        self.apply_meson_option_overrides_from_cmd_line(meson_options_cmd_line_overrides)
+        self.setup_default_meson_options(diag_build_target)
 
     def __del__(self):
         if self.meson_builddir is not None and self.keep_meson_builddir is False:
             log.debug(f"Removing meson build directory: {self.meson_builddir}")
             shutil.rmtree(self.meson_builddir)
 
-    def setup_default_meson_options(self, diag_build_target, diag_attributes_cmd_line_overrides):
+    def setup_default_meson_options(self, diag_build_target):
         self.meson_options["diag_name"] = self.diag_name
         self.meson_options["diag_sources"] = diag_build_target.diag_source.get_sources()
         self.meson_options["diag_attributes_yaml"] = (
@@ -111,25 +105,10 @@ class Meson:
             f"build_rng_seed={diag_build_target.rng_seed}"
         )
 
-        if diag_attributes_cmd_line_overrides is not None:
-            self.meson_options["diag_attribute_overrides"].extend(
-                diag_attributes_cmd_line_overrides
-            )
-
-    def apply_meson_option_overrides_from_diag(self, diag_source):
-        if diag_source.get_meson_options_override_yaml() is not None:
-            with open(diag_source.get_meson_options_override_yaml()) as f:
-                meson_option_overrides = yaml.safe_load(f)
-                DictUtils.override_dict(self.meson_options, meson_option_overrides, False, True)
-
-    def apply_meson_option_overrides_from_cmd_line(self, meson_options_cmd_line_overrides):
-        if meson_options_cmd_line_overrides is not None:
-            DictUtils.override_dict(
-                self.meson_options,
-                DictUtils.create_dict(meson_options_cmd_line_overrides),
-                False,
-                True,
-            )
+    def override_meson_options_from_dict(self, overrides_dict):
+        if overrides_dict is None:
+            return
+        DictUtils.override_dict(self.meson_options, overrides_dict, False, True)
 
     def setup(self):
         if self.meson_options["buildtype"] != self.buildtype:

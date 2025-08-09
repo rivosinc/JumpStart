@@ -167,9 +167,28 @@ class DiagBuildTarget:
             self,
             keep_meson_builddir,
             buildtype,
-            meson_options_cmd_line_overrides,
-            diag_attributes_cmd_line_overrides,
         )
+
+        # Apply meson option overrides now that Meson object exists
+        # 1) From diag's YAML file, if present
+        meson_yaml_path = self.diag_source.get_meson_options_override_yaml()
+        if meson_yaml_path is not None:
+            with open(meson_yaml_path) as f:
+                overrides_from_yaml = yaml.safe_load(f)
+            self.meson.override_meson_options_from_dict(overrides_from_yaml)
+
+        # Meson option overrides from the command line
+        if meson_options_cmd_line_overrides is not None:
+            from data_structures import DictUtils  # local import to avoid cycles
+
+            cmd_overrides_dict = DictUtils.create_dict(meson_options_cmd_line_overrides)
+            self.meson.override_meson_options_from_dict(cmd_overrides_dict)
+
+        # Apply diag attribute overrides as a meson option
+        if diag_attributes_cmd_line_overrides:
+            self.meson.override_meson_options_from_dict(
+                {"diag_attribute_overrides": diag_attributes_cmd_line_overrides}
+            )
 
     def compile(self):
         if self.meson is None:
