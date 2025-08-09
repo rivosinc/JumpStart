@@ -4,7 +4,6 @@
 
 import logging as log
 import os
-import random
 import shutil
 import sys
 import tempfile
@@ -23,13 +22,13 @@ class MesonBuildError(Exception):
         super().__init__(self.message)
 
 
-def convert_cpu_mask_to_num_active_cpus(cpu_mask):
-    num_cpus = 0
-    cpu_mask = int(cpu_mask, 2)
-    while cpu_mask != 0:
-        num_cpus += 1
-        cpu_mask >>= 1
-    return num_cpus
+def quote_if_needed(x):
+    x_str = str(x)
+    if (x_str.startswith("'") and x_str.endswith("'")) or (
+        x_str.startswith('"') and x_str.endswith('"')
+    ):
+        return x_str
+    return f"'{x_str}'"
 
 
 class Meson:
@@ -43,9 +42,6 @@ class Meson:
         diag_sources,
         diag_attributes_yaml,
         boot_config,
-        target,
-        rng_seed,
-        active_cpu_mask,
         keep_meson_builddir,
         buildtype,
     ) -> None:
@@ -72,9 +68,6 @@ class Meson:
             diag_sources,
             diag_attributes_yaml,
             boot_config,
-            target,
-            rng_seed,
-            active_cpu_mask,
         )
 
     def __del__(self):
@@ -87,9 +80,6 @@ class Meson:
         diag_sources,
         diag_attributes_yaml,
         boot_config,
-        target,
-        rng_seed,
-        active_cpu_mask,
     ):
         self.meson_options["diag_name"] = self.diag_name
         self.meson_options["diag_sources"] = diag_sources
@@ -102,24 +92,6 @@ class Meson:
         self.meson_options["spike_additional_arguments"] = []
 
         self.trace_file = f"{self.meson_builddir}/{self.diag_name}.itrace"
-
-        self.meson_options["diag_target"] = target
-        if target == "spike":
-            self.meson_options["spike_binary"] = "spike"
-            rng = random.Random(rng_seed)
-            self.meson_options["spike_additional_arguments"].append(
-                "--interleave=" + str(rng.randint(1, 400))
-            )
-
-        else:
-            raise Exception(f"Unknown target: {target}")
-
-        if active_cpu_mask is not None and target == "spike":
-            self.meson_options["spike_additional_arguments"].append(
-                f"-p{convert_cpu_mask_to_num_active_cpus(active_cpu_mask)}"
-            )
-
-        self.meson_options["diag_attribute_overrides"].append(f"build_rng_seed={rng_seed}")
 
     def override_meson_options_from_dict(self, overrides_dict):
         if overrides_dict is None:
@@ -169,14 +141,6 @@ class Meson:
             log.error(error_msg)
             raise MesonBuildError(error_msg, return_code)
 
-        if self.keep_meson_builddir is True:
-            # import here to avoid a circular import at module import time
-            from .diag import AssetAction  # noqa
-
-            self.diag_build_target.add_build_asset(
-                "meson_builddir", self.meson_builddir, None, AssetAction.NO_COPY
-            )
-
     def compile(self):
         meson_compile_command = ["meson", "compile", "-v", "-C", self.meson_builddir]
         log.info(f"Running meson compile.\n{' '.join(meson_compile_command)}")
@@ -225,7 +189,7 @@ class Meson:
             raise MesonBuildError(error_msg)
 
         if return_code != 0:
-            error_msg = f"meson test failed for diag: {self.diag_name}.\nPartial diag build assets may have been generated in {self.diag_build_target.build_dir}\n"
+            error_msg = f"meson test failed for diag: {self.diag_name}.\n"
             log.error(error_msg)
             raise MesonBuildError(error_msg, return_code)
 

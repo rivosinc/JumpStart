@@ -15,6 +15,15 @@ from system import functions as system_functions  # noqa
 from .meson import Meson  # noqa
 
 
+def convert_cpu_mask_to_num_active_cpus(cpu_mask):
+    num_cpus = 0
+    cpu_mask = int(cpu_mask, 2)
+    while cpu_mask != 0:
+        num_cpus += 1
+        cpu_mask >>= 1
+    return num_cpus
+
+
 class DiagSource:
     source_file_extensions = [".c", ".S"]
     diag_attribute_yaml_extensions = [
@@ -168,15 +177,31 @@ class DiagBuildTarget:
             self.diag_source.get_sources(),
             self.diag_source.get_diag_attributes_yaml(),
             self.boot_config,
-            self.target,
-            self.rng_seed,
-            self.diag_source.active_cpu_mask,
             keep_meson_builddir,
             buildtype,
         )
 
-        # Apply meson option overrides now that Meson object exists
-        # 1) From diag's YAML file, if present
+        # Start applying meson option overrides.
+
+        # Default meson option overrides for run targets
+        self.meson.override_meson_options_from_dict({"diag_target": self.target})
+        if self.target == "spike":
+            spike_overrides = {
+                "spike_additional_arguments": [
+                    f"--interleave={self.rng.randint(1, 400)}",
+                ],
+            }
+            if self.diag_source.active_cpu_mask is not None:
+                spike_overrides["spike_additional_arguments"].append(
+                    f"-p{convert_cpu_mask_to_num_active_cpus(self.diag_source.active_cpu_mask)}"
+                )
+            self.meson.override_meson_options_from_dict(spike_overrides)
+
+        self.meson.override_meson_options_from_dict(
+            {"diag_attribute_overrides": [f"build_rng_seed={self.rng_seed}"]}
+        )
+
+        # Meson option overrides from diag's YAML file
         meson_yaml_path = self.diag_source.get_meson_options_override_yaml()
         if meson_yaml_path is not None:
             with open(meson_yaml_path) as f:
