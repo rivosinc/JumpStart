@@ -8,6 +8,7 @@ import os
 import random
 import shutil
 import sys
+from typing import List, Optional
 
 import yaml
 from system import functions as system_functions  # noqa
@@ -32,12 +33,12 @@ class DiagSource:
     ]
     meson_options_override_yaml_extensions = ["meson_option_overrides.yaml"]
 
-    def __init__(self, diag_src_dir) -> None:
+    def __init__(self, diag_src_dir: str) -> None:
         self.diag_src_dir = os.path.abspath(diag_src_dir)
         if not os.path.exists(self.diag_src_dir):
             raise Exception(f"Diag source directory does not exist: {self.diag_src_dir}")
 
-        self.diag_sources = system_functions.find_files_with_extensions_in_dir(
+        self.diag_sources: List[str] = system_functions.find_files_with_extensions_in_dir(
             self.diag_src_dir, self.source_file_extensions
         )
         if len(self.diag_sources) == 0:
@@ -58,8 +59,10 @@ class DiagSource:
             )
         self.diag_attributes_yaml = self.diag_attributes_yaml[0]
 
-        self.meson_options_override_yaml = system_functions.find_files_with_extensions_in_dir(
-            self.diag_src_dir, self.meson_options_override_yaml_extensions
+        self.meson_options_override_yaml: Optional[str] = (
+            system_functions.find_files_with_extensions_in_dir(
+                self.diag_src_dir, self.meson_options_override_yaml_extensions
+            )
         )
         if len(self.meson_options_override_yaml) > 1:
             raise Exception(
@@ -70,9 +73,9 @@ class DiagSource:
         else:
             self.meson_options_override_yaml = None
 
-        self.diag_name = os.path.basename(os.path.normpath(self.diag_src_dir))
+        self.diag_name: str = os.path.basename(os.path.normpath(self.diag_src_dir))
 
-        self.active_cpu_mask = None
+        self.active_cpu_mask: Optional[str] = None
         with open(self.get_diag_attributes_yaml()) as f:
             diag_attributes = yaml.safe_load(f)
             if "active_cpu_mask" in diag_attributes:
@@ -84,22 +87,22 @@ class DiagSource:
     def __str__(self) -> str:
         return f"\t\tDiag: {self.diag_name}, Source Path: {self.diag_src_dir}\n\t\tSources: {self.diag_sources}\n\t\tAttributes: {self.diag_attributes_yaml}\n\t\tMeson options overrides file: {self.meson_options_override_yaml}"
 
-    def get_name(self):
+    def get_name(self) -> str:
         return self.diag_name
 
-    def get_diag_src_dir(self):
+    def get_diag_src_dir(self) -> str:
         return self.diag_src_dir
 
-    def get_sources(self):
+    def get_sources(self) -> List[str]:
         return self.diag_sources
 
-    def get_diag_attributes_yaml(self):
+    def get_diag_attributes_yaml(self) -> str:
         return self.diag_attributes_yaml
 
-    def get_meson_options_override_yaml(self):
+    def get_meson_options_override_yaml(self) -> Optional[str]:
         return self.meson_options_override_yaml
 
-    def is_valid_source_directory(diag_src_dir):
+    def is_valid_source_directory(diag_src_dir: str) -> bool:
         # if we can successfully make an object without taking an
         # exception then we have a valid diag source directory.
         try:
@@ -135,21 +138,21 @@ class DiagBuildTarget:
         keep_meson_builddir,
     ) -> None:
         self.build_assets = {}
-        self.diag_source = DiagSource(diag_src_dir)
+        self.diag_source: DiagSource = DiagSource(diag_src_dir)
 
         assert target in self.supported_targets
-        self.target = target
+        self.target: str = target
 
-        self.rng_seed = rng_seed
+        self.rng_seed: int = rng_seed
         if self.rng_seed is None:
             self.rng_seed = random.randrange(sys.maxsize)
         log.debug(
             f"DiagBuildTarget: {self.diag_source.diag_name} Seeding RNG with: {self.rng_seed}"
         )
-        self.rng = random.Random(self.rng_seed)
+        self.rng: random.Random = random.Random(self.rng_seed)
 
         assert boot_config in self.supported_boot_configs
-        self.boot_config = boot_config
+        self.boot_config: str = boot_config
 
         if self.target == "spike" and self.boot_config != "fw-none":
             raise Exception(
@@ -167,7 +170,7 @@ class DiagBuildTarget:
                     )
                 self.diag_source.active_cpu_mask = override_value
 
-        self.build_dir = os.path.abspath(build_dir)
+        self.build_dir: str = os.path.abspath(build_dir)
         system_functions.create_empty_directory(self.build_dir)
 
         self.meson = Meson(

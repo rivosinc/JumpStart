@@ -8,6 +8,7 @@ import pprint
 import shutil
 import sys
 import tempfile
+from typing import Any, Dict, List
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
 from data_structures import DictUtils  # noqa
@@ -33,18 +34,18 @@ def quote_if_needed(x):
 
 
 class Meson:
-    supported_toolchains = ["gcc"]
+    supported_toolchains: List[str] = ["gcc"]
 
     def __init__(
         self,
-        toolchain,
-        jumpstart_dir,
-        diag_name,
-        diag_sources,
-        diag_attributes_yaml,
-        boot_config,
-        keep_meson_builddir,
-        buildtype,
+        toolchain: str,
+        jumpstart_dir: str,
+        diag_name: str,
+        diag_sources: List[str],
+        diag_attributes_yaml: str,
+        boot_config: str,
+        keep_meson_builddir: bool,
+        buildtype: str,
     ) -> None:
         self.meson_builddir = None
         self.keep_meson_builddir = None
@@ -59,11 +60,11 @@ class Meson:
         self.diag_name = diag_name
         self.buildtype = buildtype
 
-        self.meson_options = {}
+        self.meson_options: Dict[str, Any] = {}
 
         self.meson_builddir = tempfile.mkdtemp(prefix=f"{self.diag_name}_meson_builddir_")
 
-        self.keep_meson_builddir = keep_meson_builddir
+        self.keep_meson_builddir: bool = keep_meson_builddir
 
         self.setup_default_meson_options(
             diag_sources,
@@ -73,15 +74,18 @@ class Meson:
 
     def __del__(self):
         if self.meson_builddir is not None and self.keep_meson_builddir is False:
-            log.debug(f"Removing meson build directory: {self.meson_builddir}")
-            shutil.rmtree(self.meson_builddir)
+            try:
+                log.debug(f"Removing meson build directory: {self.meson_builddir}")
+                shutil.rmtree(self.meson_builddir)
+            except Exception as exc:
+                log.debug(f"Ignoring error during meson build directory cleanup: {exc}")
 
     def setup_default_meson_options(
         self,
-        diag_sources,
-        diag_attributes_yaml,
-        boot_config,
-    ):
+        diag_sources: List[str],
+        diag_attributes_yaml: str,
+        boot_config: str,
+    ) -> None:
         self.meson_options["diag_name"] = self.diag_name
         self.meson_options["diag_sources"] = diag_sources
         self.meson_options["diag_attributes_yaml"] = diag_attributes_yaml
@@ -94,7 +98,7 @@ class Meson:
 
         self.trace_file = f"{self.meson_builddir}/{self.diag_name}.itrace"
 
-    def override_meson_options_from_dict(self, overrides_dict):
+    def override_meson_options_from_dict(self, overrides_dict: Dict[str, Any]) -> None:
         if overrides_dict is None:
             return
         DictUtils.override_dict(self.meson_options, overrides_dict, False, True)
