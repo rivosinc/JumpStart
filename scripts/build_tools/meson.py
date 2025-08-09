@@ -4,6 +4,7 @@
 
 import logging as log
 import os
+import random
 import shutil
 import sys
 import tempfile
@@ -38,7 +39,13 @@ class Meson:
         self,
         toolchain,
         jumpstart_dir,
-        diag_build_target,
+        diag_name,
+        diag_sources,
+        diag_attributes_yaml,
+        boot_config,
+        target,
+        rng_seed,
+        active_cpu_mask,
         keep_meson_builddir,
         buildtype,
     ) -> None:
@@ -52,7 +59,7 @@ class Meson:
             raise Exception(f"Jumpstart directory does not exist: {jumpstart_dir}")
         self.jumpstart_dir = os.path.abspath(jumpstart_dir)
 
-        self.diag_name = diag_build_target.diag_source.diag_name
+        self.diag_name = diag_name
         self.buildtype = buildtype
 
         self.meson_options = {}
@@ -61,20 +68,33 @@ class Meson:
 
         self.keep_meson_builddir = keep_meson_builddir
 
-        self.setup_default_meson_options(diag_build_target)
+        self.setup_default_meson_options(
+            diag_sources,
+            diag_attributes_yaml,
+            boot_config,
+            target,
+            rng_seed,
+            active_cpu_mask,
+        )
 
     def __del__(self):
         if self.meson_builddir is not None and self.keep_meson_builddir is False:
             log.debug(f"Removing meson build directory: {self.meson_builddir}")
             shutil.rmtree(self.meson_builddir)
 
-    def setup_default_meson_options(self, diag_build_target):
+    def setup_default_meson_options(
+        self,
+        diag_sources,
+        diag_attributes_yaml,
+        boot_config,
+        target,
+        rng_seed,
+        active_cpu_mask,
+    ):
         self.meson_options["diag_name"] = self.diag_name
-        self.meson_options["diag_sources"] = diag_build_target.diag_source.get_sources()
-        self.meson_options["diag_attributes_yaml"] = (
-            diag_build_target.diag_source.get_diag_attributes_yaml()
-        )
-        self.meson_options["boot_config"] = diag_build_target.boot_config
+        self.meson_options["diag_sources"] = diag_sources
+        self.meson_options["diag_attributes_yaml"] = diag_attributes_yaml
+        self.meson_options["boot_config"] = boot_config
         self.meson_options["diag_attribute_overrides"] = []
 
         self.meson_options["buildtype"] = self.buildtype
@@ -83,27 +103,23 @@ class Meson:
 
         self.trace_file = f"{self.meson_builddir}/{self.diag_name}.itrace"
 
-        self.meson_options["diag_target"] = diag_build_target.target
-        if diag_build_target.target == "spike":
+        self.meson_options["diag_target"] = target
+        if target == "spike":
             self.meson_options["spike_binary"] = "spike"
+            rng = random.Random(rng_seed)
             self.meson_options["spike_additional_arguments"].append(
-                "--interleave=" + str(diag_build_target.rng.randint(1, 400))
+                "--interleave=" + str(rng.randint(1, 400))
             )
 
         else:
-            raise Exception(f"Unknown target: {diag_build_target.target}")
+            raise Exception(f"Unknown target: {target}")
 
-        if (
-            diag_build_target.diag_source.active_cpu_mask is not None
-            and diag_build_target.target == "spike"
-        ):
+        if active_cpu_mask is not None and target == "spike":
             self.meson_options["spike_additional_arguments"].append(
-                f"-p{convert_cpu_mask_to_num_active_cpus(diag_build_target.diag_source.active_cpu_mask)}"
+                f"-p{convert_cpu_mask_to_num_active_cpus(active_cpu_mask)}"
             )
 
-        self.meson_options["diag_attribute_overrides"].append(
-            f"build_rng_seed={diag_build_target.rng_seed}"
-        )
+        self.meson_options["diag_attribute_overrides"].append(f"build_rng_seed={rng_seed}")
 
     def override_meson_options_from_dict(self, overrides_dict):
         if overrides_dict is None:

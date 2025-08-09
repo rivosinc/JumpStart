@@ -164,7 +164,13 @@ class DiagBuildTarget:
         self.meson = Meson(
             toolchain,
             jumpstart_dir,
-            self,
+            self.diag_source.diag_name,
+            self.diag_source.get_sources(),
+            self.diag_source.get_diag_attributes_yaml(),
+            self.boot_config,
+            self.target,
+            self.rng_seed,
+            self.diag_source.active_cpu_mask,
             keep_meson_builddir,
             buildtype,
         )
