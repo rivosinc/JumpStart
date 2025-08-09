@@ -10,7 +10,7 @@ import argparse
 import logging as log
 import os
 
-from build_tools import DiagBuildTarget, Meson
+from build_tools import DiagBuildUnit, Meson
 
 
 def main():
@@ -74,7 +74,7 @@ def main():
         required=False,
         type=str,
         default="spike",
-        choices=DiagBuildTarget.supported_targets,
+        choices=DiagBuildUnit.supported_targets,
     )
     parser.add_argument(
         "--toolchain",
@@ -86,11 +86,11 @@ def main():
     )
     parser.add_argument(
         "--boot_config",
-        help=f"Boot Config to build diag for. Options: {DiagBuildTarget.supported_boot_configs}.",
+        help=f"Boot Config to build diag for. Options: {DiagBuildUnit.supported_boot_configs}.",
         required=False,
         type=str,
         default="fw-none",
-        choices=DiagBuildTarget.supported_boot_configs,
+        choices=DiagBuildUnit.supported_boot_configs,
     )
     parser.add_argument(
         "--disable_diag_run",
@@ -143,7 +143,7 @@ def main():
 
     if args.active_cpu_mask_override is not None:
         args.override_diag_attributes.append(f"active_cpu_mask={args.active_cpu_mask_override}")
-    diag_build_target = DiagBuildTarget(
+    diag_build_unit = DiagBuildUnit(
         args.diag_src_dir,
         args.diag_build_dir,
         args.target,
@@ -157,12 +157,12 @@ def main():
         args.keep_meson_builddir,
     )
 
-    diag_build_target.compile()
+    diag_build_unit.compile()
 
     if args.disable_diag_run is False:
-        diag_build_target.run()
+        diag_build_unit.run()
 
-    log.info(f"Diag built: {diag_build_target}")
+    log.info(f"Diag built: {diag_build_unit}")
 
 
 if __name__ == "__main__":

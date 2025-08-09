@@ -4,7 +4,7 @@
 
 # __init__.py
 
-from .diag import AssetAction, DiagBuildTarget, DiagSource
+from .diag import AssetAction, DiagBuildUnit, DiagSource
 from .meson import Meson
 
 # PEP8 guideline:
@@ -15,6 +15,6 @@ from .meson import Meson
 __all__ = [
     "AssetAction",
     "DiagSource",
-    "DiagBuildTarget",
+    "DiagBuildUnit",
     "Meson",
 ]

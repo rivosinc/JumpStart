@@ -119,7 +119,7 @@ class AssetAction(enum.IntEnum):
     NO_COPY = 2
 
 
-class DiagBuildTarget:
+class DiagBuildUnit:
     supported_targets = ["spike"]
     supported_boot_configs = ["fw-none"]
 
@@ -146,9 +146,7 @@ class DiagBuildTarget:
         self.rng_seed: int = rng_seed
         if self.rng_seed is None:
             self.rng_seed = random.randrange(sys.maxsize)
-        log.debug(
-            f"DiagBuildTarget: {self.diag_source.diag_name} Seeding RNG with: {self.rng_seed}"
-        )
+        log.debug(f"DiagBuildUnit: {self.diag_source.diag_name} Seeding RNG with: {self.rng_seed}")
         self.rng: random.Random = random.Random(self.rng_seed)
 
         assert boot_config in self.supported_boot_configs
