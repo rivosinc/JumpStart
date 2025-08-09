@@ -4,6 +4,7 @@
 
 import logging as log
 import os
+import pprint
 import shutil
 import sys
 import tempfile
@@ -98,6 +99,20 @@ class Meson:
             return
         DictUtils.override_dict(self.meson_options, overrides_dict, False, True)
 
+    def get_meson_options(self) -> Dict[str, Any]:
+        """Return the current Meson options as a dict."""
+        return self.meson_options
+
+    def get_meson_options_pretty(self, width: int = 120, spacing: str = "") -> str:
+        """Return a pretty-printed string of the Meson options.
+
+        spacing: A prefix added to each line to control left padding in callers.
+        """
+        formatted = pprint.pformat(self.meson_options, width=width)
+        if spacing:
+            return "\n".join(f"{spacing}{line}" for line in formatted.splitlines())
+        return formatted
+
     def setup(self):
         if self.meson_options["buildtype"] != self.buildtype:
             raise Exception(
@@ -129,6 +144,8 @@ class Meson:
                 f"cross_compile/{self.toolchain}.txt",
             ]
         )
+
+        log.debug("Meson options:\n%s", self.get_meson_options_pretty(spacing="\t"))
 
         # Print the meson setup command in a format that can be copy-pasted to
         # reproduce the build.
