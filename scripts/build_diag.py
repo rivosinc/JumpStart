@@ -170,6 +170,14 @@ def main():
         "diag_generate_disassembly": "true",
     }
 
+    if args.diag_custom_defines:
+        script_meson_option_overrides["diag_custom_defines"] = ",".join(args.diag_custom_defines)
+
+    # Only add script defaults for options that haven't been explicitly overridden
+    for key, value in script_meson_option_overrides.items():
+        if not any(key in override for override in args.override_meson_options):
+            args.override_meson_options.append(f"{key}={value}")
+
     if args.buildtype is not None:
         args.override_meson_options.append(f"buildtype={args.buildtype}")
 
@@ -242,7 +250,6 @@ def main():
             0, f"{key}={value}"
         )
 
-    # Remove batch_mode from factory call (rivos internal)
     factory = DiagFactory(
         build_manifest_yaml=build_manifest_yaml,
         root_build_dir=args.diag_build_dir,
