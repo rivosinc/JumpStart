@@ -91,6 +91,7 @@ int run_function_in_smode(uint64_t function_address, ...);
 int run_function_in_vsmode(uint64_t function_address, ...);
 int run_function_in_vumode(uint64_t function_address, ...);
 
+void setup_mmu_from_smode(void);
 void disable_mmu_from_smode(void);
 
 uint64_t get_mmode_trap_handler_override(uint64_t mcause);

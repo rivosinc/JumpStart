@@ -8,7 +8,7 @@ active_cpu_mask: "0b1"
 
 mappings:
   -
-    va: 0xc0020000
+    va: 0xd0000000
     pa: 0xc0020000
     xwr: "0b101"
     page_size: 0x1000
@@ -16,14 +16,21 @@ mappings:
     pma_memory_type: "wb"
     linker_script_section: ".text"
   -
-    va: 0xc0023000
+    va: 0xd0002000
     pa: 0xc0023000
     xwr: "0b011"
     page_size: 0x1000
     num_pages: 1
     pma_memory_type: "wb"
     linker_script_section: ".data"
-
+  -
+    va: 0xc0024000
+    pa: 0xc0024000
+    xwr: "0b101"
+    page_size: 0x1000
+    num_pages: 2
+    pma_memory_type: "wb"
+    linker_script_section: ".text_safe"
   -
     va: 0xc0033000
     pa: 0xc0043000

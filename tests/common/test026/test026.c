@@ -13,6 +13,14 @@ extern uint64_t load_from_address(uint64_t address);
 
 uint8_t PA_access_faulted = 0;
 
+__attribute__((section(".text_safe"))) __attribute__((noinline)) static uint64_t
+load_with_disabled_mmu(uint64_t addr) {
+  disable_mmu_from_smode();
+  uint64_t val = *(uint64_t *)addr;
+  setup_mmu_from_smode();
+  return val;
+}
+
 static void skip_instruction(void) {
   uint64_t reg = get_sepc_for_current_exception();
 
@@ -90,10 +98,8 @@ int main(void) {
     return DIAG_FAILED;
   }
 
-  disable_mmu_from_smode();
-
   // PA access should now succeed with the MMU off.
-  uint64_t value_at_PA = load_from_address(PA);
+  uint64_t value_at_PA = load_with_disabled_mmu(PA);
   if (value_at_PA != new_magic_value) {
     return DIAG_FAILED;
   }
