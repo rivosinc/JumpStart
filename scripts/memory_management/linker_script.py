@@ -20,7 +20,13 @@ class LinkerScriptSection:
             raise ValueError(
                 f"Entry does not have a valid destination address for the {stage} stage: {entry}"
             )
-        self.start_address = entry.get_field(TranslationStage.get_translates_to(stage))
+
+        # Get VA as linker script is supposed to use Virtual address. For M-mode and R-code mappings
+        # fallback to PA as these don't have a virtual address.
+        self.virt_start_address = entry.get_field(TranslationStage.get_translates_from(stage))
+        self.phys_start_address = entry.get_field(TranslationStage.get_translates_to(stage))
+        if self.virt_start_address is None:
+            self.virt_start_address = self.phys_start_address
 
         if entry.get_field("num_pages") is None:
             raise ValueError(f"Entry does not have a number of pages: {entry}")
@@ -67,11 +73,17 @@ class LinkerScriptSection:
     def get_top_level_name(self):
         return self.top_level_name
 
-    def get_start_address(self):
-        return self.start_address
+    def get_virt_start_address(self):
+        return self.virt_start_address
 
-    def get_end_address(self):
-        return self.start_address + self.size
+    def get_virt_end_address(self):
+        return self.virt_start_address + self.size
+
+    def get_phys_start_address(self):
+        return self.phys_start_address
+
+    def get_phys_end_address(self):
+        return self.phys_start_address + self.size
 
     def get_size(self):
         return self.size
@@ -91,11 +103,11 @@ class LinkerScriptSection:
             if subsection not in self.subsections:
                 self.subsections.append(subsection)
 
-        if self.get_start_address() > other_section.get_start_address():
-            self.start_address = other_section.get_start_address()
+        if self.get_phys_start_address() > other_section.get_phys_start_address():
+            self.phys_start_address = other_section.get_phys_start_address()
 
-        if self.get_end_address() < other_section.get_end_address():
-            self.size = other_section.get_end_address() - self.get_start_address()
+        if self.get_phys_end_address() < other_section.get_phys_end_address():
+            self.size = other_section.get_phys_end_address() - self.get_phys_start_address()
 
         if other_section.is_padded():
             self.padded = True
@@ -104,7 +116,7 @@ class LinkerScriptSection:
             self.type = other_section.get_type()
 
     def __str__(self):
-        return f"Section: {self.get_top_level_name()}; Start Address: {hex(self.get_start_address())}; Size: {self.get_size()}; Subsections: {self.get_subsections()}; Type: {self.get_type()}; Padded: {self.is_padded()}"
+        return f"Section: {self.get_top_level_name()}; Start Address: {hex(self.get_phys_start_address())}; Size: {self.get_size()}; Subsections: {self.get_subsections()}; Type: {self.get_type()}; Padded: {self.is_padded()}"
 
 
 class LinkerScript:
@@ -145,7 +157,7 @@ class LinkerScript:
                     f"Section names in {new_section} are used in {len(existing_sections_with_matching_subsections)} other sections."
                 )
 
-        self.sections.sort(key=lambda x: x.get_start_address())
+        self.sections.sort(key=lambda x: x.get_phys_start_address())
 
         # Add guard sections after each section that isn't immediately followed
         # by another section.
@@ -155,7 +167,10 @@ class LinkerScript:
         # for each guard section. Otherwise the linker will ignore the guard section.
         self.guard_sections = []
         for i in range(len(self.sections) - 1):
-            if self.sections[i].get_end_address() < self.sections[i + 1].get_start_address():
+            if (
+                self.sections[i].get_phys_end_address()
+                < self.sections[i + 1].get_phys_start_address()
+            ):
                 self.guard_sections.append(
                     LinkerScriptSection(
                         MemoryMapping(
@@ -165,7 +180,7 @@ class LinkerScript:
                                 ],  # any stage works. We just need a valid one.
                                 TranslationStage.get_translates_to(
                                     TranslationStage.get_enabled_stages()[0]
-                                ): self.sections[i].get_end_address(),
+                                ): self.sections[i].get_phys_end_address(),
                                 "num_pages": 1,
                                 "page_size": PageSize.SIZE_4K,
                                 "linker_script_section": f".linker_guard_section_{len(self.guard_sections)}",
@@ -174,11 +189,11 @@ class LinkerScript:
                     )
                 )
         self.sections.extend(self.guard_sections)
-        self.sections.sort(key=lambda x: x.get_start_address())
+        self.sections.sort(key=lambda x: x.get_phys_start_address())
 
         # check for overlaps in the sections and that sections are within ELF address range
         for i in range(len(self.sections)):
-            section_start = self.sections[i].get_start_address()
+            section_start = self.sections[i].get_phys_start_address()
             section_end = section_start + self.sections[i].get_size()
 
             # Check section is within allowed ELF address range if specified
@@ -190,7 +205,7 @@ class LinkerScript:
 
             # Check for overlap with next section
             if i < len(self.sections) - 1:
-                if section_end > self.sections[i + 1].get_start_address():
+                if section_end > self.sections[i + 1].get_phys_start_address():
                     raise ValueError(
                         f"Linker sections overlap:\n\t{self.sections[i]}\n\t{self.sections[i + 1]}"
                     )
@@ -237,6 +252,15 @@ class LinkerScript:
         file.write('OUTPUT_ARCH( "riscv" )\n')
         file.write(f"ENTRY({self.get_entry_label()})\n\n")
 
+        # Add MEMORY region definitions
+        file.write("MEMORY\n{\n")
+        for section in self.get_sections():
+            memory_name = section.get_top_level_name().replace(".", "_").upper()
+            start_addr = hex(section.get_virt_start_address())
+            size = hex(section.get_size())
+            file.write(f"    {memory_name} (rwx) : ORIGIN = {start_addr}, LENGTH = {size}\n")
+        file.write("}\n\n")
+
         file.write("SECTIONS\n{\n")
         defined_sections = []
 
@@ -245,24 +269,29 @@ class LinkerScript:
         for section in self.get_sections():
             file.write(f"\n\n   /* {','.join(section.get_subsections())}:\n")
             file.write(
-                f"       PA Range: {hex(section.get_start_address())} - {hex(section.get_start_address() + section.get_size())}\n"
+                f"       PA Range: {hex(section.get_phys_start_address())} - {hex(section.get_phys_end_address())}\n"
+                f"       VA Range: {hex(section.get_virt_start_address())} - {hex(section.get_virt_end_address())}\n"
             )
             file.write("   */\n")
-            file.write(f"   . = {hex(section.get_start_address())};\n")
+            file.write(f"   . = {hex(section.get_virt_start_address())};\n")
 
             top_level_section_variable_name_prefix = (
                 section.get_top_level_name().replace(".", "_").upper()
             )
             file.write(f"   {top_level_section_variable_name_prefix}_START = .;\n")
-            file.write(f"   {section.get_top_level_name()} {section.get_type()} : {{\n")
+            file.write(
+                f"   {section.get_top_level_name()} {section.get_type()} :  AT({hex(section.get_phys_start_address())}) {{\n"
+            )
             for section_name in section.get_subsections():
                 assert section_name not in defined_sections
                 file.write(f"      *({section_name})\n")
                 defined_sections.append(section_name)
             if section.is_padded():
                 file.write("      BYTE(0)\n")
-            file.write(f"   }} : {section.get_top_level_name()}\n")
-            file.write(f"   . = {hex(section.get_start_address() + section.get_size() - 1)};\n")
+            file.write(f"   }} > {top_level_section_variable_name_prefix}\n")
+            file.write(
+                f"   . = {hex(section.get_virt_start_address() + section.get_size() - 1)};\n"
+            )
             file.write(f"  {top_level_section_variable_name_prefix}_END = .;\n")
 
         file.write("\n\n/DISCARD/ : { *(" + " ".join(self.get_discard_sections()) + ") }\n")
