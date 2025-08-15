@@ -242,6 +242,7 @@ class PageTableAttributes:
             "pte_ppn_bits": [(53, 28), (27, 19), (18, 10)],
             "page_sizes": [PageSize.SIZE_1G, PageSize.SIZE_2M, PageSize.SIZE_4K],
             "pagetable_sizes": [PageSize.SIZE_4K, PageSize.SIZE_4K, PageSize.SIZE_4K],
+            "va_mask": (1 << 39) - 1,
         },
         "sv48": {
             "pte_size_in_bytes": 8,
@@ -249,6 +250,7 @@ class PageTableAttributes:
             "va_vpn_bits": [(47, 39), (38, 30), (29, 21), (20, 12)],
             "pa_ppn_bits": [(55, 39), (38, 30), (29, 21), (20, 12)],
             "pte_ppn_bits": [(53, 37), (36, 28), (27, 19), (18, 10)],
+            "va_mask": (1 << 48) - 1,
             "page_sizes": [
                 PageSize.SIZE_512G,
                 PageSize.SIZE_1G,
@@ -271,10 +273,12 @@ class PageTableAttributes:
     # sv39x4 is identical to an Sv39 virtual address, except with
     # 2 more bits at the high end in VPN[2]
     mode_attributes["sv39x4"]["va_vpn_bits"][0] = (40, 30)
+    mode_attributes["sv39x4"]["va_mask"] = (1 << 40) - 1
 
     # sv48x4 is identical to an Sv48 virtual address, except with
     # 2 more bits at the high end in VPN[3]
     mode_attributes["sv48x4"]["va_vpn_bits"][0] = (49, 39)
+    mode_attributes["sv48x4"]["va_mask"] = (1 << 49) - 1
 
     # For Sv32x4, Sv39x4, Sv48x4, and Sv57x4, the root page table is 16
     # KiB and must be aligned to a 16-KiB boundary.
@@ -380,6 +384,10 @@ class PageTables:
     def get_new_page(self, va, level):
         log.debug(f"get_page_table_page({hex(va)}, {level})")
         assert self.start_address is not None
+
+        # When creating pagetable entries, we need to ignore the upper VA bits
+        va_mask = self.attributes.get_attribute("va_mask")
+        va = va & va_mask
         # look for an existing pagetable page that contains the given VA
         for page in self.pages:
             if page.contains(va, level):
