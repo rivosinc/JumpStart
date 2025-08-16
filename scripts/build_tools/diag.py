@@ -12,7 +12,6 @@ from typing import Any, List, Optional
 
 import yaml
 from system import functions as system_functions  # noqa
-from utils.binary_utils import generate_padded_binary_from_elf
 
 from .meson import Meson, MesonBuildError  # noqa
 
@@ -112,8 +111,8 @@ class AssetAction(enum.IntEnum):
 
 
 class DiagBuildUnit:
-    supported_targets = ["spike"]
-    supported_boot_configs = ["fw-none"]
+    supported_targets = ["qemu", "spike", "oswis"]
+    supported_boot_configs = ["fw-none", "fw-m", "fw-sbi"]
 
     def __init__(
         self,
@@ -319,7 +318,24 @@ class DiagBuildUnit:
                 ],
             }
 
+            # Check if "interleave=" exists in any spike_additional_arguments in meson options
+            spike_args = self.meson.get_meson_options().get("spike_additional_arguments")
+            interleave_exists = False
+            if spike_args is not None:
+                for arg in spike_args:
+                    if "interleave=" in arg:
+                        interleave_exists = True
+
+            if not interleave_exists:
+                spike_overrides["spike_additional_arguments"].append(
+                    f"--interleave={self.rng.randint(1, 400)}"
+                )
+
             self.meson.override_meson_options_from_dict(spike_overrides)
+        elif self.target == "oswis":
+            self.meson.override_meson_options_from_dict(
+                {"oswis_additional_arguments": [f"--rng_seed={self.rng_seed}"]}
+            )
 
     # ---------------------------------------------------------------------
     # Status label helpers (moved/centralized color logic)
@@ -451,58 +467,6 @@ class DiagBuildUnit:
                 if self.run_error is not None:
                     self.run_state = self.RunState.FAILED
                 # else keep whatever was set earlier
-
-    def generate_padded_binary(self) -> Optional[str]:
-        """
-        Generate a 4-byte aligned binary from the ELF build asset and register it
-        as the 'padded_binary' build asset. Returns the path to the generated
-        binary, or None on failure.
-        """
-        # If already generated and present on disk, return it directly
-        try:
-            existing = self.build_assets.get("padded_binary")
-            if existing and os.path.exists(existing):
-                return existing
-        except Exception:
-            pass
-
-        # Ensure ELF asset exists
-        try:
-            elf_path = self.get_build_asset("elf")
-        except Exception as exc:
-            log.error(f"ELF asset not available for {self.name}: {exc}")
-            return None
-
-        try:
-            gen_path = generate_padded_binary_from_elf(
-                elf_path=elf_path,
-                output_dir_path=self.build_dir,
-                name_for_logs=self.name,
-            )
-            if gen_path is None:
-                return None
-
-            # Register the asset without copying (it's already in build_dir)
-            try:
-                # Remove stale registration if present
-                if "padded_binary" in self.build_assets:
-                    self.build_assets.pop("padded_binary", None)
-                self.add_build_asset(
-                    "padded_binary",
-                    str(gen_path),
-                    asset_action=AssetAction.NO_COPY,
-                )
-            except Exception as exc:
-                # If registration fails for a non-existent file, treat as failure
-                if not os.path.exists(gen_path):
-                    log.error(f"Failed to register padded_binary for {self.name}: {exc}")
-                    return None
-                # Otherwise continue and return the path
-
-            return str(gen_path)
-        except Exception as exc:
-            log.error(f"Failed to generate padded binary for {self.name}: {exc}")
-            return None
 
     def apply_batch_outcome_from_junit_status(self, junit_status: Optional[str]) -> None:
         """Apply batch-run outcome to this unit using a junit testcase status string.
