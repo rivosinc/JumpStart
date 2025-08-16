@@ -128,6 +128,21 @@ class DiagBuildUnit:
         jumpstart_dir,
         keep_meson_builddir,
     ) -> None:
+        self._initialize_state()
+        self._validate_and_parse_yaml_config(yaml_config)
+        self._validate_and_set_target_config(target, boot_config, rng_seed)
+        self._setup_build_environment(build_dir)
+        self._create_meson_instance(toolchain, jumpstart_dir, keep_meson_builddir)
+        self._apply_meson_option_overrides(
+            yaml_config,
+            meson_options_cmd_line_overrides,
+            diag_attributes_cmd_line_overrides,
+            diag_custom_defines_cmd_line_overrides,
+        )
+        self._apply_target_specific_overrides()
+
+    def _initialize_state(self) -> None:
+        """Initialize the build state and status tracking."""
         self.state = enum.Enum("BuildState", "INITIALIZED COMPILED RUN")
         self.current_state = self.state.INITIALIZED
         # Fine-grained status tracking
@@ -143,13 +158,16 @@ class DiagBuildUnit:
         self.run_return_code: Optional[int] = None
         self.build_assets = {}
 
-        # Resolve diag source directory from YAML config only
+    def _validate_and_parse_yaml_config(self, yaml_config: dict) -> None:
+        """Validate and parse the YAML configuration to extract diag information."""
         if yaml_config is None:
             raise Exception("yaml_config is required for DiagBuildUnit")
+
         # yaml_config must be of the form { <diag_name>: {...}, global_overrides: {...}? }
         diag_blocks = {k: v for k, v in yaml_config.items() if k != "global_overrides"}
         if len(diag_blocks) != 1:
             raise Exception("Expected exactly one per-diag block in yaml_config")
+
         # Extract the diag name and its config block
         self.name, only_block = next(iter(diag_blocks.items()))
         resolved_src_dir = only_block.get("source_dir")
@@ -157,28 +175,12 @@ class DiagBuildUnit:
             raise Exception(
                 "Diag source directory not provided. Expected 'source_dir' in per-diag YAML."
             )
+
         self.diag_source: DiagSource = DiagSource(resolved_src_dir)
+        self.expected_fail: bool = only_block.get("expected_fail", False)
 
-        # expected_fail can be provided per-diag in the manifest
-        def _coerce_bool(value) -> bool:
-            if value is None:
-                return False
-            if isinstance(value, bool):
-                return value
-            try:
-                if isinstance(value, (int, float)):
-                    return bool(value)
-                val_str = str(value).strip().lower()
-                if val_str in ("true", "yes", "y", "1"):
-                    return True
-                if val_str in ("false", "no", "n", "0"):
-                    return False
-                return bool(val_str)
-            except Exception:
-                return False
-
-        self.expected_fail: bool = _coerce_bool(only_block.get("expected_fail", False))
-
+    def _validate_and_set_target_config(self, target: str, boot_config: str, rng_seed: int) -> None:
+        """Validate and set target-specific configuration."""
         assert target in self.supported_targets
         self.target: str = target
 
@@ -195,15 +197,18 @@ class DiagBuildUnit:
                 f"Invalid boot_config {self.boot_config} for spike. Only fw-none is supported for spike."
             )
 
-        diag_attributes_cmd_line_overrides = diag_attributes_cmd_line_overrides or []
-
+    def _setup_build_environment(self, build_dir: str) -> None:
+        """Set up the build directory and artifacts directory."""
         self.build_dir: str = os.path.abspath(build_dir)
         system_functions.create_empty_directory(self.build_dir)
 
         # Create a directory for Meson build artifacts inside the diag build directory
         meson_artifacts_dir = os.path.join(self.build_dir, "meson_artifacts")
         system_functions.create_empty_directory(meson_artifacts_dir)
+        self.meson_artifacts_dir = meson_artifacts_dir
 
+    def _create_meson_instance(self, toolchain: str, jumpstart_dir: str, keep_meson_builddir: bool) -> None:
+        """Create the Meson instance for this build unit."""
         self.meson = Meson(
             toolchain,
             jumpstart_dir,
@@ -212,75 +217,61 @@ class DiagBuildUnit:
             self.diag_source.get_diag_attributes_yaml(),
             self.boot_config,
             keep_meson_builddir,
-            meson_artifacts_dir,
+            self.meson_artifacts_dir,
         )
 
-        # Start applying meson option overrides.
+    def _apply_meson_option_overrides(
+        self,
+        yaml_config: dict,
+        meson_options_cmd_line_overrides,
+        diag_attributes_cmd_line_overrides,
+        diag_custom_defines_cmd_line_overrides,
+    ) -> None:
+        """Apply meson option overrides in the correct order."""
+        # Apply default overrides first
+        self._apply_default_meson_overrides()
 
-        # Default meson option overrides for run targets
+        # Apply YAML file overrides from source directory
+        self._apply_source_yaml_overrides()
+
+        # Apply overrides in order: global (YAML), diag-specific (YAML), command-line
+        self._apply_yaml_config_overrides(yaml_config)
+        self._apply_command_line_overrides(
+            meson_options_cmd_line_overrides,
+            diag_attributes_cmd_line_overrides,
+            diag_custom_defines_cmd_line_overrides,
+        )
+
+    def _apply_default_meson_overrides(self) -> None:
+        """Apply default meson option overrides for run targets."""
         self.meson.override_meson_options_from_dict({"diag_target": self.target})
-
         self.meson.override_meson_options_from_dict(
             {"diag_attribute_overrides": [f"build_rng_seed={self.rng_seed}"]}
         )
 
-        # Meson option overrides from diag's YAML file in source directory.
+    def _apply_source_yaml_overrides(self) -> None:
+        """Apply meson option overrides from diag's YAML file in source directory."""
         meson_yaml_path = self.diag_source.get_meson_options_override_yaml()
         if meson_yaml_path is not None:
             with open(meson_yaml_path) as f:
                 overrides_from_yaml = yaml.safe_load(f)
             self.meson.override_meson_options_from_dict(overrides_from_yaml)
 
-        # Apply overrides in order: global (YAML), diag-specific (YAML), command-line
-
-        def _normalize_meson_overrides(value) -> dict:
-            if value is None:
-                return {}
-            # Accept dict, list of "k=v" strings, or list of dicts
-            if isinstance(value, dict):
-                return value
-            if isinstance(value, list):
-                # list of dicts
-                if all(isinstance(x, dict) for x in value):
-                    merged: dict = {}
-                    for item in value:
-                        merged.update(item)
-                    return merged
-                # list of strings
-                from data_structures import DictUtils  # local import to avoid cycles
-
-                str_items = [x for x in value if isinstance(x, str)]
-                return DictUtils.create_dict(str_items)
-            raise TypeError("Unsupported override_meson_options format in YAML overrides")
-
-        def _apply_yaml_overrides(overrides: Optional[dict]):
-            if not overrides:
-                return
-            # meson options
-            meson_over = _normalize_meson_overrides(overrides.get("override_meson_options"))
-            if meson_over:
-                self.meson.override_meson_options_from_dict(meson_over)
-
-            # diag_custom_defines
-            diag_custom_defines = overrides.get("diag_custom_defines")
-            if diag_custom_defines:
-                self.meson.override_meson_options_from_dict(
-                    {"diag_custom_defines": list(diag_custom_defines)}
-                )
-
-            # diag attribute overrides
-            diag_attr_overrides = overrides.get("override_diag_attributes")
-            if diag_attr_overrides:
-                self.meson.override_meson_options_from_dict(
-                    {"diag_attribute_overrides": list(diag_attr_overrides)}
-                )
-
+    def _apply_yaml_config_overrides(self, yaml_config: dict) -> None:
+        """Apply overrides from the YAML configuration."""
         # 1) Global overrides from YAML (if provided as part of yaml_config)
-        _apply_yaml_overrides(yaml_config.get("global_overrides"))
+        self._apply_yaml_overrides(yaml_config.get("global_overrides"))
 
         # 2) Diag-specific overrides from YAML (full per-diag block)
-        _apply_yaml_overrides(yaml_config.get(self.name))
+        self._apply_yaml_overrides(yaml_config.get(self.name))
 
+    def _apply_command_line_overrides(
+        self,
+        meson_options_cmd_line_overrides,
+        diag_attributes_cmd_line_overrides,
+        diag_custom_defines_cmd_line_overrides,
+    ) -> None:
+        """Apply command-line overrides (applied last)."""
         # 3) Command-line overrides applied last
         if meson_options_cmd_line_overrides is not None:
             from data_structures import DictUtils  # local import to avoid cycles
@@ -298,43 +289,105 @@ class DiagBuildUnit:
                 {"diag_custom_defines": list(diag_custom_defines_cmd_line_overrides)}
             )
 
+    def _apply_target_specific_overrides(self) -> None:
+        """Apply target-specific meson option overrides."""
         if self.target == "spike":
-            num_active_cpus = 1
-            active_cpu_mask = self.diag_source.get_attribute_value("active_cpu_mask")
-            if active_cpu_mask is not None:
+            self._apply_spike_overrides()
+        elif self.target == "oswis":
+            self._apply_oswis_overrides()
+
+    def _apply_spike_overrides(self) -> None:
+        """Apply Spike-specific meson option overrides."""
+        num_active_cpus = self._calculate_spike_active_cpus()
+
+        spike_overrides = {
+            "spike_additional_arguments": [
+                f"-p{num_active_cpus}",
+            ],
+        }
+
+        # Check if "interleave=" exists in any spike_additional_arguments in meson options
+        if not self._has_spike_interleave_arg():
+            spike_overrides["spike_additional_arguments"].append(
+                f"--interleave={self.rng.randint(1, 400)}"
+            )
+
+        self.meson.override_meson_options_from_dict(spike_overrides)
+
+    def _calculate_spike_active_cpus(self) -> int:
+        """Calculate the number of active CPUs for Spike target."""
+        num_active_cpus = 1
+        active_cpu_mask = self.diag_source.get_attribute_value("active_cpu_mask")
+        if active_cpu_mask is not None:
+            num_active_cpus = convert_cpu_mask_to_num_active_cpus(active_cpu_mask)
+
+        # get the active_cpu_mask from the meson diag_attribute_overrides
+        for diag_attribute in self.meson.get_meson_options().get(
+            "diag_attribute_overrides", []
+        ):
+            if diag_attribute.startswith("active_cpu_mask="):
+                active_cpu_mask = diag_attribute.split("=", 1)[1]
                 num_active_cpus = convert_cpu_mask_to_num_active_cpus(active_cpu_mask)
 
-            # get the active_cpu_mask from the meson diag_attribute_overrides
-            for diag_attribute in self.meson.get_meson_options().get(
-                "diag_attribute_overrides", []
-            ):
-                if diag_attribute.startswith("active_cpu_mask="):
-                    active_cpu_mask = diag_attribute.split("=", 1)[1]
-                    num_active_cpus = convert_cpu_mask_to_num_active_cpus(active_cpu_mask)
+        return num_active_cpus
 
-            spike_overrides = {
-                "spike_additional_arguments": [
-                    f"-p{num_active_cpus}",
-                ],
-            }
+    def _has_spike_interleave_arg(self) -> bool:
+        """Check if interleave argument already exists in spike_additional_arguments."""
+        spike_args = self.meson.get_meson_options().get("spike_additional_arguments")
+        if spike_args is not None:
+            for arg in spike_args:
+                if "interleave=" in arg:
+                    return True
+        return False
 
-            # Check if "interleave=" exists in any spike_additional_arguments in meson options
-            spike_args = self.meson.get_meson_options().get("spike_additional_arguments")
-            interleave_exists = False
-            if spike_args is not None:
-                for arg in spike_args:
-                    if "interleave=" in arg:
-                        interleave_exists = True
+    def _apply_oswis_overrides(self) -> None:
+        """Apply OSWIS-specific meson option overrides."""
+        self.meson.override_meson_options_from_dict(
+            {"oswis_additional_arguments": [f"--rng_seed={self.rng_seed}"]}
+        )
 
-            if not interleave_exists:
-                spike_overrides["spike_additional_arguments"].append(
-                    f"--interleave={self.rng.randint(1, 400)}"
-                )
+    def _normalize_meson_overrides(self, value) -> dict:
+        """Normalize meson overrides to a dictionary format."""
+        if value is None:
+            return {}
+        # Accept dict, list of "k=v" strings, or list of dicts
+        if isinstance(value, dict):
+            return value
+        if isinstance(value, list):
+            # list of dicts
+            if all(isinstance(x, dict) for x in value):
+                merged: dict = {}
+                for item in value:
+                    merged.update(item)
+                return merged
+            # list of strings
+            from data_structures import DictUtils  # local import to avoid cycles
 
-            self.meson.override_meson_options_from_dict(spike_overrides)
-        elif self.target == "oswis":
+            str_items = [x for x in value if isinstance(x, str)]
+            return DictUtils.create_dict(str_items)
+        raise TypeError("Unsupported override_meson_options format in YAML overrides")
+
+    def _apply_yaml_overrides(self, overrides: Optional[dict]) -> None:
+        """Apply overrides from a YAML configuration block."""
+        if not overrides:
+            return
+        # meson options
+        meson_over = self._normalize_meson_overrides(overrides.get("override_meson_options"))
+        if meson_over:
+            self.meson.override_meson_options_from_dict(meson_over)
+
+        # diag_custom_defines
+        diag_custom_defines = overrides.get("diag_custom_defines")
+        if diag_custom_defines:
             self.meson.override_meson_options_from_dict(
-                {"oswis_additional_arguments": [f"--rng_seed={self.rng_seed}"]}
+                {"diag_custom_defines": list(diag_custom_defines)}
+            )
+
+        # diag attribute overrides
+        diag_attr_overrides = overrides.get("override_diag_attributes")
+        if diag_attr_overrides:
+            self.meson.override_meson_options_from_dict(
+                {"diag_attribute_overrides": list(diag_attr_overrides)}
             )
 
     # ---------------------------------------------------------------------
