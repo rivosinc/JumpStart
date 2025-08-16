@@ -126,7 +126,19 @@ class Meson:
             return "\n".join(f"{spacing}{line}" for line in formatted.splitlines())
         return formatted
 
+    def _validate_meson_options(self) -> None:
+        """Perform sanity checks on meson options to catch conflicting configurations."""
+        # Check for conflicting options
+        if self.meson_options.get("batch_mode", False) and self.meson_options.get(
+            "magicbox", False
+        ):
+            error_msg = "Conflicting options: batch_mode and magicbox cannot both be True"
+            log.error(error_msg)
+            raise MesonBuildError(error_msg)
+
     def setup(self):
+        # Perform sanity checks before setup
+        self._validate_meson_options()
 
         self.meson_setup_flags = {}
         for option in self.meson_options:
