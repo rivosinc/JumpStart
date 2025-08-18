@@ -51,7 +51,7 @@ class DiagFactory:
         cli_diag_attribute_overrides: Optional[List[str]] = None,
         cli_diag_custom_defines: Optional[List[str]] = None,
         batch_mode: bool = False,
-        skip_write_repro_manifest: bool = False,
+        skip_write_manifest: bool = False,
     ) -> None:
         self.build_manifest_yaml = build_manifest_yaml
         self.root_build_dir = os.path.abspath(root_build_dir)
@@ -77,6 +77,7 @@ class DiagFactory:
         self.cli_diag_attribute_overrides = cli_diag_attribute_overrides or []
         self.cli_diag_custom_defines = cli_diag_custom_defines or []
         self.batch_mode: bool = bool(batch_mode)
+        self.skip_write_manifest: bool = bool(skip_write_manifest)
 
         loaded = self.build_manifest_yaml or {}
 
@@ -113,11 +114,12 @@ class DiagFactory:
         self._diag_units: Dict[str, DiagBuildUnit] = {}
         # expected_fail now lives per DiagBuildUnit; no per-factory map
         self._manifest_path: Optional[str] = None
+        self._run_manifest_path: Optional[str] = None
         # Batch-mode artifacts (set when batch_mode=True and generation succeeds)
         self._batch_out_dir: Optional[str] = None
         self._batch_manifest_path: Optional[str] = None
 
-        if not skip_write_repro_manifest:
+        if not self.skip_write_manifest:
             self.write_build_repro_manifest()
 
     def _validate_manifest(self, manifest: dict) -> None:
@@ -388,6 +390,69 @@ class DiagFactory:
         log.debug(f"Wrote build manifest: {output_path}")
         return output_path
 
+    def write_run_manifest(self, output_path: Optional[str] = None) -> str:
+        """Write the run manifest YAML to disk and return its path.
+
+        Format:
+        diagnostics:
+          <diag name>:
+            elf_path: <path to ELF>
+            num_iterations: 1
+            expected_fail: <bool>
+            primary_cpu_id: <int>
+        """
+        if output_path is None:
+            output_path = os.path.join(self.root_build_dir, "run_manifest.yaml")
+
+        run_manifest = {"diagnostics": {}}
+
+        if self.batch_mode:
+            # In batch mode, only include Truf silicon binaries, not individual unit diags
+            if hasattr(self, "batch_runner") and self.batch_runner is not None:
+                truf_elfs = list(getattr(self.batch_runner, "batch_truf_elfs", []) or [])
+                for elf_path in truf_elfs:
+                    if os.path.exists(elf_path):
+                        # Extract diag name from the ELF path
+                        elf_basename = os.path.basename(elf_path)
+                        diag_name = elf_basename.replace(".elf", "")
+
+                        run_manifest["diagnostics"][diag_name] = {
+                            "elf_path": os.path.abspath(elf_path),
+                            "num_iterations": 1,
+                            "expected_fail": False,  # Default for batch mode
+                            "primary_cpu_id": 0,  # Default for batch mode
+                        }
+        else:
+            # In non-batch mode, include all successfully compiled diags
+            for diag_name, unit in self._diag_units.items():
+                if (
+                    getattr(unit, "compile_state", None) is not None
+                    and getattr(unit.compile_state, "name", "") == "PASS"
+                    and unit.compile_error is None
+                ):
+                    try:
+                        elf_path = unit.get_build_asset("elf")
+                        if os.path.exists(elf_path):
+                            # Get active_cpu_mask from the diag unit
+                            active_cpu_mask = unit.get_active_cpu_mask()
+                            active_cpu_mask = int(active_cpu_mask, 2)
+                            primary_cpu_id = (active_cpu_mask & -active_cpu_mask).bit_length() - 1
+
+                            run_manifest["diagnostics"][diag_name] = {
+                                "elf_path": os.path.abspath(elf_path),
+                                "num_iterations": 1,
+                                "expected_fail": getattr(unit, "expected_fail", False),
+                                "primary_cpu_id": primary_cpu_id,
+                            }
+                    except Exception as exc:
+                        log.warning(f"Failed to get ELF path for diag '{diag_name}': {exc}")
+
+        with open(output_path, "w") as f:
+            yaml.safe_dump(run_manifest, f, sort_keys=False)
+        self._run_manifest_path = output_path
+        log.debug(f"Wrote run manifest: {output_path}")
+        return output_path
+
     def _prepare_unit(self, diag_name: str, config: dict) -> Tuple[str, DiagBuildUnit]:
         # Do not validate here; DiagBuildUnit validates presence of 'source_dir'
         # Pass through all per-diag config keys as-is
@@ -446,6 +511,10 @@ class DiagFactory:
         # If batch mode is enabled, generate the batch manifest and payloads/ELFs here
         if self.batch_mode:
             self._generate_batch_artifacts()
+
+        # Generate run manifest after all compilation is complete
+        if not self.skip_write_manifest:
+            self.write_run_manifest()
 
         # After building all units (and generating any artifacts), raise if any compile failed
         compile_failures = [
@@ -859,8 +928,9 @@ class DiagFactory:
             sep,
             *body,
             bot,
-            f"Build Repro Manifest: {self._manifest_path}",
             f"Build root: {self.root_build_dir}",
+            f"Build Repro Manifest: {self._manifest_path}",
+            f"Run Manifest: {self._run_manifest_path}",
         ]
 
         # Note: Per-diag artifact section removed; artifacts are shown inline in the table

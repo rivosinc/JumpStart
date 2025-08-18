@@ -207,7 +207,9 @@ class DiagBuildUnit:
         system_functions.create_empty_directory(meson_artifacts_dir)
         self.meson_artifacts_dir = meson_artifacts_dir
 
-    def _create_meson_instance(self, toolchain: str, jumpstart_dir: str, keep_meson_builddir: bool) -> None:
+    def _create_meson_instance(
+        self, toolchain: str, jumpstart_dir: str, keep_meson_builddir: bool
+    ) -> None:
         """Create the Meson instance for this build unit."""
         self.meson = Meson(
             toolchain,
@@ -314,22 +316,31 @@ class DiagBuildUnit:
 
         self.meson.override_meson_options_from_dict(spike_overrides)
 
-    def _calculate_spike_active_cpus(self) -> int:
-        """Calculate the number of active CPUs for Spike target."""
-        num_active_cpus = 1
-        active_cpu_mask = self.diag_source.get_attribute_value("active_cpu_mask")
-        if active_cpu_mask is not None:
-            num_active_cpus = convert_cpu_mask_to_num_active_cpus(active_cpu_mask)
+    def get_active_cpu_mask(self) -> str:
+        """Get the final active_cpu_mask value from source attributes and meson overrides.
 
-        # get the active_cpu_mask from the meson diag_attribute_overrides
+        Returns the active_cpu_mask as a string (e.g., "0b1", "0b1111").
+        Meson overrides take precedence over source attributes.
+        """
+        # Start with the value from source attributes
+        active_cpu_mask = self.diag_source.get_attribute_value("active_cpu_mask")
+        if active_cpu_mask is None:
+            active_cpu_mask = "0b1"  # Default value
+
+        # Check for overrides in meson diag_attribute_overrides
         for diag_attribute in self.meson.get_meson_options().get(
             "diag_attribute_overrides", []
         ):
             if diag_attribute.startswith("active_cpu_mask="):
                 active_cpu_mask = diag_attribute.split("=", 1)[1]
-                num_active_cpus = convert_cpu_mask_to_num_active_cpus(active_cpu_mask)
+                break
 
-        return num_active_cpus
+        return active_cpu_mask
+
+    def _calculate_spike_active_cpus(self) -> int:
+        """Calculate the number of active CPUs for Spike target."""
+        active_cpu_mask = self.get_active_cpu_mask()
+        return convert_cpu_mask_to_num_active_cpus(active_cpu_mask)
 
     def _has_spike_interleave_arg(self) -> bool:
         """Check if interleave argument already exists in spike_additional_arguments."""
