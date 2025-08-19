@@ -777,58 +777,91 @@ class DiagFactory:
 
     def summarize(self) -> str:
         # Build pretty table; compute widths from plain text, add ANSI coloring for PASS/FAILED/EXPECTED_FAIL labels
-        # First, gather data per-diag to decide whether to include the Error column
+
+        # Define color constants
+        bold = "\u001b[1m"
+        reset = "\u001b[0m"
+        green = "\u001b[32m"
+        red = "\u001b[31m"
+
+        # Gather data per-diag for the Result column
         gathered = []
-        include_error_col = False
         for diag_name, unit in self._diag_units.items():
             build_plain = unit.format_build_label(include_duration=True, color=False)
             run_plain = unit.format_run_label(include_duration=True, color=False)
             error_text = unit.compile_error or unit.run_error or ""
-            if (error_text or "").strip():
-                include_error_col = True
 
             try:
                 elf_path = unit.get_build_asset("elf")
             except Exception:
                 elf_path = None
 
+            # Determine what to show in the Result column
+            if error_text and error_text.strip():
+                # If there's an error, show it (will be colored red later)
+                merged_content = error_text
+            elif elf_path and not self.batch_mode:
+                # If no error but ELF is available and not in batch mode, show the path
+                merged_content = elf_path
+            else:
+                # Fallback - don't show ELF paths in batch mode
+                merged_content = "N/A"
+
             gathered.append(
                 {
                     "name": diag_name,
                     "build": build_plain,
                     "run": run_plain,
-                    "error": error_text,
-                    "elf": f"elf: {elf_path if elf_path else 'N/A'}",
+                    "result": merged_content,
+                    "has_error": bool(error_text and error_text.strip()),
                 }
             )
+
+        # Check if Result column would be empty (all "N/A")
+        include_result_col = any(item["result"] != "N/A" for item in gathered)
 
         # Build rows in two-row groups per diag
         row_groups = []
         for item in gathered:
-            if include_error_col:
+            if include_result_col:
                 row_groups.append(
                     [
-                        (item["name"], item["build"], item["run"], item["error"], item["elf"]),
+                        (
+                            item["name"],
+                            item["build"],
+                            item["run"],
+                            item["result"],
+                            item["has_error"],
+                        ),
                     ]
                 )
             else:
                 row_groups.append(
                     [
-                        (item["name"], item["build"], item["run"], item["elf"]),
+                        (
+                            item["name"],
+                            item["build"],
+                            item["run"],
+                            item["has_error"],
+                        ),
                     ]
                 )
 
-        # Header varies depending on whether we include the Error column
-        if include_error_col:
-            header = ("Diag", "Build", f"Run [{self.target}]", "Error", "Artifacts")
+        # Header varies depending on whether we include the Result column
+        if include_result_col:
+            header = ("Diag", "Build", f"Run [{self.target}]", "Result")
         else:
-            header = ("Diag", "Build", f"Run [{self.target}]", "Artifacts")
+            header = ("Diag", "Build", f"Run [{self.target}]")
 
         # Compute column widths based on plain text
         col_widths = [len(h) for h in header]
         for group in row_groups:
             for r in group:
-                for i, cell in enumerate(r):
+                # Consider the display elements (excluding has_error which is a boolean flag)
+                # When include_result_col is True: r has 5 elements, last is has_error
+                # When include_result_col is False: r has 4 elements, last is has_error
+                display_elements = r[:-1]  # Always exclude the last element (has_error)
+                for i, cell in enumerate(display_elements):
                     if len(str(cell)) > col_widths[i]:
                         col_widths[i] = len(str(cell))
 
@@ -844,20 +877,16 @@ class DiagFactory:
         body = []
         for gi, group in enumerate(row_groups):
             for ri, r in enumerate(group):
-                # Unpack based on header size
-                if include_error_col:
-                    diag_name, build_plain, run_plain, error_text, artifacts = r
+                # Unpack the row data based on whether we have the result column
+                if include_result_col:
+                    diag_name, build_plain, run_plain, result, has_error = r
                 else:
-                    diag_name, build_plain, run_plain, artifacts = r
+                    diag_name, build_plain, run_plain, has_error = r
+
                 # pad using plain text
                 diag_pad = pad(str(diag_name), col_widths[0])
                 build_pad = pad(build_plain, col_widths[1])
                 run_pad = pad(run_plain, col_widths[2])
-                if include_error_col:
-                    err_pad = pad(str(error_text), col_widths[3])
-                    art_pad = pad(str(artifacts), col_widths[4])
-                else:
-                    art_pad = pad(str(artifacts), col_widths[3])
 
                 # colorize status prefixes on the first row of each group only
                 unit = self._diag_units.get(diag_name) if ri == 0 else None
@@ -868,25 +897,23 @@ class DiagFactory:
                     build_colored = build_pad
                     run_colored = run_pad
 
-                if include_error_col:
-                    body.append(
-                        "│ "
-                        + " │ ".join([diag_pad, build_colored, run_colored, err_pad, art_pad])
-                        + " │"
-                    )
+                # Build the row content
+                if include_result_col:
+                    result_pad = pad(str(result), col_widths[3])
+                    # Apply red coloring to errors in the result column
+                    if has_error:
+                        result_colored = f"{red}{result_pad}{reset}"
+                    else:
+                        result_colored = result_pad
+                    row_content = [diag_pad, build_colored, run_colored, result_colored]
                 else:
-                    body.append(
-                        "│ " + " │ ".join([diag_pad, build_colored, run_colored, art_pad]) + " │"
-                    )
+                    row_content = [diag_pad, build_colored, run_colored]
+
+                body.append("│ " + " │ ".join(row_content) + " │")
             # separator between diagnostics (groups), except after the last group
             if gi != len(row_groups) - 1:
                 body.append(inner)
         bot = "└" + "┴".join("─" * (w + 2) for w in col_widths) + "┘"
-
-        bold = "\u001b[1m"
-        reset = "\u001b[0m"
-        green = "\u001b[32m"
-        red = "\u001b[31m"
 
         # Compute overall result visibility line
         try:
@@ -923,14 +950,13 @@ class DiagFactory:
 
         table_lines = [
             f"\n{bold}Summary{reset}",
+            f"Build root: {self.root_build_dir}",
+            f"Build Repro Manifest: {self._manifest_path}",
             top,
             hdr,
             sep,
             *body,
             bot,
-            f"Build root: {self.root_build_dir}",
-            f"Build Repro Manifest: {self._manifest_path}",
-            f"Run Manifest: {self._run_manifest_path}",
         ]
 
         # Note: Per-diag artifact section removed; artifacts are shown inline in the table
@@ -970,54 +996,106 @@ class DiagFactory:
                 if hasattr(self.batch_runner, "error_message") and self.batch_runner.error_message:
                     batch_error = self.batch_runner.error_message
 
+            # Group ELFs by target type (silicon, fssim, etc.)
+            target_elfs = {}
+            for elf_path, bin_path in truf_pairs:
+                basename = os.path.basename(elf_path)
+                # Extract target from filename: truf_runner_0.silicon.elf -> silicon
+                if "." in basename:
+                    parts = basename.split(".")
+                    if len(parts) >= 2:
+                        target = parts[-2]  # Second to last part before .elf
+                        if target not in target_elfs:
+                            target_elfs[target] = []
+                        target_elfs[target].append(elf_path)
+                    else:
+                        # Fallback if filename doesn't match expected pattern
+                        if "unknown" not in target_elfs:
+                            target_elfs["unknown"] = []
+                        target_elfs["unknown"].append(elf_path)
+                else:
+                    # Fallback if filename doesn't match expected pattern
+                    if "unknown" not in target_elfs:
+                        target_elfs["unknown"] = []
+                    target_elfs["unknown"].append(elf_path)
+
+            # Build batch artifacts table using the same logic as diagnostics table
+            batch_rows = []
+
+            # Add status row
+            batch_rows.append(("Status", batch_status))
+
+            # Add error row if present
+            if batch_error:
+                batch_rows.append(("Error", batch_error))
+
+            # Add manifest row
+            batch_rows.append(
+                (
+                    "Truf Payload Manifest (consumed by truf-payload-generator)",
+                    self._batch_manifest_path,
+                )
+            )
+
+            # Add payloads rows
+            for payload in payloads:
+                batch_rows.append(("Truf Payloads (consumed by truf-runner)", payload))
+
+            # Add ELF rows grouped by target
+            for target, elf_paths in sorted(target_elfs.items()):
+                for i, elf_path in enumerate(elf_paths):
+                    if i == 0:
+                        batch_rows.append((f"Truf ELFs ({target})", elf_path))
+                    else:
+                        batch_rows.append(("", elf_path))
+
+            # Build table using same logic as diagnostics
+            batch_header = ("Type", "Value")
+            batch_col_widths = [len(h) for h in batch_header]
+
+            # Compute column widths
+            for row in batch_rows:
+                for i, cell in enumerate(row):
+                    if len(str(cell)) > batch_col_widths[i]:
+                        batch_col_widths[i] = len(str(cell))
+
+            # Build table lines
+            batch_top = "┏" + "┳".join("━" * (w + 2) for w in batch_col_widths) + "┓"
+            batch_hdr = (
+                "┃ " + " ┃ ".join(pad(h, w) for h, w in zip(batch_header, batch_col_widths)) + " ┃"
+            )
+            batch_sep = "┡" + "╇".join("━" * (w + 2) for w in batch_col_widths) + "┩"
+            batch_inner = "├" + "┼".join("─" * (w + 2) for w in batch_col_widths) + "┤"
+
+            # Build body
+            batch_body = []
+            for i, (type_name, value) in enumerate(batch_rows):
+                type_pad = pad(str(type_name), batch_col_widths[0])
+                value_pad = pad(str(value), batch_col_widths[1])
+                batch_body.append("│ " + " │ ".join([type_pad, value_pad]) + " │")
+                # Add separator between rows except after the last one
+                if i < len(batch_rows) - 1:
+                    batch_body.append(batch_inner)
+
+            batch_bot = "└" + "┴".join("─" * (w + 2) for w in batch_col_widths) + "┘"
+
+            # Add the batch table to the main table lines
             table_lines.extend(
                 [
                     "",
                     f"{bold}Batch Mode Artifacts{reset}",
-                    f"  Status: {batch_status}",
+                    batch_top,
+                    batch_hdr,
+                    batch_sep,
+                    *batch_body,
+                    batch_bot,
                 ]
             )
 
-            if batch_error:
-                table_lines.append(f"  Error: {batch_error}")
-
-            table_lines.extend(
-                [
-                    f"  Manifest: {self._batch_manifest_path}",
-                    f"  Payloads ({len(payloads)}):",
-                    *[f"    - {payload}" for payload in payloads],
-                    f"  Truf ELFs ({len(truf_elfs)}):",
-                ]
-            )
-
-            def _fmt_size(num_bytes: int) -> str:
-                try:
-                    b = int(num_bytes)
-                except Exception:
-                    return "unknown size"
-                if b < 1024:
-                    return f"{b} bytes"
-                kb = b / 1024.0
-                if kb < 1024.0:
-                    return f"{kb:.2f} KB"
-                mb = kb / 1024.0
-                if mb < 1024.0:
-                    return f"{mb:.2f} MB"
-                gb = mb / 1024.0
-                return f"{gb:.2f} GB"
-
-            for elf_path, bin_path in truf_pairs:
-                label = os.path.basename(elf_path)
-                table_lines.append(f"    {label}:")
-                # elf size
-                try:
-                    elf_size = os.path.getsize(elf_path) if os.path.exists(elf_path) else None
-                except Exception:
-                    elf_size = None
-                if elf_size is not None:
-                    table_lines.append(f"      elf [{_fmt_size(elf_size)}]: {elf_path}")
-                else:
-                    table_lines.append(f"      elf: {elf_path}")
+        # Add Run Manifest before the final status
+        table_lines.append(
+            f"\n{bold}Run Manifest (for sival rivos_sival/ga0/scripts/baremetal_diag_runner.py){reset}:\n{self._run_manifest_path}"
+        )
 
         # Print overall result at the very end for visibility (after batch-mode details if present)
         table_lines.append("")
