@@ -78,7 +78,12 @@ def run_command(command, run_directory, timeout=None, extra_env=None):
         stdout_thread.start()
         stderr_thread.start()
 
-        returncode = p.wait(timeout=timeout)
+        try:
+            returncode = p.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            os.killpg(p.pid, signal.SIGTERM)
+            returncode = -1
+
         if returncode != 0:
             log.error(f"COMMAND FAILED: {' '.join(command)}")
             full_output = f"STDOUT:\n{'-' * 40}\n"
