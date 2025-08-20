@@ -1093,9 +1093,7 @@ class DiagFactory:
             )
 
         # Add Run Manifest before the final status
-        table_lines.append(
-            f"\n{bold}Run Manifest (for sival rivos_sival/ga0/scripts/baremetal_diag_runner.py){reset}:\n{self._run_manifest_path}"
-        )
+        table_lines.append(f"\n{bold}Run Manifest{reset}:\n{self._run_manifest_path}")
 
         # Print overall result at the very end for visibility (after batch-mode details if present)
         table_lines.append("")
