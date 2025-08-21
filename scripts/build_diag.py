@@ -13,6 +13,7 @@ from typing import Dict
 
 import yaml
 from build_tools import DiagBuildUnit, DiagFactory, Meson
+from build_tools.environment import get_environment_manager
 
 
 def main():
@@ -25,7 +26,7 @@ def main():
         default=f"{os.path.dirname(os.path.realpath(__file__))}/..",
     )
     # Allow either a list of source directories or a YAML manifest
-    input_group = parser.add_mutually_exclusive_group(required=True)
+    input_group = parser.add_mutually_exclusive_group(required=False)
     input_group.add_argument(
         "--diag_src_dir",
         "-d",
@@ -96,14 +97,19 @@ def main():
         type=str,
         default=None,
     )
+
+    env_manager = get_environment_manager()
+    env_names = sorted(env_manager.environments.keys())
+    env_help = f"Target to build for. Available environments: {', '.join(env_names)}"
+
     parser.add_argument(
         "--target",
         "-t",
-        help="Target to build for.",
+        help=env_help,
         required=False,
         type=str,
         default="spike",
-        choices=DiagBuildUnit.supported_targets,
+        choices=env_names,
     )
     parser.add_argument(
         "--toolchain",
@@ -131,7 +137,7 @@ def main():
         "--diag_build_dir",
         "--diag_build",
         help="Directory to place built diag in.",
-        required=True,
+        required=False,
         type=str,
     )
     parser.add_argument(
@@ -159,6 +165,13 @@ def main():
         default=5,
     )
     args = parser.parse_args()
+
+    # Validate required arguments for normal operation
+    if not args.diag_src_dir and not args.build_manifest:
+        parser.error("Either --diag_src_dir or --build_manifest is required")
+
+    if not args.diag_build_dir:
+        parser.error("--diag_build_dir is required")
 
     if args.verbose:
         log.basicConfig(format="%(levelname)s: [%(threadName)s]: %(message)s", level=log.DEBUG)
