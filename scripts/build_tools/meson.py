@@ -2,10 +2,12 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import json
 import logging as log
 import os
 import pprint
 import shutil
+import subprocess
 import sys
 import tempfile
 from typing import Any, Dict, List
@@ -116,7 +118,7 @@ class Meson:
         """Return the current Meson options as a dict."""
         return self.meson_options
 
-    def get_meson_options_pretty(self, width: int = 120, spacing: str = "") -> str:
+    def get_meson_setup_options_pretty(self, width: int = 120, spacing: str = "") -> str:
         """Return a pretty-printed string of the Meson options.
 
         spacing: A prefix added to each line to control left padding in callers.
@@ -126,19 +128,36 @@ class Meson:
             return "\n".join(f"{spacing}{line}" for line in formatted.splitlines())
         return formatted
 
-    def _validate_meson_options(self) -> None:
+    def get_meson_introspect_options_pretty(self, width: int = 120, spacing: str = "") -> str:
+        """Return a pretty-printed string of the Meson introspect options.
+
+        spacing: A prefix added to each line to control left padding in callers.
+        """
+        if not hasattr(self, "_meson_introspect_options") or self._meson_introspect_options is None:
+            return "No introspect options available"
+
+        formatted = pprint.pformat(self._meson_introspect_options, width=width)
+        if spacing:
+            return "\n".join(f"{spacing}{line}" for line in formatted.splitlines())
+        return formatted
+
+    def validate_build_options(self) -> None:
         """Perform sanity checks on meson options to catch conflicting configurations."""
+        # Use introspect options directly since this is called after introspect()
+        if not hasattr(self, "_meson_introspect_options") or self._meson_introspect_options is None:
+            error_msg = "Cannot validate meson options: _meson_introspect_options is not available"
+            log.error(error_msg)
+            raise MesonBuildError(error_msg)
+
         # Check for conflicting options
-        if self.meson_options.get("batch_mode", False) and self.meson_options.get(
-            "magicbox", False
-        ):
+        if self._meson_introspect_options.get(
+            "batch_mode", False
+        ) and self._meson_introspect_options.get("magicbox", False):
             error_msg = "Conflicting options: batch_mode and magicbox cannot both be True"
             log.error(error_msg)
             raise MesonBuildError(error_msg)
 
     def setup(self):
-        # Perform sanity checks before setup
-        self._validate_meson_options()
 
         self.meson_setup_flags = {}
         for option in self.meson_options:
@@ -166,7 +185,7 @@ class Meson:
             ]
         )
 
-        log.debug("Meson options:\n%s", self.get_meson_options_pretty(spacing="\t"))
+        log.debug("Meson setup options:\n%s", self.get_meson_setup_options_pretty(spacing="\t"))
 
         # Print the meson setup command in a format that can be copy-pasted to
         # reproduce the build.
@@ -237,3 +256,45 @@ class Meson:
             raise MesonBuildError(error_msg, return_code)
 
         return run_assets
+
+    def introspect(self):
+        """Run meson introspect and store the build options."""
+        # --- Run meson introspect and store build options ---
+        self._meson_introspect_options = {}
+
+        # Use subprocess.run to run the introspect command and capture output
+        introspect_cmd = ["meson", "introspect", self.meson_builddir, "--buildoptions"]
+        log.debug(f"Running meson introspect: {' '.join(introspect_cmd)}")
+        try:
+            result = subprocess.run(
+                introspect_cmd,
+                cwd=self.jumpstart_dir,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            result_code = result.returncode
+            result_out = result.stdout
+        except Exception as e:
+            log.error(f"Failed to run meson introspect command: {e}")
+            result_code = 1
+            result_out = ""
+
+        if result_code != 0:
+            error_msg = f"meson introspect failed. Check: {self.meson_builddir}"
+            log.error(error_msg)
+            self.keep_meson_builddir = True
+            raise MesonBuildError(error_msg, result_code)
+
+        try:
+            options = json.loads(result_out)
+            for opt in options:
+                # Only store user options (not built-in)
+                if opt.get("section") == "user":
+                    self._meson_introspect_options[opt["name"]] = opt["value"]
+            log.debug(f"Meson introspect options: {self._meson_introspect_options}")
+        except Exception as e:
+            error_msg = f"Failed to parse meson introspect output: {e}"
+            log.error(error_msg)
+            self.keep_meson_builddir = True
+            raise MesonBuildError(error_msg)

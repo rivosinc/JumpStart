@@ -458,6 +458,12 @@ class DiagBuildUnit:
 
         try:
             self.meson.setup()
+
+            self.meson.introspect()
+
+            # Validate meson options after introspect
+            self.meson.validate_build_options()
+
             compiled_assets = self.meson.compile()
             for asset_type, asset_path in compiled_assets.items():
                 self.add_build_asset(asset_type, asset_path)
@@ -606,7 +612,14 @@ class DiagBuildUnit:
         )
         print_string += f"\n\tRNG Seed: {hex(self.rng_seed)}"
         print_string += f"\n\tSource Info:\n{self.diag_source}"
-        print_string += "\n\tMeson Options:\n" + self.meson.get_meson_options_pretty(spacing="\t\t")
+        print_string += "\n\tMeson setup options:\n" + self.meson.get_meson_setup_options_pretty(
+            spacing="\t\t"
+        print_string += (
+            "\n\tMeson setup options:\n"
+            + self.meson.get_meson_setup_options_pretty(spacing="\t\t")
+            "\n\tMeson introspect options:\n"
+            + self.meson.get_meson_introspect_options_pretty(spacing="\t\t")
+        )
         print_string += f"\n\tAssets: {self.build_assets}"
 
         return print_string
