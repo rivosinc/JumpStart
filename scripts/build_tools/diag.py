@@ -129,9 +129,19 @@ class DiagBuildUnit:
         keep_meson_builddir,
     ) -> None:
         self._initialize_state()
+
         self._validate_and_parse_yaml_config(yaml_config)
-        self._validate_and_set_target_config(target, boot_config, rng_seed)
-        self._setup_build_environment(build_dir)
+
+        # Set up RNG generator.
+        assert rng_seed is not None
+        self.rng_seed: int = rng_seed
+        log.debug(f"DiagBuildUnit: {self.name} Seeding RNG with: {self.rng_seed}")
+        self.rng: random.Random = random.Random(self.rng_seed)
+
+        self._validate_and_set_target_config(target, boot_config)
+
+        self._setup_build_dir(build_dir)
+
         self._create_meson_instance(toolchain, jumpstart_dir, keep_meson_builddir)
         self._apply_meson_option_overrides(
             yaml_config,
@@ -139,7 +149,6 @@ class DiagBuildUnit:
             diag_attributes_cmd_line_overrides,
             diag_custom_defines_cmd_line_overrides,
         )
-        self._apply_target_specific_overrides()
 
     def _initialize_state(self) -> None:
         """Initialize the build state and status tracking."""
@@ -179,15 +188,10 @@ class DiagBuildUnit:
         self.diag_source: DiagSource = DiagSource(resolved_src_dir)
         self.expected_fail: bool = only_block.get("expected_fail", False)
 
-    def _validate_and_set_target_config(self, target: str, boot_config: str, rng_seed: int) -> None:
+    def _validate_and_set_target_config(self, target: str, boot_config: str) -> None:
         """Validate and set target-specific configuration."""
         assert target in self.supported_targets
         self.target: str = target
-
-        assert rng_seed is not None
-        self.rng_seed: int = rng_seed
-        log.debug(f"DiagBuildUnit: {self.name} Seeding RNG with: {self.rng_seed}")
-        self.rng: random.Random = random.Random(self.rng_seed)
 
         assert boot_config in self.supported_boot_configs
         self.boot_config: str = boot_config
@@ -197,7 +201,7 @@ class DiagBuildUnit:
                 f"Invalid boot_config {self.boot_config} for spike. Only fw-none is supported for spike."
             )
 
-    def _setup_build_environment(self, build_dir: str) -> None:
+    def _setup_build_dir(self, build_dir: str) -> None:
         """Set up the build directory and artifacts directory."""
         self.build_dir: str = os.path.abspath(build_dir)
         system_functions.create_empty_directory(self.build_dir)
@@ -243,6 +247,8 @@ class DiagBuildUnit:
             diag_attributes_cmd_line_overrides,
             diag_custom_defines_cmd_line_overrides,
         )
+
+        self._apply_target_specific_overrides()
 
     def _apply_default_meson_overrides(self) -> None:
         """Apply default meson option overrides for run targets."""
