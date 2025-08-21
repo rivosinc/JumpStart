@@ -42,20 +42,11 @@ default_c_args = []
 
 diag_attribute_overrides = get_option('diag_attribute_overrides')
 
-compatible_priv_modes = []
-if get_option('boot_config') == 'fw-none'
-  compatible_priv_modes = get_option('riscv_priv_modes_enabled')
-else
+if get_option('boot_config') != 'fw-none'
   error('Invalid boot_config value. Only fw-none is supported.')
 endif
 
-riscv_priv_modes_enabled = []
-foreach mode: get_option('riscv_priv_modes_enabled')
-    if compatible_priv_modes.contains(mode)
-      riscv_priv_modes_enabled += [mode]
-    endif
-endforeach
-
+riscv_priv_modes_enabled = get_option('riscv_priv_modes_enabled')
 
 subdir('src')
 subdir('include')
