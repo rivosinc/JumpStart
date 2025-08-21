@@ -99,7 +99,7 @@ def main():
     )
 
     env_manager = get_environment_manager()
-    env_names = sorted(env_manager.environments.keys())
+    env_names = sorted(env_manager.list_visible_environments().keys())
     env_help = f"Target to build for. Available environments: {', '.join(env_names)}"
 
     parser.add_argument(

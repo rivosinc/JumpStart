@@ -202,7 +202,7 @@ class DiagBuildUnit:
         if not is_valid_target:
             available_targets = list(self.supported_targets)
             try:
-                available_targets.extend(sorted(env_manager.environments.keys()))
+                available_targets.extend(sorted(env_manager.list_visible_environments().keys()))
             except Exception:
                 pass
             raise ValueError(
@@ -287,7 +287,7 @@ class DiagBuildUnit:
 
             # Check if the target corresponds to an environment
             if self.target not in env_manager.environments:
-                available_envs = sorted(env_manager.environments.keys())
+                available_envs = sorted(env_manager.list_visible_environments().keys())
                 raise ValueError(
                     f"Target '{self.target}' does not match any known environment. "
                     f"Available environments: {', '.join(available_envs)}"

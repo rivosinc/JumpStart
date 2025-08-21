@@ -17,6 +17,9 @@ class Environment:
         self.override_meson_options = kwargs.get("override_meson_options", {})
         self.override_diag_attributes = kwargs.get("override_diag_attributes", [])
         self.extends = kwargs.get("extends")  # String or list of strings
+        self.hidden = kwargs.get(
+            "hidden", False
+        )  # Whether this environment should be hidden from lists
 
     def __str__(self) -> str:
         return (
@@ -44,6 +47,10 @@ class EnvironmentManager:
     def list_environments(self) -> Dict[str, Environment]:
         """Get all registered environments (unresolved)."""
         return self.environments.copy()
+
+    def list_visible_environments(self) -> Dict[str, Environment]:
+        """Get all visible (non-hidden) registered environments (unresolved)."""
+        return {name: env for name, env in self.environments.items() if not env.hidden}
 
     def _resolve_environment(self, name: str, visited: Optional[set] = None) -> Environment:
         """Recursively resolve inheritance chain and merge attributes."""
@@ -185,10 +192,10 @@ def get_environment_manager() -> EnvironmentManager:
 
 
 def format_environment_list(manager: EnvironmentManager) -> str:
-    """Format a list of all environments for display."""
+    """Format a list of all visible environments for display."""
     output = ["Available environments:", "=" * 50]
 
-    for env_name in sorted(manager.environments.keys()):
+    for env_name in sorted(manager.list_visible_environments().keys()):
         try:
             resolved_env = manager.get_environment(env_name)
             inheritance_chain = manager.get_inheritance_chain(env_name)
