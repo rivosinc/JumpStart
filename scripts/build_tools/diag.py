@@ -13,6 +13,7 @@ from typing import Any, List, Optional
 import yaml
 from system import functions as system_functions  # noqa
 
+from .environment import get_environment_manager  # noqa
 from .meson import Meson, MesonBuildError  # noqa
 
 
@@ -190,7 +191,25 @@ class DiagBuildUnit:
 
     def _validate_and_set_target_config(self, target: str, boot_config: str) -> None:
         """Validate and set target-specific configuration."""
-        assert target in self.supported_targets
+        # Check if target is in supported_targets or in available environments
+        try:
+            env_manager = get_environment_manager()
+            is_valid_target = target in self.supported_targets or target in env_manager.environments
+        except Exception:
+            # If environment manager fails, fall back to supported_targets only
+            is_valid_target = target in self.supported_targets
+
+        if not is_valid_target:
+            available_targets = list(self.supported_targets)
+            try:
+                available_targets.extend(sorted(env_manager.environments.keys()))
+            except Exception:
+                pass
+            raise ValueError(
+                f"Target '{target}' is not supported. "
+                f"Available targets: {', '.join(sorted(set(available_targets)))}"
+            )
+
         self.target: str = target
 
         assert boot_config in self.supported_boot_configs
@@ -237,6 +256,9 @@ class DiagBuildUnit:
         # Apply default overrides first
         self._apply_default_meson_overrides()
 
+        # Apply environment overrides
+        self._apply_environment_overrides()
+
         # Apply YAML file overrides from source directory
         self._apply_source_yaml_overrides()
 
@@ -257,6 +279,35 @@ class DiagBuildUnit:
         self.meson.override_meson_options_from_dict(
             {"diag_attribute_overrides": [f"build_rng_seed={self.rng_seed}"]}
         )
+
+    def _apply_environment_overrides(self) -> None:
+        """Apply environment-specific overrides based on the target."""
+        try:
+            env_manager = get_environment_manager()
+
+            # Check if the target corresponds to an environment
+            if self.target not in env_manager.environments:
+                available_envs = sorted(env_manager.environments.keys())
+                raise ValueError(
+                    f"Target '{self.target}' does not match any known environment. "
+                    f"Available environments: {', '.join(available_envs)}"
+                )
+
+            env = env_manager.get_environment(self.target)
+
+            # Apply meson option overrides from environment
+            if env.override_meson_options:
+                self.meson.override_meson_options_from_dict(env.override_meson_options)
+
+            # Apply diag attribute overrides from environment
+            if env.override_diag_attributes:
+                self.meson.override_meson_options_from_dict(
+                    {"diag_attribute_overrides": env.override_diag_attributes}
+                )
+
+        except Exception as e:
+            log.error(f"Failed to apply environment overrides for target '{self.target}': {e}")
+            raise
 
     def _apply_source_yaml_overrides(self) -> None:
         """Apply meson option overrides from diag's YAML file in source directory."""
