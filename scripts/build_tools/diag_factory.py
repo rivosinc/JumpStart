@@ -425,18 +425,33 @@ class DiagFactory:
         diag_build_dir = os.path.join(self.root_build_dir, diag_name)
 
         # Build the single YAML config to pass through: { <diag_name>: {..}, global_overrides: {...} }
+        # Create deep copies to avoid modifying shared state
+        import copy
+
         merged_yaml_config = {
-            diag_name: {k: v for k, v in yaml_diag_config.items() if v is not None},
-            "global_overrides": self.global_overrides,
+            diag_name: copy.deepcopy({k: v for k, v in yaml_diag_config.items() if v is not None}),
+            "global_overrides": copy.deepcopy(self.global_overrides),
         }
 
         unit = DiagBuildUnit(
             yaml_config=merged_yaml_config,
-            meson_options_cmd_line_overrides=self.cli_meson_option_overrides,
-            diag_attributes_cmd_line_overrides=self.cli_diag_attribute_overrides,
-            diag_custom_defines_cmd_line_overrides=self.cli_diag_custom_defines,
+            meson_options_cmd_line_overrides=(
+                copy.deepcopy(self.cli_meson_option_overrides)
+                if self.cli_meson_option_overrides
+                else None
+            ),
+            diag_attributes_cmd_line_overrides=(
+                copy.deepcopy(self.cli_diag_attribute_overrides)
+                if self.cli_diag_attribute_overrides
+                else None
+            ),
+            diag_custom_defines_cmd_line_overrides=(
+                copy.deepcopy(self.cli_diag_custom_defines)
+                if self.cli_diag_custom_defines
+                else None
+            ),
             build_dir=diag_build_dir,
-            environment=self.environment,
+            environment=copy.deepcopy(self.environment),
             toolchain=self.toolchain,
             rng_seed=self.rng_seed,
             jumpstart_dir=self.jumpstart_dir,
