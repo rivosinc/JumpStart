@@ -149,8 +149,6 @@ class Meson:
             log.error(error_msg)
             raise MesonBuildError(error_msg)
 
-        # Check for conflicting options (if any are added in the future)
-
     def setup(self):
 
         self.meson_setup_flags = {}
