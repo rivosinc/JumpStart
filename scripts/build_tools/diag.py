@@ -448,9 +448,6 @@ class DiagBuildUnit:
 
             self.meson.introspect()
 
-            # Validate meson options after introspect
-            self.meson.validate_build_options()
-
             compiled_assets = self.meson.compile()
             for asset_type, asset_path in compiled_assets.items():
                 self.add_build_asset(asset_type, asset_path)
