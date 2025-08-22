@@ -10,9 +10,6 @@ JumpStart provides a bare-metal kernel, APIs and build infrastructure for writin
 
 A Diag is expected to provide sources (C and assembly files) and it's attributes in a YAML file.
 
-The JumpStart [`Unit Tests`](../tests) are a good reference on writing diags:
-* [Common tests](../tests/common/meson.build)
-
 **For a Quick Start Guide, see [Anatomy of a Diag](quick_start_anatomy_of_a_diag.md)** which provides a detailed explanation of `test021` which is a 2-core diag that modifies a shared page table in memory and checks that the change is visible to both cores.
 
 ## Table of Contents
@@ -21,6 +18,8 @@ The JumpStart [`Unit Tests`](../tests) are a good reference on writing diags:
 * [Diag Attributes](#diag-attributes)
 * [JumpStart APIs](#jumpstart-apis)
 * [Building and Running Diags](#building-and-running-diags)
+* [Running Unit Tests](#running-unit-tests)
+* [Debugging with GDB](#debugging-diags-with-gdb)
 
 ## Diag Sources
 
@@ -34,6 +33,8 @@ JumpStart provides a set of basic API functions that the diag can use. Details [
 
 The diag exits by returning from `main()` with a `DIAG_PASSED` or `DIAG_FAILED` return code. Alternatively, the diag can call `jumpstart_mmode_fail()` or `jumpstart_smode_fail()` functions if a clean return from `main()` is not possible. On return from the diag, JumpStart will exit the simulation with the appropriate exit code and exit sequence for the simulation environment.
 
+The JumpStart [`Unit Tests`](../tests) are a good reference on writing diags:
+* [Common tests](../tests/common/meson.build)
 
 **Diags are expected to follow the [RISC-V ABI Calling Convention](https://github.com/riscv-non-isa/riscv-elf-psabi-doc/blob/master/riscv-cc.adoc).**
 
@@ -69,6 +70,8 @@ Valid values: `bare`, `sv39`, `sv48`, `sv39x4`, `sv48x4`.
 
 Controls whether the diag's `main()` will be called in M-mode or S-mode.
 
+NOTE: Diags that run in `sbi_firmware_boot` mode (where JumpStart starts in S-mode after SBI Firmware runs) cannot start in M-mode.
+
 Default: `False`. The diag's `main()` will be called in S-mode.
 
 ### `mmode_start_address`, `smode_start_address` and `umode_start_address`
@@ -98,6 +101,14 @@ Controls the memory layout and attributes of all the sections of the diag.
 #### `va`, `gpa`, `pa`, `spa`
 
 Controls the virtual, guest physical, physical and supervisor physical addresses of the mapping.
+
+#### `target_mmu`
+
+Specifies the list of MMUs that this mapping will be set up for.
+
+MMUs currently supported: `cpu`, `iommu`.
+
+Default: ["cpu"]
 
 #### `stage`
 
@@ -130,6 +141,10 @@ If not explicitly specified, this will be inferred based on the translation stag
 
 Default: `None`.
 
+#### `pma_memory_type` (Rivos Internal)
+
+The memory type of the section. This is used to set the memory type for the PMARR region that holds this section.
+
 #### `linker_script_section`
 
 The name of the linker script section that this section will be placed in.
@@ -152,44 +167,129 @@ The sections `.text` and `.text.end` will be placed together in the `.text` link
    }
 ```
 
-## Building and Running Diags
+## Building and Running Diags with `build_diag.py`
 
-`meson` is the underlying build flow used to build the diags. Both the [`scripts/build_diag.py`](#scriptsbuild_diagpy) and the `justfile` wrap the meson build system.
+[`scripts/build_diag.py`](../scripts/build_diag.py) is the preferred way to build diags and optionally run them on spike.
 
-### `scripts/build_diag.py`
+It will place the build and run artifacts into `--diag_build_dir`. It produces the ELFs, run traces (for spike), `build_manifest.repro.yaml` file to reproduce the build, etc.
+
+It will produce a summary indicating status for each diag.
+
+```
+Summary
+Build root: /tmp/diag
+Build Repro Manifest: /tmp/diag/build_manifest.repro.yaml
+┏━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Diag    ┃ Build        ┃ Run [spike] ┃ Result                        ┃
+┡━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ test000 │ PASS (4.45s) │ PASS (0.38s) │ /tmp/diag/test000/test000.elf │
+├─────────┼──────────────┼──────────────┼───────────────────────────────┤
+│ test010 │ PASS (4.52s) │ PASS (0.38s) │ /tmp/diag/test010/test010.elf │
+├─────────┼──────────────┼──────────────┼───────────────────────────────┤
+│ test002 │ PASS (4.49s) │ PASS (0.39s) │ /tmp/diag/test002/test002.elf │
+└─────────┴──────────────┴──────────────┴───────────────────────────────┘
+
+Run Manifest:
+/tmp/diag/run_manifest.yaml
+
+STATUS: PASSED
+
+```
+
+### Environment Configuration
+
+The script uses an environment-based configuration system that determines the run_target, boot configuration, and other build settings. Environments are defined in [`scripts/build_tools/environments.yaml`](../scripts/build_tools/environments.yaml) and can inherit from other environments.
+
+Available environments include:
+- `spike`: Run on Spike simulator with fw-none boot configuration
+
+Each environment can specify:
+- `run_target`: The run_target to run the diag on (spike, etc.)
+- `override_meson_options`: Meson options to override for this environment
+- `override_diag_attributes`: Diag attributes to override for this environment
+- `extends`: Parent environment to inherit from
+
+### Flags
 
 The preferred way to build and run using JumpStart is to use the [`scripts/build_diag.py`](../scripts/build_diag.py) script.
 
-The script takes as input a diag source directory containing the diag's sources and attributes file, the toolchain to be used and the target to run the diag on.
+#### `--diag_src_dir`
 
-Run `--help` for all options.
+A list of diag source directories containing the diag's sources and attributes file.
 
-#### `--target`
+#### `--build_manifest`
 
-Targets define the environment to run the diag. Targets also have Meson options
-that can influence their behavior that are enabled by passing the args with
-[--override_meson_options](#--override_meson_options).
+A manifest file containing a list of multiple diags to be built. The manifest file can also contain global overrides for `override_meson_options`, `override_diag_attributes` and `diag_custom_defines` that are applied to all diags in a manifest. See `diags/sival/ddr.diag_manifest.yaml` in the `ctest` repo for an example.
 
-* `spike`: Run diag in spike.
-   * `spike_binary=<spike binary>`
-   * `spike_isa_string=<spike isa string>`
-   * `spike_additional_arguments=<spike args>`
-   * `spike_timeout=<spike timeout>`
+#### `--environment`
 
-#### `--boot_config`
+**Required.** The environment to build and run for.
 
-* `fw-none` (default): JumpStart starts running from hardware reset. No system firmware is expected to be present.
+Available environments can be listed by running:
+```shell
+jumpstart/scripts/build_diag.py --help
+```
+
+The environment determines:
+- The run_target (spike, etc.)
+- Boot configuration (fw-none)
+- Default meson options and diag attributes
+
 #### `--override_meson_options`
 
-Used to override the meson options specified in [meson.options](../meson.options).
+Used to override the meson options specified in [meson.options](../meson.options) or those set by the environment.
 
 #### `--override_diag_attributes`
 
-Used to override the diag attributes specified in the [attributes file](../src/public/jumpstart_public_source_attributes.yaml). This will override the attributes specified in the diag's attributes file.
+Used to override the diag attributes specified in the [attributes file](../src/public/jumpstart_public_source_attributes.yaml) or those set by the environment. This will override the attributes specified in the diag's attributes file.
 
-### `justfile`
+#### `--diag_custom_defines`
 
-This provides a way to build and test the unit tests during development.
+Override per diag custom defines.
+
+#### `--include_diags` / `--exclude_diags`
+
+Filter diagnostics when using a manifest. Only valid with `--build_manifest` and incompatible with `--diag_src_dir`.
+- `--include_diags name1 name2`: Build only the listed diagnostics from the manifest; errors if a name is not present.
+- `--exclude_diags name1 name2`: Build all diagnostics except the listed ones; errors if a name is not present.
+
+#### `--buildtype`
+
+Meson build type to use. Choices: `release`, `minsize`, `debug`, `debugoptimized`. Defaults to `release` if not specified.
+
+#### `--toolchain`
+
+Compiler toolchain. Choices: `gcc`. Default: `gcc`.
+
+#### `--disable_diag_run`
+
+Builds the diag but does not run it on the run_target (skips trace generation/run phase).
+
+#### `--diag_build_dir` (`--diag_build`)
+
+Required. Output directory for built artifacts. A subdirectory is used for Meson build artifacts.
+
+#### `--keep_meson_builddir`
+
+Keep the temporary Meson build directory (useful for inspecting logs/artifacts on failures). Default: `false`.
+
+#### `--rng_seed`
+
+Seed for randomized build/run behavior. Accepts Python int literals (e.g., `1234`, `0xdeadbeef`, `0b1010`). If not provided, uses `rng_seed` from the manifest or auto-generates a random seed.
+
+#### `-v`, `--verbose`
+
+Enable verbose logging.
+
+#### `-j`, `--jobs`
+
+Number of parallel compile jobs.
+
+See `--help` for all options.
+
+## Running Unit Tests
+
+Use the `justfile` to build and run unit tests during development.
 
 Run `just --list` to see all the available commands.
 
@@ -197,7 +297,7 @@ Examples:
 
 ```shell
 # Build all unit tests with GCC targeting release build and run on Spike.
-just gcc release spike
+just test gcc release spike
 ```
 
 ## JumpStart APIs
@@ -208,7 +308,7 @@ Functions with names that end in `_from_smode()` or `_from_mmode()` can only be 
 
 ### Memory Management APIs
 
-JumpStart provides a heap-based memory management system that supports allocations from DDR memory with different memory attributes (WB, WC, UC). A DDR WB heap is set up by default, but other heaps must be explicitly initialized before use.
+JumpStart provides a heap-based memory management system that supports allocations from DDR memory with different memory attributes (WB, WC, UC).
 
 If the diag attribute `enable_heap` is set to `True` a DDR WB heap will be initialized for use.
 
