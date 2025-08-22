@@ -39,7 +39,6 @@ class DiagFactory:
         root_build_dir: str,
         environment: str,
         toolchain: str,
-        boot_config: str,
         rng_seed: Optional[int],
         jumpstart_dir: str,
         keep_meson_builddir: bool,
@@ -52,7 +51,6 @@ class DiagFactory:
         self.build_manifest_yaml = build_manifest_yaml
         self.root_build_dir = os.path.abspath(root_build_dir)
         self.toolchain = toolchain
-        self.boot_config = boot_config
 
         # Get the environment object
         try:
@@ -80,6 +78,7 @@ class DiagFactory:
         self.cli_meson_option_overrides = cli_meson_option_overrides or []
         self.cli_diag_attribute_overrides = cli_diag_attribute_overrides or []
         self.cli_diag_custom_defines = cli_diag_custom_defines or []
+
         self.skip_write_manifest: bool = bool(skip_write_manifest)
 
         loaded = self.build_manifest_yaml or {}
@@ -439,7 +438,6 @@ class DiagFactory:
             build_dir=diag_build_dir,
             environment=self.environment,
             toolchain=self.toolchain,
-            boot_config=self.boot_config,
             rng_seed=self.rng_seed,
             jumpstart_dir=self.jumpstart_dir,
             keep_meson_builddir=self.keep_meson_builddir,

@@ -45,7 +45,6 @@ class Meson:
         diag_name: str,
         diag_sources: List[str],
         diag_attributes_yaml: str,
-        boot_config: str,
         keep_meson_builddir: bool,
         artifacts_dir: str,
     ) -> None:
@@ -79,7 +78,6 @@ class Meson:
         self.setup_default_meson_options(
             diag_sources,
             diag_attributes_yaml,
-            boot_config,
         )
 
     def __del__(self):
@@ -94,12 +92,10 @@ class Meson:
         self,
         diag_sources: List[str],
         diag_attributes_yaml: str,
-        boot_config: str,
     ) -> None:
         self.meson_options["diag_name"] = self.diag_name
         self.meson_options["diag_sources"] = diag_sources
         self.meson_options["diag_attributes_yaml"] = diag_attributes_yaml
-        self.meson_options["boot_config"] = boot_config
         self.meson_options["diag_attribute_overrides"] = []
 
         # Default buildtype. Can be overridden by YAML or CLI meson option overrides.
@@ -148,6 +144,15 @@ class Meson:
             error_msg = "Cannot validate meson options: _meson_introspect_options is not available"
             log.error(error_msg)
             raise MesonBuildError(error_msg)
+
+        # Check that spike only supports fw-none boot_config
+        diag_target = self._meson_introspect_options.get("diag_target")
+        if diag_target == "spike":
+            boot_config = self._meson_introspect_options.get("boot_config")
+            if boot_config != "fw-none":
+                error_msg = f"Invalid boot_config {boot_config} for spike. Only fw-none is supported for spike."
+                log.error(error_msg)
+                raise MesonBuildError(error_msg)
 
     def setup(self):
 

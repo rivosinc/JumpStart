@@ -66,6 +66,10 @@ int main(void) {
     return DIAG_FAILED;
   }
 
+  if (NUM_PAGES_FOR_JUMPSTART_UMODE_STACK != 8) {
+    return DIAG_FAILED;
+  }
+
   if (run_function_in_umode((uint64_t)asm_check_passed_in_arguments, 1, 2, 3, 4,
                             5, 6, 7) != DIAG_PASSED) {
     return DIAG_FAILED;

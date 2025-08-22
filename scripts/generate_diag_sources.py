@@ -622,7 +622,91 @@ class SourceGenerator:
                     )
                     file_descriptor.write("#endif\n")
 
+            # Generate stack-related defines
+            self.generate_stack_defines(file_descriptor)
+
             file_descriptor.close()
+
+    def generate_stack_defines(self, file_descriptor):
+        # This is a bit of a mess. Both mmode and smode share the same stack.
+        # We've named this stack "privileged" so we need to map the stack
+        # name to the mode.
+        stack_types = ListUtils.intersection(["umode"], self.priv_modes_enabled)
+        stack_types.append("privileged")
+        stack_types_to_priv_mode_map = {"umode": "umode", "privileged": "mmode"}
+
+        for stack_type in stack_types:
+            # Make sure we can equally distribute the number of total stack pages
+            # among the cpus.
+            priv_mode = stack_types_to_priv_mode_map[stack_type]
+            area_name = f"jumpstart_{priv_mode}"
+
+            # Get the num_pages from the diag attributes
+            num_pages_key = f"num_pages_for_jumpstart_{priv_mode}_stack"
+            if num_pages_key not in self.jumpstart_source_attributes["diag_attributes"]:
+                raise Exception(
+                    f"Required attribute '{num_pages_key}' not found in diag_attributes"
+                )
+            num_pages_for_stack = self.jumpstart_source_attributes["diag_attributes"][num_pages_key]
+
+            assert (
+                num_pages_for_stack % self.jumpstart_source_attributes["max_num_cpus_supported"]
+                == 0
+            )
+            num_pages_per_cpu_for_stack = int(
+                num_pages_for_stack / self.jumpstart_source_attributes["max_num_cpus_supported"]
+            )
+            stack_page_size = self.jumpstart_source_attributes[area_name]["stack"]["page_size"]
+
+            file_descriptor.write(
+                f"#define NUM_PAGES_PER_CPU_FOR_{stack_type.upper()}_STACK {num_pages_per_cpu_for_stack}\n\n"
+            )
+
+            file_descriptor.write(
+                f"#define {stack_type.upper()}_STACK_PAGE_SIZE {stack_page_size}\n\n"
+            )
+
+    def generate_stack(self, file_descriptor):
+        # This is a bit of a mess. Both mmode and smode share the same stack.
+        # We've named this stack "privileged" so we need to map the stack
+        # name to the mode.
+        stack_types = ListUtils.intersection(["umode"], self.priv_modes_enabled)
+        stack_types.append("privileged")
+        stack_types_to_priv_mode_map = {"umode": "umode", "privileged": "mmode"}
+
+        for stack_type in stack_types:
+            # Make sure we can equally distribute the number of total stack pages
+            # among the cpus.
+            priv_mode = stack_types_to_priv_mode_map[stack_type]
+            area_name = f"jumpstart_{priv_mode}"
+
+            # Get the num_pages from the diag attributes
+            num_pages_key = f"num_pages_for_jumpstart_{priv_mode}_stack"
+            if num_pages_key not in self.jumpstart_source_attributes["diag_attributes"]:
+                raise Exception(
+                    f"Required attribute '{num_pages_key}' not found in diag_attributes"
+                )
+            num_pages_for_stack = self.jumpstart_source_attributes["diag_attributes"][num_pages_key]
+
+            assert (
+                num_pages_for_stack % self.jumpstart_source_attributes["max_num_cpus_supported"]
+                == 0
+            )
+            num_pages_per_cpu_for_stack = int(
+                num_pages_for_stack / self.jumpstart_source_attributes["max_num_cpus_supported"]
+            )
+            stack_page_size = self.jumpstart_source_attributes[area_name]["stack"]["page_size"]
+
+            file_descriptor.write(f'.section .jumpstart.cpu.stack.{stack_type}, "aw"\n')
+            file_descriptor.write(".align 12\n")
+            file_descriptor.write(f".global {stack_type}_stack_top\n")
+            file_descriptor.write(f"{stack_type}_stack_top:\n")
+            for i in range(self.jumpstart_source_attributes["max_num_cpus_supported"]):
+                file_descriptor.write(f".global {stack_type}_stack_top_cpu_{i}\n")
+                file_descriptor.write(f"{stack_type}_stack_top_cpu_{i}:\n")
+                file_descriptor.write(f"  .zero {num_pages_per_cpu_for_stack * stack_page_size}\n")
+            file_descriptor.write(f".global {stack_type}_stack_bottom\n")
+            file_descriptor.write(f"{stack_type}_stack_bottom:\n\n")
 
     def generate_cpu_sync_functions(self, file_descriptor):
         active_cpu_mask = self.jumpstart_source_attributes["diag_attributes"]["active_cpu_mask"]
@@ -816,6 +900,8 @@ sync_all_cpus_from_{mode}:
             self.generate_smode_fail_functions(file)
 
             self.generate_cpu_sync_functions(file)
+
+            self.generate_stack(file)
 
             if self.jumpstart_source_attributes["rivos_internal_build"] is True:
                 rivos_internal_functions.generate_rivos_internal_mmu_functions(

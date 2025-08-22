@@ -112,9 +112,6 @@ class AssetAction(enum.IntEnum):
 
 
 class DiagBuildUnit:
-    supported_targets = ["spike"]
-    supported_boot_configs = ["fw-none"]
-
     def __init__(
         self,
         yaml_config: dict,
@@ -124,7 +121,6 @@ class DiagBuildUnit:
         build_dir,
         environment,
         toolchain,
-        boot_config,
         rng_seed,
         jumpstart_dir,
         keep_meson_builddir,
@@ -140,16 +136,6 @@ class DiagBuildUnit:
         self.rng: random.Random = random.Random(self.rng_seed)
 
         self.environment = environment
-
-        # Validate boot_config
-        assert boot_config in self.supported_boot_configs
-        self.boot_config: str = boot_config
-
-        # Legacy validation for spike
-        if self.environment.run_target == "spike" and self.boot_config != "fw-none":
-            raise Exception(
-                f"Invalid boot_config {self.boot_config} for spike. Only fw-none is supported for spike."
-            )
 
         self._setup_build_dir(build_dir)
 
@@ -219,7 +205,6 @@ class DiagBuildUnit:
             self.name,
             self.diag_source.get_sources(),
             self.diag_source.get_diag_attributes_yaml(),
-            self.boot_config,
             keep_meson_builddir,
             self.meson_artifacts_dir,
         )
@@ -574,7 +559,6 @@ class DiagBuildUnit:
             f"\n\tBuildType: {current_buildtype},"
             f"\n\tEnvironment: {self.environment.name},"
             f"\n\tRunTarget: {self.environment.run_target},"
-            f"\n\tBootConfig: {self.boot_config},"
             f"\n\tCompile: {compile_colored},"
             f"\n\tRun: {run_colored}"
         )

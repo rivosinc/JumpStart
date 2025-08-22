@@ -81,8 +81,6 @@ class JumpStartGeneratedSource:
 
         self.generate_c_structs()
 
-        self.generate_stack()
-
         self.generate_defines()
 
         self.generate_reg_context_save_restore_code()
@@ -187,56 +185,6 @@ class JumpStartGeneratedSource:
                 f"Total size of C structs ({total_size_of_c_structs}) exceeds maximum size allocated for C structs {max_allowed_size_of_c_structs}"
             )
             sys.exit(1)
-
-    def generate_stack(self):
-        # This is a bit of a mess. Both mmode and smode share the same stack.
-        # We've named this stack "privileged" so we need to map the stack
-        # name to the mode.
-        stack_types = ListUtils.intersection(["umode"], self.priv_modes_enabled)
-        stack_types.append("privileged")
-        stack_types_to_priv_mode_map = {"umode": "umode", "privileged": "mmode"}
-
-        for stack_type in stack_types:
-            # Make sure we can equally distribute the number of total stack pages
-            # among the cpus.
-            assert (
-                self.attributes_data[f"jumpstart_{stack_types_to_priv_mode_map[stack_type]}"][
-                    "stack"
-                ]["num_pages"]
-                % self.attributes_data["max_num_cpus_supported"]
-                == 0
-            )
-            num_pages_per_cpu_for_stack = int(
-                self.attributes_data[f"jumpstart_{stack_types_to_priv_mode_map[stack_type]}"][
-                    "stack"
-                ]["num_pages"]
-                / self.attributes_data["max_num_cpus_supported"]
-            )
-            stack_page_size = self.attributes_data[
-                f"jumpstart_{stack_types_to_priv_mode_map[stack_type]}"
-            ]["stack"]["page_size"]
-
-            self.defines_file_fd.write(
-                f"#define NUM_PAGES_PER_CPU_FOR_{stack_type.upper()}_STACK {num_pages_per_cpu_for_stack}\n\n"
-            )
-
-            self.defines_file_fd.write(
-                f"#define {stack_type.upper()}_STACK_PAGE_SIZE {stack_page_size}\n\n"
-            )
-
-        for stack_type in stack_types:
-            self.assembly_file_fd.write(f'.section .jumpstart.cpu.stack.{stack_type}, "aw"\n')
-            self.assembly_file_fd.write(".align 12\n")
-            self.assembly_file_fd.write(f".global {stack_type}_stack_top\n")
-            self.assembly_file_fd.write(f"{stack_type}_stack_top:\n")
-            for i in range(self.attributes_data["max_num_cpus_supported"]):
-                self.assembly_file_fd.write(f".global {stack_type}_stack_top_cpu_{i}\n")
-                self.assembly_file_fd.write(f"{stack_type}_stack_top_cpu_{i}:\n")
-                self.assembly_file_fd.write(
-                    f"  .zero {num_pages_per_cpu_for_stack * stack_page_size}\n"
-                )
-            self.assembly_file_fd.write(f".global {stack_type}_stack_bottom\n")
-            self.assembly_file_fd.write(f"{stack_type}_stack_bottom:\n\n")
 
     def generate_defines(self):
         for define_name in self.attributes_data["defines"]:

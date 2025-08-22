@@ -12,7 +12,7 @@ import os
 from typing import Dict
 
 import yaml
-from build_tools import DiagBuildUnit, DiagFactory, Meson
+from build_tools import DiagFactory, Meson
 from build_tools.environment import get_environment_manager
 
 
@@ -128,14 +128,7 @@ def main():
         default="gcc",
         choices=Meson.supported_toolchains,
     )
-    parser.add_argument(
-        "--boot_config",
-        help=f"Boot Config to build diag for. Options: {DiagBuildUnit.supported_boot_configs}.",
-        required=False,
-        type=str,
-        default="fw-none",
-        choices=DiagBuildUnit.supported_boot_configs,
-    )
+
     parser.add_argument(
         "--disable_diag_run",
         help="Build the diag but don't run it on the target to generate the trace.",
@@ -149,6 +142,7 @@ def main():
         required=False,
         type=str,
     )
+
     parser.add_argument(
         "--keep_meson_builddir",
         help="Keep the meson build directory.",
@@ -297,7 +291,6 @@ def main():
         root_build_dir=args.diag_build_dir,
         environment=args.environment,
         toolchain=args.toolchain,
-        boot_config=args.boot_config,
         rng_seed=args.rng_seed,
         jumpstart_dir=args.jumpstart_dir,
         keep_meson_builddir=args.keep_meson_builddir,
