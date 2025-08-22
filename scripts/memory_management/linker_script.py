@@ -197,10 +197,14 @@ class LinkerScript:
             section_end = section_start + self.sections[i].get_size()
 
             # Check section is within allowed ELF address range if specified
-            if self.elf_start_address is not None and self.elf_end_address is not None:
-                if section_start < self.elf_start_address or section_end > self.elf_end_address:
+            if self.elf_start_address is not None or self.elf_end_address is not None:
+                if self.elf_start_address is not None and section_start < self.elf_start_address:
                     raise ValueError(
-                        f"{self.sections[i]} is outside allowed ELF address range [{hex(self.elf_start_address)}, {hex(self.elf_end_address)}]"
+                        f"{self.sections[i]} is outside allowed ELF address range - start address {hex(section_start)} is less than elf_start_address {hex(self.elf_start_address)}"
+                    )
+                if self.elf_end_address is not None and section_end > self.elf_end_address:
+                    raise ValueError(
+                        f"{self.sections[i]} is outside allowed ELF address range - end address {hex(section_end)} is greater than elf_end_address {hex(self.elf_end_address)}"
                     )
 
             # Check for overlap with next section
