@@ -37,7 +37,7 @@ class DiagFactory:
         self,
         build_manifest_yaml: dict,
         root_build_dir: str,
-        target: str,
+        environment: str,
         toolchain: str,
         boot_config: str,
         rng_seed: Optional[int],
@@ -51,9 +51,17 @@ class DiagFactory:
     ) -> None:
         self.build_manifest_yaml = build_manifest_yaml
         self.root_build_dir = os.path.abspath(root_build_dir)
-        self.target = target
         self.toolchain = toolchain
         self.boot_config = boot_config
+
+        # Get the environment object
+        try:
+            from .environment import get_environment_manager
+
+            env_manager = get_environment_manager()
+            self.environment = env_manager.get_environment(environment)
+        except Exception as e:
+            raise DiagFactoryError(f"Failed to get environment '{environment}': {e}")
 
         if rng_seed is not None:
             self.rng_seed = rng_seed
@@ -429,7 +437,7 @@ class DiagFactory:
             diag_attributes_cmd_line_overrides=self.cli_diag_attribute_overrides,
             diag_custom_defines_cmd_line_overrides=self.cli_diag_custom_defines,
             build_dir=diag_build_dir,
-            target=self.target,
+            environment=self.environment,
             toolchain=self.toolchain,
             boot_config=self.boot_config,
             rng_seed=self.rng_seed,
@@ -487,9 +495,6 @@ class DiagFactory:
         if not self._diag_units:
             raise DiagFactoryError("run_all() called before compile_all().")
 
-        # Run per-diag via DiagBuildUnit.run()
-        effective_jobs = self.jobs if self.target == "spike" else 1
-
         def _do_run(name: str, unit: DiagBuildUnit) -> None:
             log.info(f"Running diag '{name}'")
             try:
@@ -501,6 +506,7 @@ class DiagFactory:
                     pass
 
         run_tasks: Dict[str, Tuple] = {name: (unit,) for name, unit in self._diag_units.items()}
+        effective_jobs = self.jobs if self.environment.run_target == "spike" else 1
         self._execute_parallel(effective_jobs, run_tasks, _do_run)
 
         # After running all units, raise if any run failed
@@ -590,9 +596,9 @@ class DiagFactory:
 
         # Header varies depending on whether we include the Result column
         if include_result_col:
-            header = ("Diag", "Build", f"Run [{self.target}]", "Result")
+            header = ("Diag", "Build", f"Run [{self.environment.run_target}]", "Result")
         else:
-            header = ("Diag", "Build", f"Run [{self.target}]")
+            header = ("Diag", "Build", f"Run [{self.environment.run_target}]")
 
         # Compute column widths based on plain text
         col_widths = [len(h) for h in header]

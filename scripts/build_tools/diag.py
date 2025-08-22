@@ -122,7 +122,7 @@ class DiagBuildUnit:
         diag_attributes_cmd_line_overrides,
         diag_custom_defines_cmd_line_overrides,
         build_dir,
-        target,
+        environment,
         toolchain,
         boot_config,
         rng_seed,
@@ -139,7 +139,17 @@ class DiagBuildUnit:
         log.debug(f"DiagBuildUnit: {self.name} Seeding RNG with: {self.rng_seed}")
         self.rng: random.Random = random.Random(self.rng_seed)
 
-        self._validate_and_set_target_config(target, boot_config)
+        self.environment = environment
+
+        # Validate boot_config
+        assert boot_config in self.supported_boot_configs
+        self.boot_config: str = boot_config
+
+        # Legacy validation for spike
+        if self.environment.run_target == "spike" and self.boot_config != "fw-none":
+            raise Exception(
+                f"Invalid boot_config {self.boot_config} for spike. Only fw-none is supported for spike."
+            )
 
         self._setup_build_dir(build_dir)
 
@@ -189,37 +199,6 @@ class DiagBuildUnit:
         self.diag_source: DiagSource = DiagSource(resolved_src_dir)
         self.expected_fail: bool = only_block.get("expected_fail", False)
 
-    def _validate_and_set_target_config(self, target: str, boot_config: str) -> None:
-        """Validate and set target-specific configuration."""
-        # Check if target is in supported_targets or in available environments
-        try:
-            env_manager = get_environment_manager()
-            is_valid_target = target in self.supported_targets or target in env_manager.environments
-        except Exception:
-            # If environment manager fails, fall back to supported_targets only
-            is_valid_target = target in self.supported_targets
-
-        if not is_valid_target:
-            available_targets = list(self.supported_targets)
-            try:
-                available_targets.extend(sorted(env_manager.list_visible_environments().keys()))
-            except Exception:
-                pass
-            raise ValueError(
-                f"Target '{target}' is not supported. "
-                f"Available targets: {', '.join(sorted(set(available_targets)))}"
-            )
-
-        self.target: str = target
-
-        assert boot_config in self.supported_boot_configs
-        self.boot_config: str = boot_config
-
-        if self.target == "spike" and self.boot_config != "fw-none":
-            raise Exception(
-                f"Invalid boot_config {self.boot_config} for spike. Only fw-none is supported for spike."
-            )
-
     def _setup_build_dir(self, build_dir: str) -> None:
         """Set up the build directory and artifacts directory."""
         self.build_dir: str = os.path.abspath(build_dir)
@@ -265,7 +244,7 @@ class DiagBuildUnit:
         # Apply overrides in order: global (YAML), diag-specific (YAML), command-line
         self._apply_yaml_config_overrides(yaml_config)
 
-        self._apply_target_specific_overrides()
+        self._apply_run_target_specific_overrides()
 
         self._apply_command_line_overrides(
             meson_options_cmd_line_overrides,
@@ -275,38 +254,28 @@ class DiagBuildUnit:
 
     def _apply_default_meson_overrides(self) -> None:
         """Apply default meson option overrides for run targets."""
-        self.meson.override_meson_options_from_dict({"diag_target": self.target})
+        self.meson.override_meson_options_from_dict({"diag_target": self.environment.run_target})
         self.meson.override_meson_options_from_dict(
             {"diag_attribute_overrides": [f"build_rng_seed={self.rng_seed}"]}
         )
 
     def _apply_environment_overrides(self) -> None:
-        """Apply environment-specific overrides based on the target."""
+        """Apply environment-specific overrides based on the environment."""
         try:
-            env_manager = get_environment_manager()
-
-            # Check if the target corresponds to an environment
-            if self.target not in env_manager.environments:
-                available_envs = sorted(env_manager.list_visible_environments().keys())
-                raise ValueError(
-                    f"Target '{self.target}' does not match any known environment. "
-                    f"Available environments: {', '.join(available_envs)}"
-                )
-
-            env = env_manager.get_environment(self.target)
-
             # Apply meson option overrides from environment
-            if env.override_meson_options:
-                self.meson.override_meson_options_from_dict(env.override_meson_options)
+            if self.environment.override_meson_options:
+                self.meson.override_meson_options_from_dict(self.environment.override_meson_options)
 
             # Apply diag attribute overrides from environment
-            if env.override_diag_attributes:
+            if self.environment.override_diag_attributes:
                 self.meson.override_meson_options_from_dict(
-                    {"diag_attribute_overrides": env.override_diag_attributes}
+                    {"diag_attribute_overrides": self.environment.override_diag_attributes}
                 )
 
         except Exception as e:
-            log.error(f"Failed to apply environment overrides for target '{self.target}': {e}")
+            log.error(
+                f"Failed to apply environment overrides for environment '{self.environment.name}': {e}"
+            )
             raise
 
     def _apply_source_yaml_overrides(self) -> None:
@@ -349,9 +318,9 @@ class DiagBuildUnit:
                 {"diag_custom_defines": list(diag_custom_defines_cmd_line_overrides)}
             )
 
-    def _apply_target_specific_overrides(self) -> None:
+    def _apply_run_target_specific_overrides(self) -> None:
         """Apply target-specific meson option overrides."""
-        if self.target == "spike":
+        if self.environment.run_target == "spike":
             self._apply_spike_overrides()
 
     def _apply_spike_overrides(self) -> None:
@@ -520,6 +489,15 @@ class DiagBuildUnit:
             # Do not run if compile failed
             return
 
+        # Check if environment has a run_target defined
+        if self.environment.run_target is None:
+            self.run_error = (
+                f"Environment '{self.environment.name}' does not have a run_target defined"
+            )
+            self.run_duration_s = time.perf_counter() - start_time
+            self.run_state = self.RunState.FAILED
+            return
+
         try:
             run_assets = self.meson.test()
             for asset_type, asset_path in run_assets.items():
@@ -594,7 +572,8 @@ class DiagBuildUnit:
             f"\n\tName: {self.name}"
             f"\n\tDirectory: {self.build_dir}"
             f"\n\tBuildType: {current_buildtype},"
-            f"\n\tTarget: {self.target},"
+            f"\n\tEnvironment: {self.environment.name},"
+            f"\n\tRunTarget: {self.environment.run_target},"
             f"\n\tBootConfig: {self.boot_config},"
             f"\n\tCompile: {compile_colored},"
             f"\n\tRun: {run_colored}"

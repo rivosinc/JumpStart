@@ -100,15 +100,24 @@ def main():
 
     env_manager = get_environment_manager()
     env_names = sorted(env_manager.list_visible_environments().keys())
-    env_help = f"Target to build for. Available environments: {', '.join(env_names)}"
+    env_help = f"Environment to build for. Available environments: {', '.join(env_names)}"
 
     parser.add_argument(
-        "--target",
-        "-t",
+        "--environment",
+        "-e",
         help=env_help,
         required=False,
         type=str,
-        default="spike",
+        default=None,
+        choices=env_names,
+    )
+    parser.add_argument(
+        "--target",
+        "-t",
+        help="[DEPRECATED] Use --environment instead. Target to build for.",
+        required=False,
+        type=str,
+        default=None,
         choices=env_names,
     )
     parser.add_argument(
@@ -166,12 +175,32 @@ def main():
     )
     args = parser.parse_args()
 
+    # Handle backward compatibility for --target
+    if args.target is not None:
+        import warnings
+
+        warnings.warn(
+            "--target is deprecated and will be removed in a future version. Use --environment instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        # If both --target and --environment are specified, error out
+        if args.environment is not None:
+            parser.error(
+                "Cannot specify both --target and --environment. Use --environment instead."
+            )
+        # Use target value as environment if environment is not specified
+        args.environment = args.target
+
     # Validate required arguments for normal operation
     if not args.diag_src_dir and not args.build_manifest:
         parser.error("Either --diag_src_dir or --build_manifest is required")
 
     if not args.diag_build_dir:
         parser.error("--diag_build_dir is required")
+
+    if args.environment is None:
+        parser.error("--environment must be specified")
 
     if args.verbose:
         log.basicConfig(format="%(levelname)s: [%(threadName)s]: %(message)s", level=log.DEBUG)
@@ -266,7 +295,7 @@ def main():
     factory = DiagFactory(
         build_manifest_yaml=build_manifest_yaml,
         root_build_dir=args.diag_build_dir,
-        target=args.target,
+        environment=args.environment,
         toolchain=args.toolchain,
         boot_config=args.boot_config,
         rng_seed=args.rng_seed,
