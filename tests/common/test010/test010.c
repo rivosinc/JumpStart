@@ -19,7 +19,7 @@ extern uint64_t _TEXT_END;
 extern uint64_t _DATA_START;
 extern uint64_t _DATA_END;
 
-#define ADDR(var) ((uint64_t) & (var))
+#define ADDR(var) ((uint64_t)&(var))
 #define VAR_WITHIN_REGION(var, start, end)                                     \
   (((ADDR(var) >= (start)) && (ADDR(var) + (sizeof(var)) < (end))) ? 1 : 0)
 
