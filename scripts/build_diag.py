@@ -70,21 +70,21 @@ def main():
     parser.add_argument(
         "--override_meson_options",
         "--override_meson",
-        help="Override the meson options from meson.options.",
+        help="Override the meson options from meson.options. Format: 'key=value' (e.g., 'generate_trace=true').",
         required=False,
         nargs="+",
         default=[],
     )
     parser.add_argument(
         "--override_diag_attributes",
-        help="Override the diag attributes specified in the diag's attributes file.",
+        help="Override the diag attributes specified in the diag's attributes file. Format: 'key=value' (e.g., 'active_cpu_mask=0b1').",
         required=False,
         nargs="+",
         default=[],
     )
     parser.add_argument(
         "--diag_custom_defines",
-        help="Set diag specific defines.",
+        help="Set diag specific defines. Format: 'NAME=VALUE' (e.g., 'USE_L2PMU=1').",
         required=False,
         nargs="+",
         default=None,

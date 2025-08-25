@@ -33,6 +33,14 @@ class DictUtils:
             # Split at the first '='
             name_value_pair = override.split("=", 1)
 
+            # Check if the split resulted in exactly 2 parts (key and value)
+            if len(name_value_pair) != 2:
+                raise ValueError(
+                    f"Invalid override format: '{override}'. "
+                    f"Expected format is 'key=value', but no '=' found. "
+                    f"Example: 'generate_trace=true'"
+                )
+
             attribute_name = name_value_pair[0]
             attribute_value = name_value_pair[1]
 
