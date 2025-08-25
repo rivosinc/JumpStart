@@ -237,6 +237,10 @@ class DiagBuildUnit:
             diag_custom_defines_cmd_line_overrides,
         )
 
+        # Deduplicate diag_custom_defines meson option.
+        # The compiler will error if there are duplicate defines.
+        self._deduplicate_diag_custom_defines()
+
     def _apply_default_meson_overrides(self) -> None:
         """Apply default meson option overrides for run targets."""
         self.meson.override_meson_options_from_dict({"run_target": self.environment.run_target})
@@ -302,6 +306,26 @@ class DiagBuildUnit:
             self.meson.override_meson_options_from_dict(
                 {"diag_custom_defines": list(diag_custom_defines_cmd_line_overrides)}
             )
+
+    def _deduplicate_diag_custom_defines(self) -> None:
+        """Remove duplicate diag_custom_defines, keeping the last occurrence of each key."""
+        existing_defines = self.meson.get_meson_options().get("diag_custom_defines", [])
+        if not existing_defines:
+            return
+
+        # Use a dict to naturally handle precedence - last value wins
+        defines_dict = {}
+        for entry in existing_defines:
+            if "=" in entry:
+                key = entry.split("=", 1)[0]
+                defines_dict[key] = entry
+            else:
+                defines_dict[entry] = entry
+
+        # Convert back to list
+        deduplicated_defines = list(defines_dict.values())
+
+        self.meson.meson_options["diag_custom_defines"] = deduplicated_defines
 
     def _apply_run_target_specific_overrides(self) -> None:
         """Apply target-specific meson option overrides."""
