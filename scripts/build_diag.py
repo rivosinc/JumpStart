@@ -201,10 +201,7 @@ def main():
     else:
         log.basicConfig(format="%(levelname)s: [%(threadName)s]: %(message)s", level=log.INFO)
 
-    script_meson_option_overrides = {
-        "generate_trace": "true",
-        "diag_generate_disassembly": "true",
-    }
+    script_meson_option_overrides = {}
 
     if args.diag_custom_defines:
         script_meson_option_overrides["diag_custom_defines"] = ",".join(args.diag_custom_defines)

@@ -21,3 +21,6 @@ environments:
   spike:
     extends: fw-none
     run_target: spike
+    override_meson_options:
+      diag_generate_disassembly: true
+      generate_trace: true
