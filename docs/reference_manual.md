@@ -238,6 +238,11 @@ Available environments can be listed by running:
 jumpstart/scripts/build_diag.py --help
 ```
 
+Environment related extra arguments can be listed by running:
+```shell
+jumpstart/scripts/build_diag.py -e <environment> --help
+```
+
 The environment determines:
 - The run_target (spike, etc.)
 - Boot configuration (fw-none)

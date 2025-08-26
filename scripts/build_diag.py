@@ -17,7 +17,32 @@ from build_tools.environment import get_environment_manager
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
+    env_parser = argparse.ArgumentParser(description=__doc__, add_help=False)
+    env_manager = get_environment_manager()
+    env_names = sorted(env_manager.list_visible_environments().keys())
+    env_help = f"Environment to build for. Available environments: {', '.join(env_names)}"
+
+    env_parser.add_argument(
+        "--environment",
+        "-e",
+        help=env_help,
+        required=False,
+        type=str,
+        default=None,
+        choices=env_names,
+    )
+    env_parser.add_argument(
+        "--target",
+        "-t",
+        help="[DEPRECATED] Use --environment instead. Target to build for.",
+        required=False,
+        type=str,
+        default=None,
+        choices=env_names,
+    )
+    env_args, _ = env_parser.parse_known_args()
+
+    parser = argparse.ArgumentParser(description=__doc__, parents=[env_parser])
     parser.add_argument(
         "--jumpstart_dir",
         help="Jumpstart directory",
@@ -97,29 +122,6 @@ def main():
         type=str,
         default=None,
     )
-
-    env_manager = get_environment_manager()
-    env_names = sorted(env_manager.list_visible_environments().keys())
-    env_help = f"Environment to build for. Available environments: {', '.join(env_names)}"
-
-    parser.add_argument(
-        "--environment",
-        "-e",
-        help=env_help,
-        required=False,
-        type=str,
-        default=None,
-        choices=env_names,
-    )
-    parser.add_argument(
-        "--target",
-        "-t",
-        help="[DEPRECATED] Use --environment instead. Target to build for.",
-        required=False,
-        type=str,
-        default=None,
-        choices=env_names,
-    )
     parser.add_argument(
         "--toolchain",
         help=f"Toolchain to build diag with. Options: {Meson.supported_toolchains}.",
@@ -128,7 +130,6 @@ def main():
         default="gcc",
         choices=Meson.supported_toolchains,
     )
-
     parser.add_argument(
         "--disable_diag_run",
         help="Build the diag but don't run it on the target to generate the trace.",
@@ -142,7 +143,6 @@ def main():
         required=False,
         type=str,
     )
-
     parser.add_argument(
         "--keep_meson_builddir",
         help="Keep the meson build directory.",
@@ -157,6 +157,13 @@ def main():
         default=None,
     )
     parser.add_argument(
+        "--custom_rcode_bin",
+        help="Path to custom r-code binary to replace jumpstart r-code.",
+        required=False,
+        type=str,
+        default=None,
+    )
+    parser.add_argument(
         "-v", "--verbose", help="Verbose output.", action="store_true", default=False
     )
     parser.add_argument(
@@ -167,6 +174,42 @@ def main():
         type=int,
         default=5,
     )
+
+    final_target = env_args.environment if env_args.environment else env_args.target
+    if final_target and "oswis" in final_target:
+        # OSWIS-only arguments
+        oswis = parser.add_argument_group("OSWIS-only arguments")
+        oswis.add_argument(
+            "--oswis_additional_arguments",
+            help="Additional arguments to pass to OSWIS when running the diag.",
+            nargs="*",
+            default=[],
+        )
+        oswis.add_argument(
+            "--oswis_emulation_model",
+            help="Emulation model to use when running the tests with OSWIS.",
+            type=str,
+            default="work_core",
+        )
+        oswis.add_argument(
+            "--oswis_diag_timeout",
+            help="Meson test timeout when running the tests with OSWIS.",
+            type=int,
+            default=3000,
+        )
+        oswis.add_argument(
+            "--oswis_timeout",
+            help="Emulator timeout when running the tests with OSWIS.",
+            type=int,
+            default=10000000000,
+        )
+        oswis.add_argument(
+            "--oswis_firmware_tarball",
+            help="Path to a tarball containing the boot firmware for OSWIS SCS models.",
+            type=str,
+            default="",
+        )
+
     args = parser.parse_args()
 
     # Handle backward compatibility for --target
@@ -203,16 +246,11 @@ def main():
 
     script_meson_option_overrides = {}
 
-    if args.diag_custom_defines:
-        script_meson_option_overrides["diag_custom_defines"] = ",".join(args.diag_custom_defines)
-
-    # Only add script defaults for options that haven't been explicitly overridden
-    for key, value in script_meson_option_overrides.items():
-        if not any(key in override for override in args.override_meson_options):
-            args.override_meson_options.append(f"{key}={value}")
-
     if args.buildtype is not None:
         args.override_meson_options.append(f"buildtype={args.buildtype}")
+
+    if args.custom_rcode_bin is not None:
+        args.override_meson_options.append(f"custom_rcode_bin={args.custom_rcode_bin}")
 
     if args.active_cpu_mask_override is not None:
         args.override_diag_attributes.append(f"active_cpu_mask={args.active_cpu_mask_override}")
@@ -283,6 +321,18 @@ def main():
             0, f"{key}={value}"
         )
 
+    # Ensure OSWIS-specific arguments exist in args, even if not set by the parser
+    if not hasattr(args, "oswis_additional_arguments"):
+        args.oswis_additional_arguments = []
+    if not hasattr(args, "oswis_emulation_model"):
+        args.oswis_emulation_model = ""
+    if not hasattr(args, "oswis_diag_timeout"):
+        args.oswis_diag_timeout = 0
+    if not hasattr(args, "oswis_timeout"):
+        args.oswis_timeout = 0
+    if not hasattr(args, "oswis_firmware_tarball"):
+        args.oswis_firmware_tarball = ""
+
     factory = DiagFactory(
         build_manifest_yaml=build_manifest_yaml,
         root_build_dir=args.diag_build_dir,
@@ -295,6 +345,11 @@ def main():
         cli_meson_option_overrides=args.override_meson_options,
         cli_diag_attribute_overrides=args.override_diag_attributes,
         cli_diag_custom_defines=args.diag_custom_defines,
+        oswis_additional_arguments=args.oswis_additional_arguments,
+        oswis_emulation_model=args.oswis_emulation_model,
+        oswis_diag_timeout=args.oswis_diag_timeout,
+        oswis_timeout=args.oswis_timeout,
+        oswis_firmware_tarball=args.oswis_firmware_tarball,
     )
 
     try:
