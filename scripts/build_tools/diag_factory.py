@@ -384,7 +384,6 @@ class DiagFactory:
             elf_path: <path to ELF>
             num_iterations: 1
             expected_fail: <bool>
-            primary_cpu_id: <int>
         """
         if output_path is None:
             output_path = os.path.join(self.root_build_dir, "run_manifest.yaml")
@@ -401,16 +400,10 @@ class DiagFactory:
                 try:
                     elf_path = unit.get_build_asset("elf")
                     if os.path.exists(elf_path):
-                        # Get active_cpu_mask from the diag unit
-                        active_cpu_mask = unit.get_active_cpu_mask()
-                        active_cpu_mask = int(active_cpu_mask, 2)
-                        primary_cpu_id = (active_cpu_mask & -active_cpu_mask).bit_length() - 1
-
                         run_manifest["diagnostics"][diag_name] = {
                             "elf_path": os.path.abspath(elf_path),
                             "num_iterations": 1,
                             "expected_fail": getattr(unit, "expected_fail", False),
-                            "primary_cpu_id": primary_cpu_id,
                         }
                 except Exception as exc:
                     log.warning(f"Failed to get ELF path for diag '{diag_name}': {exc}")
