@@ -6,10 +6,8 @@ import json
 import logging as log
 import os
 import pprint
-import shutil
 import subprocess
 import sys
-import tempfile
 from typing import Any, Dict, List
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
@@ -45,11 +43,9 @@ class Meson:
         diag_name: str,
         diag_sources: List[str],
         diag_attributes_yaml: str,
-        keep_meson_builddir: bool,
-        artifacts_dir: str,
+        builddir: str,
     ) -> None:
         self.meson_builddir = None
-        self.keep_meson_builddir = None
 
         assert toolchain in self.supported_toolchains
         self.toolchain = toolchain
@@ -62,31 +58,17 @@ class Meson:
 
         self.meson_options: Dict[str, Any] = {}
 
-        # Ensure artifacts directory exists and is absolute
-        if not os.path.isabs(artifacts_dir):
-            artifacts_dir = os.path.abspath(artifacts_dir)
-        os.makedirs(artifacts_dir, exist_ok=True)
-        self.artifacts_dir = artifacts_dir
-
-        # Create meson build directory inside the provided artifacts directory
-        self.meson_builddir = tempfile.mkdtemp(
-            dir=self.artifacts_dir, prefix=f"{self.diag_name}_meson_builddir_"
-        )
-
-        self.keep_meson_builddir: bool = keep_meson_builddir
+        # Ensure build directory exists and is absolute
+        if not os.path.isabs(builddir):
+            builddir = os.path.abspath(builddir)
+        if not os.path.exists(builddir):
+            raise Exception(f"Meson build directory does not exist: {builddir}")
+        self.meson_builddir = builddir
 
         self.setup_default_meson_options(
             diag_sources,
             diag_attributes_yaml,
         )
-
-    def __del__(self):
-        if self.meson_builddir is not None and self.keep_meson_builddir is False:
-            try:
-                log.debug(f"Removing meson build directory: {self.meson_builddir}")
-                shutil.rmtree(self.meson_builddir)
-            except Exception as exc:
-                log.debug(f"Ignoring error during meson build directory cleanup: {exc}")
 
     def setup_default_meson_options(
         self,
@@ -196,7 +178,6 @@ class Meson:
         if return_code != 0:
             error_msg = f"meson setup failed. Check: {self.meson_builddir}"
             log.error(error_msg)
-            self.keep_meson_builddir = True
             raise MesonBuildError(error_msg, return_code)
 
     def compile(self):
@@ -211,13 +192,11 @@ class Meson:
         if return_code == 0:
             if not os.path.exists(diag_elf):
                 error_msg = f"diag elf not created by meson compile. Check: {self.meson_builddir}"
-                self.keep_meson_builddir = True
                 raise MesonBuildError(error_msg)
 
         if return_code != 0:
             error_msg = f"Compile failed. Check: {self.meson_builddir}"
             log.error(error_msg)
-            self.keep_meson_builddir = True
             raise MesonBuildError(error_msg, return_code)
 
         compiled_assets = {}
@@ -239,19 +218,16 @@ class Meson:
         if generate_trace:
             if return_code == 0 and not os.path.exists(self.trace_file):
                 error_msg = f"Run passed but trace file not created. Check: {self.meson_builddir}"
-                self.keep_meson_builddir = True
                 raise MesonBuildError(error_msg)
 
             run_assets["trace"] = self.trace_file
         elif self.trace_file and os.path.exists(self.trace_file):
             error_msg = f"Trace generation was disabled but trace file {self.trace_file} created. Check: {self.meson_builddir}"
-            self.keep_meson_builddir = True
             raise MesonBuildError(error_msg)
 
         if return_code != 0:
             error_msg = f"Run failed. Check: {self.meson_builddir}"
             log.error(error_msg)
-            self.keep_meson_builddir = True
             raise MesonBuildError(error_msg, return_code)
 
         return run_assets
@@ -282,7 +258,6 @@ class Meson:
         if result_code != 0:
             error_msg = f"meson introspect failed. Check: {self.meson_builddir}"
             log.error(error_msg)
-            self.keep_meson_builddir = True
             raise MesonBuildError(error_msg, result_code)
 
         try:
@@ -295,5 +270,4 @@ class Meson:
         except Exception as e:
             error_msg = f"Failed to parse meson introspect output: {e}"
             log.error(error_msg)
-            self.keep_meson_builddir = True
             raise MesonBuildError(error_msg)

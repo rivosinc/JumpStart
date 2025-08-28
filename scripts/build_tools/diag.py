@@ -186,27 +186,27 @@ class DiagBuildUnit:
         self.expected_fail: bool = only_block.get("expected_fail", False)
 
     def _setup_build_dir(self, build_dir: str) -> None:
-        """Set up the build directory and artifacts directory."""
+        """Set up the build directory and meson build directory."""
         self.build_dir: str = os.path.abspath(build_dir)
         system_functions.create_empty_directory(self.build_dir)
 
-        # Create a directory for Meson build artifacts inside the diag build directory
-        meson_artifacts_dir = os.path.join(self.build_dir, "meson_artifacts")
-        system_functions.create_empty_directory(meson_artifacts_dir)
-        self.meson_artifacts_dir = meson_artifacts_dir
+        # Create a directory for Meson build directory inside the diag build directory
+        meson_builddir = os.path.join(self.build_dir, "meson_builddir")
+        system_functions.create_empty_directory(meson_builddir)
+        self.meson_builddir = meson_builddir
 
     def _create_meson_instance(
         self, toolchain: str, jumpstart_dir: str, keep_meson_builddir: bool
     ) -> None:
         """Create the Meson instance for this build unit."""
+        self.keep_meson_builddir = keep_meson_builddir
         self.meson = Meson(
             toolchain,
             jumpstart_dir,
             self.name,
             self.diag_source.get_sources(),
             self.diag_source.get_diag_attributes_yaml(),
-            keep_meson_builddir,
-            self.meson_artifacts_dir,
+            self.meson_builddir,
         )
 
     def _apply_meson_option_overrides(
@@ -639,3 +639,16 @@ class DiagBuildUnit:
 
     def get_name(self):
         return self.name
+
+    def cleanup_meson_builddir(self) -> None:
+        """Clean up the meson build directory if keep_meson_builddir is False."""
+        if hasattr(self, "meson_builddir") and self.meson_builddir and not self.keep_meson_builddir:
+            try:
+                log.debug(f"Removing meson build directory: {self.meson_builddir}")
+                shutil.rmtree(self.meson_builddir)
+            except Exception as exc:
+                log.debug(f"Ignoring error during meson build directory cleanup: {exc}")
+
+    def __del__(self):
+        """Cleanup when the object is destroyed."""
+        self.cleanup_meson_builddir()
