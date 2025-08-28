@@ -61,13 +61,6 @@ class DiagFactory:
         except Exception as e:
             raise DiagFactoryError(f"Failed to get environment '{environment}': {e}")
 
-        if rng_seed is not None:
-            self.rng_seed = rng_seed
-        elif build_manifest_yaml.get("rng_seed") is not None:
-            self.rng_seed = build_manifest_yaml.get("rng_seed")
-        else:
-            self.rng_seed = random.randrange(sys.maxsize)
-
         self.jumpstart_dir = jumpstart_dir
         self.keep_meson_builddir = keep_meson_builddir
         try:
@@ -87,6 +80,18 @@ class DiagFactory:
         self._validate_manifest(loaded)
 
         self.diagnostics: Dict[str, dict] = loaded["diagnostics"] or {}
+
+        # Create a deterministic RNG for generating diag seeds
+        if rng_seed is None:
+            factory_rng = random.Random()
+        else:
+            factory_rng = random.Random(rng_seed)
+
+        # Set rng_seed for each diagnostic if not already specified
+        for diag_name, diag_config in self.diagnostics.items():
+            if "rng_seed" not in diag_config:
+                diag_config["rng_seed"] = factory_rng.randrange(sys.maxsize)
+
         # Optional global_overrides (already validated)
         self.global_overrides = loaded.get("global_overrides") or {}
 
@@ -94,7 +99,7 @@ class DiagFactory:
 
         self._diag_units: Dict[str, DiagBuildUnit] = {}
         # expected_fail now lives per DiagBuildUnit; no per-factory map
-        self._manifest_path: Optional[str] = None
+        self._build_repo_manifest_path: Optional[str] = None
         self._run_manifest_path: Optional[str] = None
 
         if not self.skip_write_manifest:
@@ -109,28 +114,29 @@ class DiagFactory:
         - `diagnostics`: mapping of diag_name -> per-diag mapping.
           Each per-diag mapping must include `source_dir` (non-empty string).
           Allowed optional keys per diag: `override_meson_options`, `override_diag_attributes`,
-          `diag_custom_defines`, `expected_fail`.
+          `diag_custom_defines`, `expected_fail`, `rng_seed`.
         - `global_overrides` (optional): mapping; allowed keys are
           `override_meson_options`, `override_diag_attributes`, `diag_custom_defines`.
-        - `rng_seed` (optional): integer RNG seed to reproduce randomized behavior
+
         - Types:
           - override_meson_options: dict OR list (each item must be a dict or str)
           - override_diag_attributes: list of str
           - diag_custom_defines: list of str
           - expected_fail: bool, int, or str
           - rng_seed: int
+
         """
         if not isinstance(manifest, dict):
             raise DiagFactoryError("Invalid diagnostics YAML. Expected a top-level mapping (dict).")
 
-        top_allowed = {"diagnostics", "global_overrides", "rng_seed"}
+        top_allowed = {"diagnostics", "global_overrides"}
         top_keys = set(manifest.keys())
         if "diagnostics" not in top_keys:
             raise DiagFactoryError("Invalid diagnostics YAML. Missing required key 'diagnostics'.")
         extra_top = top_keys - top_allowed
         if extra_top:
             raise DiagFactoryError(
-                "Invalid diagnostics YAML. Only 'diagnostics' and optional 'global_overrides', 'rng_seed' are allowed; found: "
+                "Invalid diagnostics YAML. Only 'diagnostics' and optional 'global_overrides' are allowed; found: "
                 + ", ".join(sorted(extra_top))
             )
 
@@ -144,6 +150,7 @@ class DiagFactory:
             "override_diag_attributes",
             "diag_custom_defines",
             "expected_fail",
+            "rng_seed",
         }
 
         def _validate_override_meson_options(value, context: str) -> None:
@@ -209,6 +216,14 @@ class DiagFactory:
                     raise DiagFactoryError(
                         f"diagnostics.{diag_name}.expected_fail must be a bool, int, or str"
                     )
+            if "rng_seed" in diag_cfg:
+                seed = diag_cfg["rng_seed"]
+                if not isinstance(seed, int):
+                    raise DiagFactoryError(
+                        f"diagnostics.{diag_name}.rng_seed must be an integer if provided"
+                    )
+                if seed < 0:
+                    raise DiagFactoryError(f"diagnostics.{diag_name}.rng_seed must be non-negative")
 
         # Validate optional global_overrides
         if "global_overrides" in manifest:
@@ -237,14 +252,6 @@ class DiagFactory:
                 _validate_str_list(
                     go["diag_custom_defines"], "global_overrides", "diag_custom_defines"
                 )
-
-        # Validate optional rng_seed
-        if "rng_seed" in manifest:
-            seed = manifest.get("rng_seed")
-            if not isinstance(seed, int):
-                raise DiagFactoryError("rng_seed must be an integer if provided")
-            if seed < 0:
-                raise DiagFactoryError("rng_seed must be non-negative")
 
     def _execute_parallel(
         self,
@@ -362,11 +369,9 @@ class DiagFactory:
         if output_path is None:
             output_path = os.path.join(self.root_build_dir, "build_manifest.repro.yaml")
         manifest = self.build_repro_manifest_dict()
-        # Include the effective RNG seed to enable reproducible rebuilds
-        manifest["rng_seed"] = int(self.rng_seed)
         with open(output_path, "w") as f:
             yaml.safe_dump(manifest, f, sort_keys=False)
-        self._manifest_path = output_path
+        self._build_repo_manifest_path = output_path
         log.debug(f"Wrote build manifest: {output_path}")
         return output_path
 
@@ -453,7 +458,6 @@ class DiagFactory:
             build_dir=diag_build_dir,
             environment=copy.deepcopy(self.environment),
             toolchain=self.toolchain,
-            rng_seed=self.rng_seed,
             jumpstart_dir=self.jumpstart_dir,
             keep_meson_builddir=self.keep_meson_builddir,
         )
@@ -706,7 +710,7 @@ class DiagFactory:
         table_lines = [
             f"\n{bold}Summary{reset}",
             f"Build root: {self.root_build_dir}",
-            f"Build Repro Manifest: {self._manifest_path}",
+            f"Build Repro Manifest: {self._build_repo_manifest_path}",
             top,
             hdr,
             sep,

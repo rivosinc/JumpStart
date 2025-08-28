@@ -121,7 +121,6 @@ class DiagBuildUnit:
         build_dir,
         environment,
         toolchain,
-        rng_seed,
         jumpstart_dir,
         keep_meson_builddir,
     ) -> None:
@@ -130,8 +129,6 @@ class DiagBuildUnit:
         self._validate_and_parse_yaml_config(yaml_config)
 
         # Set up RNG generator.
-        assert rng_seed is not None
-        self.rng_seed: int = rng_seed
         log.debug(f"DiagBuildUnit: {self.name} Seeding RNG with: {self.rng_seed}")
         self.rng: random.Random = random.Random(self.rng_seed)
 
@@ -184,6 +181,11 @@ class DiagBuildUnit:
 
         self.diag_source: DiagSource = DiagSource(resolved_src_dir)
         self.expected_fail: bool = only_block.get("expected_fail", False)
+
+        # Extract rng_seed from the diag config
+        self.rng_seed: int = only_block.get("rng_seed")
+        if self.rng_seed is None:
+            raise Exception("rng_seed is required in per-diag YAML configuration")
 
     def _setup_build_dir(self, build_dir: str) -> None:
         """Set up the build directory and meson build directory."""
