@@ -36,6 +36,7 @@ class DiagSource:
 
     def __init__(self, diag_src_dir: str) -> None:
         self.diag_src_dir = os.path.abspath(diag_src_dir)
+        self.original_path = diag_src_dir  # Store the original path as provided
         if not os.path.exists(self.diag_src_dir):
             raise Exception(f"Diag source directory does not exist: {self.diag_src_dir}")
 
@@ -79,6 +80,9 @@ class DiagSource:
 
     def get_diag_src_dir(self) -> str:
         return self.diag_src_dir
+
+    def get_original_path(self) -> str:
+        return self.original_path
 
     def get_sources(self) -> List[str]:
         return self.diag_sources

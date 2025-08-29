@@ -459,7 +459,7 @@ class DiagFactory:
 
     def compile_all(self) -> Dict[str, DiagBuildUnit]:
         def _do_compile(name: str, unit: DiagBuildUnit, build_dir: str) -> None:
-            log.info(f"Compiling '{name}'")
+            log.info(f"Compiling '{unit.diag_source.get_original_path()}'")
             log.debug(f"Build directory: {build_dir}")
             try:
                 unit.compile()
@@ -488,7 +488,7 @@ class DiagFactory:
 
         # After building all units (and generating any artifacts), raise if any compile failed
         compile_failures = [
-            name
+            unit.diag_source.get_original_path()
             for name, unit in self._diag_units.items()
             if (
                 getattr(unit, "compile_state", None) is not None
@@ -497,16 +497,15 @@ class DiagFactory:
             or (unit.compile_error is not None)
         ]
         if compile_failures:
-            raise DiagFactoryError(
-                "One or more diagnostics failed to compile: " + ", ".join(compile_failures)
-            )
+            failure_list = "\n  ".join(compile_failures)
+            raise DiagFactoryError(f"One or more diagnostics failed to compile:\n  {failure_list}")
 
     def run_all(self) -> Dict[str, DiagBuildUnit]:
         if not self._diag_units:
             raise DiagFactoryError("run_all() called before compile_all().")
 
         def _do_run(name: str, unit: DiagBuildUnit) -> None:
-            log.info(f"Running diag '{name}'")
+            log.info(f"Running diag '{unit.diag_source.get_original_path()}'")
             try:
                 unit.run()
             except Exception as exc:
@@ -521,7 +520,7 @@ class DiagFactory:
 
         # After running all units, raise if any run failed
         run_failures = [
-            name
+            unit.diag_source.get_original_path()
             for name, unit in self._diag_units.items()
             if (
                 (getattr(unit, "run_state", None) is not None and unit.run_state.name == "FAILED")
@@ -529,9 +528,8 @@ class DiagFactory:
             )
         ]
         if run_failures:
-            raise DiagFactoryError(
-                "One or more diagnostics failed to run: " + ", ".join(run_failures)
-            )
+            failure_list = "\n  ".join(run_failures)
+            raise DiagFactoryError(f"One or more diagnostics failed to run:\n  {failure_list}")
 
     def summarize(self) -> str:
         # Build pretty table; compute widths from plain text, add ANSI coloring for PASS/FAILED/EXPECTED_FAIL labels
@@ -566,7 +564,8 @@ class DiagFactory:
 
             gathered.append(
                 {
-                    "name": diag_name,
+                    "name": unit.diag_source.get_original_path(),
+                    "original_name": diag_name,
                     "build": build_plain,
                     "run": run_plain,
                     "result": merged_content,
@@ -585,6 +584,7 @@ class DiagFactory:
                     [
                         (
                             item["name"],
+                            item["original_name"],
                             item["build"],
                             item["run"],
                             item["result"],
@@ -597,6 +597,7 @@ class DiagFactory:
                     [
                         (
                             item["name"],
+                            item["original_name"],
                             item["build"],
                             item["run"],
                             item["has_error"],
@@ -614,10 +615,13 @@ class DiagFactory:
         col_widths = [len(h) for h in header]
         for group in row_groups:
             for r in group:
-                # Consider the display elements (excluding has_error which is a boolean flag)
-                # When include_result_col is True: r has 5 elements, last is has_error
-                # When include_result_col is False: r has 4 elements, last is has_error
-                display_elements = r[:-1]  # Always exclude the last element (has_error)
+                # Consider the display elements (excluding original_name and has_error)
+                # When include_result_col is True: r has 6 elements: [diag_name, original_name, build, run, result, has_error]
+                # When include_result_col is False: r has 5 elements: [diag_name, original_name, build, run, has_error]
+                if include_result_col:
+                    display_elements = [r[0], r[2], r[3], r[4]]  # diag_name, build, run, result
+                else:
+                    display_elements = [r[0], r[2], r[3]]  # diag_name, build, run
                 for i, cell in enumerate(display_elements):
                     if len(str(cell)) > col_widths[i]:
                         col_widths[i] = len(str(cell))
@@ -636,9 +640,9 @@ class DiagFactory:
             for ri, r in enumerate(group):
                 # Unpack the row data based on whether we have the result column
                 if include_result_col:
-                    diag_name, build_plain, run_plain, result, has_error = r
+                    diag_name, original_name, build_plain, run_plain, result, has_error = r
                 else:
-                    diag_name, build_plain, run_plain, has_error = r
+                    diag_name, original_name, build_plain, run_plain, has_error = r
 
                 # pad using plain text
                 diag_pad = pad(str(diag_name), col_widths[0])
@@ -646,7 +650,7 @@ class DiagFactory:
                 run_pad = pad(run_plain, col_widths[2])
 
                 # colorize status prefixes on the first row of each group only
-                unit = self._diag_units.get(diag_name) if ri == 0 else None
+                unit = self._diag_units.get(original_name) if ri == 0 else None
                 if unit is not None:
                     build_colored = unit.colorize_status_text(build_pad)
                     run_colored = unit.colorize_status_text(run_pad)
