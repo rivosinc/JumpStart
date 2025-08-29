@@ -715,6 +715,32 @@ class DiagFactory:
             bot,
         ]
 
+        # Count and print diagnostics that were built and run
+        built_count = 0
+        run_count = 0
+
+        for name, unit in self._diag_units.items():
+            # Count built diagnostics (those that compiled successfully)
+            if (
+                getattr(unit, "compile_state", None) is not None
+                and getattr(unit.compile_state, "name", "") == "PASS"
+                and unit.compile_error is None
+            ):
+                built_count += 1
+
+            # Count run diagnostics (those that ran successfully)
+            if (
+                getattr(unit, "run_state", None) is not None
+                and getattr(unit.run_state, "name", "") == "PASS"
+                and unit.run_error is None
+            ):
+                run_count += 1
+
+        # Add count information to table lines
+        table_lines.extend(
+            ["", f"Diagnostics built: {built_count}", f"Diagnostics run: {run_count}"]
+        )
+
         # Note: Per-diag artifact section removed; artifacts are shown inline in the table
 
         # Add Run Manifest before the final status
