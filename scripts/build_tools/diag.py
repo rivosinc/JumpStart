@@ -647,13 +647,31 @@ class DiagBuildUnit:
         return self.name
 
     def cleanup_meson_builddir(self) -> None:
-        """Clean up the meson build directory if keep_meson_builddir is False."""
-        if hasattr(self, "meson_builddir") and self.meson_builddir and not self.keep_meson_builddir:
+        """Clean up the meson build directory if keep_meson_builddir is False and no failures occurred."""
+        # Keep the build directory if explicitly requested or if there were failures
+        should_keep = (
+            self.keep_meson_builddir
+            or self.compile_state == self.CompileState.FAILED
+            or self.run_state == self.RunState.FAILED
+        )
+
+        if hasattr(self, "meson_builddir") and self.meson_builddir and not should_keep:
             try:
                 log.debug(f"Removing meson build directory: {self.meson_builddir}")
                 shutil.rmtree(self.meson_builddir)
             except Exception as exc:
                 log.debug(f"Ignoring error during meson build directory cleanup: {exc}")
+        elif hasattr(self, "meson_builddir") and self.meson_builddir and should_keep:
+            if self.compile_state == self.CompileState.FAILED:
+                log.debug(
+                    f"Keeping meson build directory due to compile failure: {self.meson_builddir}"
+                )
+            elif self.run_state == self.RunState.FAILED:
+                log.debug(
+                    f"Keeping meson build directory due to run failure: {self.meson_builddir}"
+                )
+            elif self.keep_meson_builddir:
+                log.debug(f"Keeping meson build directory as requested: {self.meson_builddir}")
 
     def __del__(self):
         """Cleanup when the object is destroyed."""
