@@ -235,13 +235,13 @@ class DiagBuildUnit:
         # Apply overrides in order: global (YAML), diag-specific (YAML), command-line
         self._apply_yaml_config_overrides(yaml_config)
 
-        self._apply_run_target_specific_overrides()
-
         self._apply_command_line_overrides(
             meson_options_cmd_line_overrides,
             diag_attributes_cmd_line_overrides,
             diag_custom_defines_cmd_line_overrides,
         )
+
+        self._apply_run_target_specific_overrides()
 
         # Deduplicate diag_custom_defines meson option.
         # The compiler will error if there are duplicate defines.
