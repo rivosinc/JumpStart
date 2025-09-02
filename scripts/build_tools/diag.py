@@ -647,6 +647,9 @@ class DiagBuildUnit:
         return self.name
 
     def cleanup_meson_builddir(self) -> None:
+        if not hasattr(self, "keep_meson_builddir"):
+            return
+
         """Clean up the meson build directory if keep_meson_builddir is False and no failures occurred."""
         # Keep the build directory if explicitly requested or if there were failures
         should_keep = (

@@ -244,9 +244,7 @@ class DiagFactory:
                 _validate_override_meson_options(go["override_meson_options"], "global_overrides")
             if "override_diag_attributes" in go:
                 _validate_str_list(
-                    go["override_diag_attributes"],
-                    "global_overrides",
-                    "override_diag_attributes",
+                    go["override_diag_attributes"], "global_overrides", "override_diag_attributes"
                 )
             if "diag_custom_defines" in go:
                 _validate_str_list(
@@ -504,6 +502,15 @@ class DiagFactory:
         if not self._diag_units:
             raise DiagFactoryError("run_all() called before compile_all().")
 
+        # Check if environment has a run_target defined
+        if self.environment.run_target is None:
+            raise DiagFactoryError(
+                f"Environment '{self.environment.name}' does not have a run_target defined"
+            )
+
+        # Run per-diag via DiagBuildUnit.run()
+        effective_jobs = self.jobs if self.environment.run_target == "spike" else 1
+
         def _do_run(name: str, unit: DiagBuildUnit) -> None:
             log.info(f"Running diag '{unit.diag_source.get_original_path()}'")
             try:
@@ -515,7 +522,6 @@ class DiagFactory:
                     pass
 
         run_tasks: Dict[str, Tuple] = {name: (unit,) for name, unit in self._diag_units.items()}
-        effective_jobs = self.jobs if self.environment.run_target == "spike" else 1
         self._execute_parallel(effective_jobs, run_tasks, _do_run)
 
         # After running all units, raise if any run failed
@@ -679,22 +685,30 @@ class DiagFactory:
         # Compute overall result visibility line
         try:
             overall_pass = True
-            for _name, _unit in self._diag_units.items():
-                if (
-                    getattr(_unit, "compile_state", None) is None
-                    or _unit.compile_state.name != "PASS"
-                ):
-                    overall_pass = False
-                    break
-                if _unit.compile_error is not None:
-                    overall_pass = False
-                    break
-                if getattr(_unit, "run_state", None) is None or _unit.run_state.name == "FAILED":
-                    overall_pass = False
-                    break
-                if _unit.run_error is not None:
-                    overall_pass = False
-                    break
+
+            # If no diagnostics were built at all, that's a failure
+            if not self._diag_units:
+                overall_pass = False
+            else:
+                for _name, _unit in self._diag_units.items():
+                    if (
+                        getattr(_unit, "compile_state", None) is None
+                        or _unit.compile_state.name != "PASS"
+                    ):
+                        overall_pass = False
+                        break
+                    if _unit.compile_error is not None:
+                        overall_pass = False
+                        break
+                    if (
+                        getattr(_unit, "run_state", None) is None
+                        or _unit.run_state.name == "FAILED"
+                    ):
+                        overall_pass = False
+                        break
+                    if _unit.run_error is not None:
+                        overall_pass = False
+                        break
         except Exception:
             overall_pass = False
 
