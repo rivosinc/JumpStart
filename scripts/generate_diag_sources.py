@@ -100,12 +100,6 @@ class SourceGenerator:
             # Override the diag attributes with the values specified on the
             # command line.
             cmd_line_diag_attribute_override_dict = DictUtils.create_dict(override_diag_attributes)
-            # Warn if the command line overrides override existing keys.
-            for key in cmd_line_diag_attribute_override_dict:
-                if key in self.jumpstart_source_attributes["diag_attributes"]:
-                    log.warning(
-                        f"Command line overrides diag attribute {key}. {self.jumpstart_source_attributes['diag_attributes'][key]} -> {cmd_line_diag_attribute_override_dict[key]}"
-                    )
             DictUtils.override_dict(
                 self.jumpstart_source_attributes["diag_attributes"],
                 cmd_line_diag_attribute_override_dict,
