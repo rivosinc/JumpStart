@@ -189,9 +189,12 @@ class JumpStartGeneratedSource:
     def generate_defines(self):
         for define_name in self.attributes_data["defines"]:
             self.defines_file_fd.write(f"#ifndef {define_name}\n")
-            self.defines_file_fd.write(
-                f"#define {define_name} {self.attributes_data['defines'][define_name]}\n"
-            )
+            define_value = self.attributes_data["defines"][define_name]
+            # Write all integers as hexadecimal for consistency and C/Assembly compatibility
+            if isinstance(define_value, int):
+                self.defines_file_fd.write(f"#define {define_name} 0x{define_value:x}\n")
+            else:
+                self.defines_file_fd.write(f"#define {define_name} {define_value}\n")
             self.defines_file_fd.write("#endif\n")
 
         self.defines_file_fd.write("\n")
