@@ -82,7 +82,7 @@ class MemoryMapping:
             "num_pages": MappingField("num_pages", int, int, None, None, True),
             "alias": MappingField("alias", bool, bool, None, False, False),
             "pma_memory_type": MappingField(
-                "pma_memory_type", str, str, ["uc", "wc", "wb"], None, False
+                "pma_memory_type", str, str, ["uc", "wc", "wb", None], "uc", False
             ),
             "pbmt_mode": MappingField("pbmt_mode", str, str, ["pma", "io", "nc"], "pma", False),
             "linker_script_section": MappingField(
@@ -107,6 +107,10 @@ class MemoryMapping:
                     )
             else:
                 self.fields[field_name].set_value_from_yaml(mapping_dict[field_name])
+
+        # Alias mappings should have no pma_memory_type.
+        if self.get_field("alias") is True and mapping_dict.get("pma_memory_type") is None:
+            self.set_field("pma_memory_type", None)
 
         self.set_translation_stage()
 
