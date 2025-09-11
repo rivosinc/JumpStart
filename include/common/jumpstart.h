@@ -139,6 +139,12 @@ get_thread_attributes_num_context_saves_remaining_in_mmode_from_smode(void);
 
 void sync_all_cpus_from_smode(void);
 void sync_all_cpus_from_mmode(void);
+void sync_cpus_in_mask_from_smode(uint8_t cpu_id, uint64_t cpu_mask,
+                                  uint8_t primary_cpu_id,
+                                  uint64_t sync_point_address);
+void sync_cpus_in_mask_from_mmode(uint8_t cpu_id, uint64_t cpu_mask,
+                                  uint8_t primary_cpu_id,
+                                  uint64_t sync_point_address);
 
 void jumpstart_umode_fail(void) __attribute__((noreturn));
 void jumpstart_smode_fail(void) __attribute__((noreturn));
