@@ -25,6 +25,7 @@ from memory_management import (
     TranslationMode,
     TranslationStage,
 )
+from utils.napot_utils import align_to_napot_size, get_next_napot_size
 
 try:
     import rivos_internal.functions as rivos_internal_functions
@@ -165,19 +166,10 @@ class SourceGenerator:
             region_size = mapping_dict["page_size"] * mapping_dict["num_pages"]
 
             # Calculate the NAPOT size that will cover this region
-            # If the region size is not a NAPOT value, find the next larger NAPOT
-            napot_size = region_size
-            if region_size & (region_size - 1) != 0:
-                # Find the next larger NAPOT value that can cover this region
-                napot_size = 1
-                while napot_size < region_size:
-                    napot_size <<= 1
+            napot_size = get_next_napot_size(region_size)
 
             # Align the address to the NAPOT size
-            if next_available_address & (napot_size - 1) != 0:
-                # Find the next aligned address
-                next_aligned = (next_available_address + napot_size - 1) & ~(napot_size - 1)
-                next_available_address = next_aligned
+            next_available_address = align_to_napot_size(next_available_address, napot_size)
 
         if self.jumpstart_source_attributes["diag_attributes"]["satp_mode"] != "bare":
             mapping_dict[TranslationStage.get_translates_from(stage)] = next_available_address
