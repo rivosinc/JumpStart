@@ -696,7 +696,6 @@ class SourceGenerator:
 
     def generate_cpu_sync_functions(self, file_descriptor):
         active_cpu_mask = self.jumpstart_source_attributes["diag_attributes"]["active_cpu_mask"]
-        primary_cpu_id = self.jumpstart_source_attributes["diag_attributes"]["primary_cpu_id"]
 
         modes = ListUtils.intersection(["mmode", "smode"], self.priv_modes_enabled)
         for mode in modes:
@@ -704,10 +703,8 @@ class SourceGenerator:
                 f"""
 .section .jumpstart.cpu.text.{mode}, "ax"
 # Inputs:
-#   a0: cpu id of current cpu
-#   a1: cpu mask of cpus to sync.
-#   a2: cpu id of primary cpu for sync
-#   a3: sync point address (4 byte aligned)
+#   a0: cpu mask of cpus to sync.
+#   a1: sync point address (4 byte aligned)
 .global sync_cpus_in_mask_from_{mode}
 sync_cpus_in_mask_from_{mode}:
   addi  sp, sp, -16
@@ -717,35 +714,40 @@ sync_cpus_in_mask_from_{mode}:
 
   CHECKTC_DISABLE
 
-  li t0, 1
-  sll t2, t0, a0
-  sll t0, t0, a2
+  GET_THREAD_ATTRIBUTES_CPU_ID(t0)
+  # Get the lowest numbered cpu id in the mask to use as the primary cpu
+  # to drive the sync.
+  ctz t1, a0
+
+  li t4, 1
+  sll t5, t4, t0
+  sll t4, t4, t1
 
   # Both this cpu id and the primary cpu id should be part of
   # the mask of cpus to sync
-  and t3, t2, a1
+  and t3, t5, a0
   beqz t3, jumpstart_{mode}_fail
-  and t3, t0, a1
+  and t3, t4, a0
   beqz t3, jumpstart_{mode}_fail
 
-  amoor.w.aqrl t3, t2, (a3)
+  amoor.w.aqrl t3, t5, (a1)
 
   # This bit should not be already set.
-  and t3, t3, t2
+  and t3, t3, t5
   bnez t3, jumpstart_{mode}_fail
 
-  bne t0, t2, wait_for_primary_cpu_to_clear_sync_point_bits_{mode}
+  bne t4, t5, wait_for_primary_cpu_to_clear_sync_point_bits_{mode}
 
 wait_for_all_cpus_to_set_sync_point_bits_{mode}:
   # Primary cpu waits till all the cpus have set their bits in the sync point.
   # twiddle thumbs to avoid excessive spinning
   pause
-  lw t0, (a3)
-  bne t0, a1, wait_for_all_cpus_to_set_sync_point_bits_{mode}
+  lw t4, (a1)
+  bne t4, a0, wait_for_all_cpus_to_set_sync_point_bits_{mode}
 
-  amoswap.w t0, zero, (a3)
+  amoswap.w t4, zero, (a1)
 
-  bne t0, a1, jumpstart_{mode}_fail
+  bne t4, a0, jumpstart_{mode}_fail
 
   j return_from_sync_cpus_in_mask_from_{mode}
 
@@ -753,10 +755,10 @@ wait_for_primary_cpu_to_clear_sync_point_bits_{mode}:
   # non-primary cpus wait for the primary cpu to clear the sync point bits.
   # twiddle thumbs to avoid excessive spinning
   pause
-  lw t0, (a3)
-  srl t0, t0, a0
-  andi t0, t0, 1
-  bnez t0, wait_for_primary_cpu_to_clear_sync_point_bits_{mode}
+  lw t4, (a1)
+  srl t4, t4, t0
+  andi t4, t4, 1
+  bnez t4, wait_for_primary_cpu_to_clear_sync_point_bits_{mode}
 
 return_from_sync_cpus_in_mask_from_{mode}:
   CHECKTC_ENABLE
@@ -773,10 +775,8 @@ sync_all_cpus_from_{mode}:
   sd  fp, 0(sp)
   addi    fp, sp, 16
 
-  jal get_thread_attributes_cpu_id_from_{mode}
-  li a1, {active_cpu_mask}
-  li a2, {primary_cpu_id}
-  la a3, cpu_sync_point
+  li a0, {active_cpu_mask}
+  la a1, cpu_sync_point
 
   jal sync_cpus_in_mask_from_{mode}
 

@@ -382,6 +382,22 @@ Disables the MMU. The page tables are set up and the MMU is enabled by default w
 
 Synchronization point for all active cpus in the diag.
 
+### `sync_cpus_in_mask_from_smode()`
+
+Synchronization point for a specific subset of CPUs specified by a CPU mask. This function provides more flexible synchronization than `sync_all_cpus_from_smode()` by allowing diags to synchronize only specific CPUs.
+
+**Parameters:**
+- `cpu_mask`: A bitmask specifying which CPUs should participate in the synchronization. Each bit represents a CPU ID (bit 0 = CPU 0, bit 1 = CPU 1, etc.)
+- `sync_point_address`: The address of a 4-byte aligned memory location to use as the synchronization point. Each CPU combination should use its own unique sync point to avoid conflicts.
+
+**Important Notes:**
+- Each CPU combination must use its own dedicated sync point to prevent synchronization conflicts
+- The sync point must be 4-byte aligned and placed in a memory section accessible to all participating CPUs
+- Only CPUs specified in the mask will participate in the synchronization
+- The primary CPU (lowest CPU ID in the mask) coordinates the synchronization process
+
+See [test019](../tests/common/test019/) for examples of how the sync functions can be used.
+
 ### `register_mmode_trap_handler_override()` and `get_mmode_trap_handler_override()`
 
 Allows the diag to register a trap handler override function for M-mode traps. The registered function will be called when the trap occurs in M-mode.
