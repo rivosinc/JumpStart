@@ -212,11 +212,6 @@ __attr_stext void free_from_memory(void *ptr, uint8_t backing_memory,
     goto exit_free;
   }
 
-  // Update last_allocated if it points to the freed chunk
-  if (target_heap->last_allocated == chunk) {
-    target_heap->last_allocated = NULL;
-  }
-
   // Verify this is actually a used chunk
   if (!(chunk->size & MEMCHUNK_USED)) {
     printk("Error: Double free detected\n");
@@ -232,6 +227,11 @@ __attr_stext void free_from_memory(void *ptr, uint8_t backing_memory,
   // Mark the chunk as free
   chunk->size &= ~MEMCHUNK_USED;
 
+  // Clear last_allocated if it points to the freed chunk
+  if (target_heap->last_allocated == chunk) {
+    target_heap->last_allocated = NULL;
+  }
+
   // Coalesce with next chunk if it exists and is free
   if (chunk->next && !(chunk->next->size & MEMCHUNK_USED)) {
     chunk->size += chunk->next->size + PER_HEAP_ALLOCATION_METADATA_SIZE;
@@ -246,6 +246,43 @@ __attr_stext void free_from_memory(void *ptr, uint8_t backing_memory,
   if (prev && !(prev->size & MEMCHUNK_USED)) {
     prev->size += chunk->size + PER_HEAP_ALLOCATION_METADATA_SIZE;
     prev->next = chunk->next;
+
+    // We need chunk to set last_allocated if it's NULL.
+    chunk = prev;
+  }
+
+  if (target_heap->last_allocated == NULL) {
+    // We've cleared last_allocated because it was set to the freed chunk.
+    // Look for the next allocated chunk after this one as replacement.
+    // We need to do this after any coalescing operations so that we're only
+    // assigning last_allocated to valid chunks.
+    memchunk *next_allocated = chunk->next;
+    while (next_allocated && !(next_allocated->size & MEMCHUNK_USED)) {
+      next_allocated = next_allocated->next;
+    }
+
+    if (next_allocated) {
+      // Found a next allocated chunk, use it
+      target_heap->last_allocated = next_allocated;
+    } else {
+      // No next allocated chunk found, look backwards
+      memchunk *prev = target_heap->head;
+      memchunk *prev_allocated = NULL;
+      while (prev && prev != chunk) {
+        if (prev->size & MEMCHUNK_USED) {
+          prev_allocated = prev;
+        }
+        prev = prev->next;
+      }
+
+      if (prev_allocated) {
+        target_heap->last_allocated = prev_allocated;
+      } else {
+        // No allocated chunks found, set to NULL as fallback
+        // This will cause the next allocation to start from head
+        target_heap->last_allocated = NULL;
+      }
+    }
   }
 
 exit_free:
