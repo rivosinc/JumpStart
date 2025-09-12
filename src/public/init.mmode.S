@@ -17,11 +17,9 @@
 setup_mmode:
     ret
 
-# Input:
-#   a0: hartid
 # Output:
 #   a0: cpuid
-.global convert_hart_id_to_cpu_id
-convert_hart_id_to_cpu_id:
-  mv a0, a0
+.global get_cpu_id
+get_cpu_id:
+  csrr a0, mhartid
   ret

@@ -24,18 +24,8 @@ _mmode_start:
   li t1, MAX_NUM_CPUS_SUPPORTED
   bge a0, t1, just_wfi_from_mmode
 
-  # The mmode init code is expected to fit in a 4KB page for Rivos internal
-  # reasons.
-  la t4, mmode_init_4k_boundary
-  la t1, _JUMPSTART_CPU_TEXT_MMODE_INIT_ENTER_START
-  sub t2, t4, t1
-  li t3, 0x1000 # 4KB
-  blt t2, t3, setup_logical_cpu_id
-  j just_wfi_from_mmode
-
-setup_logical_cpu_id:
-  # Returns cpu id in a0
-  jal convert_hart_id_to_cpu_id
+  # Outputs: a0: cpu id
+  jal get_cpu_id
 
 setup_thread_attributes:
   csrr a1, mhartid
