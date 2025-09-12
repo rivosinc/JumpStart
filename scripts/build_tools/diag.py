@@ -348,6 +348,39 @@ class DiagBuildUnit:
             ],
         }
 
+        # Add hartids based on soc_rev and num_active_cpus
+        soc_rev = self.meson.get_meson_options().get("soc_rev", "A0")
+        hartids_a0 = ["0", "1", "2", "3", "32", "33", "34", "35"]
+        hartids_b0 = [
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "32",
+            "33",
+            "34",
+            "35",
+            "36",
+            "37",
+            "38",
+            "39",
+        ]
+
+        if soc_rev == "A0":
+            hartids = hartids_a0[:num_active_cpus]
+        elif soc_rev == "B0":
+            hartids = hartids_b0[:num_active_cpus]
+        else:
+            raise Exception(
+                f"Unsupported soc_rev '{soc_rev}' in spike overrides. Please add support for this soc_rev."
+            )
+
+        spike_overrides["spike_additional_arguments"].append(f"--hartids={','.join(hartids)}")
+
         self.meson.override_meson_options_from_dict(spike_overrides)
 
     def get_active_cpu_mask(self) -> str:
@@ -561,8 +594,52 @@ class DiagBuildUnit:
                     self.run_state = self.RunState.FAILED
                 # else keep whatever was set earlier
 
+    def apply_batch_outcome_from_junit_status(self, junit_status: Optional[str]) -> None:
+        """Apply batch-run outcome to this unit using a junit testcase status string.
+
+        junit_status: one of "pass", "fail", "skipped".
+        """
+        # Default pessimistic state
+        self.run_state = self.RunState.FAILED
+        if junit_status == "fail":
+            # truf marks fail when rc==0 for expected_fail=True, or rc!=0 for expected_fail=False
+            if self.expected_fail:
+                self.run_return_code = 0
+                self.run_error = "Diag run passed but was expected to fail."
+                self.run_state = self.RunState.FAILED
+            else:
+                self.run_return_code = 1
+                self.run_error = "Batch run failure"
+                self.run_state = self.RunState.FAILED
+        elif junit_status == "pass" or junit_status == "conditional_pass":
+            # truf marks pass when rc!=0 for expected_fail=True, or rc==0 for expected_fail=False
+            if self.expected_fail:
+                self.run_return_code = 1
+                self.run_error = None
+                self.run_state = self.RunState.EXPECTED_FAIL
+            else:
+                self.run_return_code = 0
+                self.run_error = None
+                if junit_status == "conditional_pass":
+                    self.run_state = self.RunState.CONDITIONAL_PASS
+                else:
+                    self.run_state = self.RunState.PASS
+        else:
+            # If not in report or unknown status, assume failure conservatively
+            self.run_return_code = 1
+            self.run_error = "No batch result"
+            self.run_state = self.RunState.FAILED
+
     def mark_no_junit_report(self) -> None:
         self.run_error = "No JUnit report"
+        self.run_return_code = None
+        self.run_state = self.RunState.FAILED
+
+    def mark_batch_exception(self, exc: Exception) -> None:
+        try:
+            self.run_error = f"{type(exc).__name__}: {exc}"
+        except Exception:
+            self.run_error = "Batch run failed with an exception"
         self.run_return_code = None
         self.run_state = self.RunState.FAILED
 
