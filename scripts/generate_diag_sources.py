@@ -56,8 +56,6 @@ class SourceGenerator:
 
         self.process_memory_map()
 
-        self.create_page_tables_data()
-
     def process_source_attributes(self, jumpstart_source_attributes_yaml):
         with open(jumpstart_source_attributes_yaml) as f:
             self.jumpstart_source_attributes = yaml.safe_load(f)
@@ -142,15 +140,8 @@ class SourceGenerator:
         # the next available address that is not already used by another mapping.
         next_available_address = 0
         for target_mmu in MemoryMapping.get_supported_targets():
-            # Handle both memory_map structures: {stage: []} and {target_mmu: {stage: []}}
-            if target_mmu in self.memory_map and isinstance(self.memory_map[target_mmu], dict):
-                # New structure: {target_mmu: {stage: []}}
-                if len(self.memory_map[target_mmu][stage]) == 0:
-                    continue
-            else:
-                # Old structure: {stage: []}
-                if target_mmu != stage or len(self.memory_map[stage]) == 0:
-                    continue
+            if len(self.memory_map[target_mmu][stage]) == 0:
+                continue
             temp_address = self.get_next_available_dest_addr_after_last_mapping(
                 target_mmu, stage, mapping_dict["page_size"], mapping_dict["pma_memory_type"]
             )
@@ -233,54 +224,86 @@ class SourceGenerator:
                     mapping_dict, TranslationStage.get_enabled_stages()[0]
                 )
 
-            mapping = MemoryMapping(mapping_dict)
-            if mapping.get_field("num_pages") == 0:
-                continue
-            self.memory_map[mapping.get_field("translation_stage")].append(mapping)
+            for target_mmu in MemoryMapping(
+                mapping_dict, self.jumpstart_source_attributes["max_num_cpus_supported"]
+            ).get_field("target_mmu"):
+                # We need a per stage memory mapping object.
+                mapping = MemoryMapping(
+                    mapping_dict, self.jumpstart_source_attributes["max_num_cpus_supported"]
+                )
+
+                stage = mapping.get_field("translation_stage")
+                mapping.set_field("target_mmu", [target_mmu])
+
+                self.memory_map[target_mmu][stage].append(mapping)
 
     def process_memory_map(self):
-        self.memory_map = {stage: [] for stage in TranslationStage.get_enabled_stages()}
+        self.memory_map = {}
+
+        for supported_mmu in MemoryMapping.get_supported_targets():
+            self.memory_map[supported_mmu] = {}
+            for stage in TranslationStage.get_enabled_stages():
+                self.memory_map[supported_mmu][stage] = []
 
         self.add_jumpstart_sections_to_mappings()
 
         self.add_diag_sections_to_mappings()
 
-        for stage in self.memory_map.keys():
-            # Sort all the mappings by the destination address.
-            self.memory_map[stage] = sorted(
-                self.memory_map[stage],
-                key=lambda x: x.get_field(TranslationStage.get_translates_to(stage)),
-                reverse=False,
-            )
+        for target_mmu in self.memory_map.keys():
+            for stage in self.memory_map[target_mmu].keys():
+                # Sort all the mappings by the destination address.
+                self.memory_map[target_mmu][stage] = sorted(
+                    self.memory_map[target_mmu][stage],
+                    key=lambda x: x.get_field(TranslationStage.get_translates_to(stage)),
+                    reverse=False,
+                )
 
         if self.jumpstart_source_attributes["rivos_internal_build"] is True:
-            rivos_internal_functions.process_memory_map(self.memory_map)
+            rivos_internal_functions.process_cpu_memory_map(
+                self.memory_map["cpu"], self.jumpstart_source_attributes
+            )
 
         self.sanity_check_memory_map()
 
+        self.create_page_tables_data()
+
     def create_page_tables_data(self):
         self.page_tables = {}
-        for stage in TranslationStage.get_enabled_stages():
-            translation_mode = TranslationStage.get_selected_mode_for_stage(stage)
-            if translation_mode == "bare":
-                # No pagetable mappings for the bare mode.
+        for target_mmu in MemoryMapping.get_supported_targets():
+            if target_mmu not in self.memory_map:
+                # Don't create page tables for MMUs that don't have any
+                # mappings.
                 continue
 
-            self.page_tables[stage] = PageTables(
-                translation_mode,
-                self.jumpstart_source_attributes["diag_attributes"][
-                    "max_num_pagetable_pages_per_stage"
-                ],
-                self.memory_map[stage],
-            )
+            self.page_tables[target_mmu] = {}
+
+            for stage in TranslationStage.get_enabled_stages():
+                translation_mode = TranslationStage.get_selected_mode_for_stage(stage)
+                if translation_mode == "bare":
+                    # No pagetable mappings for the bare mode.
+                    continue
+
+                self.page_tables[target_mmu][stage] = PageTables(
+                    translation_mode,
+                    self.jumpstart_source_attributes["diag_attributes"][
+                        "max_num_pagetable_pages_per_stage"
+                    ],
+                    self.memory_map[target_mmu][stage],
+                )
 
     def sanity_check_memory_map(self):
         public_functions.sanity_check_memory_map(self.memory_map)
 
         if self.jumpstart_source_attributes["rivos_internal_build"] is True:
-            rivos_internal_functions.sanity_check_memory_map(self.memory_map)
+            rivos_internal_functions.sanity_check_memory_map(
+                self.jumpstart_source_attributes["diag_attributes"], self.memory_map
+            )
 
     def add_pagetable_mappings(self, start_address):
+        assert (
+            start_address is not None and start_address >= 0
+        ), f"Invalid start address for pagetables: {start_address}"
+
         common_attributes = {
             "page_size": PageSize.SIZE_4K,
             "num_pages": self.jumpstart_source_attributes["diag_attributes"][
@@ -297,98 +320,112 @@ class SourceGenerator:
         else:
             common_attributes["xwr"] = "0b001"
 
-        per_stage_pagetable_mappings = {}
-
-        for stage in TranslationStage.get_enabled_stages():
-            translation_mode = TranslationStage.get_selected_mode_for_stage(stage)
-            if translation_mode == "bare":
-                # No pagetable mappings for the bare mode.
+        for target_mmu in MemoryMapping.get_supported_targets():
+            if target_mmu not in self.memory_map:
+                # Don't add pagetable mappings for MMUs that
+                # don't have any mappings.
                 continue
 
-            section_mapping = common_attributes.copy()
-            source_address_type = TranslationStage.get_translates_from(stage)
-            dest_address_type = TranslationStage.get_translates_to(stage)
+            per_stage_pagetable_mappings = {}
 
-            # The start of the pagetables have to be aligned to the size of the
-            # root (first level) page table.
-            root_page_table_size = PageTableAttributes.mode_attributes[translation_mode][
-                "pagetable_sizes"
-            ][0]
-            if (start_address % root_page_table_size) != 0:
-                start_address = (
-                    math.floor(start_address / root_page_table_size) + 1
-                ) * root_page_table_size
+            for stage in TranslationStage.get_enabled_stages():
+                translation_mode = TranslationStage.get_selected_mode_for_stage(stage)
+                if translation_mode == "bare":
+                    # No pagetable mappings for the bare mode.
+                    continue
 
-            section_mapping[source_address_type] = section_mapping[dest_address_type] = (
-                start_address
-            )
+                section_mapping = common_attributes.copy()
+                source_address_type = TranslationStage.get_translates_from(stage)
+                dest_address_type = TranslationStage.get_translates_to(stage)
 
-            section_mapping["translation_stage"] = stage
-            section_mapping["linker_script_section"] = f".jumpstart.rodata.{stage}_stage.pagetables"
+                # The start of the pagetables have to be aligned to the size of the
+                # root (first level) page table.
+                root_page_table_size = PageTableAttributes.mode_attributes[translation_mode][
+                    "pagetable_sizes"
+                ][0]
+                if (start_address % root_page_table_size) != 0:
+                    start_address = (
+                        math.floor(start_address / root_page_table_size) + 1
+                    ) * root_page_table_size
 
-            per_stage_pagetable_mappings[stage] = MemoryMapping(section_mapping)
+                section_mapping[source_address_type] = section_mapping[dest_address_type] = (
+                    start_address
+                )
 
-            self.memory_map[stage].insert(
-                len(self.memory_map[stage]), per_stage_pagetable_mappings[stage]
-            )
+                section_mapping["translation_stage"] = stage
+                section_mapping["linker_script_section"] = (
+                    f".jumpstart.{target_mmu}.rodata.{stage}_stage.pagetables"
+                )
+                section_mapping["target_mmu"] = [target_mmu]
 
-            start_address += common_attributes["num_pages"] * common_attributes["page_size"]
+                per_stage_pagetable_mappings[stage] = MemoryMapping(
+                    section_mapping, self.jumpstart_source_attributes["max_num_cpus_supported"]
+                )
 
-        if "g" in TranslationStage.get_enabled_stages():
-            vs_stage_memory_mapping = per_stage_pagetable_mappings["vs"].copy()
+                self.memory_map[target_mmu][stage].insert(
+                    len(self.memory_map[target_mmu][stage]), per_stage_pagetable_mappings[stage]
+                )
 
-            vs_stage_memory_mapping.set_field("translation_stage", "g")
+                start_address += common_attributes["num_pages"] * common_attributes["page_size"]
 
-            start_address = vs_stage_memory_mapping.get_field(
-                TranslationStage.get_translates_to("vs")
-            )
-            vs_stage_memory_mapping.set_field(TranslationStage.get_translates_from("vs"), None)
-            vs_stage_memory_mapping.set_field(TranslationStage.get_translates_to("vs"), None)
-            vs_stage_memory_mapping.set_field(
-                TranslationStage.get_translates_from("g"), start_address
-            )
-            vs_stage_memory_mapping.set_field(
-                TranslationStage.get_translates_to("g"), start_address
-            )
+            if "g" in TranslationStage.get_enabled_stages():
+                vs_stage_memory_mapping = per_stage_pagetable_mappings["vs"].copy()
 
-            vs_stage_memory_mapping.set_field("umode", 1)
+                vs_stage_memory_mapping.set_field("translation_stage", "g")
 
-            self.memory_map["g"].insert(len(self.memory_map["g"]), vs_stage_memory_mapping)
+                mapping_address = vs_stage_memory_mapping.get_field(
+                    TranslationStage.get_translates_to("vs")
+                )
+                vs_stage_memory_mapping.set_field(TranslationStage.get_translates_from("vs"), None)
+                vs_stage_memory_mapping.set_field(TranslationStage.get_translates_to("vs"), None)
+                vs_stage_memory_mapping.set_field(
+                    TranslationStage.get_translates_from("g"), mapping_address
+                )
+                vs_stage_memory_mapping.set_field(
+                    TranslationStage.get_translates_to("g"), mapping_address
+                )
 
-        for stage in TranslationStage.get_enabled_stages():
-            self.add_pa_guard_page_after_last_mapping(stage)
+                vs_stage_memory_mapping.set_field("umode", 1)
+
+                self.memory_map[target_mmu]["g"].insert(
+                    len(self.memory_map[target_mmu]["g"]), vs_stage_memory_mapping
+                )
+
+            # Adds G-stage pagetable memory region into hs stage memory map to
+            # allow HS-mode to access G-stage pagetables.
+            if target_mmu == "cpu" and "g" in TranslationStage.get_enabled_stages():
+                mapping = per_stage_pagetable_mappings["g"].copy()
+                mapping.set_field("translation_stage", "hs")
+                mapping.set_field("va", mapping.get_field("gpa"))
+                mapping.set_field("pa", mapping.get_field("spa"))
+                mapping.set_field("gpa", None)
+                mapping.set_field("spa", None)
+                self.memory_map[target_mmu]["hs"].insert(
+                    len(self.memory_map[target_mmu]["hs"]), mapping
+                )
 
     def add_jumpstart_sections_to_mappings(self):
+        target_mmu = "cpu"
         pagetables_start_address = 0
+
         for stage in TranslationStage.get_enabled_stages():
             if self.jumpstart_source_attributes["rivos_internal_build"] is True:
-                self.memory_map[stage].extend(
+                self.memory_map[target_mmu][stage].extend(
                     rivos_internal_functions.get_additional_mappings(
+                        target_mmu,
                         stage,
                         self.jumpstart_source_attributes,
                     )
                 )
 
             for mode in self.priv_modes_enabled:
-                self.add_jumpstart_mode_mappings_for_stage(stage, mode)
+                self.add_jumpstart_cpu_mode_mappings(target_mmu, stage, mode)
 
-            # Pagetables for each stage are placed consecutively in the physical address
-            # space. We will place the pagetables after the last physical address
-            # used by the jumpstart mappings in any stage.
-            # Note: get_next_available_dest_addr_after_last_mapping expects target_mmu but
-            # current memory_map structure is {stage: []}, so we use stage directly
-            if len(self.memory_map[stage]) > 0:
-                previous_mapping_id = len(self.memory_map[stage]) - 1
-                previous_mapping = self.memory_map[stage][previous_mapping_id]
-                previous_mapping_size = previous_mapping.get_field(
-                    "page_size"
-                ) * previous_mapping.get_field("num_pages")
-                dest_address_type = TranslationStage.get_translates_to(stage)
-                next_available_dest_address = (
-                    previous_mapping.get_field(dest_address_type) + previous_mapping_size
-                )
-            else:
-                next_available_dest_address = 0
+            # We will place the pagetables for all MMUs after the last
+            # physical address used by the CPU jumpstart mappings.
+            next_available_dest_address = self.get_next_available_dest_addr_after_last_mapping(
+                target_mmu, stage, PageSize.SIZE_4K, "wb"
+            )
             if next_available_dest_address > pagetables_start_address:
                 pagetables_start_address = next_available_dest_address
 
@@ -420,17 +457,10 @@ class SourceGenerator:
     def get_next_available_dest_addr_after_last_mapping(
         self, target_mmu, stage, page_size, pma_memory_type
     ):
-        # Handle both memory_map structures: {stage: []} and {target_mmu: {stage: []}}
-        if target_mmu in self.memory_map and isinstance(self.memory_map[target_mmu], dict):
-            # New structure: {target_mmu: {stage: []}}
-            assert len(self.memory_map[target_mmu][stage]) > 0, "No previous mappings found."
-            previous_mapping_id = len(self.memory_map[target_mmu][stage]) - 1
-            previous_mapping = self.memory_map[target_mmu][stage][previous_mapping_id]
-        else:
-            # Old structure: {stage: []}
-            assert len(self.memory_map[stage]) > 0, "No previous mappings found."
-            previous_mapping_id = len(self.memory_map[stage]) - 1
-            previous_mapping = self.memory_map[stage][previous_mapping_id]
+        assert len(self.memory_map[target_mmu][stage]) > 0, "No previous mappings found."
+
+        previous_mapping_id = len(self.memory_map[target_mmu][stage]) - 1
+        previous_mapping = self.memory_map[target_mmu][stage][previous_mapping_id]
 
         previous_mapping_size = previous_mapping.get_field(
             "page_size"
@@ -449,7 +479,7 @@ class SourceGenerator:
 
         return next_available_pa
 
-    def add_jumpstart_mode_mappings_for_stage(self, stage, mode):
+    def add_jumpstart_cpu_mode_mappings(self, cpu_mmu, stage, mode):
         area_name = f"jumpstart_{mode}"
         area_start_address_attribute_name = f"{mode}_start_address"
 
@@ -473,6 +503,7 @@ class SourceGenerator:
 
         for section_name in self.jumpstart_source_attributes[area_name]:
             section_mapping = self.jumpstart_source_attributes[area_name][section_name].copy()
+            section_mapping["target_mmu"] = [cpu_mmu]
             section_mapping["translation_stage"] = stage
 
             if TranslationStage.get_selected_mode_for_stage(stage) == "bare":
@@ -480,10 +511,11 @@ class SourceGenerator:
                 section_mapping.pop("xwr", None)
                 section_mapping.pop("umode", None)
 
-            for attribute in ["num_pages", "page_size"]:
+            for attribute in ["num_pages", "page_size", "num_pages_per_cpu"]:
                 # This is where we allow the diag to override the attributes of jumpstart sections.
                 # We can change the page size and num_pages of the section.
-                #   Example: num_pages_for_jumpstart_smode_bss, num_pages_for_jumpstart_mmode_rodata, etc.
+                #   Example: num_pages_for_jumpstart_smode_bss, num_pages_for_jumpstart_mmode_rodata,
+                #            num_pages_per_cpu_for_jumpstart_smode_bss, etc.
                 attribute_name = f"{attribute}_for_{area_name}_{section_name}"
                 if (
                     attribute in section_mapping
@@ -507,15 +539,20 @@ class SourceGenerator:
                 area_start_pa = None
             else:
                 # We're going to start the PA of the new mapping after the PA range
-                # # of the last mapping.
+                # of the last mapping.
                 section_mapping[dest_address_type] = (
                     self.get_next_available_dest_addr_after_last_mapping(
-                        "cpu",
+                        cpu_mmu,
                         stage,
                         section_mapping["page_size"],
-                        section_mapping["pma_memory_type"],
+                        section_mapping.get("pma_memory_type", None),
                     )
                 )
+
+            if section_mapping.get("alignment", None) is not None:
+                section_mapping[dest_address_type] = (
+                    section_mapping[dest_address_type] + section_mapping["alignment"] - 1
+                ) & ~(section_mapping["alignment"] - 1)
 
             if (
                 "no_pte_allocation" not in section_mapping
@@ -538,32 +575,12 @@ class SourceGenerator:
             if section_mapping.get("num_pages") == 0:
                 continue
 
-            self.memory_map[stage].insert(
-                len(self.memory_map[stage]), MemoryMapping(section_mapping)
+            self.memory_map[cpu_mmu][stage].insert(
+                len(self.memory_map[cpu_mmu][stage]),
+                MemoryMapping(
+                    section_mapping, self.jumpstart_source_attributes["max_num_cpus_supported"]
+                ),
             )
-
-    def add_pa_guard_page_after_last_mapping(self, stage):
-        guard_page_mapping = {}
-        guard_page_mapping["page_size"] = PageSize.SIZE_4K
-        guard_page_mapping["pma_memory_type"] = "wb"
-        guard_page_mapping["translation_stage"] = stage
-
-        # Guard pages have no allocations in the page tables
-        # but occupy space in the memory map.
-        # They also don't occupy space in the ELFs.
-        guard_page_mapping["no_pte_allocation"] = True
-        guard_page_mapping["valid"] = "0b0"
-        dest_address_type = TranslationStage.get_translates_to(stage)
-        guard_page_mapping[dest_address_type] = (
-            self.get_next_available_dest_addr_after_last_mapping(
-                "cpu", stage, guard_page_mapping["page_size"], guard_page_mapping["pma_memory_type"]
-            )
-        )
-        guard_page_mapping["num_pages"] = 1
-
-        self.memory_map[stage].insert(
-            len(self.memory_map[stage]), MemoryMapping(guard_page_mapping)
-        )
 
     def generate_linker_script(self, output_linker_script):
         self.linker_script = LinkerScript(
@@ -610,6 +627,12 @@ class SourceGenerator:
 
             # Generate stack-related defines
             self.generate_stack_defines(file_descriptor)
+
+            # Generate rivos internal defines if this is a rivos internal build
+            if self.jumpstart_source_attributes["rivos_internal_build"] is True:
+                rivos_internal_functions.add_rivos_internal_defines(
+                    file_descriptor, self.jumpstart_source_attributes
+                )
 
             file_descriptor.close()
 
@@ -814,8 +837,10 @@ sync_all_cpus_from_{mode}:
                 atp_register = TranslationStage.get_atp_register(stage)
                 file_descriptor.write(f"    li   t0, {atp_register.upper()}_MODE\n")
                 file_descriptor.write(f"    slli  t0, t0, {atp_register.upper()}64_MODE_SHIFT\n")
-                if stage in self.page_tables:
-                    file_descriptor.write(f"    la t1, {self.page_tables[stage].get_asm_label()}\n")
+                if stage in self.page_tables["cpu"]:
+                    file_descriptor.write(
+                        f"    la t1, {self.page_tables['cpu'][stage].get_asm_label()}\n"
+                    )
                     file_descriptor.write("    srai t1, t1, PAGE_OFFSET\n")
                     file_descriptor.write("    add  t0, t1, t0\n")
                 else:
@@ -829,48 +854,51 @@ sync_all_cpus_from_{mode}:
             file_descriptor.write("    ret\n")
 
     def generate_page_tables(self, file_descriptor):
-        for stage in TranslationStage.get_enabled_stages():
-            if stage not in self.page_tables:
+        for target_mmu in MemoryMapping.get_supported_targets():
+            if target_mmu not in self.page_tables:
                 continue
 
-            file_descriptor.write(f'.section .jumpstart.rodata.{stage}_stage.pagetables, "a"\n\n')
+            for stage in TranslationStage.get_enabled_stages():
+                if stage not in self.page_tables[target_mmu]:
+                    continue
 
-            file_descriptor.write(f".global {self.page_tables[stage].get_asm_label()}\n")
-            file_descriptor.write(f"{self.page_tables[stage].get_asm_label()}:\n\n")
-
-            file_descriptor.write("/* Memory mappings in this page table:\n")
-            for mapping in self.page_tables[stage].get_mappings():
-                if not mapping.is_bare_mapping():
-                    file_descriptor.write(f"{mapping}\n")
-            file_descriptor.write("*/\n")
-
-            pte_size_in_bytes = self.page_tables[stage].get_attribute("pte_size_in_bytes")
-            last_filled_address = None
-            for address in list(sorted(self.page_tables[stage].get_pte_addresses())):
-                if last_filled_address is not None and address != (
-                    last_filled_address + pte_size_in_bytes
-                ):
-                    file_descriptor.write(
-                        f".skip {hex(address - (last_filled_address + pte_size_in_bytes))}\n"
-                    )
-                log.debug(
-                    f"Writing [{hex(address)}] = {hex(self.page_tables[stage].get_pte(address))}"
-                )
-                file_descriptor.write(f"\n# [{hex(address)}]\n")
                 file_descriptor.write(
-                    f".{pte_size_in_bytes}byte {hex(self.page_tables[stage].get_pte(address))}\n"
+                    f'.section .jumpstart.{target_mmu}.rodata.{stage}_stage.pagetables, "a"\n\n'
                 )
 
-                last_filled_address = address
+                file_descriptor.write(
+                    f".global {self.page_tables[target_mmu][stage].get_asm_label()}\n"
+                )
+                file_descriptor.write(f"{self.page_tables[target_mmu][stage].get_asm_label()}:\n\n")
 
-    def generate_linker_guard_sections(self, file_descriptor):
-        assert self.linker_script.get_guard_sections() is not None
-        for guard_section in self.linker_script.get_guard_sections():
-            file_descriptor.write(f'\n\n.section {guard_section.get_top_level_name()}, "a"\n\n')
-            file_descriptor.write(f"dummy_data_for_{guard_section.get_top_level_name()}:\n")
-            file_descriptor.write(
-                f".fill {int(guard_section.get_size() / 8)}, 8, 0xF00D44C0DE44F00D\n\n"
-            )
+                file_descriptor.write("/* Memory mappings in this page table:\n")
+                for mapping in self.page_tables[target_mmu][stage].get_mappings():
+                    if not mapping.is_bare_mapping():
+                        file_descriptor.write(f"{mapping}\n")
+                file_descriptor.write("*/\n")
+
+                pte_size_in_bytes = self.page_tables[target_mmu][stage].get_attribute(
+                    "pte_size_in_bytes"
+                )
+                last_filled_address = None
+                for address in list(
+                    sorted(self.page_tables[target_mmu][stage].get_pte_addresses())
+                ):
+                    if last_filled_address is not None and address != (
+                        last_filled_address + pte_size_in_bytes
+                    ):
+                        file_descriptor.write(
+                            f".skip {hex(address - (last_filled_address + pte_size_in_bytes))}\n"
+                        )
+                    log.debug(
+                        f"Writing [{hex(address)}] = {hex(self.page_tables[target_mmu][stage].get_pte(address))}"
+                    )
+                    file_descriptor.write(f"\n# [{hex(address)}]\n")
+                    file_descriptor.write(
+                        f".{pte_size_in_bytes}byte {hex(self.page_tables[target_mmu][stage].get_pte(address))}\n"
+                    )
+
+                    last_filled_address = address
 
     def generate_assembly_file(self, output_assembly_file):
         with open(output_assembly_file, "w") as file:
@@ -896,35 +924,36 @@ sync_all_cpus_from_{mode}:
 
             self.generate_page_tables(file)
 
-            self.generate_linker_guard_sections(file)
-
             file.close()
 
     def translate(self, source_address):
-        for stage in TranslationStage.get_enabled_stages():
-            try:
-                self.translate_stage(stage, source_address)
-                log.info(f"{stage} Stage: Translation SUCCESS\n\n")
-            except Exception as e:
-                log.warning(f"{stage} Stage: Translation FAILED: {e}\n\n")
+        for target_mmu in MemoryMapping.get_supported_targets():
+            for stage in TranslationStage.get_enabled_stages():
+                try:
+                    self.translate_stage(target_mmu, stage, source_address)
+                    log.info(f"{target_mmu} MMU: {stage} Stage: Translation SUCCESS\n\n")
+                except Exception as e:
+                    log.warning(f"{target_mmu} MMU: {stage} Stage: Translation FAILED: {e}\n\n")
 
-    def translate_stage(self, stage, source_address):
+    def translate_stage(self, target_mmu, stage, source_address):
         translation_mode = TranslationStage.get_selected_mode_for_stage(stage)
         log.info(
-            f"{stage} Stage: Translating Address {hex(source_address)}. Translation.translation_mode = {translation_mode}."
+            f"{target_mmu} MMU: {stage} Stage: Translating Address {hex(source_address)}. Translation.translation_mode = {translation_mode}."
         )
 
         attributes = PageTableAttributes(translation_mode)
 
         # Step 1
-        a = self.page_tables[stage].get_start_address()
+        a = self.page_tables[target_mmu][stage].get_start_address()
 
         current_level = 0
         pte_value = 0
 
         # Step 2
         while True:
-            log.info(f"    {stage} Stage: a = {hex(a)}; current_level = {current_level}")
+            log.info(
+                f"    {target_mmu} MMU: {stage} Stage: a = {hex(a)}; current_level = {current_level}"
+            )
 
             pte_address = a + BitField.extract_bits(
                 source_address, attributes.get_attribute("va_vpn_bits")[current_level]
@@ -932,17 +961,19 @@ sync_all_cpus_from_{mode}:
 
             if TranslationStage.get_next_stage(stage) is not None:
                 log.info(
-                    f"    {stage} Stage: PTE Address {hex(pte_address)} needs next stage translation."
+                    f"    {target_mmu} MMU: {stage} Stage: PTE Address {hex(pte_address)} needs next stage translation."
                 )
-                self.translate_stage(TranslationStage.get_next_stage(stage), pte_address)
+                self.translate_stage(
+                    target_mmu, TranslationStage.get_next_stage(stage), pte_address
+                )
 
-            pte_value = self.page_tables[stage].read_sparse_memory(pte_address)
+            pte_value = self.page_tables[target_mmu][stage].read_sparse_memory(pte_address)
 
             if pte_value is None:
                 raise ValueError(f"Level {current_level} PTE at {hex(pte_address)} is not valid.")
 
             log.info(
-                f"    {stage} Stage: level{current_level} PTE: [{hex(pte_address)}] = {hex(pte_value)}"
+                f"    {target_mmu} MMU: {stage} Stage: level{current_level} PTE: [{hex(pte_address)}] = {hex(pte_value)}"
             )
 
             if BitField.extract_bits(pte_value, attributes.common_attributes["valid_bit"]) == 0:
@@ -962,7 +993,7 @@ sync_all_cpus_from_{mode}:
                 )
 
             if (xwr & 0x6) or (xwr & 0x1):
-                log.info(f"    {stage} Stage: This is a Leaf PTE")
+                log.info(f"    {target_mmu} MMU: {stage} Stage: This is a Leaf PTE")
                 break
             else:
                 if BitField.extract_bits(pte_value, attributes.common_attributes["a_bit"]) != 0:
@@ -980,8 +1011,10 @@ sync_all_cpus_from_{mode}:
             source_address, (attributes.get_attribute("va_vpn_bits")[current_level][1] - 1, 0)
         )
 
-        log.info(f"    {stage} Stage: PTE value = {hex(pte_value)}")
-        log.info(f"{stage} Stage: Translated {hex(source_address)} --> {hex(dest_address)}")
+        log.info(f"    {target_mmu} MMU: {stage} Stage: PTE value = {hex(pte_value)}")
+        log.info(
+            f"{target_mmu} MMU: {stage} Stage: Translated {hex(source_address)} --> {hex(dest_address)}"
+        )
 
         return dest_address
 

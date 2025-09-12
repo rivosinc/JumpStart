@@ -45,6 +45,7 @@ start_in_smode_tests += [
   ['test053', 'Test time() and gettimeofday().'],
   ['test058', 'Run cores 1 and 3 with cores 0 and 2 marked as inactive.', '-p4'],
   ['test067', 'Test address assignment for mappings with no addresses specified.'],
+  ['test070', 'Test expandable mappings.', '-p4'],
 ]
 
 start_in_mmode_tests += [

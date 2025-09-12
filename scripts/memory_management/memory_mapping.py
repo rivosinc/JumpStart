@@ -34,9 +34,14 @@ class MappingField:
 
     def check_value(self, value):
         if self.allowed_values is not None:
-            assert (
-                value in self.allowed_values
-            ), f"Invalid value for field {self.name}: {value}. Allowed values are: {self.allowed_values}"
+            if isinstance(value, list):
+                assert all(
+                    [v in self.allowed_values for v in value]
+                ), f"Invalid value for field {self.name}: {value}. Allowed values are: {self.allowed_values}"
+            else:
+                assert (
+                    value in self.allowed_values
+                ), f"Invalid value for field {self.name}: {value}. Allowed values are: {self.allowed_values}"
 
     def set_value_from_yaml(self, yaml_value):
         assert isinstance(yaml_value, self.input_yaml_type)
@@ -63,7 +68,9 @@ class MappingField:
 
 
 class MemoryMapping:
-    def __init__(self, mapping_dict) -> None:
+    supported_target_mmus = ["cpu"]
+
+    def __init__(self, mapping_dict, max_num_cpus_supported=None) -> None:
         self.fields = {
             "va": MappingField("va", int, int, None, None, False),
             "gpa": MappingField("gpa", int, int, None, None, False),
@@ -79,7 +86,8 @@ class MemoryMapping:
                 None,
                 True,
             ),
-            "num_pages": MappingField("num_pages", int, int, None, None, True),
+            "num_pages": MappingField("num_pages", int, int, None, None, False),
+            "num_pages_per_cpu": MappingField("num_pages_per_cpu", int, int, None, None, False),
             "alias": MappingField("alias", bool, bool, None, False, False),
             "pma_memory_type": MappingField(
                 "pma_memory_type", str, str, ["uc", "wc", "wb", None], "uc", False
@@ -93,6 +101,10 @@ class MemoryMapping:
             "translation_stage": MappingField(
                 "translation_stage", str, str, list(TranslationStage.stages.keys()), None, False
             ),
+            "target_mmu": MappingField(
+                "target_mmu", list, list, self.supported_target_mmus, ["cpu"], False
+            ),
+            "alignment": MappingField("alignment", int, int, None, None, False),
         }
 
         assert set(self.fields.keys()).issuperset(
@@ -108,6 +120,31 @@ class MemoryMapping:
             else:
                 self.fields[field_name].set_value_from_yaml(mapping_dict[field_name])
 
+        if (
+            mapping_dict.get("num_pages", None) is None
+            and mapping_dict.get("num_pages_per_cpu", None) is None
+        ):
+            raise ValueError(
+                f"num_pages or num_pages_per_cpu must be specified for the mapping: {mapping_dict}"
+            )
+        elif (
+            mapping_dict.get("num_pages", None) is not None
+            and mapping_dict.get("num_pages_per_cpu", None) is not None
+        ):
+            raise ValueError(
+                f"num_pages and num_pages_per_cpu cannot both be specified for the mapping: {mapping_dict}"
+            )
+
+        # Convert num_pages_per_cpu to num_pages. We only need num_pages going forward.
+        if mapping_dict.get("num_pages_per_cpu", None) is not None:
+            if max_num_cpus_supported is None:
+                raise ValueError(
+                    "max_num_cpus_supported cannot be None when num_pages_per_cpu is not None"
+                )
+            self.fields["num_pages"].set_value(
+                int(mapping_dict["num_pages_per_cpu"]) * max_num_cpus_supported
+            )
+
         # Alias mappings should have no pma_memory_type.
         if self.get_field("alias") is True and mapping_dict.get("pma_memory_type") is None:
             self.set_field("pma_memory_type", None)
@@ -115,6 +152,10 @@ class MemoryMapping:
         self.set_translation_stage()
 
         self.sanity_check_field_values()
+
+    @classmethod
+    def get_supported_targets(self):
+        return self.supported_target_mmus
 
     def set_translation_stage(self):
         if self.get_field("translation_stage") is not None:
@@ -276,8 +317,3 @@ class MemoryMapping:
 
     def copy(self):
         return copy.deepcopy(self)
-
-    @staticmethod
-    def get_supported_targets():
-        """Return the list of supported MMU targets (translation stages)."""
-        return TranslationStage.get_enabled_stages()
