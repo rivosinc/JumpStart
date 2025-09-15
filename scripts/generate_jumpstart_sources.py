@@ -85,7 +85,7 @@ class JumpStartGeneratedSource:
 
         self.generate_reg_context_save_restore_code()
 
-        self.generate_thread_attributes_setup_code()
+        self.generate_thread_attributes_code()
 
     def generate_headers(self):
         self.defines_file_fd.write(
@@ -238,7 +238,9 @@ class JumpStartGeneratedSource:
             self.assembly_file_fd.write(f"    SET_{c_struct.upper()}_{field_name.upper()}(a0)\n")
             self.assembly_file_fd.write("    ret\n\n")
 
-    def generate_thread_attributes_setup_code(self):
+    def generate_thread_attributes_code(self):
+        self.generate_thread_attributes_getter_functions()
+
         modes = ListUtils.intersection(["smode", "mmode"], self.priv_modes_enabled)
         mode_encodings = {"smode": "PRV_S", "mmode": "PRV_M"}
         for mode in modes:
@@ -251,10 +253,21 @@ class JumpStartGeneratedSource:
             self.assembly_file_fd.write("  li t1, MAX_NUM_CPUS_SUPPORTED\n")
             self.assembly_file_fd.write(f"  bgeu a0, t1, jumpstart_{mode}_fail\n")
             self.assembly_file_fd.write("\n")
-            self.assembly_file_fd.write("  li  t2, THREAD_ATTRIBUTES_STRUCT_SIZE_IN_BYTES\n")
-            self.assembly_file_fd.write("  mul t2, a0, t2\n")
-            self.assembly_file_fd.write("  la  t1, thread_attributes_region\n")
-            self.assembly_file_fd.write("  add tp, t1, t2\n")
+            # Save input parameters and return address to stack
+            self.assembly_file_fd.write("  addi sp, sp, -24\n")
+            self.assembly_file_fd.write("  sd a0, 0(sp)    # Save cpu_id\n")
+            self.assembly_file_fd.write("  sd a1, 8(sp)    # Save physical_cpu_id\n")
+            self.assembly_file_fd.write("  sd ra, 16(sp)   # Save return address\n")
+            self.assembly_file_fd.write("\n")
+            # Call getter function to get thread attributes address for this cpu id
+            self.assembly_file_fd.write(f"  jal get_thread_attributes_for_cpu_id_from_{mode}\n")
+            self.assembly_file_fd.write("  mv tp, a0       # Move returned address to tp\n")
+            self.assembly_file_fd.write("\n")
+            # Restore parameters from stack
+            self.assembly_file_fd.write("  ld ra, 16(sp)   # Restore return address\n")
+            self.assembly_file_fd.write("  ld a1, 8(sp)    # Restore physical_cpu_id\n")
+            self.assembly_file_fd.write("  ld a0, 0(sp)    # Restore cpu_id\n")
+            self.assembly_file_fd.write("  addi sp, sp, 24\n")
             self.assembly_file_fd.write("\n")
             self.assembly_file_fd.write("  SET_THREAD_ATTRIBUTES_CPU_ID(a0)\n")
             self.assembly_file_fd.write("  SET_THREAD_ATTRIBUTES_PHYSICAL_CPU_ID(a1)\n")
@@ -319,6 +332,28 @@ class JumpStartGeneratedSource:
             self.assembly_file_fd.write("  SET_THREAD_ATTRIBUTES_BOOKEND_MAGIC_NUMBER(t0)\n")
             self.assembly_file_fd.write("\n")
             self.assembly_file_fd.write("  ret\n")
+
+    def generate_thread_attributes_getter_functions(self):
+        """Generate functions to get thread attributes struct address for a given CPU ID."""
+        modes = ListUtils.intersection(["smode", "mmode"], self.priv_modes_enabled)
+        for mode in modes:
+            self.assembly_file_fd.write(f'.section .jumpstart.cpu.text.{mode}.init, "ax"\n')
+            self.assembly_file_fd.write("# Inputs:\n")
+            self.assembly_file_fd.write("#   a0: cpu id\n")
+            self.assembly_file_fd.write("# Outputs:\n")
+            self.assembly_file_fd.write(
+                "#   a0: address of thread attributes struct for the given cpu id\n"
+            )
+            self.assembly_file_fd.write(f".global get_thread_attributes_for_cpu_id_from_{mode}\n")
+            self.assembly_file_fd.write(f"get_thread_attributes_for_cpu_id_from_{mode}:\n")
+            self.assembly_file_fd.write("  li t1, MAX_NUM_CPUS_SUPPORTED\n")
+            self.assembly_file_fd.write(f"  bgeu a0, t1, jumpstart_{mode}_fail\n")
+            self.assembly_file_fd.write("\n")
+            self.assembly_file_fd.write("  li  t2, THREAD_ATTRIBUTES_STRUCT_SIZE_IN_BYTES\n")
+            self.assembly_file_fd.write("  mul t2, a0, t2\n")
+            self.assembly_file_fd.write("  la  t1, thread_attributes_region\n")
+            self.assembly_file_fd.write("  add a0, t1, t2\n")
+            self.assembly_file_fd.write("  ret\n\n")
 
     def generate_reg_context_save_restore_code(self):
         assert (
