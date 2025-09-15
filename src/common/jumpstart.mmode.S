@@ -27,14 +27,18 @@ _mmode_start:
   # Outputs: a0: cpu id
   jal get_cpu_id
 
-setup_thread_attributes:
-  csrr a1, mhartid
-  jal setup_thread_attributes_from_mmode
+  # Checks if this cpu is in the active cpu mask and parks inactive cpus.
+  # Returns if the current CPU is in the active cpu mask.
+  # Inputs: a0: cpu id
+  jal handle_inactive_cpus
 
+  # Inputs: a0: cpu id
   jal setup_stack
 
-  GET_THREAD_ATTRIBUTES_CPU_ID(a0)
-  jal handle_inactive_cpus
+  # Inputs: a0: cpu id
+  #         a1: mhartid
+  csrr a1, mhartid
+  jal setup_thread_attributes_from_mmode
 
   # Any C code we run can be compiled down to use floating point and
   # vector instructions so we need to make sure that we have these enabled.
@@ -76,15 +80,14 @@ setup_thread_attributes:
 1:
   j jump_to_main
 
+# Inputs:
+#   a0: cpu id
 .global setup_stack
 setup_stack:
-
-  GET_THREAD_ATTRIBUTES_CPU_ID(t0)
-
   # Set up the stack.
   # S-mode and M-mode share the same stack.
   li  t1, (NUM_PAGES_PER_CPU_FOR_PRIVILEGED_STACK * PRIVILEGED_STACK_PAGE_SIZE)
-  mul t3, t0, t1
+  mul t3, a0, t1
   la  t2, privileged_stack_top
   add sp, t2, t3
   add sp, sp, t1 # We want the stack bottom.
