@@ -7,7 +7,8 @@ mmode_sources += files('jumpstart.mmode.S',
                        'utils.mmode.c',
                        'uart.mmode.c',
                        'lock.mmode.c',
-                       'data.privileged.S')
+                       'data.privileged.S',
+                       'thread_attributes.mmode.c')
 
 smode_sources += files('jumpstart.smode.S',
                               'jumpstart.vsmode.S',
@@ -19,7 +20,8 @@ smode_sources += files('jumpstart.smode.S',
                               'uart.smode.c',
                               'heap.smode.c',
                               'heap.smode.S',
-                              'lock.smode.c')
+                              'lock.smode.c',
+                              'thread_attributes.smode.c')
 
 umode_sources += files('jumpstart.umode.S',
                        'jumpstart.vumode.S')

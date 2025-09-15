@@ -123,6 +123,16 @@ get_thread_attributes_num_context_saves_remaining_in_smode_from_smode(void);
 uint8_t
 get_thread_attributes_num_context_saves_remaining_in_smode_from_mmode(void);
 
+struct thread_attributes *
+get_thread_attributes_for_cpu_id_from_smode(uint8_t cpu_id);
+
+uint8_t get_physical_cpu_id_for_cpu_id_from_smode(uint8_t cpu_id);
+
+struct thread_attributes *
+get_thread_attributes_for_cpu_id_from_mmode(uint8_t cpu_id);
+
+uint8_t get_physical_cpu_id_for_cpu_id_from_mmode(uint8_t cpu_id);
+
 uint64_t get_thread_attributes_bookend_magic_number_from_mmode(void);
 uint64_t get_thread_attributes_trap_override_struct_address_from_mmode(void);
 uint8_t get_thread_attributes_current_mode_from_mmode(void);
