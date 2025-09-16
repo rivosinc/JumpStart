@@ -26,7 +26,7 @@ jumpstart_mmode:
     linker_script_section: ".jumpstart.cpu.stack.privileged"
   c_structs:
     page_size: 0x1000
-    num_pages: 2
+    num_pages_per_cpu: 1
     xwr: "0b011"
     umode: "0b0"
     pma_memory_type: "wb"
@@ -93,9 +93,9 @@ diag_attributes:
   # unless given values by a diag.
   smode_start_address: null
   umode_start_address: null
-  num_pages_for_jumpstart_mmode_text: 4
-  num_pages_for_jumpstart_mmode_data: 5
-  num_pages_for_jumpstart_mmode_stack: 4
+  num_pages_for_jumpstart_mmode_text: 3
+  num_pages_per_cpu_for_jumpstart_mmode_data: 2
+  num_pages_per_cpu_for_jumpstart_mmode_stack: 1
   num_pages_for_jumpstart_smode_text: 4
   num_pages_for_jumpstart_mmode_sdata: 1
   num_pages_for_jumpstart_smode_bss: 7
@@ -103,7 +103,7 @@ diag_attributes:
   num_pages_for_jumpstart_smode_heap: 2
   num_pages_for_jumpstart_mmode_rodata: 2
   num_pages_for_jumpstart_umode_text: 1
-  num_pages_for_jumpstart_umode_stack: 4
+  num_pages_per_cpu_for_jumpstart_umode_stack: 1
   max_num_pagetable_pages_per_stage: 30
   allow_page_table_modifications: false
   active_cpu_mask: '0b1'

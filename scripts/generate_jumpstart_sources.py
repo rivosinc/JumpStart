@@ -9,7 +9,6 @@
 import argparse
 import logging as log
 import os
-import sys
 from enum import Enum
 
 import yaml
@@ -173,7 +172,8 @@ class JumpStartGeneratedSource:
             total_size_of_c_structs += current_offset
 
         max_allowed_size_of_c_structs = (
-            self.attributes_data["jumpstart_mmode"]["c_structs"]["num_pages"]
+            self.attributes_data["jumpstart_mmode"]["c_structs"]["num_pages_per_cpu"]
+            * self.attributes_data["max_num_cpus_supported"]
             * self.attributes_data["jumpstart_mmode"]["c_structs"]["page_size"]
         )
 
@@ -181,10 +181,9 @@ class JumpStartGeneratedSource:
             total_size_of_c_structs * self.attributes_data["max_num_cpus_supported"]
             > max_allowed_size_of_c_structs
         ):
-            log.error(
+            raise Exception(
                 f"Total size of C structs ({total_size_of_c_structs}) exceeds maximum size allocated for C structs {max_allowed_size_of_c_structs}"
             )
-            sys.exit(1)
 
     def generate_defines(self):
         for define_name in self.attributes_data["defines"]:

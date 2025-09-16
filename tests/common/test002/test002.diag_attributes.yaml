@@ -4,7 +4,7 @@
 
 satp_mode: "sv39"
 
-num_pages_for_jumpstart_umode_stack: 8
+num_pages_per_cpu_for_jumpstart_umode_stack: 2
 
 mappings:
   -

@@ -66,7 +66,7 @@ int main(void) {
     return DIAG_FAILED;
   }
 
-  if (NUM_PAGES_FOR_JUMPSTART_UMODE_STACK != 8) {
+  if (NUM_PAGES_PER_CPU_FOR_JUMPSTART_UMODE_STACK != 2) {
     return DIAG_FAILED;
   }
 
