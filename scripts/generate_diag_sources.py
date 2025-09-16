@@ -728,7 +728,9 @@ class SourceGenerator:
             )
 
             file_descriptor.write(f'.section .jumpstart.cpu.stack.{stack_type}, "aw"\n')
-            file_descriptor.write(".align 12\n")
+            # Calculate alignment based on page size (log2 of page size)
+            alignment = stack_page_size.bit_length() - 1
+            file_descriptor.write(f".align {alignment}\n")
             file_descriptor.write(f".global {stack_type}_stack_top\n")
             file_descriptor.write(f"{stack_type}_stack_top:\n")
             for i in range(self.jumpstart_source_attributes["max_num_cpus_supported"]):
