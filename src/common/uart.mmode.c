@@ -6,7 +6,6 @@
 
 #include "uart.mmode.h"
 #include "jumpstart.h"
-#include "jumpstart_defines.h"
 #include "lock.mmode.h"
 #include "uart.h"
 

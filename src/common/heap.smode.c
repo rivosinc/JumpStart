@@ -13,7 +13,6 @@
 
 #include "cpu_bits.h"
 #include "jumpstart.h"
-#include "jumpstart_defines.h"
 #include "lock.smode.h"
 #include "tablewalk.smode.h"
 #include "uart.smode.h"

@@ -8,7 +8,6 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-#include "jumpstart_defines.h"
 #include "cpu_bits.h"
 
 # This section should fall into the initial 4K page set up.

@@ -8,7 +8,6 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-#include "jumpstart_defines.h"
 
 # The supervisor data section is can be accessed from both
 # machine and supervisor mode.

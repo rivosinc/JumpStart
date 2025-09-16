@@ -5,7 +5,6 @@
  */
 
 #include "jumpstart.h"
-#include "jumpstart_defines.h"
 #include <inttypes.h>
 
 void setup_uart(void);

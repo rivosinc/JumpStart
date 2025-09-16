@@ -8,7 +8,6 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-#include "jumpstart_defines.h"
 
 .global main
 main:

@@ -9,9 +9,6 @@
 #include <inttypes.h>
 #include <stdarg.h>
 
-#include "jumpstart_data_structures.h"
-#include "jumpstart_defines.h"
-
 #define __ASM_STR(x)  #x
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(*a))

@@ -52,26 +52,6 @@ subdir('src')
 subdir('include')
 
 prog_python = find_program('python3')
-jumpstart_source_generator = files('scripts/generate_jumpstart_sources.py')
-
-jumpstart_source_generator_inputs = [jumpstart_source_generator, jumpstart_source_attributes_yaml]
-jumpstart_source_generator_expected_outputs = ['jumpstart_defines.h', 'jumpstart_data_structures.h', 'jumpstart_data_structures.S']
-jumpstart_source_generator_command = [prog_python,
-                                              '@INPUT0@',
-                                              '--defines_file', '@OUTPUT0@',
-                                              '--data_structures_file', '@OUTPUT1@',
-                                              '--assembly_file', '@OUTPUT2@',
-                                              '--jumpstart_source_attributes_yaml', '@INPUT1@',
-                                              '--priv_modes_enabled', riscv_priv_modes_enabled
-                                              ]
-
-jumpstart_source_generator_outputs = custom_target(
-                                      'Generate jumpstart sources for build',
-                                      input : jumpstart_source_generator_inputs,
-                                      output: jumpstart_source_generator_expected_outputs,
-                                      command: jumpstart_source_generator_command)
-
-jumpstart_sources += jumpstart_source_generator_outputs
 
 diag_source_generator = files('scripts/generate_diag_sources.py')
 
