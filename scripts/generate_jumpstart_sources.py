@@ -48,6 +48,59 @@ field_type_to_size_in_bytes = {
 }
 
 
+class CStructField:
+    """Represents a single field in a C struct."""
+
+    def __init__(self, name, field_type, num_elements=1):
+        self.name = name
+        self.field_type = field_type
+        self.num_elements = num_elements
+        self.size_in_bytes = field_type_to_size_in_bytes[field_type]
+
+
+class CStruct:
+    """Represents a C struct with its fields and metadata."""
+
+    def __init__(self, name, fields_data):
+        self.name = name
+        self.fields = []
+        self.size_in_bytes = 0
+        self.alignment = 8  # Hardcoded to 8-byte alignment
+        self._parse_fields(fields_data)
+        self._calculate_offsets_and_size()
+
+    def _parse_fields(self, fields_data):
+        """Parse field data from YAML into CStructField objects."""
+        for field_name, field_spec in fields_data.items():
+            if "," in field_spec:
+                field_type, num_elements = field_spec.split(",")
+                num_elements = int(num_elements.strip())
+            else:
+                field_type = field_spec
+                num_elements = 1
+
+            field = CStructField(field_name, field_type.strip(), num_elements)
+            self.fields.append(field)
+
+    def _calculate_offsets_and_size(self):
+        """Calculate field offsets and total struct size."""
+        current_offset = 0
+
+        for field in self.fields:
+            # Align field to its natural boundary
+            while (current_offset % field.size_in_bytes) != 0:
+                current_offset += 1
+
+            field.offset = current_offset
+            current_offset += field.size_in_bytes * field.num_elements
+
+        # Align struct to specified boundary
+        while (current_offset % self.alignment) != 0:
+            current_offset += 1
+
+        self.size_in_bytes = current_offset
+
+
 class JumpStartGeneratedSource:
     def __init__(
         self,
@@ -70,15 +123,27 @@ class JumpStartGeneratedSource:
         self.data_structures_file_fd = open(data_structures_file, "w")
         self.assembly_file_fd = open(assembly_file, "w")
 
+        # Parse C structs from YAML data
+        self.c_structs = self._parse_c_structs()
+
     def __del__(self):
         self.defines_file_fd.close()
         self.data_structures_file_fd.close()
         self.assembly_file_fd.close()
 
+    def _parse_c_structs(self):
+        """Parse C structs from YAML data into CStruct objects."""
+        c_structs = []
+        for struct_name, struct_data in self.attributes_data["c_structs"].items():
+            c_struct = CStruct(struct_name, struct_data["fields"])
+            c_structs.append(c_struct)
+        return c_structs
+
     def generate(self):
         self.generate_headers()
-
-        self.generate_c_structs()
+        self.generate_cstructs_defines()
+        self.generate_cstructs_data_structures()
+        self.generate_cstructs_assembly()
 
     def generate_headers(self):
         self.defines_file_fd.write(
@@ -97,70 +162,110 @@ class JumpStartGeneratedSource:
         self.assembly_file_fd.write('#include "cpu_bits.h"\n\n')
 
         self.data_structures_file_fd.write('#include "jumpstart_defines.h"\n\n')
-        self.data_structures_file_fd.write("#include <inttypes.h>\n\n")
+        self.data_structures_file_fd.write("#include <inttypes.h>\n")
+        self.data_structures_file_fd.write("#include <stddef.h>\n\n")
 
-    def generate_c_structs(self):
-        total_size_of_c_structs = 0
-
-        for c_struct in self.attributes_data["c_structs"]:
-            c_struct_fields = self.attributes_data["c_structs"][c_struct]["fields"]
-            current_offset = 0
-
-            self.data_structures_file_fd.write(f"struct {c_struct} {{\n")
-            for field_name in c_struct_fields:
-                num_field_elements = 1
-                if len(c_struct_fields[field_name].split(",")) > 1:
-                    field_type = c_struct_fields[field_name].split(",")[0]
-                    num_field_elements = int(c_struct_fields[field_name].split(",")[1])
+    def generate_cstructs_defines(self):
+        """Generate #define statements for struct sizes and field counts."""
+        for c_struct in self.c_structs:
+            # Generate defines for array field counts
+            for field in c_struct.fields:
+                if field.num_elements > 1:
                     self.defines_file_fd.write(
-                        f"#define NUM_{field_name.upper()} {num_field_elements}\n"
-                    )
-                else:
-                    field_type = c_struct_fields[field_name]
-
-                field_size_in_bytes = field_type_to_size_in_bytes[field_type]
-                if num_field_elements > 1:
-                    self.data_structures_file_fd.write(
-                        f"    {field_type} {field_name}[NUM_{field_name.upper()}];\n"
-                    )
-                else:
-                    self.data_structures_file_fd.write(f"    {field_type} {field_name};\n")
-
-                # Take care of the padding that the compiler will add.
-                while (current_offset % field_size_in_bytes) != 0:
-                    current_offset += 1
-
-                if c_struct == "thread_attributes":
-                    self.generate_getter_and_setter_methods_for_field(
-                        c_struct,
-                        field_name,
-                        field_size_in_bytes,
-                        current_offset,
+                        f"#define NUM_{field.name.upper()} {field.num_elements}\n"
                     )
 
-                current_offset += field_size_in_bytes * num_field_elements
-
-            self.data_structures_file_fd.write("};\n\n")
-
-            # Align the end of the struct to 8 bytes.
-            while (current_offset % 8) != 0:
-                current_offset += 1
+            # Generate struct size define
             self.defines_file_fd.write(
-                f"#define {c_struct.upper()}_STRUCT_SIZE_IN_BYTES {current_offset}\n\n"
+                f"#define {c_struct.name.upper()}_STRUCT_SIZE_IN_BYTES {c_struct.size_in_bytes}\n\n"
             )
 
+            # Generate field offset defines and getter/setter macros for thread_attributes
+            if c_struct.name == "thread_attributes":
+                for field in c_struct.fields:
+                    self.defines_file_fd.write(
+                        f"#define {c_struct.name.upper()}_{field.name.upper()}_OFFSET {field.offset}\n"
+                    )
+                    self.defines_file_fd.write(
+                        f"#define GET_{c_struct.name.upper()}_{field.name.upper()}(dest_reg) {get_memop_of_size(MemoryOp.LOAD, field.size_in_bytes)}   dest_reg, {c_struct.name.upper()}_{field.name.upper()}_OFFSET(tp);\n"
+                    )
+                    self.defines_file_fd.write(
+                        f"#define SET_{c_struct.name.upper()}_{field.name.upper()}(dest_reg) {get_memop_of_size(MemoryOp.STORE, field.size_in_bytes)}   dest_reg, {c_struct.name.upper()}_{field.name.upper()}_OFFSET(tp);\n\n"
+                    )
+
+    def generate_cstructs_data_structures(self):
+        """Generate C struct definitions."""
+        for c_struct in self.c_structs:
+            self.data_structures_file_fd.write(f"struct {c_struct.name} {{\n")
+            for field in c_struct.fields:
+                if field.num_elements > 1:
+                    self.data_structures_file_fd.write(
+                        f"    {field.field_type} {field.name}[NUM_{field.name.upper()}];\n"
+                    )
+                else:
+                    self.data_structures_file_fd.write(f"    {field.field_type} {field.name};\n")
+            self.data_structures_file_fd.write(
+                f"}} __attribute__((aligned({c_struct.alignment})));\n\n"
+            )
+
+            # Generate offsetof assertions for compile-time verification
+            self._generate_offsetof_assertions(c_struct)
+
+    def _generate_offsetof_assertions(self, c_struct):
+        """Generate _Static_assert statements using offsetof() for compile-time verification."""
+        for field in c_struct.fields:
+            self.data_structures_file_fd.write(
+                f"_Static_assert(offsetof(struct {c_struct.name}, {field.name}) == {field.offset}, "
+                f'"{c_struct.name}.{field.name} offset mismatch");\n'
+            )
+
+        # Generate size assertion
+        self.data_structures_file_fd.write(
+            f"_Static_assert(sizeof(struct {c_struct.name}) == {c_struct.name.upper()}_STRUCT_SIZE_IN_BYTES, "
+            f'"{c_struct.name} size mismatch");\n\n'
+        )
+
+    def generate_cstructs_assembly(self):
+        """Generate assembly code for struct regions and getter/setter functions."""
+        for c_struct in self.c_structs:
+            # Generate assembly regions
             self.assembly_file_fd.write('.section .jumpstart.cpu.c_structs.mmode, "aw"\n\n')
-            self.assembly_file_fd.write(f".global {c_struct}_region\n")
-            self.assembly_file_fd.write(f"{c_struct}_region:\n")
+            self.assembly_file_fd.write(f".global {c_struct.name}_region\n")
+            self.assembly_file_fd.write(f"{c_struct.name}_region:\n")
             for i in range(self.attributes_data["max_num_cpus_supported"]):
-                self.assembly_file_fd.write(f".global {c_struct}_region_cpu_{i}\n")
-                self.assembly_file_fd.write(f"{c_struct}_region_cpu_{i}:\n")
-                self.assembly_file_fd.write(f"  .zero {current_offset}\n")
-            self.assembly_file_fd.write(f".global {c_struct}_region_end\n")
-            self.assembly_file_fd.write(f"{c_struct}_region_end:\n\n")
+                self.assembly_file_fd.write(f".global {c_struct.name}_region_cpu_{i}\n")
+                self.assembly_file_fd.write(f"{c_struct.name}_region_cpu_{i}:\n")
+                self.assembly_file_fd.write(f"  .zero {c_struct.size_in_bytes}\n")
+            self.assembly_file_fd.write(f".global {c_struct.name}_region_end\n")
+            self.assembly_file_fd.write(f"{c_struct.name}_region_end:\n\n")
 
-            total_size_of_c_structs += current_offset
+            # Generate getter/setter functions for thread_attributes
+            if c_struct.name == "thread_attributes":
+                modes = ListUtils.intersection(["smode", "mmode"], self.priv_modes_enabled)
+                for field in c_struct.fields:
+                    for mode in modes:
+                        self.assembly_file_fd.write(f'.section .jumpstart.cpu.text.{mode}, "ax"\n')
+                        getter_method = f"get_{c_struct.name}_{field.name}_from_{mode}"
+                        self.assembly_file_fd.write(f".global {getter_method}\n")
+                        self.assembly_file_fd.write(f"{getter_method}:\n")
+                        self.assembly_file_fd.write(
+                            f"    GET_{c_struct.name.upper()}_{field.name.upper()}(a0)\n"
+                        )
+                        self.assembly_file_fd.write("    ret\n\n")
 
+                        self.assembly_file_fd.write(
+                            f".global set_{c_struct.name}_{field.name}_from_{mode}\n"
+                        )
+                        self.assembly_file_fd.write(
+                            f"set_{c_struct.name}_{field.name}_from_{mode}:\n"
+                        )
+                        self.assembly_file_fd.write(
+                            f"    SET_{c_struct.name.upper()}_{field.name.upper()}(a0)\n"
+                        )
+                        self.assembly_file_fd.write("    ret\n\n")
+
+        # Validate total size
+        total_size_of_c_structs = sum(c_struct.size_in_bytes for c_struct in self.c_structs)
         max_allowed_size_of_c_structs = (
             self.attributes_data["jumpstart_mmode"]["c_structs"]["num_pages_per_cpu"]
             * self.attributes_data["max_num_cpus_supported"]
@@ -174,38 +279,6 @@ class JumpStartGeneratedSource:
             raise Exception(
                 f"Total size of C structs ({total_size_of_c_structs}) exceeds maximum size allocated for C structs {max_allowed_size_of_c_structs}"
             )
-
-    def generate_getter_and_setter_methods_for_field(
-        self,
-        c_struct,
-        field_name,
-        field_size_in_bytes,
-        field_offset_in_struct,
-    ):
-        self.defines_file_fd.write(
-            f"#define {c_struct.upper()}_{field_name.upper()}_OFFSET {field_offset_in_struct}\n"
-        )
-
-        self.defines_file_fd.write(
-            f"#define GET_{c_struct.upper()}_{field_name.upper()}(dest_reg) {get_memop_of_size(MemoryOp.LOAD, field_size_in_bytes)}   dest_reg, {c_struct.upper()}_{field_name.upper()}_OFFSET(tp);\n"
-        )
-        self.defines_file_fd.write(
-            f"#define SET_{c_struct.upper()}_{field_name.upper()}(dest_reg) {get_memop_of_size(MemoryOp.STORE, field_size_in_bytes)}   dest_reg, {c_struct.upper()}_{field_name.upper()}_OFFSET(tp);\n\n"
-        )
-
-        modes = ListUtils.intersection(["smode", "mmode"], self.priv_modes_enabled)
-        for mode in modes:
-            self.assembly_file_fd.write(f'.section .jumpstart.cpu.text.{mode}, "ax"\n')
-            getter_method = f"get_{c_struct}_{field_name}_from_{mode}"
-            self.assembly_file_fd.write(f".global {getter_method}\n")
-            self.assembly_file_fd.write(f"{getter_method}:\n")
-            self.assembly_file_fd.write(f"    GET_{c_struct.upper()}_{field_name.upper()}(a0)\n")
-            self.assembly_file_fd.write("    ret\n\n")
-
-            self.assembly_file_fd.write(f".global set_{c_struct}_{field_name}_from_{mode}\n")
-            self.assembly_file_fd.write(f"set_{c_struct}_{field_name}_from_{mode}:\n")
-            self.assembly_file_fd.write(f"    SET_{c_struct.upper()}_{field_name.upper()}(a0)\n")
-            self.assembly_file_fd.write("    ret\n\n")
 
 
 def main():
