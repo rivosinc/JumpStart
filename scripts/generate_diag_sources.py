@@ -636,27 +636,49 @@ class SourceGenerator:
 
             file_descriptor.close()
 
+    def find_memory_mapping_by_linker_section(self, linker_script_section, target_mmu=None):
+        """Find a MemoryMapping object by its linker_script_section name.
+
+        Args:
+            linker_script_section (str): The linker script section name to search for
+            target_mmu (str, optional): The target MMU to search in. If None, searches all target MMUs.
+
+        Returns:
+            MemoryMapping or None: The found MemoryMapping object, or None if not found
+        """
+        target_mmus_to_search = [target_mmu] if target_mmu is not None else self.memory_map.keys()
+
+        for mmu in target_mmus_to_search:
+            if mmu not in self.memory_map:
+                continue
+            for stage in self.memory_map[mmu].keys():
+                for mapping in self.memory_map[mmu][stage]:
+                    if mapping.get_field("linker_script_section") == linker_script_section:
+                        return mapping
+        return None
+
     def generate_stack_defines(self, file_descriptor):
         # This is a bit of a mess. Both mmode and smode share the same stack.
         # We've named this stack "privileged" so we need to map the stack
         # name to the mode.
         stack_types = ListUtils.intersection(["umode"], self.priv_modes_enabled)
         stack_types.append("privileged")
-        stack_types_to_priv_mode_map = {"umode": "umode", "privileged": "mmode"}
 
         for stack_type in stack_types:
             # Make sure we can equally distribute the number of total stack pages
             # among the cpus.
-            priv_mode = stack_types_to_priv_mode_map[stack_type]
-            area_name = f"jumpstart_{priv_mode}"
 
-            # Get the num_pages from the diag attributes
-            num_pages_key = f"num_pages_for_jumpstart_{priv_mode}_stack"
-            if num_pages_key not in self.jumpstart_source_attributes["diag_attributes"]:
+            # Find the MemoryMapping object for this stack type
+            linker_section = f".jumpstart.cpu.stack.{stack_type}"
+            stack_mapping = self.find_memory_mapping_by_linker_section(linker_section, "cpu")
+            if stack_mapping is None:
                 raise Exception(
-                    f"Required attribute '{num_pages_key}' not found in diag_attributes"
+                    f"MemoryMapping with linker_script_section '{linker_section}' not found in memory_map"
                 )
-            num_pages_for_stack = self.jumpstart_source_attributes["diag_attributes"][num_pages_key]
+
+            # Get the num_pages from the MemoryMapping object
+            num_pages_for_stack = stack_mapping.get_field("num_pages")
+            stack_page_size = stack_mapping.get_field("page_size")
 
             assert (
                 num_pages_for_stack % self.jumpstart_source_attributes["max_num_cpus_supported"]
@@ -665,7 +687,6 @@ class SourceGenerator:
             num_pages_per_cpu_for_stack = int(
                 num_pages_for_stack / self.jumpstart_source_attributes["max_num_cpus_supported"]
             )
-            stack_page_size = self.jumpstart_source_attributes[area_name]["stack"]["page_size"]
 
             file_descriptor.write(
                 f"#define NUM_PAGES_PER_CPU_FOR_{stack_type.upper()}_STACK {num_pages_per_cpu_for_stack}\n\n"
@@ -681,21 +702,22 @@ class SourceGenerator:
         # name to the mode.
         stack_types = ListUtils.intersection(["umode"], self.priv_modes_enabled)
         stack_types.append("privileged")
-        stack_types_to_priv_mode_map = {"umode": "umode", "privileged": "mmode"}
 
         for stack_type in stack_types:
             # Make sure we can equally distribute the number of total stack pages
             # among the cpus.
-            priv_mode = stack_types_to_priv_mode_map[stack_type]
-            area_name = f"jumpstart_{priv_mode}"
 
-            # Get the num_pages from the diag attributes
-            num_pages_key = f"num_pages_for_jumpstart_{priv_mode}_stack"
-            if num_pages_key not in self.jumpstart_source_attributes["diag_attributes"]:
+            # Find the MemoryMapping object for this stack type
+            linker_section = f".jumpstart.cpu.stack.{stack_type}"
+            stack_mapping = self.find_memory_mapping_by_linker_section(linker_section, "cpu")
+            if stack_mapping is None:
                 raise Exception(
-                    f"Required attribute '{num_pages_key}' not found in diag_attributes"
+                    f"MemoryMapping with linker_script_section '{linker_section}' not found in memory_map"
                 )
-            num_pages_for_stack = self.jumpstart_source_attributes["diag_attributes"][num_pages_key]
+
+            # Get the num_pages from the MemoryMapping object
+            num_pages_for_stack = stack_mapping.get_field("num_pages")
+            stack_page_size = stack_mapping.get_field("page_size")
 
             assert (
                 num_pages_for_stack % self.jumpstart_source_attributes["max_num_cpus_supported"]
@@ -704,7 +726,6 @@ class SourceGenerator:
             num_pages_per_cpu_for_stack = int(
                 num_pages_for_stack / self.jumpstart_source_attributes["max_num_cpus_supported"]
             )
-            stack_page_size = self.jumpstart_source_attributes[area_name]["stack"]["page_size"]
 
             file_descriptor.write(f'.section .jumpstart.cpu.stack.{stack_type}, "aw"\n')
             file_descriptor.write(".align 12\n")
