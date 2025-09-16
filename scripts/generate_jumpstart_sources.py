@@ -141,9 +141,6 @@ class JumpStartGeneratedSource:
 
     def generate(self):
         self.generate_headers()
-        self.generate_cstructs_defines()
-        self.generate_cstructs_data_structures()
-        self.generate_cstructs_assembly()
 
     def generate_headers(self):
         self.defines_file_fd.write(

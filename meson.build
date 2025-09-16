@@ -122,6 +122,7 @@ diag_source_generator_command = [prog_python,
                                     '--output_assembly_file', '@OUTPUT0@',
                                     '--output_defines_file', '@OUTPUT2@',
                                     '--output_linker_script', '@OUTPUT1@',
+                                    '--output_data_structures_file', '@OUTPUT3@',
                                     '--priv_modes_enabled', riscv_priv_modes_enabled
                                     ]
 
@@ -141,17 +142,20 @@ if diag_attributes_yaml != '' and diag_sources.length() > 0
                                 input : diag_source_generator_common_inputs + [diag_attributes_yaml],
                                 output : [diag_name + '.generated.S',
                                           diag_name + '.linker_script.ld',
-                                          diag_name + '.defines.h'],
+                                          diag_name + '.defines.h',
+                                          diag_name + '.data_structures.h',
+                                          ],
                                 command : diag_source_generator_command)
 
   diag_sources += diag_source_generator_output[0]
   linker_script = diag_source_generator_output[1]
   diag_defines = diag_source_generator_output[2]
+  diag_data_structures = diag_source_generator_output[3]
 
   diag_exe = executable(diag_name + '.elf',
                         sources: [jumpstart_sources, diag_sources],
                         include_directories: jumpstart_includes,
-                        c_args: ['-include', diag_defines.full_path()],
+                        c_args: default_c_args + ['-include', diag_defines.full_path(), '-include', diag_data_structures.full_path()],
                         link_args: ['-T' + linker_script.full_path()],
                         link_depends: linker_script,
                         dependencies: declare_dependency(sources: diag_defines)

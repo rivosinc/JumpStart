@@ -64,17 +64,20 @@ foreach unit_test : unit_tests
                                 input : diag_source_generator_common_inputs + [diag_attributes_yaml],
                                 output : [test_name + '.generated.S',
                                           test_name + '.linker_script.ld',
-                                          test_name + '.defines.h'],
+                                          test_name + '.defines.h',
+                                          test_name + '.data_structures.h',
+                                          ],
                                 command : diag_source_generator_command)
 
   test_sources += diag_source_generator_output[0]
   linker_script = diag_source_generator_output[1]
   test_defines = diag_source_generator_output[2]
+  test_data_structures = diag_source_generator_output[3]
 
   test_exe = executable(test_name,
                         sources: [jumpstart_sources, test_sources],
                         include_directories: jumpstart_includes,
-                        c_args: ['-include', test_defines.full_path()],
+                        c_args: default_c_args + ['-include', test_defines.full_path(), '-include', test_data_structures.full_path()],
                         link_args: ['-T' + linker_script.full_path()],
                         link_depends: linker_script,
                         dependencies: declare_dependency(sources: test_defines)
