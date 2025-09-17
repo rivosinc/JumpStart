@@ -130,6 +130,14 @@ The page size has to conform to the sizes supported by the SATP mode.
 
 Controls the number of `page_size` pages allocated for the section.
 
+#### `num_pages_per_cpu`
+
+Controls the number of `page_size` pages allocated per CPU for the section. The total number of pages allocated will be `num_pages_per_cpu` multiplied by `max_num_cpus_supported`.
+
+This attribute is mutually exclusive with `num_pages` - only one of them can be specified for a mapping. When `num_pages_per_cpu` is used, the memory allocation scales automatically with the number of CPUs supported by the system.
+
+Example: If `num_pages_per_cpu: 2` and `max_num_cpus_supported: 4`, then 8 total pages will be allocated for the section.
+
 #### `alias`
 
 Indicates whether this is a VA alias. It's PA should be contained in the PA range of another mapping.
