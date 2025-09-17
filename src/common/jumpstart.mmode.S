@@ -20,9 +20,6 @@ _mmode_start:
 
   csrr a0, mhartid
 
-  li t1, MAX_NUM_CPUS_SUPPORTED
-  bge a0, t1, just_wfi_from_mmode
-
   # Outputs: a0: cpu id
   jal get_cpu_id
 
