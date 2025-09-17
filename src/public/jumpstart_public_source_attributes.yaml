@@ -4,8 +4,6 @@
 
 rivos_internal_build: false
 
-max_num_cpus_supported: 4
-
 priv_modes_supported: [mmode, smode, umode]
 
 # Hard limits on how many pages the jumsptart infrastructure itself will occupy.

@@ -141,12 +141,14 @@ class SourceGenerator:
             self.jumpstart_source_attributes["diag_attributes"]["active_cpu_mask"], 2
         )
 
+        active_cpu_mask = self.jumpstart_source_attributes["diag_attributes"]["active_cpu_mask"]
         if self.jumpstart_source_attributes["diag_attributes"]["primary_cpu_id"] is None:
-            active_cpu_mask = self.jumpstart_source_attributes["diag_attributes"]["active_cpu_mask"]
-            # Set the lowest index of the lowest bit set in active_cpu_mask as the primary cpu id.
+            # Set the CPU with the lowest CPU ID as the primary CPU.
             self.jumpstart_source_attributes["diag_attributes"]["primary_cpu_id"] = (
-                active_cpu_mask & -active_cpu_mask
-            ).bit_length() - 1
+                BitField.find_lowest_set_bit(active_cpu_mask)
+            )
+
+        self.max_num_cpus_supported = BitField.find_highest_set_bit(active_cpu_mask) + 1
 
         self.sanity_check_diag_attributes()
 
@@ -253,13 +255,11 @@ class SourceGenerator:
                     mapping_dict, TranslationStage.get_enabled_stages()[0]
                 )
 
-            for target_mmu in MemoryMapping(
-                mapping_dict, self.jumpstart_source_attributes["max_num_cpus_supported"]
-            ).get_field("target_mmu"):
+            for target_mmu in MemoryMapping(mapping_dict, self.max_num_cpus_supported).get_field(
+                "target_mmu"
+            ):
                 # We need a per stage memory mapping object.
-                mapping = MemoryMapping(
-                    mapping_dict, self.jumpstart_source_attributes["max_num_cpus_supported"]
-                )
+                mapping = MemoryMapping(mapping_dict, self.max_num_cpus_supported)
 
                 stage = mapping.get_field("translation_stage")
                 mapping.set_field("target_mmu", [target_mmu])
@@ -388,7 +388,7 @@ class SourceGenerator:
                 section_mapping["target_mmu"] = [target_mmu]
 
                 per_stage_pagetable_mappings[stage] = MemoryMapping(
-                    section_mapping, self.jumpstart_source_attributes["max_num_cpus_supported"]
+                    section_mapping, self.max_num_cpus_supported
                 )
 
                 self.memory_map[target_mmu][stage].insert(
@@ -475,7 +475,7 @@ class SourceGenerator:
 
         assert (
             self.jumpstart_source_attributes["diag_attributes"]["active_cpu_mask"].bit_count()
-            <= self.jumpstart_source_attributes["max_num_cpus_supported"]
+            <= self.max_num_cpus_supported
         )
         primary_cpu_id = int(self.jumpstart_source_attributes["diag_attributes"]["primary_cpu_id"])
         assert (
@@ -606,9 +606,7 @@ class SourceGenerator:
 
             self.memory_map[cpu_mmu][stage].insert(
                 len(self.memory_map[cpu_mmu][stage]),
-                MemoryMapping(
-                    section_mapping, self.jumpstart_source_attributes["max_num_cpus_supported"]
-                ),
+                MemoryMapping(section_mapping, self.max_num_cpus_supported),
             )
 
     def generate_linker_script(self, output_linker_script):
@@ -642,7 +640,7 @@ class SourceGenerator:
             file_descriptor.write("\n")
 
             file_descriptor.write(
-                f"#define MAX_NUM_CPUS_SUPPORTED {self.jumpstart_source_attributes['max_num_cpus_supported']}\n\n"
+                f"#define MAX_NUM_CPUS_SUPPORTED {self.max_num_cpus_supported}\n\n"
             )
 
             for mod in self.priv_modes_enabled:
@@ -762,13 +760,8 @@ class SourceGenerator:
             num_pages_for_stack = stack_mapping.get_field("num_pages")
             stack_page_size = stack_mapping.get_field("page_size")
 
-            assert (
-                num_pages_for_stack % self.jumpstart_source_attributes["max_num_cpus_supported"]
-                == 0
-            )
-            num_pages_per_cpu_for_stack = int(
-                num_pages_for_stack / self.jumpstart_source_attributes["max_num_cpus_supported"]
-            )
+            assert num_pages_for_stack % self.max_num_cpus_supported == 0
+            num_pages_per_cpu_for_stack = int(num_pages_for_stack / self.max_num_cpus_supported)
 
             file_descriptor.write(
                 f"#define NUM_PAGES_PER_CPU_FOR_{stack_type.upper()}_STACK {num_pages_per_cpu_for_stack}\n\n"
@@ -801,13 +794,8 @@ class SourceGenerator:
             num_pages_for_stack = stack_mapping.get_field("num_pages")
             stack_page_size = stack_mapping.get_field("page_size")
 
-            assert (
-                num_pages_for_stack % self.jumpstart_source_attributes["max_num_cpus_supported"]
-                == 0
-            )
-            num_pages_per_cpu_for_stack = int(
-                num_pages_for_stack / self.jumpstart_source_attributes["max_num_cpus_supported"]
-            )
+            assert num_pages_for_stack % self.max_num_cpus_supported == 0
+            num_pages_per_cpu_for_stack = int(num_pages_for_stack / self.max_num_cpus_supported)
 
             file_descriptor.write(f'.section .jumpstart.cpu.stack.{stack_type}, "aw"\n')
             # Calculate alignment based on page size (log2 of page size)
@@ -815,7 +803,7 @@ class SourceGenerator:
             file_descriptor.write(f".align {alignment}\n")
             file_descriptor.write(f".global {stack_type}_stack_top\n")
             file_descriptor.write(f"{stack_type}_stack_top:\n")
-            for i in range(self.jumpstart_source_attributes["max_num_cpus_supported"]):
+            for i in range(self.max_num_cpus_supported):
                 file_descriptor.write(f".global {stack_type}_stack_top_cpu_{i}\n")
                 file_descriptor.write(f"{stack_type}_stack_top_cpu_{i}:\n")
                 file_descriptor.write(f"  .zero {num_pages_per_cpu_for_stack * stack_page_size}\n")
@@ -1225,7 +1213,7 @@ sync_all_cpus_from_{mode}:
         for mode in modes:
             file_descriptor.write(f".global {mode}_reg_context_save_region\n")
             file_descriptor.write(f"{mode}_reg_context_save_region:\n")
-            for i in range(self.jumpstart_source_attributes["max_num_cpus_supported"]):
+            for i in range(self.max_num_cpus_supported):
                 file_descriptor.write(
                     f"  # {mode} context save area for cpu {i}'s {num_registers} registers. {self.jumpstart_source_attributes['reg_context_to_save_across_exceptions']['max_num_context_saves']} nested contexts supported.\n"
                 )
@@ -1304,7 +1292,7 @@ sync_all_cpus_from_{mode}:
             file_descriptor.write('.section .jumpstart.cpu.c_structs.mmode, "aw"\n\n')
             file_descriptor.write(f".global {c_struct.name}_region\n")
             file_descriptor.write(f"{c_struct.name}_region:\n")
-            for i in range(self.jumpstart_source_attributes["max_num_cpus_supported"]):
+            for i in range(self.max_num_cpus_supported):
                 file_descriptor.write(f".global {c_struct.name}_region_cpu_{i}\n")
                 file_descriptor.write(f"{c_struct.name}_region_cpu_{i}:\n")
                 file_descriptor.write(f"  .zero {c_struct.size_in_bytes}\n")
@@ -1351,10 +1339,7 @@ sync_all_cpus_from_{mode}:
 
         max_allowed_size_of_c_structs = num_pages_for_c_structs * c_structs_page_size
 
-        if (
-            total_size_of_c_structs * self.jumpstart_source_attributes["max_num_cpus_supported"]
-            > max_allowed_size_of_c_structs
-        ):
+        if total_size_of_c_structs * self.max_num_cpus_supported > max_allowed_size_of_c_structs:
             raise Exception(
                 f"Total size of C structs ({total_size_of_c_structs}) exceeds maximum size allocated for C structs {max_allowed_size_of_c_structs}"
             )
