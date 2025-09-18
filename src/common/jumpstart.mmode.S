@@ -465,8 +465,11 @@ save_context:
   csrr  a0, mcause
   call  get_mmode_trap_handler_override
 
-  beqz  a0, check_for_env_call_requests
+  bnez  a0, run_registered_trap_handler
 
+  j check_for_env_call_requests
+
+run_registered_trap_handler:
   # Jump to the registered trap handler.
   # TODO: Do we need to pass any arguments to the trap handler?
   #       If so, we need to restore them from the context save region.
