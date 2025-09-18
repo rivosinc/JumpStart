@@ -175,4 +175,30 @@ void exit_from_smode(uint64_t return_code) __attribute__((noreturn));
   __attribute__((section(".jumpstart.cpu.text.mmode.init")))
 #define __attr_mtext __attribute__((section(".jumpstart.cpu.text.mmode")))
 
-__attr_stext uint64_t read_time(void);
+// Attributes for diag custom rcode hook functions and data
+#define __attr_diag_custom_rcode_hook_text                                     \
+  __attribute__((section(".diag_custom_rcode_hook.cpu.text.rcode")))
+#define __attr_diag_custom_rcode_hook_data                                     \
+  __attribute__((section(".diag_custom_rcode_hook.cpu.data.rcode")))
+
+uint64_t read_time(void);
+
+/**
+ * @brief Delays execution by the specified number of microseconds (S-mode)
+ *
+ * The function delays the execution of the program by (twiddling thumbs for)
+ * the number of microseconds provided as a parameter.
+ *
+ * @param delay_in_useconds Number of microseconds to delay execution
+ */
+void delay_us_from_smode(uint32_t delay_in_useconds);
+
+/**
+ * @brief Delays execution by the specified number of microseconds (M-mode)
+ *
+ * The function delays the execution of the program by (twiddling thumbs for)
+ * the number of microseconds provided as a parameter.
+ *
+ * @param delay_in_useconds Number of microseconds to delay execution
+ */
+void delay_us_from_mmode(uint32_t delay_in_useconds);

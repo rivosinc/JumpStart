@@ -3,12 +3,14 @@
 # SPDX-License-Identifier: Apache-2.0
 
 mmode_sources += files('jumpstart.mmode.S',
-                       'trap_handler.mmode.c',
-                       'utils.mmode.c',
-                       'uart.mmode.c',
-                       'lock.mmode.c',
                        'data.privileged.S',
-                       'thread_attributes.mmode.c')
+                       'lock.mmode.c',
+                       'thread_attributes.mmode.c',
+                       'time.mmode.c',
+                       'trap_handler.mmode.c',
+                       'uart.mmode.c',
+                       'utils.mmode.c')
+
 
 smode_sources += files('jumpstart.smode.S',
                               'jumpstart.vsmode.S',

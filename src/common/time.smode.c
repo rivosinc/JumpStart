@@ -4,16 +4,24 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include <stddef.h>
 #include <stdint.h>
 #include <sys/time.h>
 #include <time.h>
 
+#include "cpu_bits.h"
+#include "delay.h"
 #include "jumpstart.h"
+#include "time.smode.h"
 
 __attr_stext uint64_t read_time(void) {
   uint64_t time_val;
   asm volatile("rdtime %0" : "=r"(time_val));
   return time_val;
+}
+
+__attr_stext void delay_us_from_smode(uint32_t delay_in_useconds) {
+  _delay_us(delay_in_useconds);
 }
 
 __attr_stext int gettimeofday(struct timeval *tv,
