@@ -34,7 +34,7 @@ def quote_if_needed(x):
 
 
 class Meson:
-    supported_toolchains: List[str] = ["gcc"]
+    supported_toolchains: List[str] = ["gcc", "llvm", "gcc15"]
 
     def __init__(
         self,
@@ -84,8 +84,14 @@ class Meson:
         self.meson_options["buildtype"] = "release"
 
         self.meson_options["spike_additional_arguments"] = []
+        self.meson_options["qemu_additional_arguments"] = []
 
         self.trace_file = f"{self.meson_builddir}/{self.diag_name}.itrace"
+
+        # Override rig_path option if the RIG_ROOT env variable is set from loading the
+        # rivos-sdk/rig module our sourcing rig_env.sh.
+        if os.getenv("RIG_ROOT") is not None:
+            self.meson_options["rig_path"] = os.getenv("RIG_ROOT")
 
     def override_meson_options_from_dict(self, overrides_dict: Dict[str, Any]) -> None:
         if overrides_dict is None:
@@ -96,7 +102,7 @@ class Meson:
         """Return the current Meson options as a dict."""
         return self.meson_options
 
-    def get_meson_setup_options_pretty(self, width: int = 120, spacing: str = "") -> str:
+    def get_meson_options_pretty(self, width: int = 120, spacing: str = "") -> str:
         """Return a pretty-printed string of the Meson options.
 
         spacing: A prefix added to each line to control left padding in callers.
@@ -106,36 +112,6 @@ class Meson:
             return "\n".join(f"{spacing}{line}" for line in formatted.splitlines())
         return formatted
 
-    def get_meson_introspect_options_pretty(self, width: int = 120, spacing: str = "") -> str:
-        """Return a pretty-printed string of the Meson introspect options.
-
-        spacing: A prefix added to each line to control left padding in callers.
-        """
-        if not hasattr(self, "_meson_introspect_options") or self._meson_introspect_options is None:
-            return "No introspect options available"
-
-        formatted = pprint.pformat(self._meson_introspect_options, width=width)
-        if spacing:
-            return "\n".join(f"{spacing}{line}" for line in formatted.splitlines())
-        return formatted
-
-    def validate_build_options(self) -> None:
-        """Perform sanity checks on meson options to catch conflicting configurations."""
-        # Use introspect options directly since this is called after introspect()
-        if not hasattr(self, "_meson_introspect_options") or self._meson_introspect_options is None:
-            error_msg = "Cannot validate meson options: _meson_introspect_options is not available"
-            log.error(error_msg)
-            raise MesonBuildError(error_msg)
-
-        # Check that spike only supports fw-none boot_config
-        run_target = self._meson_introspect_options.get("run_target")
-        if run_target == "spike":
-            boot_config = self._meson_introspect_options.get("boot_config")
-            if boot_config != "fw-none":
-                error_msg = f"Invalid boot_config {boot_config} for spike. Only fw-none is supported for spike."
-                log.error(error_msg)
-                raise MesonBuildError(error_msg)
-
     def setup(self):
         self.meson_setup_flags = {}
         for option in self.meson_options:
@@ -143,7 +119,7 @@ class Meson:
                 if len(self.meson_options[option]) == 0:
                     continue
                 self.meson_setup_flags[f"-D{option}"] = (
-                    "[" + ",".join(f"'{x}'" for x in self.meson_options[option]) + "]"
+                    "[" + ",".join(quote_if_needed(x) for x in self.meson_options[option]) + "]"
                 )
             elif isinstance(self.meson_options[option], bool):
                 self.meson_setup_flags[f"-D{option}"] = str(self.meson_options[option]).lower()
@@ -157,16 +133,13 @@ class Meson:
         meson_setup_command.extend(
             [
                 "--cross-file",
-                f"cross_compile/public/{self.toolchain}_options.txt",
+                os.path.join(self.jumpstart_dir, f"cross_compile/public/{self.toolchain}_options.txt"),
                 "--cross-file",
                 f"cross_compile/{self.toolchain}.txt",
             ]
         )
 
-        log.debug(
-            "Meson setup options:\n%s",
-            self.get_meson_setup_options_pretty(spacing="\t"),
-        )
+        log.debug("Meson options:\n%s", self.get_meson_options_pretty(spacing="\t"))
 
         # Print the meson setup command in a format that can be copy-pasted to
         # reproduce the build.
@@ -235,7 +208,6 @@ class Meson:
     def introspect(self):
         """Run meson introspect and store the build options."""
         # --- Run meson introspect and store build options ---
-        self._meson_introspect_options = {}
 
         # Use subprocess.run to run the introspect command and capture output
         introspect_cmd = ["meson", "introspect", self.meson_builddir, "--buildoptions"]
@@ -262,11 +234,16 @@ class Meson:
 
         try:
             options = json.loads(result_out)
+            meson_options = {}
             for opt in options:
                 # Only store user options (not built-in)
                 if opt.get("section") == "user":
-                    self._meson_introspect_options[opt["name"]] = opt["value"]
-            log.debug(f"Meson introspect options: {self._meson_introspect_options}")
+                    meson_options[opt["name"]] = opt["value"]
+
+            # Replace the current meson options with the introspect options
+            self.meson_options = meson_options
+
+            log.debug(f"Meson introspect options: {self.meson_options}")
         except Exception as e:
             error_msg = f"Failed to parse meson introspect output: {e}"
             log.error(error_msg)
