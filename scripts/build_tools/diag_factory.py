@@ -440,6 +440,7 @@ class DiagFactory:
                                 "elf_path": os.path.abspath(elf_path),
                                 "num_iterations": 1,
                                 "expected_fail": getattr(unit, "expected_fail", False),
+                                "primary_hart_id": unit.get_primary_hart_id(),
                             }
                     except Exception as exc:
                         log.warning(f"Failed to get ELF path for diag '{diag_name}': {exc}")

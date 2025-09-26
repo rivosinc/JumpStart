@@ -350,34 +350,8 @@ class DiagBuildUnit:
 
         # Add hartids based on soc_rev and num_active_cpus
         soc_rev = self.meson.get_meson_options().get("soc_rev", "A0")
-        hartids_a0 = ["0", "1", "2", "3", "32", "33", "34", "35"]
-        hartids_b0 = [
-            "0",
-            "1",
-            "2",
-            "3",
-            "4",
-            "5",
-            "6",
-            "7",
-            "32",
-            "33",
-            "34",
-            "35",
-            "36",
-            "37",
-            "38",
-            "39",
-        ]
-
-        if soc_rev == "A0":
-            hartids = hartids_a0[:num_active_cpus]
-        elif soc_rev == "B0":
-            hartids = hartids_b0[:num_active_cpus]
-        else:
-            raise Exception(
-                f"Unsupported soc_rev '{soc_rev}' in spike overrides. Please add support for this soc_rev."
-            )
+        all_hartids = self.get_hart_ids_for_soc(soc_rev)
+        hartids = all_hartids[:num_active_cpus]
 
         spike_overrides["spike_additional_arguments"].append(f"--hartids={','.join(hartids)}")
 
@@ -401,6 +375,99 @@ class DiagBuildUnit:
                 break
 
         return active_cpu_mask
+
+    def get_primary_cpu_id(self) -> int:
+        """Get the primary CPU ID, which is the index of the lowest set bit in the active_cpu_mask.
+
+        Returns the 0-based index of the first set bit in the active_cpu_mask.
+        For example:
+        - active_cpu_mask="0b1" -> primary_cpu_id=0
+        - active_cpu_mask="0b10" -> primary_cpu_id=1
+        - active_cpu_mask="0b101" -> primary_cpu_id=0
+        - active_cpu_mask="0b1100" -> primary_cpu_id=2
+        """
+        active_cpu_mask = self.get_active_cpu_mask()
+
+        # Convert binary string to integer
+        if active_cpu_mask.startswith("0b"):
+            cpu_mask_int = int(active_cpu_mask, 2)
+        else:
+            cpu_mask_int = int(active_cpu_mask, 2)
+
+        if cpu_mask_int == 0:
+            raise Exception("No active CPUs: active_cpu_mask is zero")
+
+        # Find the index of the lowest set bit
+        primary_cpu_id = 0
+        while cpu_mask_int & 1 == 0:
+            cpu_mask_int >>= 1
+            primary_cpu_id += 1
+
+        return primary_cpu_id
+
+    def get_primary_hart_id(self) -> int:
+        """Get the primary hart ID, which is the hart ID corresponding to the primary CPU ID.
+
+        Returns the hart ID (as integer) for the primary CPU based on soc_rev.
+        For example:
+        - For soc_rev="A0" and primary_cpu_id=0 -> hart_id=0
+        - For soc_rev="A0" and primary_cpu_id=1 -> hart_id=1
+        - For soc_rev="B0" and primary_cpu_id=0 -> hart_id=0
+        - For soc_rev="B0" and primary_cpu_id=1 -> hart_id=1
+        """
+        primary_cpu_id = self.get_primary_cpu_id()
+        soc_rev = self.meson.get_meson_options().get("soc_rev", "A0")
+        hart_ids = self.get_hart_ids_for_soc(soc_rev)
+
+        # Ensure we don't go out of bounds
+        if primary_cpu_id >= len(hart_ids):
+            raise Exception(
+                f"Primary CPU ID {primary_cpu_id} is out of bounds for soc_rev '{soc_rev}' "
+                f"which has {len(hart_ids)} hart IDs"
+            )
+
+        return int(hart_ids[primary_cpu_id])
+
+    def get_hart_ids_for_soc(self, soc_rev: str) -> List[str]:
+        """Get the list of hart IDs for a given soc_rev.
+
+        Args:
+            soc_rev: The SoC revision ("A0" or "B0")
+
+        Returns:
+            List of hart ID strings for the given soc_rev
+
+        Raises:
+            Exception: If soc_rev is not supported
+        """
+        hart_ids_by_soc = {
+            "A0": ["0", "1", "2", "3", "32", "33", "34", "35"],
+            "B0": [
+                "0",
+                "1",
+                "2",
+                "3",
+                "4",
+                "5",
+                "6",
+                "7",
+                "32",
+                "33",
+                "34",
+                "35",
+                "36",
+                "37",
+                "38",
+                "39",
+            ],
+        }
+
+        if soc_rev not in hart_ids_by_soc:
+            raise Exception(
+                f"Unsupported soc_rev '{soc_rev}' in get_hart_ids_for_soc. Please add support for this soc_rev."
+            )
+
+        return hart_ids_by_soc[soc_rev]
 
     def _calculate_spike_active_cpus(self) -> int:
         """Calculate the number of active CPUs for Spike target."""
