@@ -34,9 +34,6 @@ __attr_stext int is_uart_enabled(void) {
 
 __attr_stext int puts(const char *str) {
   return _puts(uart_initialized, putch, str);
-
-fail:
-  jumpstart_smode_fail();
 }
 
 #define VPRINTK_BUFFER_SIZE 1024

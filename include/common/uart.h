@@ -9,7 +9,7 @@
 #define _puts(__uart_initialized, __putch, __str)                              \
   ({                                                                           \
     if (__uart_initialized == 0) {                                             \
-      goto fail;                                                               \
+      return 0;                                                                \
     }                                                                          \
                                                                                \
     int __count = 0;                                                           \

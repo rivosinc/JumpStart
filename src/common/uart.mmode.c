@@ -31,7 +31,4 @@ __attr_mtext int m_is_uart_enabled(void) {
 
 __attr_mtext int m_puts(const char *str) {
   return _puts(uart_initialized, m_putch, str);
-
-fail:
-  jumpstart_mmode_fail();
 }
