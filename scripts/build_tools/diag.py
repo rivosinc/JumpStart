@@ -156,8 +156,8 @@ class DiagBuildUnit:
         self.CompileState = enum.Enum("CompileState", "PENDING PASS FAILED")
         self.RunState = enum.Enum("RunState", "PENDING PASS CONDITIONAL_PASS EXPECTED_FAIL FAILED")
         self.compile_state = self.CompileState.PENDING
-        self.run_state = self.RunState.PENDING
         self.compile_error: Optional[str] = None
+        self.run_state = self.RunState.PENDING
         self.run_error: Optional[str] = None
         self.expected_fail: bool = False
         self.compile_duration_s: Optional[float] = None
@@ -783,6 +783,30 @@ class DiagBuildUnit:
 
     def get_name(self):
         return self.name
+
+    def compile_passed(self) -> bool:
+        """Check if compilation passed successfully.
+
+        Returns True if compile_state is PASS and compile_error is None.
+        Returns False otherwise.
+        """
+        return (
+            getattr(self, "compile_state", None) is not None
+            and getattr(self.compile_state, "name", "") == "PASS"
+            and self.compile_error is None
+        )
+
+    def run_passed(self) -> bool:
+        """Check if run passed successfully.
+
+        Returns True if run_state is PASS and run_error is None.
+        Returns False otherwise.
+        """
+        return (
+            getattr(self, "run_state", None) is not None
+            and getattr(self.run_state, "name", "") == "PASS"
+            and self.run_error is None
+        )
 
     def cleanup_meson_builddir(self) -> None:
         if not hasattr(self, "keep_meson_builddir"):

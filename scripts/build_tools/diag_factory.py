@@ -414,36 +414,14 @@ class DiagFactory:
                 truf_elfs = list(getattr(self.batch_runner, "batch_truf_elfs", []) or [])
                 for elf_path in truf_elfs:
                     if os.path.exists(elf_path):
-                        # Only include silicon ELFs, not fssim ELFs
-                        elf_basename = os.path.basename(elf_path)
-                        if ".silicon.elf" in elf_basename:
-                            # Extract diag name from the ELF path
-                            diag_name = elf_basename.replace(".silicon.elf", "")
-
-                            run_manifest["diagnostics"][diag_name] = {
-                                "elf_path": os.path.abspath(elf_path),
-                                "num_iterations": 1,
-                                "expected_fail": False,  # Default for batch mode
-                            }
-        else:
-            # In non-batch mode, include all successfully compiled diags
-            for diag_name, unit in self._diag_units.items():
-                if (
-                    getattr(unit, "compile_state", None) is not None
-                    and getattr(unit.compile_state, "name", "") == "PASS"
-                    and unit.compile_error is None
-                ):
-                    try:
-                        elf_path = unit.get_build_asset("elf")
-                        if os.path.exists(elf_path):
-                            run_manifest["diagnostics"][diag_name] = {
-                                "elf_path": os.path.abspath(elf_path),
-                                "num_iterations": 1,
-                                "expected_fail": getattr(unit, "expected_fail", False),
-                                "primary_hart_id": unit.get_primary_hart_id(),
-                            }
-                    except Exception as exc:
-                        log.warning(f"Failed to get ELF path for diag '{diag_name}': {exc}")
+                        run_manifest["diagnostics"][diag_name] = {
+                            "elf_path": os.path.abspath(elf_path),
+                            "num_iterations": 1,
+                            "expected_fail": getattr(unit, "expected_fail", False),
+                            "primary_hart_id": unit.get_primary_hart_id(),
+                        }
+                except Exception as exc:
+                    log.warning(f"Failed to get ELF path for diag '{diag_name}': {exc}")
 
         with open(output_path, "w") as f:
             yaml.safe_dump(run_manifest, f, sort_keys=False)
@@ -529,280 +507,11 @@ class DiagFactory:
         compile_failures = [
             unit.diag_source.get_original_path()
             for name, unit in self._diag_units.items()
-            if (
-                getattr(unit, "compile_state", None) is not None
-                and getattr(unit.compile_state, "name", "") == "FAILED"
-            )
-            or (unit.compile_error is not None)
+            if not unit.compile_passed()
         ]
         if compile_failures:
             failure_list = "\n  ".join(compile_failures)
             raise DiagFactoryError(f"One or more diagnostics failed to compile:\n  {failure_list}")
-
-    def _generate_batch_artifacts(self):
-        """Create batch test manifest, payloads, and truf ELFs into root_build_dir.
-
-        Raises DiagFactoryError on failure.
-        """
-        try:
-            # Create a dedicated directory for all batch artifacts
-            self._batch_out_dir = os.path.join(
-                os.path.abspath(self.root_build_dir), "batch_run_artifacts"
-            )
-            system_functions.create_empty_directory(self._batch_out_dir)
-            payload_entries = []
-            for diag_name, unit in self._diag_units.items():
-                if unit.compile_state.name != "PASS":
-                    log.warning(f"Skipping '{diag_name}' in batch manifest due to compile failure")
-                    continue
-                elf_path = unit.get_build_asset("elf")
-                entry = {
-                    "name": diag_name,
-                    "description": diag_name,
-                    "path": os.path.abspath(elf_path),
-                    "expected_result": (1 if getattr(unit, "expected_fail", False) is True else 0),
-                }
-                payload_entries.append(entry)
-
-            # Use hardware revision from the first diag (assuming all are the same)
-            first_unit = next(iter(self._diag_units.values()))
-            hardware_revision = "g" + first_unit.meson.get_meson_options().get("soc_rev").lower()
-            manifest = {"payload": payload_entries}
-            self._batch_manifest_path = os.path.join(
-                self._batch_out_dir, "batch_run_diag_manifest.yaml"
-            )
-            with open(self._batch_manifest_path, "w") as f:
-                yaml.safe_dump(manifest, f, sort_keys=False)
-            log.debug(f"Wrote batch run diag manifest: {self._batch_manifest_path}")
-
-            # Batch mode is rivos internal - not supported in public release
-            raise DiagFactoryError("Batch mode is not supported in the public release")
-
-        except DiagFactoryError:
-            raise
-        except Exception as exc:
-            # Surface the error clearly; batch mode requested but failed
-            self._batch_runner_failed = True
-            raise DiagFactoryError(f"Batch mode generation failed: {exc}") from exc
-
-    def _parse_truf_junit(self) -> Dict[str, Dict[str, Optional[str]]]:
-        """Parse all truf-runner JUnit XML files using junitparser and return mapping of
-        testcase name -> {status, message}.
-
-        Status is one of: 'pass', 'fail', 'skipped'. Message may be None.
-        Assumes testcase name matches the diag name exactly.
-        """
-        # Import junitparser only when this method is called
-        from junitparser import Error, Failure, JUnitXml, Skipped  # type: ignore
-
-        results: Dict[str, Dict[str, Optional[str]]] = {}
-
-        if self._batch_out_dir is None or not os.path.exists(self._batch_out_dir):
-            raise DiagFactoryError(
-                "Batch mode artifacts not found; run_all() called before compile_all()."
-            )
-
-        artifacts_dir = os.path.join(self._batch_out_dir, "truf-artifacts")
-        pattern = os.path.join(artifacts_dir, "junit-report*xml")
-        for junit_path in sorted(glob.glob(pattern)):
-            try:
-                xml = JUnitXml.fromfile(junit_path)
-
-                # Handle both <testsuite> root and <testsuites> root generically
-                suites_iter = xml if hasattr(xml, "__iter__") else [xml]
-
-                for suite in suites_iter:
-                    try:
-                        cases_iter = suite if hasattr(suite, "__iter__") else []
-                    except Exception:
-                        cases_iter = []
-
-                    for case in cases_iter:
-                        try:
-                            name = getattr(case, "name", "") or ""
-                            status = "pass"
-                            message: Optional[str] = None
-
-                            results_list = []
-                            try:
-                                # case.result may be a list of Result objects
-                                results_list = list(getattr(case, "result", []) or [])
-                            except Exception:
-                                results_list = []
-
-                            for res in results_list:
-                                # Treat Skipped, Failure, and Error uniformly as failure
-                                if isinstance(res, (Skipped, Failure, Error)):
-                                    status = "fail"
-                                    message = (
-                                        getattr(res, "message", None)
-                                        or (getattr(res, "text", None) or "").strip()
-                                        or None
-                                    )
-                                    break
-
-                            if name:
-                                results[name] = {"status": status, "message": message}
-                        except Exception:
-                            # Skip malformed testcase entries
-                            continue
-            except Exception as exc:
-                log.warning(f"Failed to parse truf JUnit results at {junit_path}: {exc}")
-        return results
-
-    def _run_all_oswis(self):
-        """Execute diagnostics one by one on Emulator."""
-
-        # Use hardware revision from the first diag (assuming all are the same)
-        first_unit = next(iter(self._diag_units.values()))
-        hardware_revision = "g" + first_unit.meson.get_meson_options().get("soc_rev").lower()
-        self.oswis_runner = OswisRunner(
-            hardware_revision=hardware_revision,
-            emulation_model=self.oswis_emulation_model,
-            oswis_timeout=self.oswis_timeout,
-            firmware_tarball=self.oswis_firmware_tarball,
-            extra_args=self.oswis_additional_arguments,
-        )
-
-        # Single diag mode: run each diag with OswisRunner
-        try:
-            for unit in self._diag_units.values():
-                result, uart_file = self.oswis_runner.run_single(
-                    elf=unit.get_build_asset("elf"),
-                    build_dir=unit.build_dir,
-                    rng_seed=unit.rng_seed,
-                    timeout=self.oswis_diag_timeout,
-                )
-                unit.apply_batch_outcome_from_junit_status("pass" if result == 0 else "fail")
-                if uart_file:
-                    unit.add_build_asset("uart", uart_file, asset_action=AssetAction.MOVE)
-        except Exception as exc:
-            log.error(f"OSWIS run failed: {exc}")
-            raise DiagFactoryError(f"OSWIS run failed: {exc}")
-
-    def _run_all_batch_mode_oswis(self) -> Tuple[bool, Dict[str, Dict[str, Optional[str]]]]:
-        """Execute diagnostics in batch mode on Emulator."""
-
-        # Use hardware revision from the first diag (assuming all are the same)
-        first_unit = next(iter(self._diag_units.values()))
-        hardware_revision = "g" + first_unit.meson.get_meson_options().get("soc_rev").lower()
-        self.oswis_runner = OswisRunner(
-            hardware_revision=hardware_revision,
-            emulation_model=self.oswis_emulation_model,
-            oswis_timeout=self.oswis_timeout,
-            firmware_tarball=self.oswis_firmware_tarball,
-            extra_args=self.oswis_additional_arguments,
-        )
-
-        truf_results = {}
-        batch_run_succeeded = False
-        try:
-            for truf_elf in self.batch_runner.batch_truf_elfs:
-                # Run only non-silicon ELFs in batch mode
-                if "silicon" not in os.path.basename(truf_elf):
-                    continue
-
-                log.info(f"Running OSWIS Batch ELF: {truf_elf}")
-                result, diag_results = self.oswis_runner.run_batch(
-                    truf_elf,
-                    self._batch_out_dir,
-                    self.factory_rng.randrange(sys.maxsize),
-                    self.oswis_diag_timeout,
-                )
-                truf_results.update(diag_results)
-                if result != 0:
-                    log.error(f"OSWIS Batch Run Failed: Error {result}")
-                    break
-
-            if result == 0:
-                log.info("OSWIS Batch payload run completed successfully")
-                batch_run_succeeded = True
-        except Exception as exc:
-            log.error(f"OSWIS Batch run failed: {exc}")
-            raise DiagFactoryError(f"OSWIS Batch run failed: {exc}")
-
-        return batch_run_succeeded, truf_results
-
-    def _run_all_batch_mode_qemu(self) -> Tuple[bool, Dict[str, Dict[str, Optional[str]]]]:
-        """Execute diagnostics in batch mode on QEMU."""
-
-        batch_run_succeeded = False
-        try:
-            self.batch_runner.run_payloads_on_qemu()
-            log.info("Batch payload run completed successfully")
-            results = self._parse_truf_junit()
-            batch_run_succeeded = True
-        except Exception as exc:
-            log.error(f"Batch payload run failed: {exc}")
-            results = self._parse_truf_junit()
-            batch_run_succeeded = False
-
-        return batch_run_succeeded, results
-
-    def _run_all_batch_mode(self) -> Dict[str, DiagBuildUnit]:
-        """Execute diagnostics in batch mode and update units from JUnit results."""
-        # Batch mode is rivos internal - not supported in public release
-        raise DiagFactoryError("Batch mode is not supported in the public release")
-
-        def _update_units_from_results(
-            results: Dict[str, Dict[str, Optional[str]]],
-            treat_fail_as_conditional_pass: bool = False,
-        ) -> None:
-            # The JUnit report generator parses the UART log to determine pass/fail status.
-            # This is not reliable if the UART is corrupted. treat_fail_as_conditional_pass allows us
-            # to treat a failed run as a conditional pass to work around this for cases where the
-            # truf-runner exited with a non-zero error code.
-
-            compiled_names = [
-                name for name, unit in self._diag_units.items() if unit.compile_state.name == "PASS"
-            ]
-
-            missing_tests = [name for name in compiled_names if name not in (results or {})]
-            if missing_tests:
-                raise RuntimeError(
-                    f"Batch run results is missing or incomplete; missing results for tests: {missing_tests}"
-                )
-
-            # Process only the compiled tests
-            for name in compiled_names:
-                unit = self._diag_units[name]
-                status = (results.get(name, {}) or {}).get("status", "fail")
-                if treat_fail_as_conditional_pass and status == "fail":
-                    status = "conditional_pass"
-                unit.apply_batch_outcome_from_junit_status(status)
-
-        batch_run_succeeded = False
-        if self.environment.run_target == "qemu":
-            batch_run_succeeded, results = self._run_all_batch_mode_qemu()
-        elif self.environment.run_target == "oswis":
-            batch_run_succeeded, results = self._run_all_batch_mode_oswis()
-        else:
-            raise NotImplementedError(
-                f"Batch mode not implemented for target: {self.environment.run_target}"
-            )
-
-        _update_units_from_results(
-            results,
-            treat_fail_as_conditional_pass=batch_run_succeeded,
-        )
-
-        run_failures = [
-            name
-            for name, unit in self._diag_units.items()
-            if unit.compile_error is None
-            and (
-                (getattr(unit, "run_state", None) is not None and unit.run_state.name == "FAILED")
-                or (unit.run_error is not None)
-            )
-        ]
-
-        if len(run_failures) == 0 and batch_run_succeeded is False:
-            log.error("Batch run failed but no diagnostics failed. This is unexpected.")
-            sys.exit(1)
-
-        if len(run_failures) != 0 and batch_run_succeeded is True:
-            log.error("Batch run succeeded but some diagnostics failed. This is unexpected.")
-            sys.exit(1)
 
     def run_all(self) -> Dict[str, DiagBuildUnit]:
         if not self._diag_units:
@@ -838,10 +547,7 @@ class DiagFactory:
         run_failures = [
             unit.diag_source.get_original_path()
             for name, unit in self._diag_units.items()
-            if (
-                (getattr(unit, "run_state", None) is not None and unit.run_state.name == "FAILED")
-                or (unit.run_error is not None)
-            )
+            if unit.compile_passed() and not unit.run_passed()
         ]
         if run_failures:
             failure_list = "\n  ".join(run_failures)
@@ -1002,22 +708,10 @@ class DiagFactory:
                 overall_pass = False
             else:
                 for _name, _unit in self._diag_units.items():
-                    if (
-                        getattr(_unit, "compile_state", None) is None
-                        or _unit.compile_state.name != "PASS"
-                    ):
+                    if not _unit.compile_passed():
                         overall_pass = False
                         break
-                    if _unit.compile_error is not None:
-                        overall_pass = False
-                        break
-                    if (
-                        getattr(_unit, "run_state", None) is None
-                        or _unit.run_state.name == "FAILED"
-                    ):
-                        overall_pass = False
-                        break
-                    if _unit.run_error is not None:
+                    if not _unit.run_passed():
                         overall_pass = False
                         break
 
@@ -1059,19 +753,11 @@ class DiagFactory:
 
         for name, unit in self._diag_units.items():
             # Count built diagnostics (those that compiled successfully)
-            if (
-                getattr(unit, "compile_state", None) is not None
-                and getattr(unit.compile_state, "name", "") == "PASS"
-                and unit.compile_error is None
-            ):
+            if unit.compile_passed():
                 built_count += 1
 
             # Count run diagnostics (those that ran successfully)
-            if (
-                getattr(unit, "run_state", None) is not None
-                and getattr(unit.run_state, "name", "") == "PASS"
-                and unit.run_error is None
-            ):
+            if unit.run_passed():
                 run_count += 1
 
         # Add count information to table lines
