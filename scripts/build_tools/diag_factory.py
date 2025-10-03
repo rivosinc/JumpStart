@@ -501,11 +501,9 @@ class DiagFactory:
             try:
                 unit.compile()
             except Exception as exc:
-                try:
-                    # Capture unexpected exceptions as compile_error
-                    unit.compile_error = f"{type(exc).__name__}: {exc}"
-                except Exception:
-                    pass
+                # Capture unexpected exceptions as compile_error
+                unit.compile_error = f"{type(exc).__name__}: {exc}"
+                unit.compile_state = unit.CompileState.FAILED
 
         # Build task map: name -> (unit, build_dir)
         tasks: Dict[str, Tuple] = {}
@@ -830,10 +828,8 @@ class DiagFactory:
                 try:
                     unit.run()
                 except Exception as exc:
-                    try:
-                        unit.run_error = f"{type(exc).__name__}: {exc}"
-                    except Exception:
-                        pass
+                    unit.run_error = f"{type(exc).__name__}: {exc}"
+                    unit.run_state = unit.RunState.FAILED
 
             run_tasks: Dict[str, Tuple] = {name: (unit,) for name, unit in self._diag_units.items()}
             self._execute_parallel(effective_jobs, run_tasks, _do_run)
