@@ -8,7 +8,6 @@
 
 // Separate sync points for each CPU combination
 static uint32_t all_cpus_sync_point __attribute__((section(".data"))) = 0;
-static uint32_t single_cpu_sync_point __attribute__((section(".data"))) = 0;
 static uint32_t pair_01_sync_point __attribute__((section(".data"))) = 0;
 static uint32_t pair_13_sync_point __attribute__((section(".data"))) = 0;
 static uint32_t subset_012_sync_point __attribute__((section(".data"))) = 0;
@@ -37,6 +36,7 @@ int main(void) {
   // Test 3: sync_cpus_in_mask_from_smode() with individual CPUs
   // Each CPU syncs with itself only
   uint64_t single_cpu_mask = 1UL << cpu_id; // Only this CPU
+  uint32_t single_cpu_sync_point = 0;
 
   for (int i = 0; i < 2; ++i) {
     sync_cpus_in_mask_from_smode(single_cpu_mask,
