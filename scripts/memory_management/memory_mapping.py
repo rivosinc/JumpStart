@@ -296,6 +296,9 @@ class MemoryMapping:
         ):
             raise ValueError(f"umode not set to 1 for g stage mapping: {self}")
 
+        # Validate canonical addresses for virtual addresses
+        self._validate_canonical_addresses()
+
     def get_field(self, field_name):
         assert field_name in self.fields.keys()
         return self.fields[field_name].get_value()
@@ -317,3 +320,62 @@ class MemoryMapping:
 
     def copy(self):
         return copy.deepcopy(self)
+
+    def _validate_canonical_addresses(self):
+        """
+        Validate that virtual addresses are canonical for the given translation mode.
+        """
+        # Get the translation stage and mode
+        translation_stage = self.get_field("translation_stage")
+        if translation_stage is None:
+            return
+
+        translation_mode = TranslationStage.get_selected_mode_for_stage(translation_stage)
+        if translation_mode == "bare":
+            return
+
+        # Get the source address type for this stage
+        source_address_type = TranslationStage.get_translates_from(translation_stage)
+        va = self.get_field(source_address_type)
+
+        if va is None:
+            return
+
+        # Validate the canonical address
+        self._validate_canonical_address(va, translation_mode)
+
+    def _validate_canonical_address(self, va, translation_mode):
+        """
+        Validate that a 64-bit virtual address is canonical for the given translation mode.
+
+        Args:
+            va: 64-bit virtual address to validate
+            translation_mode: The translation mode (sv39, sv48, sv57, etc.)
+
+        Raises:
+            ValueError: If the address is non-canonical for the given mode
+        """
+        # Get the attributes for this translation mode
+        from .page_tables import PageTableAttributes
+
+        va_mask = PageTableAttributes(translation_mode).get_attribute("va_mask")
+        va_bits = va_mask.bit_length()  # Number of valid VA bits
+
+        # Extract the sign bit (most significant valid bit)
+        sign_bit = (va >> (va_bits - 1)) & 1
+
+        # Extract the upper bits that should be sign-extended
+        actual_upper = va >> va_bits
+
+        # Calculate what the upper bits should be (all 0s or all 1s)
+        if sign_bit:
+            expected_upper = (1 << (64 - va_bits)) - 1  # All 1s
+        else:
+            expected_upper = 0  # All 0s
+
+        # Check if the upper bits are properly sign-extended
+        if actual_upper != expected_upper:
+            raise ValueError(
+                f"Non-canonical address 0x{va:016x} for {translation_mode}: "
+                f"bits 63:{va_bits} (0x{actual_upper:016x}) must all equal bit {va_bits-1} ({sign_bit})"
+            )
