@@ -2,12 +2,125 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+"""
+System utility functions for process management and file operations.
+
+This module includes an automatic process cleanup mechanism that ensures spawned
+subprocesses (like Spike) are killed when the script is interrupted (Ctrl+C) or exits.
+
+Process Cleanup Mechanism:
+--------------------------
+1. All processes spawned via run_command() are tracked in a global registry
+2. A SIGINT (Ctrl+C) handler is installed at module import time
+3. When Ctrl+C is pressed:
+   - The signal handler immediately kills all registered process groups
+   - The original Python signal handler is called to raise KeyboardInterrupt
+   - This ensures single Ctrl+C kills all Spike processes across all threads
+4. An atexit handler provides backup cleanup on normal script exit
+"""
+
+import atexit
 import logging as log
 import os
 import shutil
 import signal
 import subprocess
 import threading
+import time
+
+# Global registry to track active process groups so they can be cleaned up on interrupt
+_active_process_groups = set()
+_process_groups_lock = threading.Lock()
+_original_sigint_handler = signal.getsignal(signal.SIGINT)
+_cleanup_in_progress = False
+
+
+def register_process_group(pgid):
+    """Register a process group ID for cleanup on interrupt."""
+    with _process_groups_lock:
+        _active_process_groups.add(pgid)
+        log.debug(f"Registered process group: {pgid}")
+
+
+def unregister_process_group(pgid):
+    """Unregister a process group ID."""
+    with _process_groups_lock:
+        _active_process_groups.discard(pgid)
+        log.debug(f"Unregistered process group: {pgid}")
+
+
+def cleanup_all_process_groups(show_message=True):
+    """Kill all registered process groups. Called on script interruption or exit.
+
+    This function is idempotent and safe to call multiple times.
+    """
+    global _cleanup_in_progress
+
+    with _process_groups_lock:
+        # Prevent concurrent cleanup attempts
+        if _cleanup_in_progress or not _active_process_groups:
+            return
+
+        _cleanup_in_progress = True
+        process_groups = list(_active_process_groups)
+
+    # Only print if we have processes to clean up and message is requested
+    if show_message:
+        try:
+            log.info("Cleaning up spawned processes...")
+        except Exception:
+            # Logging might not be available during shutdown
+            try:
+                print("\nCleaning up spawned processes...", flush=True)
+            except Exception:
+                pass
+
+    # First pass: send SIGTERM to all process groups
+    for pgid in process_groups:
+        try:
+            os.killpg(pgid, signal.SIGTERM)
+            try:
+                log.debug(f"Sent SIGTERM to process group: {pgid}")
+            except Exception:
+                pass
+        except ProcessLookupError:
+            # Process already terminated
+            pass
+        except Exception as e:
+            try:
+                log.warning(f"Failed to kill process group {pgid}: {e}")
+            except Exception:
+                pass
+
+    # Give processes a brief moment to terminate gracefully
+    if process_groups:
+        time.sleep(0.05)
+
+    # Clear the registry
+    with _process_groups_lock:
+        _active_process_groups.clear()
+        _cleanup_in_progress = False
+
+
+def _sigint_handler(signum, frame):
+    """Handle SIGINT (Ctrl+C) by immediately killing all spawned processes."""
+    # First, kill all spawned processes immediately
+    cleanup_all_process_groups(show_message=True)
+
+    # Then restore and call the original handler to raise KeyboardInterrupt
+    signal.signal(signal.SIGINT, _original_sigint_handler)
+    if callable(_original_sigint_handler):
+        _original_sigint_handler(signum, frame)
+    else:
+        # If no handler or default, raise KeyboardInterrupt
+        raise KeyboardInterrupt()
+
+
+# Install our signal handler at import time.
+signal.signal(signal.SIGINT, _sigint_handler)
+
+# Register cleanup function to run at exit (backup)
+atexit.register(lambda: cleanup_all_process_groups(show_message=False))
 
 
 def create_empty_directory(directory):
@@ -60,6 +173,7 @@ def run_command(command, run_directory, timeout=None, extra_env=None):
             env=env,
         )
         group_pid = os.getpgid(p.pid)
+        register_process_group(group_pid)
 
         # Function to capture output
         def capture_output(stream, log_func, output_list):
@@ -81,7 +195,11 @@ def run_command(command, run_directory, timeout=None, extra_env=None):
         try:
             returncode = p.wait(timeout=timeout)
         except subprocess.TimeoutExpired:
-            os.killpg(p.pid, signal.SIGTERM)
+            log.warning(f"Command timed out after {timeout}s, killing process group {group_pid}")
+            try:
+                os.killpg(group_pid, signal.SIGTERM)
+            except ProcessLookupError:
+                pass  # Process already terminated
             returncode = -1
 
         if returncode != 0:
@@ -99,15 +217,14 @@ def run_command(command, run_directory, timeout=None, extra_env=None):
 
     except KeyboardInterrupt:
         log.error(f"Command: {' '.join(command)} interrupted.")
-        if group_pid is not None:
-            # p.kill() seems to only kill the child process and not the
-            # subprocesses of the child. This leaves the subprocesses of the
-            # child orphaned.
-            # For example, "meson test" spawns spike which doesn't get killed
-            # when p.kill() is called on "meson test".
-            # Instead, kill the whole process group containing the child process
-            # and it's subprocesses.
-            os.killpg(group_pid, signal.SIGTERM)
+        # Note: cleanup_all_process_groups() is already called by the signal handler,
+        # but we call it here as a safety net in case the signal handler didn't run.
+        # The function is idempotent, so calling it multiple times is safe.
+        cleanup_all_process_groups(show_message=False)
         raise Exception(f"Command: {' '.join(command)} interrupted.")
+    finally:
+        # Always unregister the process group when done
+        if group_pid is not None:
+            unregister_process_group(group_pid)
 
     return returncode
