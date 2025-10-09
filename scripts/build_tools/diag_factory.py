@@ -38,7 +38,7 @@ class DiagFactory:
         self,
         build_manifest_yaml: dict,
         root_build_dir: str,
-        environment: str,
+        environment,
         toolchain: str,
         rng_seed: Optional[int],
         jumpstart_dir: str,
@@ -58,14 +58,8 @@ class DiagFactory:
         self.root_build_dir = os.path.abspath(root_build_dir)
         self.toolchain = toolchain
 
-        # Get the environment object
-        try:
-            from .environment import get_environment_manager
-
-            env_manager = get_environment_manager()
-            self.environment = env_manager.get_environment(environment)
-        except Exception as e:
-            raise DiagFactoryError(f"Failed to get environment '{environment}': {e}")
+        # Store the environment object directly
+        self.environment = environment
 
         self.jumpstart_dir = jumpstart_dir
         self.keep_meson_builddir = keep_meson_builddir
