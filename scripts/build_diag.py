@@ -339,6 +339,9 @@ def main():
     except Exception as e:
         raise Exception(f"Failed to get environment object for {args.environment}: {e}")
 
+    if args.disable_diag_run is True:
+        environment.run_target = None
+
     factory = DiagFactory(
         build_manifest_yaml=build_manifest_yaml,
         root_build_dir=args.diag_build_dir,
@@ -361,12 +364,13 @@ def main():
     try:
         factory.compile_all()
 
-        if args.disable_diag_run is False:
-            factory.run_all()
-        elif factory.environment.run_target is None:
+        if environment.run_target is None:
             log.info(
-                f"Skipping diag run: environment '{factory.environment.name}' has no run_target (build-only environment)"
+                f"Skipping diag run: environment '{environment.name}' has no run_target (build-only environment)"
             )
+        elif environment.run_target is not None:
+            factory.run_all()
+
     except Exception as exc:
         # Ensure we always print a summary before exiting
         try:
