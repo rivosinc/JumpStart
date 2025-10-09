@@ -719,7 +719,7 @@ class DiagFactory:
                     if not _unit.compile_passed():
                         overall_pass = False
                         break
-                    if not _unit.run_passed():
+                    if self.environment.run_target is not None and not _unit.run_passed():
                         overall_pass = False
                         break
 
