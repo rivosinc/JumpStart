@@ -506,22 +506,29 @@ __attr_stext void *memalign_from_memory(size_t alignment, size_t size,
   uint64_t alloc_size = ALIGN_TO_MIN_ALLOC(size);
 
   //----------------------------------------------------------------------------
-  // Try to find a suitable chunk that is unused
+  // Try to find a suitable chunk that is unused, starting from last allocation
   //----------------------------------------------------------------------------
+  memchunk *start_chunk = target_heap->last_allocated
+                              ? target_heap->last_allocated->next
+                              : target_heap->head;
+  if (!start_chunk)
+    start_chunk = target_heap->head; // Wrap around if at end
+
   uint64_t pow2 = (uint64_t)__builtin_ctzll((uint64_t)alignment);
   uint8_t aligned = 0;
   uint64_t aligned_start = 0, start = 0, end = 0;
-  memchunk *chunk;
-  for (chunk = target_heap->head; chunk; chunk = chunk->next) {
+  memchunk *chunk = NULL;
+
+  // First try searching from last allocation to end
+  for (memchunk *c = start_chunk; c; c = c->next) {
     // Skip if chunk is used or too small
-    if (chunk->size & MEMCHUNK_USED || chunk->size < alloc_size) {
+    if (c->size & MEMCHUNK_USED || c->size < alloc_size) {
       continue;
     }
 
     // Calculate chunk boundaries
-    start = (uint64_t)((char *)chunk + PER_HEAP_ALLOCATION_METADATA_SIZE);
-    end = (uint64_t)((char *)chunk + PER_HEAP_ALLOCATION_METADATA_SIZE +
-                     chunk->size);
+    start = (uint64_t)((char *)c + PER_HEAP_ALLOCATION_METADATA_SIZE);
+    end = (uint64_t)((char *)c + PER_HEAP_ALLOCATION_METADATA_SIZE + c->size);
 
     // First try: Check if chunk's start address can be used directly after
     // alignment
@@ -529,6 +536,7 @@ __attr_stext void *memalign_from_memory(size_t alignment, size_t size,
     if (start == aligned_start) {
       // Current chunk is already properly aligned - use it as-is
       aligned = 1;
+      chunk = c;
       break;
     }
 
@@ -549,7 +557,53 @@ __attr_stext void *memalign_from_memory(size_t alignment, size_t size,
     }
 
     // Found a suitable chunk we can split
+    chunk = c;
     break;
+  }
+
+  // If not found, search from beginning to where we started
+  if (!chunk && start_chunk != target_heap->head) {
+    for (memchunk *c = target_heap->head; c && c != start_chunk; c = c->next) {
+      // Skip if chunk is used or too small
+      if (c->size & MEMCHUNK_USED || c->size < alloc_size) {
+        continue;
+      }
+
+      // Calculate chunk boundaries
+      start = (uint64_t)((char *)c + PER_HEAP_ALLOCATION_METADATA_SIZE);
+      end = (uint64_t)((char *)c + PER_HEAP_ALLOCATION_METADATA_SIZE + c->size);
+
+      // First try: Check if chunk's start address can be used directly after
+      // alignment
+      aligned_start = (((start - 1) >> pow2) << pow2) + alignment;
+      if (start == aligned_start) {
+        // Current chunk is already properly aligned - use it as-is
+        aligned = 1;
+        chunk = c;
+        break;
+      }
+
+      // Second try: Check if we can split this chunk to create an aligned
+      // allocation We need space for: metadata + minimum allocation before the
+      // aligned address
+      aligned_start =
+          ((((start + MIN_HEAP_SEGMENT_BYTES) - 1) >> pow2) << pow2) +
+          alignment;
+
+      // Verify the aligned address fits within the chunk
+      if (aligned_start >= end) {
+        continue;
+      }
+
+      // Verify there's enough space for the requested allocation
+      if (aligned_start + alloc_size > end) {
+        continue;
+      }
+
+      // Found a suitable chunk we can split
+      chunk = c;
+      break;
+    }
   }
 
   if (!chunk) {
