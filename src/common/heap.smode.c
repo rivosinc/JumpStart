@@ -74,6 +74,48 @@ __attr_stext bool is_valid_heap(uint8_t backing_memory, uint8_t memory_type) {
 }
 
 //------------------------------------------------------------------------------
+// Helper iterator for two-pass chunk search starting from last_allocated
+// Returns the next chunk to check, or NULL when iteration is complete
+//------------------------------------------------------------------------------
+typedef struct {
+  memchunk *current;
+  memchunk *start;
+  memchunk *head;
+  bool second_pass;
+} chunk_iterator_t;
+
+__attr_stext void init_chunk_iterator(chunk_iterator_t *iter,
+                                      struct heap_info *heap) {
+  iter->head = heap->head;
+  iter->start = heap->last_allocated ? heap->last_allocated->next : heap->head;
+  if (!iter->start)
+    iter->start = heap->head; // Wrap around if at end
+  iter->current = iter->start;
+  iter->second_pass = false;
+}
+
+__attr_stext memchunk *next_chunk(chunk_iterator_t *iter) {
+  if (!iter->current) {
+    // First pass exhausted, start second pass from head if needed
+    if (!iter->second_pass && iter->start != iter->head) {
+      iter->second_pass = true;
+      iter->current = iter->head;
+    } else {
+      return NULL; // Iteration complete
+    }
+  }
+
+  // In second pass, stop when we reach the start point
+  if (iter->second_pass && iter->current == iter->start) {
+    return NULL;
+  }
+
+  memchunk *result = iter->current;
+  iter->current = iter->current->next;
+  return result;
+}
+
+//------------------------------------------------------------------------------
 // Helper functions to convert numeric values to readable strings
 //------------------------------------------------------------------------------
 __attr_stext const char *backing_memory_to_string(uint8_t backing_memory) {
@@ -125,33 +167,13 @@ __attr_stext void *malloc_from_memory(size_t size, uint8_t backing_memory,
   //----------------------------------------------------------------------------
   // Try to find a suitable chunk that is unused, starting from last allocation
   //----------------------------------------------------------------------------
-  memchunk *start = target_heap->last_allocated
-                        ? target_heap->last_allocated->next
-                        : target_heap->head;
-  if (!start)
-    start = target_heap->head; // Wrap around if at end
-  memchunk *chunk = start;
+  chunk_iterator_t iter;
+  init_chunk_iterator(&iter, target_heap);
 
-  // First try searching from last allocation to end
-  while (chunk) {
+  memchunk *chunk = NULL;
+  while ((chunk = next_chunk(&iter)) != NULL) {
     if (!(chunk->size & MEMCHUNK_USED) && chunk->size >= alloc_size) {
       break;
-    }
-    chunk = chunk->next;
-  }
-
-  // If not found, search from beginning to where we started
-  if (!chunk && start != target_heap->head) {
-    chunk = target_heap->head;
-    while (chunk && chunk != start) {
-      if (!(chunk->size & MEMCHUNK_USED) && chunk->size >= alloc_size) {
-        break;
-      }
-      chunk = chunk->next;
-    }
-    // If we reached start without finding a chunk, set chunk to NULL
-    if (chunk == start) {
-      chunk = NULL;
     }
   }
 
@@ -508,19 +530,16 @@ __attr_stext void *memalign_from_memory(size_t alignment, size_t size,
   //----------------------------------------------------------------------------
   // Try to find a suitable chunk that is unused, starting from last allocation
   //----------------------------------------------------------------------------
-  memchunk *start_chunk = target_heap->last_allocated
-                              ? target_heap->last_allocated->next
-                              : target_heap->head;
-  if (!start_chunk)
-    start_chunk = target_heap->head; // Wrap around if at end
+  chunk_iterator_t iter;
+  init_chunk_iterator(&iter, target_heap);
 
   uint64_t pow2 = (uint64_t)__builtin_ctzll((uint64_t)alignment);
   uint8_t aligned = 0;
   uint64_t aligned_start = 0, start = 0, end = 0;
   memchunk *chunk = NULL;
 
-  // First try searching from last allocation to end
-  for (memchunk *c = start_chunk; c; c = c->next) {
+  memchunk *c;
+  while ((c = next_chunk(&iter)) != NULL) {
     // Skip if chunk is used or too small
     if (c->size & MEMCHUNK_USED || c->size < alloc_size) {
       continue;
@@ -559,51 +578,6 @@ __attr_stext void *memalign_from_memory(size_t alignment, size_t size,
     // Found a suitable chunk we can split
     chunk = c;
     break;
-  }
-
-  // If not found, search from beginning to where we started
-  if (!chunk && start_chunk != target_heap->head) {
-    for (memchunk *c = target_heap->head; c && c != start_chunk; c = c->next) {
-      // Skip if chunk is used or too small
-      if (c->size & MEMCHUNK_USED || c->size < alloc_size) {
-        continue;
-      }
-
-      // Calculate chunk boundaries
-      start = (uint64_t)((char *)c + PER_HEAP_ALLOCATION_METADATA_SIZE);
-      end = (uint64_t)((char *)c + PER_HEAP_ALLOCATION_METADATA_SIZE + c->size);
-
-      // First try: Check if chunk's start address can be used directly after
-      // alignment
-      aligned_start = (((start - 1) >> pow2) << pow2) + alignment;
-      if (start == aligned_start) {
-        // Current chunk is already properly aligned - use it as-is
-        aligned = 1;
-        chunk = c;
-        break;
-      }
-
-      // Second try: Check if we can split this chunk to create an aligned
-      // allocation We need space for: metadata + minimum allocation before the
-      // aligned address
-      aligned_start =
-          ((((start + MIN_HEAP_SEGMENT_BYTES) - 1) >> pow2) << pow2) +
-          alignment;
-
-      // Verify the aligned address fits within the chunk
-      if (aligned_start >= end) {
-        continue;
-      }
-
-      // Verify there's enough space for the requested allocation
-      if (aligned_start + alloc_size > end) {
-        continue;
-      }
-
-      // Found a suitable chunk we can split
-      chunk = c;
-      break;
-    }
   }
 
   if (!chunk) {
