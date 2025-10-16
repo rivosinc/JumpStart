@@ -187,6 +187,9 @@ disable_mmu_from_smode:
 .align 2
 .global stvec_trap_handler
 stvec_trap_handler:
+  # Save gp as we use it in this handler.
+  csrw sscratch, gp
+
   li  gp, PRV_S
   SET_THREAD_ATTRIBUTES_CURRENT_MODE(gp)
 
@@ -286,6 +289,9 @@ restore_all_gprs:
   GET_THREAD_ATTRIBUTES_NUM_CONTEXT_SAVES_REMAINING_IN_SMODE(gp)
   addi gp, gp, 1
   SET_THREAD_ATTRIBUTES_NUM_CONTEXT_SAVES_REMAINING_IN_SMODE(gp)
+
+  # Restore gp as we had saved it at the start of this handler.
+  csrr gp, sscratch
 
 # The return_from_stvec_trap_handler label is referenced in control transfer
 # records diag so mark it as global.
