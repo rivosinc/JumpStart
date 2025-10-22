@@ -8,8 +8,6 @@ active_cpu_mask: "0b1111"
 
 mappings:
   -
-    va: 0xC0020000
-    pa: 0xC0020000
     xwr: "0b101"
     page_size: 0x1000
     num_pages: 1
