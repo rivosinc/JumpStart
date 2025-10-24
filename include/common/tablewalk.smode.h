@@ -21,5 +21,6 @@ struct __attribute__((packed)) translation_info {
   uint8_t pbmt_mode;
 };
 
+void translate_GVA(uint64_t gva, struct translation_info *xlate_info);
 void translate_GPA(uint64_t gpa, struct translation_info *xlate_info);
 void translate_VA(uint64_t va, struct translation_info *xlate_info);

@@ -141,6 +141,28 @@ translate(uint64_t xatp, const struct mmu_mode_attribute *mmu_mode_attribute,
   xlate_info->walk_successful = 1;
 }
 
+__attr_stext void translate_GVA(uint64_t gva,
+                                struct translation_info *xlate_info) {
+  uint64_t vsatp_value = read_csr(vsatp);
+  uint8_t mode = (uint8_t)get_field(vsatp_value, VSATP64_MODE);
+
+  const struct mmu_mode_attribute *attribute = 0;
+  for (uint8_t i = 0;
+       i < sizeof(mmu_smode_attributes) / sizeof(mmu_smode_attributes[0]);
+       ++i) {
+    if (mmu_smode_attributes[i].xatp_mode == mode) {
+      attribute = &mmu_smode_attributes[i];
+      break;
+    }
+  }
+
+  if (!attribute) {
+    jumpstart_smode_fail();
+  }
+
+  translate(vsatp_value, attribute, gva, xlate_info);
+}
+
 __attr_stext void translate_GPA(uint64_t gpa,
                                 struct translation_info *xlate_info) {
   uint64_t hgatp_value = read_csr(hgatp);

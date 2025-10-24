@@ -433,6 +433,17 @@ class SourceGenerator:
                     len(self.memory_map[target_mmu]["hs"]), mapping
                 )
 
+            # Adds VS-stage pagetable memory region into hs stage memory map to
+            # allow HS-mode to access VS-stage pagetables.
+            if target_mmu == "cpu" and "vs" in TranslationStage.get_enabled_stages():
+                mapping = per_stage_pagetable_mappings["vs"].copy()
+                mapping.set_field("translation_stage", "hs")
+                mapping.set_field("pa", mapping.get_field("gpa"))
+                mapping.set_field("gpa", None)
+                self.memory_map[target_mmu]["hs"].insert(
+                    len(self.memory_map[target_mmu]["hs"]), mapping
+                )
+
     def add_jumpstart_sections_to_mappings(self):
         target_mmu = "cpu"
         pagetables_start_address = 0
