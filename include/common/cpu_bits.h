@@ -666,18 +666,35 @@
 #define MISA64_MXL          0xC000000000000000ULL
 
 /* sstatus CSR bits */
-#define SSTATUS_UIE         0x00000001
-#define SSTATUS_SIE         0x00000002
-#define SSTATUS_UPIE        0x00000010
-#define SSTATUS_SPIE        0x00000020
-#define SSTATUS_SPP         0x00000100
-#define SSTATUS_VS          0x00000600
-#define SSTATUS_FS          0x00006000
-#define SSTATUS_XS          0x00018000
-#define SSTATUS_SUM         0x00040000 /* since: priv-1.10 */
-#define SSTATUS_MXR         0x00080000
+/* Bit positions */
+#define SSTATUS_UIE_POS     0
+#define SSTATUS_SIE_POS     1
+#define SSTATUS_UPIE_POS    4
+#define SSTATUS_SPIE_POS    5
+#define SSTATUS_UBE_POS     6
+#define SSTATUS_SBE_POS     7
+#define SSTATUS_SPP_POS     8
+#define SSTATUS_VS_POS      9
+#define SSTATUS_FS_POS      13
+#define SSTATUS_XS_POS      15
+#define SSTATUS_SUM_POS     18
+#define SSTATUS_MXR_POS     19
+
+/* Masks derived from bit positions */
+#define SSTATUS_UIE         (1 << SSTATUS_UIE_POS)
+#define SSTATUS_SIE         (1 << SSTATUS_SIE_POS)
+#define SSTATUS_UPIE        (1 << SSTATUS_UPIE_POS)
+#define SSTATUS_SPIE        (1 << SSTATUS_SPIE_POS)
+#define SSTATUS_UBE         (1 << SSTATUS_UBE_POS)
+#define SSTATUS_SBE         (1 << SSTATUS_SBE_POS)
+#define SSTATUS_SPP         (1 << SSTATUS_SPP_POS)
+#define SSTATUS_VS          0x00000600  /* Multi-bit field, keep explicit value */
+#define SSTATUS_FS          0x00006000  /* Multi-bit field, keep explicit value */
+#define SSTATUS_XS          0x00018000  /* Multi-bit field, keep explicit value */
+#define SSTATUS_SUM         (1 << SSTATUS_SUM_POS)
+#define SSTATUS_MXR         (1 << SSTATUS_MXR_POS)
 #define SSTATUS_SPELP       MSTATUS_SPELP   /* zicfilp */
-#define SSTATUS_SPP_SHIFT   8
+#define SSTATUS_SPP_SHIFT   SSTATUS_SPP_POS
 
 #define SSTATUS64_UXL       0x0000000300000000ULL
 

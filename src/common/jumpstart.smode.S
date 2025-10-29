@@ -31,6 +31,8 @@ setup_smode:
 
   jal setup_default_heap
 
+  jal register_default_smode_exception_handlers
+
   li t0, 1
   SET_THREAD_ATTRIBUTES_SMODE_SETUP_DONE(t0)
 

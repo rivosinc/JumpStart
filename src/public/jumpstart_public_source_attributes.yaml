@@ -94,7 +94,7 @@ diag_attributes:
   num_pages_for_jumpstart_mmode_text: 3
   num_pages_per_cpu_for_jumpstart_mmode_data: 2
   num_pages_per_cpu_for_jumpstart_mmode_stack: 1
-  num_pages_for_jumpstart_smode_text: 4
+  num_pages_for_jumpstart_smode_text: 5
   num_pages_for_jumpstart_mmode_sdata: 1
   num_pages_for_jumpstart_smode_bss: 7
   page_size_for_jumpstart_smode_heap: 0x200000
