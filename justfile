@@ -3,13 +3,13 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # To build and run the unit tests with all possible configurations:
-# just build-and-test-all
+# just test-all
 
 # To target a particular configuration:
-# just build-and-test <TOOLCHAIN> <BUILDTYPE> <TARGET>
+# just --set num_test_processes {{num_test_processes}} test <TOOLCHAIN> <BUILDTYPE> <TARGET>
 # Examples:
-#   just build-and-test gcc release spike
-#   just build-and-test gcc debug spike
+#   just --set num_test_processes {{num_test_processes}} test gcc release spike
+#   just --set num_test_processes {{num_test_processes}} test gcc debug spike
 
 # build and test targets can be run individually
 # Examples:
@@ -18,12 +18,12 @@
 
 # To limit the number of parallel test jobs pass --set num_test_processes <NUM>
 # Example:
-#   just --set num_test_processes 10 build-and-test-all
+#   just --set num_test_processes 10 test-all
 
 num_test_processes := "max"
 
 default:
-    @just build-and-test-all
+    @just test-all
 
 setup compiler buildtype target:
     meson setup {{compiler}}-{{buildtype}}-{{target}}-public-fw-none.builddir --cross-file cross_compile/public/{{compiler}}_options.txt --cross-file cross_compile/{{compiler}}.txt --buildtype {{buildtype}} -Ddiag_target={{target}} -Dboot_config=fw-none -Drivos_internal_build=false
@@ -59,15 +59,15 @@ build-all-gcc:
     @just build-all-spike-gcc
 
 test-all-spike-gcc:
-    @just test gcc debug spike
-    @just test gcc release spike
+    @just --set num_test_processes {{num_test_processes}} test gcc debug spike
+    @just --set num_test_processes {{num_test_processes}} test gcc release spike
 
 test-all-spike:
     @just test-all-spike-gcc
 
 test-all-public:
-    @just test gcc debug spike
-    @just test gcc release spike
+    @just --set num_test_processes {{num_test_processes}} test gcc debug spike
+    @just --set num_test_processes {{num_test_processes}} test gcc release spike
 
 test-all:
     @just test-all-spike
