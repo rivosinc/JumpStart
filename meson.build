@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
+# SPDX-FileCopyrightText: 2023 - 2025 Rivos Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -8,7 +8,7 @@ project('JumpStart', 'c',
           'werror=true',
           'b_ndebug=if-release',
           ],
-        meson_version: '>=1.0.3'
+        meson_version: '>=1.3.0'
 )
 
 add_project_arguments('-Wno-pedantic',
