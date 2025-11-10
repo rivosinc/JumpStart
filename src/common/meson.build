@@ -20,7 +20,6 @@ smode_sources += files('jumpstart.smode.S',
 if get_option('boot_config') == 'fw-sbi'
   smode_sources += files(
                           'sbi_firmware_boot.smode.S',
-                          'data.privileged.S'
                         )
 endif
 
