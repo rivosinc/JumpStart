@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
+# SPDX-FileCopyrightText: 2023 - 2025 Rivos Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -46,17 +46,23 @@ def run_command(command, run_directory):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             preexec_fn=os.setsid,  # Assign the child and all its subprocesses to a new process group.
+            universal_newlines=True,  # Ensures output is returned as a string rather than bytes.
         )
         group_pid = os.getpgid(p.pid)
-        stdout, stderr = p.communicate()
+
+        # Print stdout and stderr in real-time as they are produced
+        for stdout_line in iter(p.stdout.readline, ""):
+            log.debug(stdout_line.strip())
+
+        for stderr_line in iter(p.stderr.readline, ""):
+            log.error(stderr_line.strip())
+
         returncode = p.wait()
+
         if returncode != 0:
             log.error(f"COMMAND FAILED: {' '.join(command)}")
-            log.error(stdout.decode())
-            log.error(stderr.decode())
         else:
-            log.debug(stdout.decode())
-            log.debug(stderr.decode())
+            log.debug("Command executed successfully.")
 
     except KeyboardInterrupt:
         log.error(f"Command: {' '.join(command)} interrupted.")
