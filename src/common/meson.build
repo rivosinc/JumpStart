@@ -4,7 +4,8 @@
 
 mmode_sources += files('jumpstart.mmode.S',
                        'trap_handler.mmode.c',
-                       'utils.mmode.c')
+                       'utils.mmode.c',
+                       'data.privileged.S')
 
 smode_sources += files('jumpstart.smode.S',
                               'jumpstart.vsmode.S',
