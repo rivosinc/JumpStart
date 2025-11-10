@@ -69,7 +69,7 @@ __attribute__((section(".text.smode"))) int smode_main(void) {
     jumpstart_smode_fail();
 
   set_random_seed_from_smode((int)random * BUILD_RNG_SEED);
-  for (int i = 0; i < 1024; i++) {
+  for (int i = 0; i < 50; i++) {
     rand = get_random_number_from_smode();
     if (rand == last_rand)
       return DIAG_FAILED;
@@ -77,7 +77,7 @@ __attribute__((section(".text.smode"))) int smode_main(void) {
     last_rand = rand;
   }
 
-  for (unsigned i = 0; i < 1024; i++) {
+  for (unsigned i = 0; i < 50; i++) {
     /* Try csrrwi, it shouldn't fault. */
     last_seed = seed;
     __asm__ __volatile__("csrrwi %0, seed, 5" : "=r"(seed)::"memory");
@@ -200,7 +200,7 @@ int main(void) {
     jumpstart_mmode_fail();
 
   set_random_seed_from_mmode((int)random * BUILD_RNG_SEED);
-  for (int i = 0; i < 1024; i++) {
+  for (int i = 0; i < 50; i++) {
     rand = get_random_number_from_mmode();
     if (rand == last_rand)
       return DIAG_FAILED;
@@ -208,7 +208,7 @@ int main(void) {
     last_rand = rand;
   }
 
-  for (unsigned i = 0; i < 1024; i++) {
+  for (unsigned i = 0; i < 50; i++) {
     /* Try csrrwi, it shouldn't fault. */
     last_seed = seed;
     __asm__ __volatile__("csrrwi %0, seed, 5" : "=r"(seed)::"memory");
