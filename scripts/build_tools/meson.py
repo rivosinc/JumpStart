@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
+# SPDX-FileCopyrightText: 2023 - 2025 Rivos Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -207,7 +207,7 @@ class Meson:
             f"Running meson compile for diag: {self.diag_build_target.diag_source.get_diag_src_dir()}"
         )
 
-        meson_compile_command = ["meson", "compile", "-C", self.meson_builddir]
+        meson_compile_command = ["meson", "compile", "-v", "-C", self.meson_builddir]
         return_code = system_functions.run_command(meson_compile_command, self.jumpstart_dir)
 
         diag_binary = os.path.join(self.meson_builddir, self.diag_binary_name)
@@ -242,7 +242,7 @@ class Meson:
             f"Running meson test for diag: {self.diag_build_target.diag_source.get_diag_src_dir()}"
         )
 
-        meson_test_command = ["meson", "test", "-C", self.meson_builddir]
+        meson_test_command = ["meson", "test", "-v", "-C", self.meson_builddir]
         return_code = system_functions.run_command(meson_test_command, self.jumpstart_dir)
 
         if return_code == 0 and not os.path.exists(self.trace_file):
