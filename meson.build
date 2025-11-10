@@ -28,36 +28,11 @@ add_project_arguments('-Wno-pedantic',
 jumpstart_source_attribute_overrides = get_option('jumpstart_source_attribute_overrides')
 diag_attribute_overrides = get_option('diag_attribute_overrides')
 
-if get_option('batch_mode') == true
-  if get_option('boot_config') != 'fw-m'
-    error('batch_mode=true requires boot_config=fw-m')
-  endif
-  if get_option('diag_target') == 'spike'
-    error('batch_mode=true only supported on diag_target=qemu')
-  endif
-  diag_attribute_overrides += ['batch_mode=true']
-endif
-
 compatible_priv_modes = []
 if get_option('boot_config') == 'fw-none'
   compatible_priv_modes = get_option('riscv_priv_modes_enabled')
-elif get_option('boot_config') == 'fw-m'
-  compatible_priv_modes = ['mmode', 'smode', 'umode']
-  jumpstart_source_attribute_overrides += ['diag_entry_label=_mmode_start']
-  if get_option('batch_mode') == false
-    # fw-m expects the bare-metal workload to start at a fixed address.
-    diag_attribute_overrides += ['mmode_start_address=' + '0x90000000']
-  else
-    # The batch mode runtime is expected to start at the fixed address
-    # so we need to start the diag at a higher offset.
-    diag_attribute_overrides += ['mmode_start_address=' + '0x98000000']
-  endif
-elif get_option('boot_config') == 'fw-sbi'
-  compatible_priv_modes = ['smode', 'umode']
-  jumpstart_source_attribute_overrides += ['diag_entry_label=sbi_firmware_trampoline']
-  diag_attribute_overrides += ['smode_start_address=' + '0x90000000']
 else
-  error('Invalid boot_config value')
+  error('Invalid boot_config value. Only fw-none is supported.')
 endif
 
 riscv_priv_modes_enabled = []

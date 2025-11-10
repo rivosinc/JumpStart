@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
+# SPDX-FileCopyrightText: 2023 - 2025 Rivos Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -17,11 +17,6 @@ smode_sources += files('data.smode.S',
                               'heap.smode.c',
                               'lock.smode.c')
 
-if get_option('boot_config') == 'fw-sbi'
-  smode_sources += files(
-                          'sbi_firmware_boot.smode.S',
-                        )
-endif
 
 umode_sources += files('jumpstart.umode.S',
                        'jumpstart.vumode.S')

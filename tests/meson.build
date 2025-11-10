@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
+# SPDX-FileCopyrightText: 2023 - 2025 Rivos Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -8,11 +8,9 @@ source_suffixes = ['.S', '.c']
 
 start_in_mmode_tests = [] # diag main() is in mmode
 start_in_smode_tests = [] # diag main() is in smode
-firmware_boot_tests  = [] # diag needs boot_config!=fw-none
 
 tests_disabled_on_qemu = []
 tests_disabled_on_spike = []
-tests_disabled_for_sbi_firmware_boot = []
 
 subdir('common')
 test_root_directories = [meson.current_source_dir() + '/' + 'common']
@@ -32,9 +30,6 @@ if 'smode' in riscv_priv_modes_enabled
   unit_tests += start_in_smode_tests
 endif
 
-if get_option('boot_config') != 'fw-none'
-  unit_tests += firmware_boot_tests
-endif
 
 foreach unit_test : unit_tests
   test_name = unit_test.get(0)
@@ -46,13 +41,10 @@ foreach unit_test : unit_tests
 
   test_disabled_on_qemu = test_name in tests_disabled_on_qemu
   test_disabled_on_spike = test_name in tests_disabled_on_spike
-  test_disabled_for_sbi_firmware_boot = test_name in tests_disabled_for_sbi_firmware_boot
 
   if get_option('diag_target') == 'spike' and test_disabled_on_spike == true
     continue
   elif get_option('diag_target') == 'qemu' and test_disabled_on_qemu == true
-    continue
-  elif get_option('boot_config') == 'fw-sbi' and test_disabled_for_sbi_firmware_boot == true
     continue
   endif
 

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
+# SPDX-FileCopyrightText: 2023 - 2025 Rivos Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -56,19 +56,5 @@ start_in_mmode_tests += [
   ['test044', 'Tests random number generation and seed csr from both M and S modes.', '-p4'],
 ]
 
-firmware_boot_tests += []
-
 tests_disabled_on_qemu += []
 tests_disabled_on_spike += []
-tests_disabled_for_sbi_firmware_boot += [
-                                  'test010',
-                                  'test043',
-                                ]
-
-# FW doesn't appear to enable the trap delegation of VS excall in smode.
-# Disabling virtualization tests till this is resolved.
-# https://rivosinc.atlassian.net/browse/SW-7451
-tests_disabled_for_sbi_firmware_boot += [
-                                  'test045',
-                                  'test046',
-                                ]

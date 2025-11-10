@@ -28,22 +28,6 @@ _mmode_start:
 
   mv  fp, sp
 
-  li t1, BATCH_MODE
-  beqz t1, 1f
-
-  # When running in batch mode, have the primary hart save away it's
-  # return address.
-  # This return address is common to all the harts and allows all
-  # harts to exit back to where they came from.
-  csrr t0, mhartid
-  li t1, PRIMARY_HART_ID
-  bne t0, t1, 1f
-  la t1, batch_mode_exit_address
-  sd ra, (t1)
-  fence rw, rw
-  la t1, batch_mode_exit_lock
-  sd zero, (t1)
-
 1:
   # The mmode init code is expected to fit in a 4KB page for Rivos internal
   # reasons.
@@ -70,12 +54,7 @@ _mmode_start:
   bnez a0, 2f
 
   # Inactive hart.
-
-  # If running in batch mode, return the inactive hart.
-  li t2, BATCH_MODE
-  bnez t2, batch_mode_return_unused_hart
-
-  # Send the hart to WFI if not running in batch mode.
+  # Send the hart to WFI.
   j just_wfi_from_mmode
 
 2:

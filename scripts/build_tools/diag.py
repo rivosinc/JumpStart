@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
+# SPDX-FileCopyrightText: 2023 - 2025 Rivos Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -102,7 +102,7 @@ class DiagSource:
 class DiagBuildTarget:
     supported_targets = ["qemu", "spike"]
     supported_toolchains = ["gcc", "llvm"]
-    supported_boot_configs = ["fw-none", "fw-m", "fw-sbi"]
+    supported_boot_configs = ["fw-none"]
 
     def __init__(
         self,
@@ -131,11 +131,6 @@ class DiagBuildTarget:
 
         assert boot_config in self.supported_boot_configs
         self.boot_config = boot_config
-
-        if self.target == "spike" and self.boot_config != "fw-none":
-            raise Exception(
-                f"Invalid boot_config {self.boot_config} for spike. Only fw-none is supported for spike."
-            )
 
         self.active_hart_mask_override = active_hart_mask_override
 
