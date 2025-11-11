@@ -21,11 +21,5 @@ smode_sources += files('jumpstart.smode.S',
                               'heap.smode.S',
                               'lock.smode.c')
 
-if get_option('boot_config') == 'fw-sbi'
-  smode_sources += files(
-                          'sbi_firmware_boot.smode.S',
-                        )
-endif
-
 umode_sources += files('jumpstart.umode.S',
                        'jumpstart.vumode.S')

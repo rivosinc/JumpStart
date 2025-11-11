@@ -127,12 +127,7 @@ handle_inactive_cpus:
   bnez t2, 1f
 
   # Inactive cpu.
-
-  # If running in batch mode, return the inactive cpu.
-  li t2, BATCH_MODE
-  bnez t2, batch_mode_return_unused_cpu
-
-  # Send the cpu to WFI if not running in batch mode.
+  # Send the cpu to WFI.
   j just_wfi_from_mmode
 
 1:

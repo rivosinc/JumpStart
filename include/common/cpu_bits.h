@@ -6,7 +6,7 @@
 
 /* RISC-V ISA constants */
 
-/* This file is based on qemu/target/riscv/cpu_bits.h. Sync if needed. */
+/* This file is based on RISC-V CPU bits definitions. Sync if needed. */
 
 #ifndef TARGET_RISCV_CPU_BITS_H
 #define TARGET_RISCV_CPU_BITS_H
@@ -846,7 +846,6 @@
 #define RISCV_EXCP_LOAD_GUEST_ACCESS_FAULT 	0x15
 #define RISCV_EXCP_VIRT_INSTRUCTION_FAULT 	0x16
 #define RISCV_EXCP_STORE_GUEST_AMO_ACCESS_FAULT 0x17
-#define RISCV_EXCP_RIVOS_RCODE_ILLEGAL_INST	0x1a
 #define RISCV_EXCP_SEMIHOST			0x3f
 
 /* zicfilp defines lp violation results in sw check with tval = 2*/

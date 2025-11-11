@@ -27,7 +27,7 @@ option('diag_generate_disassembly',
 
 option('diag_target',
        type : 'combo',
-       choices: ['spike', 'qemu'],
+       choices: ['spike'],
        value : 'spike',
        description : 'Target to build the diag for.')
 
@@ -68,20 +68,6 @@ option('spike_timeout',
        type : 'integer',
        value : 30,
        description : 'meson test timeout when running the tests on spike.')
-
-option('qemu_binary',
-       type : 'string',
-       value : '',
-       description : 'QEMU binary to use')
-
-option('qemu_additional_arguments',
-       type : 'array',
-       description : 'Additional arguments to pass to qemu when running the diag.')
-
-option('qemu_timeout',
-       type : 'integer',
-       value : 300,
-       description : 'meson test timeout when running the tests on QEMU.')
 
 option('generate_trace',
        type : 'boolean',

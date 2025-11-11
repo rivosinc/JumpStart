@@ -25,4 +25,3 @@ You will need to run spike manually with `-d` for interactive debugging.
   * Look for the point where your code returns to the JumpStart code.
   * Run spike with the `-d` flag to step through your diag and inspect registers and memory.
 * Build with the `--buildtype debug` to turn off optimizations and generate debug information. The disassembly generated will have your code interleaved with the assembly, making it easier to correlate the two.
-* Use gdb to debug on fs-sim.

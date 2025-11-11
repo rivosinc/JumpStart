@@ -9,7 +9,6 @@ source_suffixes = ['.S', '.c']
 start_in_mmode_tests = [] # diag main() is in mmode
 start_in_smode_tests = [] # diag main() is in smode
 
-tests_disabled_on_qemu = []
 tests_disabled_on_spike = []
 
 subdir('common')
@@ -39,12 +38,9 @@ foreach unit_test : unit_tests
 
   test_expected_to_fail = unit_test.get(3, false)
 
-  test_disabled_on_qemu = test_name in tests_disabled_on_qemu
   test_disabled_on_spike = test_name in tests_disabled_on_spike
 
   if get_option('diag_target') == 'spike' and test_disabled_on_spike == true
-    continue
-  elif get_option('diag_target') == 'qemu' and test_disabled_on_qemu == true
     continue
   endif
 

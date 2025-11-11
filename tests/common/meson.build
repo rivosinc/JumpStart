@@ -58,5 +58,4 @@ start_in_mmode_tests += [
   ['test044', 'Tests random number generation and seed csr from both M and S modes.', '-p4'],
 ]
 
-tests_disabled_on_qemu += []
 tests_disabled_on_spike += []

@@ -13,14 +13,6 @@ project('JumpStart', 'c',
 
 test_env = environment()
 
-if get_option('diag_target') == 'qemu'
-  # Work around SW-12133: The MALLOC_PERTURB_ environment variable set by meson
-  # is causing QEMU to behave differently, affecting the flash data provided to
-  # RoT, causing the invalid digest error.
-  # See: https://rivosinc.atlassian.net/browse/SW-12133
-  test_env.set('MALLOC_PERTURB_', '0')
-endif
-
 # Check compiler support for mcmodel options
 cc = meson.get_compiler('c')
 mcmodel = get_option('mcmodel')
@@ -127,19 +119,6 @@ if get_option('diag_target') == 'spike'
   if get_option('spike_additional_arguments').length() > 0
     default_spike_args += get_option('spike_additional_arguments')
   endif
-
-elif get_option('diag_target') == 'qemu'
-  qemu_binary = rivos_qemu_binary
-  if get_option('qemu_binary') != ''
-    qemu_binary = get_option('qemu_binary')
-  endif
-  qemu = find_program(qemu_binary)
-
-  default_qemu_args = rivos_qemu_args
-
-  if get_option('qemu_additional_arguments').length() > 0
-    default_qemu_args += get_option('qemu_additional_arguments')
-  endif
 endif
 
 objdump = find_program('objdump')
@@ -154,10 +133,6 @@ diag_source_generator_command = [prog_python,
                                     '--output_linker_script', '@OUTPUT1@',
                                     '--priv_modes_enabled', riscv_priv_modes_enabled
                                     ]
-
-if get_option('diag_target') == 'qemu'
-  diag_attribute_overrides += ['in_qemu_mode=True']
-endif
 
 if diag_attribute_overrides.length() > 0
   diag_source_generator_command += ['--override_diag_attributes']
