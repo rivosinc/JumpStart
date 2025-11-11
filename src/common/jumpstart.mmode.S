@@ -51,6 +51,8 @@ setup_stack:
   # vector instructions so we need to make sure that we have these enabled.
   jal enable_mmode_float_and_vector_instructions
 
+  MMODE_ROLE_ENABLE
+
   # Run the setup_mmode before running any more code. Only the first
   # 4K page of mmode code is set up to run right now. setup_mmode()
   # will enable the rest of the mmode code.
