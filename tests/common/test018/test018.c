@@ -65,6 +65,14 @@ uint8_t c_check_passed_in_arguments(uint8_t a0, uint8_t a1, uint8_t a2,
 }
 
 int main(void) {
+  uint64_t main_function_address = (uint64_t)&main;
+
+  if (main_function_address != 0xC0020000) {
+    // If this check is broken then it's likely that some jumpstart runtime
+    // function hasn't been correctly tagged with  __attr_mtext.
+    return DIAG_FAILED;
+  }
+
   if (MAX_NUM_CONTEXT_SAVES < 2) {
     // We need at least 2 smode context saves to run
     // run_function_in_smode().
