@@ -24,6 +24,18 @@ _mmode_start:
   li t1, MAX_NUM_HARTS_SUPPORTED
   bge t0, t1, just_wfi_from_mmode
 
+  # The mmode init code is expected to fit in a 4KB page for Rivos internal
+  # reasons.
+  la t4, _JUMPSTART_CPU_TEXT_MMODE_INIT_BOUNDARY
+  la t1, _JUMPSTART_CPU_TEXT_MMODE_INIT_ENTER_START
+  sub t2, t4, t1
+  li t3, 0x1000 # 4KB
+  blt t2, t3, setup_stack
+1:
+  wfi
+  j 1b
+
+setup_stack:
   # Set up the stack.
   # S-mode and M-mode share the same stack.
   li  t1, (NUM_PAGES_PER_HART_FOR_PRIVILEGED_STACK * PRIVILEGED_STACK_PAGE_SIZE)
@@ -35,14 +47,6 @@ _mmode_start:
   mv  fp, sp
 
 1:
-  # The mmode init code is expected to fit in a 4KB page for Rivos internal
-  # reasons.
-  la t0, _JUMPSTART_CPU_TEXT_MMODE_INIT_BOUNDARY
-  la t1, _JUMPSTART_CPU_TEXT_MMODE_INIT_ENTER_START
-  sub t2, t0, t1
-  li t3, 0x1000 # 4KB
-  bgt t2, t3, jumpstart_mmode_fail
-
   # Any C code we run can be compiled down to use floating point and
   # vector instructions so we need to make sure that we have these enabled.
   jal enable_mmode_float_and_vector_instructions

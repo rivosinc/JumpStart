@@ -94,6 +94,9 @@ class Meson:
             self.meson_options["spike_additional_arguments"].append(
                 "--interleave=" + str(self.rng.randint(1, 400))
             )
+
+        elif self.diag_build_target.target == "qemu":
+            self.meson_options["qemu_additional_arguments"] = []
         else:
             raise Exception(f"Unknown target: {self.diag_build_target.target}")
 
