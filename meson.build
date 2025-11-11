@@ -28,6 +28,7 @@ add_project_arguments('-Wno-pedantic',
                       # it makes assumptions about using it's own.
                       '-fno-builtin',
                       '-mcmodel=' + mcmodel,
+                      '-g',
                       language: 'c')
 
 diag_custom_defines = get_option('diag_custom_defines')
