@@ -17,12 +17,10 @@
 #include "tablewalk.smode.h"
 #include "uart.smode.h"
 
-#define MIN_HEAP_ALLOCATION_BYTES 8
-#define MIN_HEAP_SEGMENT_BYTES    (sizeof(memchunk) + MIN_HEAP_ALLOCATION_BYTES)
-#define MEMCHUNK_USED             0x8000000000000000ULL
-#define MEMCHUNK_MAX_SIZE         (MEMCHUNK_USED - 1)
+#define MEMCHUNK_USED       0x8000000000000000ULL
+#define MEMCHUNK_MAX_SIZE   (MEMCHUNK_USED - 1)
 
-#define NUM_HEAPS_SUPPORTED       3
+#define NUM_HEAPS_SUPPORTED 3
 
 //------------------------------------------------------------------------------
 // Malloc helper structs
