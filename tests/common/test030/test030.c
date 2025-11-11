@@ -9,6 +9,12 @@
 #include "jumpstart.h"
 #include "tablewalk.smode.h"
 
+#include <stdlib.h>
+#include <string.h>
+
+// memalign is not in standard C, declare it here
+void *memalign(size_t alignment, size_t size);
+
 extern uint64_t _JUMPSTART_CPU_SMODE_HEAP_START;
 extern uint64_t _JUMPSTART_CPU_SMODE_HEAP_END;
 int test_malloc(void);
