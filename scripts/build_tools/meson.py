@@ -45,7 +45,7 @@ class Meson:
         diag_attributes_yaml: str,
         boot_config: str,
         keep_meson_builddir: bool,
-        buildtype: str,
+        artifacts_dir: str,
     ) -> None:
         self.meson_builddir = None
         self.keep_meson_builddir = None
@@ -58,11 +58,19 @@ class Meson:
         self.jumpstart_dir = os.path.abspath(jumpstart_dir)
 
         self.diag_name = diag_name
-        self.buildtype = buildtype
 
         self.meson_options: Dict[str, Any] = {}
 
-        self.meson_builddir = tempfile.mkdtemp(prefix=f"{self.diag_name}_meson_builddir_")
+        # Ensure artifacts directory exists and is absolute
+        if not os.path.isabs(artifacts_dir):
+            artifacts_dir = os.path.abspath(artifacts_dir)
+        os.makedirs(artifacts_dir, exist_ok=True)
+        self.artifacts_dir = artifacts_dir
+
+        # Create meson build directory inside the provided artifacts directory
+        self.meson_builddir = tempfile.mkdtemp(
+            dir=self.artifacts_dir, prefix=f"{self.diag_name}_meson_builddir_"
+        )
 
         self.keep_meson_builddir: bool = keep_meson_builddir
 
@@ -92,7 +100,8 @@ class Meson:
         self.meson_options["boot_config"] = boot_config
         self.meson_options["diag_attribute_overrides"] = []
 
-        self.meson_options["buildtype"] = self.buildtype
+        # Default buildtype. Can be overridden by YAML or CLI meson option overrides.
+        self.meson_options["buildtype"] = "release"
 
         self.meson_options["spike_additional_arguments"] = []
 
@@ -118,10 +127,6 @@ class Meson:
         return formatted
 
     def setup(self):
-        if self.meson_options["buildtype"] != self.buildtype:
-            raise Exception(
-                f"Buildtype in meson_options: {self.meson_options['buildtype']} does not match requested buildtype: {self.buildtype}. Always use the command line option to set the --buildtype."
-            )
 
         self.meson_setup_flags = {}
         for option in self.meson_options:
@@ -155,30 +160,32 @@ class Meson:
         # reproduce the build.
         printable_meson_setup_command = " ".join(meson_setup_command)
         printable_meson_setup_command = printable_meson_setup_command.replace("'", "\\'")
-        log.info(f"Running meson setup.\n{printable_meson_setup_command}")
+        log.debug(f"meson setup: {self.diag_name}")
+        log.debug(printable_meson_setup_command)
         return_code = system_functions.run_command(meson_setup_command, self.jumpstart_dir)
         if return_code != 0:
-            error_msg = f"Meson setup failed for diag: {self.diag_name}. Check the meson build directory for more information: {self.meson_builddir}"
+            error_msg = f"meson setup failed. Check: {self.meson_builddir}"
             log.error(error_msg)
             self.keep_meson_builddir = True
             raise MesonBuildError(error_msg, return_code)
 
     def compile(self):
         meson_compile_command = ["meson", "compile", "-v", "-C", self.meson_builddir]
-        log.info(f"Running meson compile.\n{' '.join(meson_compile_command)}")
+        log.debug(f"meson compile: {self.diag_name}")
+        log.debug(" ".join(meson_compile_command))
         return_code = system_functions.run_command(meson_compile_command, self.jumpstart_dir)
 
-        diag_binary = os.path.join(self.meson_builddir, self.diag_name + ".elf")
+        diag_elf = os.path.join(self.meson_builddir, self.diag_name + ".elf")
         diag_disasm = os.path.join(self.meson_builddir, self.diag_name + ".dis")
 
         if return_code == 0:
-            if not os.path.exists(diag_binary):
-                error_msg = f"diag binary: {diag_binary} not created by meson compile"
+            if not os.path.exists(diag_elf):
+                error_msg = f"diag elf not created by meson compile. Check: {self.meson_builddir}"
                 self.keep_meson_builddir = True
                 raise MesonBuildError(error_msg)
 
         if return_code != 0:
-            error_msg = f"meson compile failed for diag: {self.diag_name}"
+            error_msg = f"Compile failed. Check: {self.meson_builddir}"
             log.error(error_msg)
             self.keep_meson_builddir = True
             raise MesonBuildError(error_msg, return_code)
@@ -186,13 +193,14 @@ class Meson:
         compiled_assets = {}
         if os.path.exists(diag_disasm):
             compiled_assets["disasm"] = diag_disasm
-        if os.path.exists(diag_binary):
-            compiled_assets["binary"] = diag_binary
+        if os.path.exists(diag_elf):
+            compiled_assets["elf"] = diag_elf
         return compiled_assets
 
     def test(self):
         meson_test_command = ["meson", "test", "-v", "-C", self.meson_builddir]
-        log.info(f"Running meson test.\n{' '.join(meson_test_command)}")
+        log.debug(f"meson test: {self.diag_name}")
+        log.debug(" ".join(meson_test_command))
         return_code = system_functions.run_command(meson_test_command, self.jumpstart_dir)
 
         run_assets = {}
@@ -200,22 +208,18 @@ class Meson:
         generate_trace = bool(self.meson_options.get("generate_trace", False))
         if generate_trace:
             if return_code == 0 and not os.path.exists(self.trace_file):
-                error_msg = (
-                    f"meson test passed but trace file not created by diag: {self.trace_file}"
-                )
+                error_msg = f"Run passed but trace file not created. Check: {self.meson_builddir}"
                 self.keep_meson_builddir = True
                 raise MesonBuildError(error_msg)
 
             run_assets["trace"] = self.trace_file
         elif self.trace_file and os.path.exists(self.trace_file):
-            error_msg = (
-                f"Trace generation was disabled but trace file was created: {self.trace_file}"
-            )
+            error_msg = f"Trace generation was disabled but trace file {self.trace_file} created. Check: {self.meson_builddir}"
             self.keep_meson_builddir = True
             raise MesonBuildError(error_msg)
 
         if return_code != 0:
-            error_msg = f"meson test failed for diag: {self.diag_name}.\nPartial diag build assets may have been generated in {self.meson_builddir}\n"
+            error_msg = f"Run failed. Check: {self.meson_builddir}"
             log.error(error_msg)
             self.keep_meson_builddir = True
             raise MesonBuildError(error_msg, return_code)
