@@ -31,6 +31,8 @@ typedef struct memchunk memchunk;
 #define PER_HEAP_ALLOCATION_METADATA_SIZE                                      \
   sizeof(struct memchunk) // Per allocation metadata size
 
+void *memalign(size_t alignment, size_t size);
+
 //------------------------------------------------------------------------------
 //! Debug Features
 //------------------------------------------------------------------------------
