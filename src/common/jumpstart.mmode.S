@@ -94,6 +94,7 @@ setup_stack:
   csrw mie, t0
 
   jal program_mstateen
+  jal program_hstateen
 
   jal program_menvcfg
   jal program_mseccfg
@@ -193,6 +194,12 @@ program_henvcfg:
 program_mstateen:
   li t0, (SMSTATEEN0_HSCONTXT | SMSTATEEN0_IMSIC | SMSTATEEN0_AIA | SMSTATEEN0_SVSLCT | SMSTATEEN0_HSENVCFG | SMSTATEEN_STATEEN | SMSTATEEN0_CTR)
   csrw mstateen0, t0
+  ret
+
+.global program_hstateen
+program_hstateen:
+  li t0, (SMSTATEEN0_IMSIC | SMSTATEEN0_AIA | SMSTATEEN0_SVSLCT)
+  csrw hstateen0, t0
   ret
 
 .global program_menvcfg

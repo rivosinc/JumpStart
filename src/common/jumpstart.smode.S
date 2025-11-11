@@ -106,9 +106,6 @@ run_function_in_vsmode:
   li t0, HSTATUS_SPV
   csrs hstatus, t0
 
-  li t0, (SMSTATEEN0_IMSIC | SMSTATEEN0_AIA | SMSTATEEN0_SVSLCT)
-  csrw hstateen0, t0
-
   li t0, SSTATUS_SPP
   csrs sstatus, t0
 
