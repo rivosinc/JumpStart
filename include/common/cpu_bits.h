@@ -619,12 +619,15 @@
 #define MSTATUS_TSR         0x00400000 /* since: priv-1.10 */
 #define MSTATUS_SPELP       0x00800000 /* zicfilp */
 #define MSTATUS_SDT         0x01000000
-#define MSTATUS_MPELP       0x020000000000 /* zicfilp */
+#define MSTATUS_UXL         0x300000000ULL
+#define MSTATUS_SXL         0xC00000000ULL
 #define MSTATUS_GVA         0x4000000000ULL
 #define MSTATUS_MPV         0x8000000000ULL
+#define MSTATUS_MPELP       0x20000000000ULL /* zicfilp */
 #define MSTATUS_MDT         0x40000000000ULL /* Smdbltrp extension */
 #define MSTATUS_MPP_SHIFT   11
 #define MSTATUS_MPP_MSB     12
+#define MSTATUS_MPV_SHIFT   39
 
 #define MSTATUS64_UXL       0x0000000300000000ULL
 #define MSTATUS64_SXL       0x0000000C00000000ULL
@@ -666,7 +669,7 @@
 #define HSTATUS_VTVM         0x00100000
 #define HSTATUS_VTW          0x00200000
 #define HSTATUS_VTSR         0x00400000
-#define HSTATUS_VSXL         0x300000000
+#define HSTATUS_VSXL         0x300000000ULL
 #define HSTATUS_VGEIN_SHIFT  12
 
 #define HSTATUS32_WPRI       0xFF8FF87E

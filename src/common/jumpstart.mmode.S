@@ -392,11 +392,9 @@ mtvec_trap_handler:
   li  gp, PRV_M
   SET_THREAD_ATTRIBUTES_CURRENT_MODE(gp)
 
-  # We don't currently expect mmode to handle a trap taken from VS mode.
-  # Once we do the following code will need to be updated to save and restore
-  # the V bit value across the trap handler.
-  GET_THREAD_ATTRIBUTES_CURRENT_V_BIT(gp)
-  bnez gp, jumpstart_mmode_fail
+  # We could be coming from VS or VU mode. Clear the V bit.
+  li  gp, 0
+  SET_THREAD_ATTRIBUTES_CURRENT_V_BIT(gp)
 
   # We just need to check MSB of MPP field here to determine if we came from
   # M or S mode. U mode is also handled in S mode path.
@@ -425,12 +423,27 @@ save_context:
   csrr t0, mepc
   sd t0, EPC_OFFSET_IN_SAVE_REGION(gp)
 
-  csrr t0, mstatus
-  sd t0, STATUS_OFFSET_IN_SAVE_REGION(gp)
-
   csrr t0, hstatus
   sd t0, HSTATUS_OFFSET_IN_SAVE_REGION(gp)
 
+  csrr t0, mstatus
+  sd t0, STATUS_OFFSET_IN_SAVE_REGION(gp)
+
+  # We just need to check the SPP field here to determine if we came from
+  # S or U mode.
+  bexti t0, t0, MSTATUS_MPP_SHIFT
+  bnez  t0, 1f
+
+  # We're handling a trap from umode.
+  # Switch to the S-mode stack as we can't use the Umode stack.
+  # We get the smode stack from the smode context that was saved
+  # when we ran run_function_in_umode() - the context just prior to this.
+  GET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
+  addi t0, gp, -REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES
+  ld sp, SP_OFFSET_IN_SAVE_REGION(t0)
+  GET_THREAD_ATTRIBUTES_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
+
+1:
   # Point to the address of the next context save region for the next
   # trap handler.
   addi gp, gp, REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES
@@ -465,14 +478,18 @@ restore_context:
   ld t0, STATUS_OFFSET_IN_SAVE_REGION(gp)
   csrw mstatus, t0
 
-  bexti t0, t0, MSTATUS_MPP_MSB
-  bnez  t0, restore_all_gprs
+  # We could be returning back to VS or VU mode. Set the V bit.
+  bexti t1, t0, MSTATUS_MPV_SHIFT
+  SET_THREAD_ATTRIBUTES_CURRENT_V_BIT(t1)
 
-restore_smode_context:
-  MMODE_ROLE_DISABLE
+  srli t0, t0, MSTATUS_MPP_SHIFT
+  andi t0, t0, 3
+  li   t1, PRV_M
+  beq  t0, t1, restore_all_gprs
 
-  li  t0, PRV_S
+restore_s_u_mode_context:
   SET_THREAD_ATTRIBUTES_CURRENT_MODE(t0)
+  MMODE_ROLE_DISABLE
 
 restore_all_gprs:
   RESTORE_ALL_GPRS
