@@ -154,10 +154,11 @@ void exit_from_smode(uint64_t return_code) __attribute__((noreturn));
 #define __attr_stext __attribute__((section(".jumpstart.cpu.text.smode")))
 #define __attr_privdata                                                        \
   __attribute__((section(".jumpstart.cpu.data.privileged")))
-#define __attr_mtext __attribute__((section(".jumpstart.cpu.text.mmode")))
+
+// Only functions that need to be placed in the 4K mmode init section
+// should be marked with __attr_mtext_init.
 #define __attr_mtext_init                                                      \
   __attribute__((section(".jumpstart.cpu.text.mmode.init")))
-#define __attr_mtext_init_end                                                  \
-  __attribute__((section(".jumpstart.cpu.text.mmode.init.end")))
+#define __attr_mtext __attribute__((section(".jumpstart.cpu.text.mmode")))
 
 __attr_stext uint64_t read_time(void);

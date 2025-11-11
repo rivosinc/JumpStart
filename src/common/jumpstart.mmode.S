@@ -26,7 +26,7 @@ _mmode_start:
 
   # The mmode init code is expected to fit in a 4KB page for Rivos internal
   # reasons.
-  la t4, _JUMPSTART_CPU_TEXT_MMODE_INIT_BOUNDARY
+  la t4, mmode_init_4k_boundary
   la t1, _JUMPSTART_CPU_TEXT_MMODE_INIT_ENTER_START
   sub t2, t4, t1
   li t3, 0x1000 # 4KB
@@ -521,3 +521,12 @@ set_mepc_for_current_exception:
   addi t0, t0, -REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES
   sd a0, EPC_OFFSET_IN_SAVE_REGION(t0)
   ret
+
+.section .jumpstart.cpu.text.mmode.init.end, "ax"
+
+// The address of this function will be used to find the end of the mmode init
+// section.
+.global mmode_init_4k_boundary
+mmode_init_4k_boundary:
+    wfi
+    j mmode_init_4k_boundary
