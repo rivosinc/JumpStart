@@ -288,7 +288,9 @@ class LinkerScript:
                 defined_sections.append(section_name)
             if section.is_padded():
                 file.write("      BYTE(0)\n")
-            file.write(f"   }} > {top_level_section_variable_name_prefix}\n")
+            file.write(
+                f"   }} > {top_level_section_variable_name_prefix} : {section.get_top_level_name()}\n"
+            )
             file.write(
                 f"   . = {hex(section.get_virt_start_address() + section.get_size() - 1)};\n"
             )
