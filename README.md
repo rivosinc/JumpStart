@@ -35,11 +35,11 @@ sudo apt install meson
 
 ### macOS
 
-* Install the `gcc` toolchain to your path. Prebuilt binaries are available [HERE](https://docs.google.com/document/d/1-JRewN5ZJpFXSk_LkgvxqhzMnwZ_uRjPUb27tfEKRxc/edit#heading=h.jjddp8rb7042).
-* Build a local copy of Spike and add it to your path. Instructions are available [HERE](https://docs.google.com/document/d/1egDH-BwAMEFCFvj3amu_VHRASCihpsHv70khnG6gojU/edit#heading=h.t75kh88x3knz).
-* [brew](https://brew.sh) install `meson` and `just`.
-
-JumpStart has been tested on Ubuntu 22.04 and macOS.
+```
+brew tap riscv-software-src/riscv
+brew install riscv-tools riscv-isa-sim riscv-gnu-toolchain
+brew install just meson
+```
 
 ## Test the Environment
 
