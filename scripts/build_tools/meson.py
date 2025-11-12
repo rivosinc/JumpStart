@@ -151,14 +151,6 @@ class Meson:
 
         # Check for conflicting options (if any are added in the future)
 
-        # Check that batch_mode is True only if boot_config is fw-m
-        if self._meson_introspect_options.get("batch_mode", False):
-            boot_config = self._meson_introspect_options.get("boot_config")
-            if boot_config != "fw-m":
-                error_msg = f"batch_mode=True is only allowed when boot_config=fw-m, but boot_config={boot_config}"
-                log.error(error_msg)
-                raise MesonBuildError(error_msg)
-
     def setup(self):
 
         self.meson_setup_flags = {}
