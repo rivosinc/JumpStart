@@ -13,7 +13,7 @@ from typing import Dict, List, Optional, Tuple
 import yaml
 from system import functions as system_functions  # noqa
 
-from .diag import AssetAction, DiagBuildUnit
+from .diag import DiagBuildUnit
 
 
 class DiagFactoryError(Exception):
@@ -264,7 +264,9 @@ class DiagFactory:
                 _validate_override_meson_options(go["override_meson_options"], "global_overrides")
             if "override_diag_attributes" in go:
                 _validate_str_list(
-                    go["override_diag_attributes"], "global_overrides", "override_diag_attributes"
+                    go["override_diag_attributes"],
+                    "global_overrides",
+                    "override_diag_attributes",
                 )
             if "diag_custom_defines" in go:
                 _validate_str_list(
@@ -408,11 +410,11 @@ class DiagFactory:
 
         run_manifest = {"diagnostics": {}}
 
-        if self.batch_mode:
-            # In batch mode, only include Truf silicon binaries, not individual unit diags
-            if hasattr(self, "batch_runner") and self.batch_runner is not None:
-                truf_elfs = list(getattr(self.batch_runner, "batch_truf_elfs", []) or [])
-                for elf_path in truf_elfs:
+        # Include all successfully compiled diags
+        for diag_name, unit in self._diag_units.items():
+            if unit.compile_passed():
+                try:
+                    elf_path = unit.get_build_asset("elf")
                     if os.path.exists(elf_path):
                         run_manifest["diagnostics"][diag_name] = {
                             "elf_path": os.path.abspath(elf_path),
@@ -642,7 +644,12 @@ class DiagFactory:
                 # When include_result_col is True: r has 6 elements: [diag_name, original_name, build, run, result, has_error]
                 # When include_result_col is False: r has 5 elements: [diag_name, original_name, build, run, has_error]
                 if include_result_col:
-                    display_elements = [r[0], r[2], r[3], r[4]]  # diag_name, build, run, result
+                    display_elements = [
+                        r[0],
+                        r[2],
+                        r[3],
+                        r[4],
+                    ]  # diag_name, build, run, result
                 else:
                     display_elements = [r[0], r[2], r[3]]  # diag_name, build, run
                 for i, cell in enumerate(display_elements):
@@ -663,7 +670,14 @@ class DiagFactory:
             for ri, r in enumerate(group):
                 # Unpack the row data based on whether we have the result column
                 if include_result_col:
-                    diag_name, original_name, build_plain, run_plain, result, has_error = r
+                    (
+                        diag_name,
+                        original_name,
+                        build_plain,
+                        run_plain,
+                        result,
+                        has_error,
+                    ) = r
                 else:
                     diag_name, original_name, build_plain, run_plain, has_error = r
 
@@ -802,11 +816,10 @@ class DiagFactory:
                 if hasattr(self.batch_runner, "error_message") and self.batch_runner.error_message:
                     batch_error = self.batch_runner.error_message
 
-            # Group ELFs by target type (silicon, fssim, etc.)
+            # Group ELFs by target type
             target_elfs = {}
             for elf_path, bin_path in truf_pairs:
                 basename = os.path.basename(elf_path)
-                # Extract target from filename: truf_runner_0.silicon.elf -> silicon
                 if "." in basename:
                     parts = basename.split(".")
                     if len(parts) >= 2:

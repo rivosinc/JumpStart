@@ -133,9 +133,11 @@ class Meson:
         meson_setup_command.extend(
             [
                 "--cross-file",
-                os.path.join(self.jumpstart_dir, f"cross_compile/public/{self.toolchain}_options.txt"),
+                os.path.join(
+                    self.jumpstart_dir, f"cross_compile/public/{self.toolchain}_options.txt"
+                ),
                 "--cross-file",
-                f"cross_compile/{self.toolchain}.txt",
+                os.path.join(self.jumpstart_dir, f"cross_compile/{self.toolchain}.txt"),
             ]
         )
 
