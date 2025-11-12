@@ -34,7 +34,7 @@ def quote_if_needed(x):
 
 
 class Meson:
-    supported_toolchains: List[str] = ["gcc", "llvm", "gcc15"]
+    supported_toolchains: List[str] = ["gcc"]
 
     def __init__(
         self,
