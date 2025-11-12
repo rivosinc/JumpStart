@@ -40,7 +40,7 @@ foreach unit_test : unit_tests
 
   test_disabled_on_spike = test_name in tests_disabled_on_spike
 
-  if get_option('diag_target') == 'spike' and test_disabled_on_spike == true
+  if get_option('run_target') == 'spike' and test_disabled_on_spike == true
     continue
   endif
 
@@ -89,7 +89,7 @@ foreach unit_test : unit_tests
                 depends          : [test_exe])
   endif
 
-  if get_option('diag_target') == 'spike'
+  if get_option('run_target') == 'spike'
     spike_args = default_spike_args
 
     if spike_additional_arguments != ''

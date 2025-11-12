@@ -239,7 +239,7 @@ class DiagBuildUnit:
 
     def _apply_default_meson_overrides(self) -> None:
         """Apply default meson option overrides for run targets."""
-        self.meson.override_meson_options_from_dict({"diag_target": self.environment.run_target})
+        self.meson.override_meson_options_from_dict({"run_target": self.environment.run_target})
         self.meson.override_meson_options_from_dict(
             {"diag_attribute_overrides": [f"build_rng_seed={self.rng_seed}"]}
         )

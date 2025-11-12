@@ -78,7 +78,7 @@ diag_source_generator = files('scripts/generate_diag_sources.py')
 diag_sources = get_option('diag_sources')
 diag_attributes_yaml = get_option('diag_attributes_yaml')
 
-if get_option('diag_target') == 'spike'
+if get_option('run_target') == 'spike'
   spike = find_program(get_option('spike_binary'))
   spike_isa_string = get_option('spike_isa_string')
 
@@ -168,7 +168,7 @@ if diag_attributes_yaml != '' and diag_sources.length() > 0
 
   trace_file = diag_name + '.itrace'
 
-  if get_option('diag_target') == 'spike'
+  if get_option('run_target') == 'spike'
     spike_args = default_spike_args
 
     if get_option('generate_trace') == true

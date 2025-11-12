@@ -25,7 +25,7 @@ option('diag_generate_disassembly',
        value : false,
        description : 'Generate diag disassembly.')
 
-option('diag_target',
+option('run_target',
        type : 'combo',
        choices: ['spike'],
        value : 'spike',

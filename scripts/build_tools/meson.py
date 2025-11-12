@@ -146,8 +146,8 @@ class Meson:
             raise MesonBuildError(error_msg)
 
         # Check that spike only supports fw-none boot_config
-        diag_target = self._meson_introspect_options.get("diag_target")
-        if diag_target == "spike":
+        run_target = self._meson_introspect_options.get("run_target")
+        if run_target == "spike":
             boot_config = self._meson_introspect_options.get("boot_config")
             if boot_config != "fw-none":
                 error_msg = f"Invalid boot_config {boot_config} for spike. Only fw-none is supported for spike."
@@ -155,7 +155,6 @@ class Meson:
                 raise MesonBuildError(error_msg)
 
     def setup(self):
-
         self.meson_setup_flags = {}
         for option in self.meson_options:
             if isinstance(self.meson_options[option], list):
@@ -182,7 +181,10 @@ class Meson:
             ]
         )
 
-        log.debug("Meson setup options:\n%s", self.get_meson_setup_options_pretty(spacing="\t"))
+        log.debug(
+            "Meson setup options:\n%s",
+            self.get_meson_setup_options_pretty(spacing="\t"),
+        )
 
         # Print the meson setup command in a format that can be copy-pasted to
         # reproduce the build.

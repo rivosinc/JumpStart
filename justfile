@@ -30,7 +30,7 @@ default:
 
 setup compiler buildtype target:
     @# For fw-none boot_config, priv modes and diag attributes are empty (defaults)
-    meson setup {{compiler}}-{{buildtype}}-{{target}}-public-fw-none.builddir --cross-file cross_compile/public/{{compiler}}_options.txt --cross-file cross_compile/{{compiler}}.txt --buildtype {{buildtype}} -Ddiag_target={{target}} -Dboot_config=fw-none -Drivos_internal_build=false
+    meson setup {{compiler}}-{{buildtype}}-{{target}}-public-fw-none.builddir --cross-file cross_compile/public/{{compiler}}_options.txt --cross-file cross_compile/{{compiler}}.txt --buildtype {{buildtype}} -Drun_target={{target}} -Dboot_config=fw-none -Drivos_internal_build=false
 
 build compiler buildtype target: (setup compiler buildtype target)
     meson compile -C {{compiler}}-{{buildtype}}-{{target}}-public-fw-none.builddir
