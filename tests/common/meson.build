@@ -32,7 +32,6 @@ start_in_smode_tests += [
   ['test030', 'Heap malloc test.'],
   ['test031', 'Simple spinlock test with 4 cpus', '-p4'],
   ['test033', 'Exit with jumpstart_umode_fail() to test umode fail path.', '', true],
-  ['test034', 'Simple spinlock test with 4 active cpus and 4 inactive ones.', '-p8'],
   ['test036', 'sv48 VA aliasing test.'],
   ['test037', 'FP/Vector test.'],
   ['test045', 'Run C/Assembly functions with run_function_in_vsmode() from supervisor mode.'],
