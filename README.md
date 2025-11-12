@@ -63,18 +63,25 @@ This will build the diag in the [`tests/common/test000`](tests/common/test000) u
 
 ```shell
 ❯ scripts/build_diag.py --diag_src_dir tests/common/test000/ --diag_build_dir /tmp/diag --environment spike
-INFO: [MainThread]: Diag built:
-        Name: test000
-        Directory: /tmp/diag
-        Assets: {'disasm': '/tmp/diag/test000.elf.dis', 'binary': '/tmp/diag/test000.elf', 'spike_trace': '/tmp/diag/test000.itrace'}
-        BuildType: release,
-        Environment: spike
-        RNG Seed: 8410517908284574883
-        Source Info:
-                Diag: test000, Source Path: /Users/joy/workspace/jumpstart/tests/common/test000
-                Sources: ['/Users/joy/workspace/jumpstart/tests/common/test000/test000.c']
-                Attributes: /Users/joy/workspace/jumpstart/tests/common/test000/test000.diag_attributes.yaml
-                Meson options overrides file: None
+INFO: [ThreadPoolExecutor-0_0]: Compiling 'tests/common/test000/'
+INFO: [ThreadPoolExecutor-1_0]: Running diag 'tests/common/test000/'
+INFO: [MainThread]:
+Summary
+Build root: /tmp/diag
+Build Repro Manifest: /tmp/diag/build_manifest.repro.yaml
+┏━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Diag                  ┃ Build        ┃ Run [spike]  ┃ Result                        ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ tests/common/test000/ │ PASS (2.20s) │ PASS (0.20s) │ /tmp/diag/test000/test000.elf │
+└───────────────────────┴──────────────┴──────────────┴───────────────────────────────┘
+
+Diagnostics built: 1
+Diagnostics run: 1
+
+Run Manifest:
+/tmp/diag/run_manifest.yaml
+
+STATUS: PASSED
 ```
 
 For more details, check the Reference Manual section on [Building and Running Diags](docs/reference_manual.md#building-and-running-diags).

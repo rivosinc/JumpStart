@@ -292,7 +292,7 @@ class SourceGenerator:
                 )
 
     def sanity_check_memory_map(self):
-        public_functions.sanity_check_memory_map(self.memory_map)
+        public_functions.sanity_check_memory_map(self.memory_map["cpu"])
 
         if self.jumpstart_source_attributes["rivos_internal_build"] is True:
             rivos_internal_functions.sanity_check_memory_map(
@@ -589,7 +589,7 @@ class SourceGenerator:
                 self.jumpstart_source_attributes["diag_attributes"]["elf_start_address"],
                 self.jumpstart_source_attributes["diag_attributes"]["elf_end_address"],
             ),
-            mappings=self.memory_map,
+            mappings=self.memory_map["cpu"],
             attributes_file=self.diag_attributes_yaml,
         )
         self.linker_script.generate(output_linker_script)
