@@ -149,13 +149,7 @@ class Meson:
             log.error(error_msg)
             raise MesonBuildError(error_msg)
 
-        # Check for conflicting options
-        if self._meson_introspect_options.get(
-            "batch_mode", False
-        ) and self._meson_introspect_options.get("magicbox", False):
-            error_msg = "Conflicting options: batch_mode and magicbox cannot both be True"
-            log.error(error_msg)
-            raise MesonBuildError(error_msg)
+        # Check for conflicting options (if any are added in the future)
 
     def setup(self):
 

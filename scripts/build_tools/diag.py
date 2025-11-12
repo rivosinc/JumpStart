@@ -111,8 +111,8 @@ class AssetAction(enum.IntEnum):
 
 
 class DiagBuildUnit:
-    supported_targets = ["qemu", "spike", "oswis"]
-    supported_boot_configs = ["fw-none", "fw-m", "fw-sbi"]
+    supported_targets = ["spike"]
+    supported_boot_configs = ["fw-none"]
 
     def __init__(
         self,
@@ -302,8 +302,6 @@ class DiagBuildUnit:
         """Apply target-specific meson option overrides."""
         if self.target == "spike":
             self._apply_spike_overrides()
-        elif self.target == "oswis":
-            self._apply_oswis_overrides()
 
     def _apply_spike_overrides(self) -> None:
         """Apply Spike-specific meson option overrides."""
@@ -314,12 +312,6 @@ class DiagBuildUnit:
                 f"-p{num_active_cpus}",
             ],
         }
-
-        # Check if "interleave=" exists in any spike_additional_arguments in meson options
-        if not self._has_spike_interleave_arg():
-            spike_overrides["spike_additional_arguments"].append(
-                f"--interleave={self.rng.randint(1, 400)}"
-            )
 
         self.meson.override_meson_options_from_dict(spike_overrides)
 
@@ -335,9 +327,7 @@ class DiagBuildUnit:
             active_cpu_mask = "0b1"  # Default value
 
         # Check for overrides in meson diag_attribute_overrides
-        for diag_attribute in self.meson.get_meson_options().get(
-            "diag_attribute_overrides", []
-        ):
+        for diag_attribute in self.meson.get_meson_options().get("diag_attribute_overrides", []):
             if diag_attribute.startswith("active_cpu_mask="):
                 active_cpu_mask = diag_attribute.split("=", 1)[1]
                 break
@@ -348,21 +338,6 @@ class DiagBuildUnit:
         """Calculate the number of active CPUs for Spike target."""
         active_cpu_mask = self.get_active_cpu_mask()
         return convert_cpu_mask_to_num_active_cpus(active_cpu_mask)
-
-    def _has_spike_interleave_arg(self) -> bool:
-        """Check if interleave argument already exists in spike_additional_arguments."""
-        spike_args = self.meson.get_meson_options().get("spike_additional_arguments")
-        if spike_args is not None:
-            for arg in spike_args:
-                if "interleave=" in arg:
-                    return True
-        return False
-
-    def _apply_oswis_overrides(self) -> None:
-        """Apply OSWIS-specific meson option overrides."""
-        self.meson.override_meson_options_from_dict(
-            {"oswis_additional_arguments": [f"--rng_seed={self.rng_seed}"]}
-        )
 
     def _normalize_meson_overrides(self, value) -> dict:
         """Normalize meson overrides to a dictionary format."""
@@ -545,52 +520,8 @@ class DiagBuildUnit:
                     self.run_state = self.RunState.FAILED
                 # else keep whatever was set earlier
 
-    def apply_batch_outcome_from_junit_status(self, junit_status: Optional[str]) -> None:
-        """Apply batch-run outcome to this unit using a junit testcase status string.
-
-        junit_status: one of "pass", "fail", "skipped".
-        """
-        # Default pessimistic state
-        self.run_state = self.RunState.FAILED
-        if junit_status == "fail":
-            # truf marks fail when rc==0 for expected_fail=True, or rc!=0 for expected_fail=False
-            if self.expected_fail:
-                self.run_return_code = 0
-                self.run_error = "Diag run passed but was expected to fail."
-                self.run_state = self.RunState.FAILED
-            else:
-                self.run_return_code = 1
-                self.run_error = "Batch run failure"
-                self.run_state = self.RunState.FAILED
-        elif junit_status == "pass" or junit_status == "conditional_pass":
-            # truf marks pass when rc!=0 for expected_fail=True, or rc==0 for expected_fail=False
-            if self.expected_fail:
-                self.run_return_code = 1
-                self.run_error = None
-                self.run_state = self.RunState.EXPECTED_FAIL
-            else:
-                self.run_return_code = 0
-                self.run_error = None
-                if junit_status == "conditional_pass":
-                    self.run_state = self.RunState.CONDITIONAL_PASS
-                else:
-                    self.run_state = self.RunState.PASS
-        else:
-            # If not in report or unknown status, assume failure conservatively
-            self.run_return_code = 1
-            self.run_error = "No batch result"
-            self.run_state = self.RunState.FAILED
-
     def mark_no_junit_report(self) -> None:
         self.run_error = "No JUnit report"
-        self.run_return_code = None
-        self.run_state = self.RunState.FAILED
-
-    def mark_batch_exception(self, exc: Exception) -> None:
-        try:
-            self.run_error = f"{type(exc).__name__}: {exc}"
-        except Exception:
-            self.run_error = "Batch run failed with an exception"
         self.run_return_code = None
         self.run_state = self.RunState.FAILED
 
@@ -621,9 +552,8 @@ class DiagBuildUnit:
         print_string += f"\n\tSource Info:\n{self.diag_source}"
         print_string += "\n\tMeson setup options:\n" + self.meson.get_meson_setup_options_pretty(
             spacing="\t\t"
+        )
         print_string += (
-            "\n\tMeson setup options:\n"
-            + self.meson.get_meson_setup_options_pretty(spacing="\t\t")
             "\n\tMeson introspect options:\n"
             + self.meson.get_meson_introspect_options_pretty(spacing="\t\t")
         )

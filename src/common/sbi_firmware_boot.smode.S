@@ -173,8 +173,6 @@ jumpstart_sbi_firmware_boot_fail:
 
 run_end_of_sim_sequence:
   # NOTE: this will not work on RTL simulation.
-  li t1, IN_QEMU_MODE
-  bnez t1, invoke_sbi_reset
   slli t1, a0, 1
   ori t1, t1, 1
 
@@ -182,13 +180,6 @@ run_end_of_sim_sequence:
   sd t1, 0(t0)
 
   1: j 1b # wait for termination
-
-invoke_sbi_reset:
-  mv a1, a0
-  li a0, 0 # sbi_system_reset: param1(a0): SHUTDOWN
-           # sbi_system_reset: param2(a1): DIAG_PASS(0)/DIAG_FAIL(1)
-  jal sbi_system_reset
-  j just_wfi_from_smode
 
 #define SBI_HSM_EID               0x48534D
 #define SBI_HSM_CPU_START_FID    0
