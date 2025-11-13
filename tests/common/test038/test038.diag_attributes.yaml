@@ -1,12 +1,11 @@
-# SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
+# SPDX-FileCopyrightText: 2023 - 2025 Rivos Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 
-active_hart_mask: "0b11"
-
+active_cpu_mask: "0b11"
 satp_mode: "sv39"
-
 start_test_in_mmode: True
+enable_heap: True
 
 mappings:
   -

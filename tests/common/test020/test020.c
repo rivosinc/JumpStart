@@ -1,6 +1,8 @@
-// SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
-//
-// SPDX-License-Identifier: Apache-2.0
+/*
+ * SPDX-FileCopyrightText: 2025 Rivos Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 #include "cpu_bits.h"
 #include "jumpstart.h"
@@ -21,7 +23,7 @@ int main(void) {
     return DIAG_FAILED;
   }
 
-  if (xlate_info.satp_mode != VM_1_10_SV39) {
+  if (xlate_info.xatp_mode != VM_1_10_SV39) {
     return DIAG_FAILED;
   }
 
@@ -49,6 +51,31 @@ int main(void) {
   }
 
   if (xlate_info.pa != 0xC0021000) {
+    return DIAG_FAILED;
+  }
+
+  translate_VA(0xC0022000, &xlate_info);
+  if (xlate_info.walk_successful != 1) {
+    return DIAG_FAILED;
+  }
+  if (xlate_info.pbmt_mode != PTE_PBMT_IO) {
+    return DIAG_FAILED;
+  }
+
+  translate_VA(0xC0023000, &xlate_info);
+  if (xlate_info.walk_successful != 1) {
+    return DIAG_FAILED;
+  }
+  if (xlate_info.pbmt_mode != PTE_PBMT_NC) {
+    return DIAG_FAILED;
+  }
+
+  // The default PBMT mode is PMA if not specified.
+  translate_VA(0xC0024000, &xlate_info);
+  if (xlate_info.walk_successful != 1) {
+    return DIAG_FAILED;
+  }
+  if (xlate_info.pbmt_mode != PTE_PBMT_PMA) {
     return DIAG_FAILED;
   }
 

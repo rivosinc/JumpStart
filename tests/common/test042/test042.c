@@ -1,12 +1,14 @@
-// SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
-//
-// SPDX-License-Identifier: Apache-2.0
+/*
+ * SPDX-FileCopyrightText: 2025 Rivos Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 #include "cpu_bits.h"
 #include "jumpstart.h"
 
 // 4P version of test003 which nests as many exceptions as allowed in smode.
-// The harts sync up after they've each reached the max number of nested
+// The cpus sync up after they've each reached the max number of nested
 // exceptions.
 
 void test003_illegal_instruction_handler(void);
@@ -23,17 +25,17 @@ void test003_illegal_instruction_handler(void) {
     jumpstart_smode_fail();
   }
 
-  uint8_t hart_id = get_thread_attributes_hart_id_from_smode();
+  uint8_t cpu_id = get_thread_attributes_cpu_id_from_smode();
 
-  --num_context_saves_to_take[hart_id];
+  --num_context_saves_to_take[cpu_id];
 
-  if (num_context_saves_to_take[hart_id] !=
+  if (num_context_saves_to_take[cpu_id] !=
       get_thread_attributes_num_context_saves_remaining_in_smode_from_smode()) {
     jumpstart_smode_fail();
   }
 
-  if (num_context_saves_to_take[hart_id] > 0) {
-    if (num_context_saves_to_take[hart_id] % 2) {
+  if (num_context_saves_to_take[cpu_id] > 0) {
+    if (num_context_saves_to_take[cpu_id] % 2) {
       if (alt_test003_illegal_instruction_function() != DIAG_PASSED) {
         jumpstart_smode_fail();
       }
@@ -43,10 +45,10 @@ void test003_illegal_instruction_handler(void) {
       }
     }
   } else {
-    // the hart has used up all the context saves. Sync up all the harts
+    // the cpu has used up all the context saves. Sync up all the cpus
     // so any issue with the save/restore of the context is caught on the
     // unwind.
-    sync_all_harts_from_smode();
+    sync_all_cpus_from_smode();
   }
 
   if (get_thread_attributes_current_mode_from_smode() != PRV_S) {
@@ -57,7 +59,7 @@ void test003_illegal_instruction_handler(void) {
 }
 
 int main(void) {
-  if (get_thread_attributes_hart_id_from_smode() > 3) {
+  if (get_thread_attributes_cpu_id_from_smode() > 3) {
     return DIAG_FAILED;
   }
 

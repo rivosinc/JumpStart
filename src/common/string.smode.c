@@ -1,7 +1,10 @@
+/*
+ * SPDX-FileCopyrightText: 2025 Rivos Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 // SPDX-FileCopyrightText: 1990 - 2011 The FreeBSD Foundation
-// SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
-//
-// SPDX-License-Identifier: Apache-2.0
 
 #include <inttypes.h>
 #include <stdarg.h>
@@ -9,14 +12,12 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "jumpstart.h"
+
 int toupper(int c);
-
-static char *ksprintn(char *nbuf, uintmax_t num, int base, int *lenp, int upper)
-    __attribute__((section(".jumpstart.text.smode")));
-
-int islower(int c) __attribute__((section(".jumpstart.text.smode")));
-int isupper(int c) __attribute__((section(".jumpstart.text.smode")));
-int tolower(int c) __attribute__((section(".jumpstart.text.smode")));
+int islower(int c) __attr_stext;
+int isupper(int c) __attr_stext;
+int tolower(int c) __attr_stext;
 
 inline int islower(int c) {
   return c >= 'a' && c <= 'z';
@@ -30,13 +31,47 @@ inline int tolower(int c) {
   return isupper(c) ? c - ('A' - 'a') : c;
 }
 
-__attribute__((section(".jumpstart.text.smode"))) __attribute__((const)) int
-toupper(int c) {
+__attr_stext __attribute__((const)) int toupper(int c) {
   return islower(c) ? c + ('A' - 'a') : c;
 }
 
-__attribute__((section(".jumpstart.text.smode"))) size_t
-strlen(const char *str) {
+#pragma GCC diagnostic push
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wtautological-pointer-compare"
+#elif defined(__GNUC__)
+#pragma GCC diagnostic ignored "-Wnonnull-compare"
+#endif
+
+/* Disable nonnull warning for these functions since we want to keep NULL checks
+ * for bare-metal safety, even though the functions are marked as nonnull */
+__attr_stext char *strcpy(char *dest, const char *src) {
+  if (dest == NULL || src == NULL) {
+    return NULL;
+  }
+
+  char *original_dest = dest;
+  while (*src != '\0') {
+    *dest = *src;
+    dest++;
+    src++;
+  }
+  *dest = '\0';
+  return original_dest;
+}
+
+__attr_stext int strcmp(const char *s1, const char *s2) {
+  if (s1 == NULL || s2 == NULL) {
+    return -1;
+  }
+
+  while (*s1 && (*s1 == *s2)) {
+    s1++;
+    s2++;
+  }
+  return *(const unsigned char *)s1 - *(const unsigned char *)s2;
+}
+
+__attr_stext size_t strlen(const char *str) {
   size_t len = 0;
 
   while (str[len])
@@ -58,8 +93,8 @@ static char const hex2ascii_data[] = "0123456789abcdefghijklmnopqrstuvwxyz";
  * written in the buffer (i.e., the first character of the string).
  * The buffer pointed to by `nbuf' must have length >= MAXNBUF.
  */
-static char *ksprintn(char *nbuf, uintmax_t num, int base, int *lenp,
-                      int upper) {
+__attr_stext static char *ksprintn(char *nbuf, uintmax_t num, int base,
+                                   int *lenp, int upper) {
   char *p, c;
 
   p = nbuf;
@@ -76,8 +111,8 @@ static char *ksprintn(char *nbuf, uintmax_t num, int base, int *lenp,
 /*
  * Scaled down version of printf(3).
  */
-__attribute__((section(".jumpstart.text.smode"))) int
-vsnprintf(char *str, size_t size, char const *fmt, va_list ap) {
+__attr_stext int vsnprintf(char *str, size_t size, char const *fmt,
+                           va_list ap) {
 #define PCHAR(c)                                                               \
   do {                                                                         \
     if (size >= 2) {                                                           \
@@ -384,8 +419,7 @@ vsnprintf(char *str, size_t size, char const *fmt, va_list ap) {
 
 #pragma GCC diagnostic pop
 
-__attribute__((section(".jumpstart.text.smode"))) int
-snprintf(char *buf, size_t size, const char *fmt, ...) {
+__attr_stext int snprintf(char *buf, size_t size, const char *fmt, ...) {
   va_list args;
   int retval = 0;
 

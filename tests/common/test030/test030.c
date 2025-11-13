@@ -1,14 +1,22 @@
-// SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
-//
-// SPDX-License-Identifier: Apache-2.0
+/*
+ * SPDX-FileCopyrightText: 2025 Rivos Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 #include "cpu_bits.h"
 #include "heap.smode.h"
 #include "jumpstart.h"
 #include "tablewalk.smode.h"
 
-extern uint64_t _JUMPSTART_SMODE_HEAP_START;
-extern uint64_t _JUMPSTART_SMODE_HEAP_END;
+#include <stdlib.h>
+#include <string.h>
+
+// memalign is not in standard C, declare it here
+void *memalign(size_t alignment, size_t size);
+
+extern uint64_t _JUMPSTART_CPU_SMODE_HEAP_START;
+extern uint64_t _JUMPSTART_CPU_SMODE_HEAP_END;
 int test_malloc(void);
 int test_calloc(void);
 int test_memalign(void);
@@ -22,8 +30,8 @@ int test_memset(void);
 
 #define ARRAY_LEN     10
 int test_malloc(void) {
-  const uint64_t max_heap_size = (uint64_t)&_JUMPSTART_SMODE_HEAP_END -
-                                 (uint64_t)&_JUMPSTART_SMODE_HEAP_START;
+  const uint64_t max_heap_size = (uint64_t)&_JUMPSTART_CPU_SMODE_HEAP_END -
+                                 (uint64_t)&_JUMPSTART_CPU_SMODE_HEAP_START;
 
   uint8_t *x8 = malloc(sizeof(uint8_t));
   if (x8 == 0) {

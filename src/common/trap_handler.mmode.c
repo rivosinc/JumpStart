@@ -1,11 +1,13 @@
-// SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
-//
-// SPDX-License-Identifier: Apache-2.0
+/*
+ * SPDX-FileCopyrightText: 2025 Rivos Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 #include "cpu_bits.h"
 #include "jumpstart.h"
 
-__attribute__((section(".jumpstart.text.mmode"))) void
+__attr_mtext void
 register_mmode_trap_handler_override(uint64_t mcause,
                                      uint64_t handler_address) {
   uint64_t trap_override_struct_address =
@@ -34,8 +36,7 @@ register_mmode_trap_handler_override(uint64_t mcause,
   }
 }
 
-__attribute__((section(".jumpstart.text.mmode"))) void
-deregister_mmode_trap_handler_override(uint64_t mcause) {
+__attr_mtext void deregister_mmode_trap_handler_override(uint64_t mcause) {
   uint64_t trap_override_struct_address =
       get_thread_attributes_trap_override_struct_address_from_mmode();
 
@@ -70,8 +71,7 @@ deregister_mmode_trap_handler_override(uint64_t mcause) {
   }
 }
 
-__attribute__((section(".jumpstart.text.mmode"))) uint64_t
-get_mmode_trap_handler_override(uint64_t mcause) {
+__attr_mtext uint64_t get_mmode_trap_handler_override(uint64_t mcause) {
   uint64_t trap_override_struct_address =
       get_thread_attributes_trap_override_struct_address_from_mmode();
 

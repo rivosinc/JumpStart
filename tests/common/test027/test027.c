@@ -1,6 +1,8 @@
-// SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
-//
-// SPDX-License-Identifier: Apache-2.0
+/*
+ * SPDX-FileCopyrightText: 2025 Rivos Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 #include "cpu_bits.h"
 #include "jumpstart.h"
@@ -15,8 +17,9 @@ int main(void) {
   const uint64_t rw_VA_alias = UINT64_C(0xC0033000);
   const uint64_t ro_VA_alias = UINT64_C(0xC0053000);
   const uint64_t PA = UINT64_C(0xC0043000);
+  const uint64_t VA = UINT64_C(0xC0033000);
   uint64_t data_area_address = (uint64_t)&data_area;
-  if (data_area_address != PA) {
+  if (data_area_address != VA) {
     return DIAG_FAILED;
   }
 

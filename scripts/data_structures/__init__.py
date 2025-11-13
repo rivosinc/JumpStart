@@ -1,10 +1,11 @@
-# SPDX-FileCopyrightText: 2024 Rivos Inc.
+# SPDX-FileCopyrightText: 2024 - 2025 Rivos Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 
 # __init__.py
 
 from .bitfield_utils import BitField
+from .cstruct import CStruct, CStructField
 from .dict_utils import DictUtils
 from .list_utils import ListUtils
 
@@ -13,4 +14,4 @@ from .list_utils import ListUtils
 # To better support introspection, modules should explicitly declare
 # the names in their public API using the __all__ attribute.
 
-__all__ = ["BitField", "DictUtils", "ListUtils"]
+__all__ = ["BitField", "CStruct", "CStructField", "DictUtils", "ListUtils"]

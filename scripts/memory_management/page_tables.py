@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
+# SPDX-FileCopyrightText: 2023 - 2025 Rivos Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -6,7 +6,6 @@ import copy
 import enum
 import logging as log
 import math
-import sys
 import typing
 
 from data_structures import BitField
@@ -77,28 +76,32 @@ class TranslationStage:
 
     stages = {
         "s": {
-            "modes": ["bare", "sv39", "sv48"],
+            "valid_modes": ["bare", "sv39", "sv48"],
+            "selected_mode": None,
             "translates": ["va", "pa"],
             "virtualization_enabled": False,
             "next_stage": None,
             "atp_register": "satp",
         },
         "hs": {
-            "modes": ["bare", "sv39", "sv48"],
+            "valid_modes": ["bare", "sv39", "sv48"],
+            "selected_mode": None,
             "translates": ["va", "pa"],
             "virtualization_enabled": True,
             "next_stage": None,
             "atp_register": "satp",
         },
         "vs": {
-            "modes": ["bare", "sv39", "sv48"],
+            "valid_modes": ["bare", "sv39", "sv48"],
+            "selected_mode": None,
             "translates": ["va", "gpa"],
             "virtualization_enabled": True,
             "next_stage": "g",
             "atp_register": "vsatp",
         },
         "g": {
-            "modes": ["bare", "sv39x4", "sv48x4"],
+            "valid_modes": ["bare", "sv39x4", "sv48x4"],
+            "selected_mode": None,
             "translates": ["gpa", "spa"],
             "virtualization_enabled": True,
             "next_stage": None,
@@ -143,7 +146,34 @@ class TranslationStage:
         if TranslationMode.is_valid_mode(mode) is False:
             raise ValueError(f"Invalid TranslationMode: {mode}")
 
-        return TranslationMode.get_encoding(mode) in cls.stages[stage]["modes"]
+        return mode in cls.stages[stage]["valid_modes"]
+
+    @classmethod
+    def set_selected_mode_for_stage(cls, stage: str, mode: str):
+        if not cls.is_valid_stage(stage):
+            raise ValueError(
+                f"Invalid TranslationStage: {stage} with virtualization enabled: {cls.virtualization_enabled}"
+            )
+
+        if TranslationMode.is_valid_mode(mode) is False:
+            raise ValueError(f"Invalid TranslationMode: {mode}")
+
+        if not TranslationStage.is_valid_mode_for_stage(stage, mode):
+            raise ValueError(f"Invalid TranslationMode: {mode} for TranslationStage: {stage}")
+
+        cls.stages[stage]["selected_mode"] = mode
+
+    @classmethod
+    def get_selected_mode_for_stage(cls, stage: str):
+        if not cls.is_valid_stage(stage):
+            raise ValueError(
+                f"Invalid TranslationStage: {stage} with virtualization enabled: {cls.virtualization_enabled}"
+            )
+
+        if cls.stages[stage]["selected_mode"] is None:
+            raise ValueError(f"TranslationMode not set for TranslationStage: {stage}")
+
+        return cls.stages[stage]["selected_mode"]
 
     @classmethod
     def get_address_types(cls, stage: str):
@@ -212,6 +242,7 @@ class PageTableAttributes:
             "pte_ppn_bits": [(53, 28), (27, 19), (18, 10)],
             "page_sizes": [PageSize.SIZE_1G, PageSize.SIZE_2M, PageSize.SIZE_4K],
             "pagetable_sizes": [PageSize.SIZE_4K, PageSize.SIZE_4K, PageSize.SIZE_4K],
+            "va_mask": (1 << 39) - 1,
         },
         "sv48": {
             "pte_size_in_bytes": 8,
@@ -219,6 +250,7 @@ class PageTableAttributes:
             "va_vpn_bits": [(47, 39), (38, 30), (29, 21), (20, 12)],
             "pa_ppn_bits": [(55, 39), (38, 30), (29, 21), (20, 12)],
             "pte_ppn_bits": [(53, 37), (36, 28), (27, 19), (18, 10)],
+            "va_mask": (1 << 48) - 1,
             "page_sizes": [
                 PageSize.SIZE_512G,
                 PageSize.SIZE_1G,
@@ -241,10 +273,12 @@ class PageTableAttributes:
     # sv39x4 is identical to an Sv39 virtual address, except with
     # 2 more bits at the high end in VPN[2]
     mode_attributes["sv39x4"]["va_vpn_bits"][0] = (40, 30)
+    mode_attributes["sv39x4"]["va_mask"] = (1 << 40) - 1
 
     # sv48x4 is identical to an Sv48 virtual address, except with
     # 2 more bits at the high end in VPN[3]
     mode_attributes["sv48x4"]["va_vpn_bits"][0] = (49, 39)
+    mode_attributes["sv48x4"]["va_mask"] = (1 << 49) - 1
 
     # For Sv32x4, Sv39x4, Sv48x4, and Sv57x4, the root page table is 16
     # KiB and must be aligned to a 16-KiB boundary.
@@ -309,7 +343,8 @@ class PageTables:
         # List of PageTablePage objects
         self.pages = []
         self.translation_mode = translation_mode
-        self.translation_stage = memory_mappings[0].get_field("translation_stage")
+        self.mappings = memory_mappings
+        self.translation_stage = self.mappings[0].get_field("translation_stage")
         self.max_num_4K_pages = max_num_4K_pages
 
         self.asm_label = f"{self.translation_stage}_stage_pagetables_start"
@@ -318,7 +353,7 @@ class PageTables:
         self.pte_memory = {}
 
         self.start_address = None
-        for mapping in memory_mappings:
+        for mapping in self.mappings:
             if mapping.get_field(
                 "linker_script_section"
             ) is not None and f"{self.translation_stage}_stage.pagetables" in mapping.get_field(
@@ -330,12 +365,9 @@ class PageTables:
                 break
 
         if self.start_address is None:
-            log.error("No pagetables section found in memory mappings")
-            sys.exit(1)
+            raise Exception("No pagetables section found in memory mappings")
 
-        self.create_from_mappings(
-            mapping for mapping in memory_mappings if mapping.is_bare_mapping() is False
-        )
+        self.create_from_mappings()
 
     def get_asm_label(self):
         return self.asm_label
@@ -352,6 +384,10 @@ class PageTables:
     def get_new_page(self, va, level):
         log.debug(f"get_page_table_page({hex(va)}, {level})")
         assert self.start_address is not None
+
+        # When creating pagetable entries, we need to ignore the upper VA bits
+        va_mask = self.attributes.get_attribute("va_mask")
+        va = va & va_mask
         # look for an existing pagetable page that contains the given VA
         for page in self.pages:
             if page.contains(va, level):
@@ -417,10 +453,9 @@ class PageTables:
 
         if address in self.pte_memory:
             if self.pte_memory[address] != value:
-                log.error(
+                raise Exception(
                     f"[{hex(address)}] already contains a different value {hex(self.pte_memory[address])}. Cannot update to {hex(value)}"
                 )
-                sys.exit(1)
             log.debug(f"[{hex(address)}] already contains {hex(value)}. No update needed.")
         else:
             self.pte_memory[address] = value
@@ -434,11 +469,14 @@ class PageTables:
         return None
 
     # Populates the sparse memory with the pagetable entries
-    def create_from_mappings(self, memory_mappings):
+    def create_from_mappings(self):
         source_address_type = TranslationStage.get_translates_from(self.translation_stage)
         dest_address_type = TranslationStage.get_translates_to(self.translation_stage)
 
-        for entry in self.split_mappings_at_page_granularity(memory_mappings):
+        # No page tables for the bare mappings.
+        mappings = [mapping for mapping in self.mappings if mapping.is_bare_mapping() is False]
+
+        for entry in self.split_mappings_at_page_granularity(mappings):
             assert self.translation_stage == entry.get_field("translation_stage")
             assert entry.get_field("page_size") in self.get_attribute("page_sizes")
             leaf_level = self.get_attribute("page_sizes").index(entry.get_field("page_size"))
@@ -497,11 +535,10 @@ class PageTables:
                         pte_value, 1, self.attributes.common_attributes["d_bit"]
                     )
 
-                    if entry.get_field("pbmt_mode") is not None:
-                        pbmt_mode = PbmtMode.get_encoding(entry.get_field("pbmt_mode").lower())
-                        pte_value = BitField.place_bits(
-                            pte_value, pbmt_mode, self.attributes.common_attributes["pbmt_bits"]
-                        )
+                    pbmt_mode = PbmtMode.get_encoding(entry.get_field("pbmt_mode").lower())
+                    pte_value = BitField.place_bits(
+                        pte_value, pbmt_mode, self.attributes.common_attributes["pbmt_bits"]
+                    )
 
                     pte_value = BitField.place_bits(
                         pte_value,
@@ -547,3 +584,6 @@ class PageTables:
             self.pte_memory[pte_region_sparse_memory_start] = 0
         if pte_region_sparse_memory_end not in self.pte_memory:
             self.pte_memory[pte_region_sparse_memory_end] = 0
+
+    def get_mappings(self):
+        return self.mappings

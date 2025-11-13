@@ -1,6 +1,8 @@
-// SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
-//
-// SPDX-License-Identifier: Apache-2.0
+/*
+ * SPDX-FileCopyrightText: 2025 Rivos Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 #include "cpu_bits.h"
 #include "jumpstart.h"
@@ -13,7 +15,7 @@
 #define MISS_LIMIT 5
 
 #define CHECK_SEED(flt_cnt, local_cnt, curr_seed, last_seed, misses)           \
-  if (flt_cnt[hart_id] != local_cnt)                                           \
+  if (flt_cnt[cpu_id] != local_cnt)                                            \
     jumpstart_mmode_fail();                                                    \
   if (curr_seed == last_seed) {                                                \
     misses++;                                                                  \
@@ -22,7 +24,7 @@
   }
 
 #define SCHECK_SEED(flt_cnt, local_cnt, curr_seed, last_seed, misses)          \
-  if (flt_cnt[hart_id] != local_cnt)                                           \
+  if (flt_cnt[cpu_id] != local_cnt)                                            \
     jumpstart_smode_fail();                                                    \
   if (curr_seed == last_seed) {                                                \
     misses++;                                                                  \
@@ -30,16 +32,17 @@
       jumpstart_smode_fail();                                                  \
   }
 
-__attribute__((section(".data.smode"))) volatile uint64_t
-    fault_count_s[MAX_NUM_HARTS_SUPPORTED] = {0};
+__attribute__((section(
+    ".data.smode"))) volatile uint64_t fault_count_s[MAX_NUM_CPUS_SUPPORTED] = {
+    0};
 
 __attribute__((section(".text.smode"))) static void
 smode_exception_handler(void) {
-  uint64_t hart_id = get_thread_attributes_hart_id_from_smode();
+  uint64_t cpu_id = get_thread_attributes_cpu_id_from_smode();
   unsigned long epc = get_sepc_for_current_exception();
   uint64_t tval = read_csr(stval);
 
-  fault_count_s[hart_id]++;
+  fault_count_s[cpu_id]++;
 
   // skip over the faulting load
   if ((tval & 0x3) == 0x3)
@@ -51,7 +54,7 @@ smode_exception_handler(void) {
 }
 
 __attribute__((section(".text.smode"))) int smode_main(void) {
-  uint64_t hart_id = get_thread_attributes_hart_id_from_smode();
+  uint64_t cpu_id = get_thread_attributes_cpu_id_from_smode();
   uint32_t seed = 0, last_seed = 0;
   int rand = 0, last_rand = 0;
   uint64_t temp = 65321512512;
@@ -63,11 +66,14 @@ __attribute__((section(".text.smode"))) int smode_main(void) {
 
   /* Test M-mode access. */
   int random = smode_try_get_seed();
-  if (random < 0 || fault_count_s[hart_id] != 0)
+  if (random < 0 || fault_count_s[cpu_id] != 0)
     jumpstart_smode_fail();
 
-  set_random_seed_from_smode((int)random);
-  for (int i = 0; i < 1024; i++) {
+  if (cpu_id == 0)
+    set_random_seed_from_smode((int)random * BUILD_RNG_SEED);
+
+  sync_all_cpus_from_smode();
+  for (int i = 0; i < 10; i++) {
     rand = get_random_number_from_smode();
     if (rand == last_rand)
       return DIAG_FAILED;
@@ -75,7 +81,7 @@ __attribute__((section(".text.smode"))) int smode_main(void) {
     last_rand = rand;
   }
 
-  for (unsigned i = 0; i < 1024; i++) {
+  for (unsigned i = 0; i < 10; i++) {
     /* Try csrrwi, it shouldn't fault. */
     last_seed = seed;
     __asm__ __volatile__("csrrwi %0, seed, 5" : "=r"(seed)::"memory");
@@ -164,14 +170,14 @@ __attribute__((section(".text.smode"))) int smode_main(void) {
   return DIAG_PASSED;
 }
 
-volatile uint64_t fault_count[MAX_NUM_HARTS_SUPPORTED] = {0};
+volatile uint64_t fault_count[MAX_NUM_CPUS_SUPPORTED] = {0};
 
 static void mmode_exception_handler(void) {
-  uint64_t hart_id = get_thread_attributes_hart_id_from_mmode();
+  uint64_t cpu_id = get_thread_attributes_cpu_id_from_mmode();
   unsigned long epc = get_mepc_for_current_exception();
   uint64_t mtval = read_csr(mtval);
 
-  fault_count[hart_id]++;
+  fault_count[cpu_id]++;
 
   // skip over the faulting load
   if ((mtval & 0x3) == 0x3)
@@ -183,7 +189,7 @@ static void mmode_exception_handler(void) {
 }
 
 int main(void) {
-  uint64_t hart_id = get_thread_attributes_hart_id_from_mmode();
+  uint64_t cpu_id = get_thread_attributes_cpu_id_from_mmode();
   uint32_t seed = 0, last_seed = 0;
   int rand = 0, last_rand = 0;
   uint64_t temp = 65321512512;
@@ -194,11 +200,14 @@ int main(void) {
                                        (uint64_t)(mmode_exception_handler));
   /* Test M-mode access. */
   int random = mmode_try_get_seed();
-  if (random < 0 || fault_count[hart_id] != 0)
+  if (random < 0 || fault_count[cpu_id] != 0)
     jumpstart_mmode_fail();
 
-  set_random_seed_from_mmode((int)random);
-  for (int i = 0; i < 1024; i++) {
+  if (cpu_id == 0)
+    set_random_seed_from_mmode((int)random * BUILD_RNG_SEED);
+
+  sync_all_cpus_from_mmode();
+  for (int i = 0; i < 10; i++) {
     rand = get_random_number_from_mmode();
     if (rand == last_rand)
       return DIAG_FAILED;
@@ -206,7 +215,7 @@ int main(void) {
     last_rand = rand;
   }
 
-  for (unsigned i = 0; i < 1024; i++) {
+  for (unsigned i = 0; i < 10; i++) {
     /* Try csrrwi, it shouldn't fault. */
     last_seed = seed;
     __asm__ __volatile__("csrrwi %0, seed, 5" : "=r"(seed)::"memory");

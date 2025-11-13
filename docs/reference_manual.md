@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
+SPDX-FileCopyrightText: 2023 - 2025 Rivos Inc.
 
 SPDX-License-Identifier: Apache-2.0
 -->
@@ -10,10 +10,16 @@ JumpStart provides a bare-metal kernel, APIs and build infrastructure for writin
 
 A Diag is expected to provide sources (C and assembly files) and it's attributes in a YAML file.
 
-The JumpStart [`Unit Tests`](../tests) are a good reference on writing diags:
-* [Common tests](../tests/common/meson.build)
-
 **For a Quick Start Guide, see [Anatomy of a Diag](quick_start_anatomy_of_a_diag.md)** which provides a detailed explanation of `test021` which is a 2-core diag that modifies a shared page table in memory and checks that the change is visible to both cores.
+
+## Table of Contents
+
+* [Diag Sources](#diag-sources)
+* [Diag Attributes](#diag-attributes)
+* [JumpStart APIs](#jumpstart-apis)
+* [Building and Running Diags](#building-and-running-diags)
+* [Running Unit Tests](#running-unit-tests)
+* [Debugging with GDB](#debugging-diags-with-gdb)
 
 ## Diag Sources
 
@@ -27,23 +33,26 @@ JumpStart provides a set of basic API functions that the diag can use. Details [
 
 The diag exits by returning from `main()` with a `DIAG_PASSED` or `DIAG_FAILED` return code. Alternatively, the diag can call `jumpstart_mmode_fail()` or `jumpstart_smode_fail()` functions if a clean return from `main()` is not possible. On return from the diag, JumpStart will exit the simulation with the appropriate exit code and exit sequence for the simulation environment.
 
+The JumpStart [`Unit Tests`](../tests) are a good reference on writing diags:
+* [Common tests](../tests/common/meson.build)
+
 **Diags are expected to follow the [RISC-V ABI Calling Convention](https://github.com/riscv-non-isa/riscv-elf-psabi-doc/blob/master/riscv-cc.adoc).**
 
-**The Thread Pointer (x4) and Global Pointer (x3) registers are reserved for JumpStart purposes and should not be used in diags.** TP is used to point to a per hart attributes structure and GP is used as a temporary in JumpStart routines.
+**The Thread Pointer (x4) and Global Pointer (x3) registers are reserved for JumpStart purposes and should not be used in diags.** TP is used to point to a per cpu attributes structure and GP is used as a temporary in JumpStart routines.
 
 ## Diag Attributes
 
-The Diag Attributes file specifies the memory layout and various attributes of the diag such as the MMU mode, number of active harts, etc.
+The Diag Attributes file specifies the memory layout and various attributes of the diag such as the MMU mode, number of active cpus, etc.
 
 The default diag attribute values are defined in the [Source Attributes YAML file](../src/public/jumpstart_public_source_attributes.yaml).
 
-### `active_hart_mask`
+### `active_cpu_mask`
 
-Binary bitmask controlling how many active harts are in the diag. Any hart that is not part of the bitmask will be sent to `wfi`.
+Binary bitmask controlling how many active cpus are in the diag. Any cpu that is not part of the bitmask will be sent to `wfi`.
 
-Default: `0b1` or 1 hart active.
+Default: `0b1` or 1 cpu active.
 
-Specifies the active harts in the diag. The default is `0b1` or 1 hart active.
+Specifies the active cpus in the diag. The default is `0b1` or 1 cpu active.
 
 ### `enable_virtualization`
 
@@ -53,7 +62,9 @@ Default: `False`.
 
 ### `satp_mode`, `vstap_mode`, `hgatp_mode`
 
-The MMU mode (SV39, SV48, etc.) that will be programmed into the corresponding *ATP register.
+The MMU mode that will be programmed into the corresponding *ATP register.
+
+Valid values: `bare`, `sv39`, `sv48`, `sv39x4`, `sv48x4`.
 
 ### `start_test_in_mmode`
 
@@ -63,8 +74,6 @@ NOTE: Diags that run in `sbi_firmware_boot` mode (where JumpStart starts in S-mo
 
 Default: `False`. The diag's `main()` will be called in S-mode.
 
-Example: [test009](../tests/common/test009.diag_attributes.yaml).
-
 ### `mmode_start_address`, `smode_start_address` and `umode_start_address`
 
 The address at which the start of the Machine, Supervisor and User mode sections will be placed by the linker.
@@ -73,7 +82,7 @@ The address at which the start of the Machine, Supervisor and User mode sections
 
 The maximum number of 4K pages that can be used to allocate Page Tables for each translation stage.
 
-### `num_pages_for_jumpstart_smode_bss` and `num_pages_for_jumpstart_smode_rodata`
+### `num_pages_for_jumpstart_smode_bss` and `num_pages_for_jumpstart_mmode_rodata`
 
 The number of 4K pages allowed for the `.bss` and `.rodata` sections respectively.
 
@@ -92,6 +101,14 @@ Controls the memory layout and attributes of all the sections of the diag.
 #### `va`, `gpa`, `pa`, `spa`
 
 Controls the virtual, guest physical, physical and supervisor physical addresses of the mapping.
+
+#### `target_mmu`
+
+Specifies the list of MMUs that this mapping will be set up for.
+
+MMUs currently supported: `cpu`, `iommu`.
+
+Default: ["cpu"]
 
 #### `stage`
 
@@ -113,6 +130,14 @@ The page size has to conform to the sizes supported by the SATP mode.
 
 Controls the number of `page_size` pages allocated for the section.
 
+#### `num_pages_per_cpu`
+
+Controls the number of `page_size` pages allocated per CPU for the section. The total number of pages allocated will be `num_pages_per_cpu` multiplied by `max_num_cpus_supported`.
+
+This attribute is mutually exclusive with `num_pages` - only one of them can be specified for a mapping. When `num_pages_per_cpu` is used, the memory allocation scales automatically with the number of CPUs supported by the system.
+
+Example: If `num_pages_per_cpu: 2` and `max_num_cpus_supported: 4`, then 8 total pages will be allocated for the section.
+
 #### `alias`
 
 Indicates whether this is a VA alias. It's PA should be contained in the PA range of another mapping.
@@ -123,6 +148,10 @@ Controls whether the diag will allocate page table entries for the section.
 If not explicitly specified, this will be inferred based on the translation stage. It will be set to `True` for bare mappings and `False` for non-bare mappings.
 
 Default: `None`.
+
+#### `pma_memory_type` (Rivos Internal)
+
+The memory type of the section. This is used to set the memory type for the PMARR region that holds this section.
 
 #### `linker_script_section`
 
@@ -146,48 +175,142 @@ The sections `.text` and `.text.end` will be placed together in the `.text` link
    }
 ```
 
-## Building Diags
+## Building and Running Diags with `build_diag.py`
 
-`meson` is used to build the diags. The diags are built in 2 stages - `meson setup` and `meson compile`.
+[`scripts/build_diag.py`](../scripts/build_diag.py) is the preferred way to build diags and optionally run them on spike.
 
-### `meson setup`
+It will place the build and run artifacts into `--diag_build_dir`. It produces the ELFs, run traces (for spike), `build_manifest.repro.yaml` file to reproduce the build, etc.
 
-Takes the diag's sources and attributes and generates a meson build directory.
+It will produce a summary indicating status for each diag.
 
-Pass the sources and the attribute file to `meson setup` with the `diag_attributes_yaml`, `diag_name` and `diag_sources` setup options:
+```
+Summary
+Build root: /tmp/diag
+Build Repro Manifest: /tmp/diag/build_manifest.repro.yaml
+┏━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Diag    ┃ Build        ┃ Run [spike] ┃ Result                        ┃
+┡━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ test000 │ PASS (4.45s) │ PASS (0.38s) │ /tmp/diag/test000/test000.elf │
+├─────────┼──────────────┼──────────────┼───────────────────────────────┤
+│ test010 │ PASS (4.52s) │ PASS (0.38s) │ /tmp/diag/test010/test010.elf │
+├─────────┼──────────────┼──────────────┼───────────────────────────────┤
+│ test002 │ PASS (4.49s) │ PASS (0.39s) │ /tmp/diag/test002/test002.elf │
+└─────────┴──────────────┴──────────────┴───────────────────────────────┘
 
-```shell
-meson setup builddir --cross-file cross_compile/rivos_internal/gcc_options.txt --cross-file cross_compile/gcc.txt  --buildtype release -Ddiag_attributes_yaml=tests/common/test000.diag_attributes.yaml -Ddiag_sources=tests/common/test000.c -Ddiag_name=my_jumpstart_diag
+Run Manifest:
+/tmp/diag/run_manifest.yaml
+
+STATUS: PASSED
+
 ```
 
-All `meson setup` options are listed in the [meson_options.txt](../meson.options) file.
+### Environment Configuration
 
-#### `diag_attribute_overrides`
+The script uses an environment-based configuration system that determines the run_target, boot configuration, and other build settings. Environments are defined in [`scripts/build_tools/environments.yaml`](../scripts/build_tools/environments.yaml) and can inherit from other environments.
 
-Diag attributes specified in the diag's attribute file can be overriden at `meson setup` with the `diag_attribute_overrides` option. `diag_attribute_overrides` takes a list of attributes that can be overriden.
+Available environments include:
+- `spike`: Run on Spike simulator with fw-none boot configuration
 
-For example, to override the `active_hart_mask`:
+Each environment can specify:
+- `run_target`: The run_target to run the diag on (spike, etc.)
+- `override_meson_options`: Meson options to override for this environment
+- `override_diag_attributes`: Diag attributes to override for this environment
+- `extends`: Parent environment to inherit from
 
+### Flags
+
+The preferred way to build and run using JumpStart is to use the [`scripts/build_diag.py`](../scripts/build_diag.py) script.
+
+#### `--diag_src_dir`
+
+A list of diag source directories containing the diag's sources and attributes file.
+
+#### `--build_manifest`
+
+A manifest file containing a list of multiple diags to be built. The manifest file can also contain global overrides for `override_meson_options`, `override_diag_attributes` and `diag_custom_defines` that are applied to all diags in a manifest. See `diags/sival/ddr.diag_manifest.yaml` in the `ctest` repo for an example.
+
+#### `--environment`
+
+**Required.** The environment to build and run for.
+
+Available environments can be listed by running:
 ```shell
-meson setup builddir -Ddiag_attribute_overrides=active_hart_mask=0b11 ...
+jumpstart/scripts/build_diag.py --help
 ```
 
-### `meson compile`
-
-Compiles the diag for which the meson build directory has been generated by `meson setup`.
-
+Environment related extra arguments can be listed by running:
 ```shell
-meson compile -C builddir
+jumpstart/scripts/build_diag.py -e <environment> --help
 ```
 
-This will build `builddir/my_jumpstart_diag`
+The environment determines:
+- The run_target (spike, etc.)
+- Boot configuration (fw-none)
+- Default meson options and diag attributes
 
-### `meson test`
+#### `--override_meson_options`
 
-Runs the generated diag in Spike.
+Used to override the meson options specified in [meson.options](../meson.options) or those set by the environment.
+
+#### `--override_diag_attributes`
+
+Used to override the diag attributes specified in the [attributes file](../src/public/jumpstart_public_source_attributes.yaml) or those set by the environment. This will override the attributes specified in the diag's attributes file.
+
+#### `--diag_custom_defines`
+
+Override per diag custom defines.
+
+#### `--include_diags` / `--exclude_diags`
+
+Filter diagnostics when using a manifest. Only valid with `--build_manifest` and incompatible with `--diag_src_dir`.
+- `--include_diags name1 name2`: Build only the listed diagnostics from the manifest; errors if a name is not present.
+- `--exclude_diags name1 name2`: Build all diagnostics except the listed ones; errors if a name is not present.
+
+#### `--buildtype`
+
+Meson build type to use. Choices: `release`, `minsize`, `debug`, `debugoptimized`. Defaults to `release` if not specified.
+
+#### `--toolchain`
+
+Compiler toolchain. Choices: `gcc`. Default: `gcc`.
+
+#### `--disable_diag_run`
+
+Builds the diag but does not run it on the run_target (skips trace generation/run phase).
+
+#### `--diag_build_dir` (`--diag_build`)
+
+Required. Output directory for built artifacts. A subdirectory is used for Meson build artifacts.
+
+#### `--keep_meson_builddir`
+
+Keep the temporary Meson build directory (useful for inspecting logs/artifacts on failures). Default: `false`.
+
+#### `--rng_seed`
+
+Seed for randomized build/run behavior. Accepts Python int literals (e.g., `1234`, `0xdeadbeef`, `0b1010`). If not provided, uses `rng_seed` from the manifest or auto-generates a random seed.
+
+#### `-v`, `--verbose`
+
+Enable verbose logging.
+
+#### `-j`, `--jobs`
+
+Number of parallel compile jobs.
+
+See `--help` for all options.
+
+## Running Unit Tests
+
+Use the `justfile` to build and run unit tests during development.
+
+Run `just --list` to see all the available commands.
+
+Examples:
 
 ```shell
-meson test -C builddir
+# Build all unit tests with GCC targeting release build and run on Spike.
+just test gcc release spike
 ```
 
 ## JumpStart APIs
@@ -196,29 +319,97 @@ These are listed in the header files in the [include](../include) directory.
 
 Functions with names that end in `_from_smode()` or `_from_mmode()` can only be called from the respective modes.
 
-### `get_thread_attributes_hart_id_from_smode()`
+### Memory Management APIs
 
-Returns the hart id of the hart calling the function. Can only be called from S-mode.
+JumpStart provides a heap-based memory management system that supports allocations from DDR memory with different memory attributes (WB, WC, UC).
+
+If the diag attribute `enable_heap` is set to `True` a DDR WB heap will be initialized for use.
+
+Custom heaps (of any memory type and size) must be explicitly set up to point to memory regions in the memory map of the diag.
+Note that multiple heaps can be active at a time but only one heap of a particular type (memory backing and memory attribute) can be set up at at time.
+
+#### Basic Memory Functions
+- `malloc()`, `free()`, `calloc()`, `memalign()`: Default memory allocation functions that use DDR WB memory.
+
+#### Memory Type Specific Functions
+- `malloc_from_memory()`, `free_from_memory()`, `calloc_from_memory()`, `memalign_from_memory()`: Memory allocation functions that allow specifying the backing memory and memory type.
+
+#### Heap Management
+- `setup_heap()`: Initialize a new heap with specified backing memory and memory type.
+- `deregister_heap()`: Clean up and remove a previously initialized heap. All allocations from this heap have to be freed before deregistering the heap.
+- `get_heap_size()`: Get the total size of a specific heap.
+
+The following constants are defined for use with these functions:
+
+**Backing Memory Types:**
+- `BACKING_MEMORY_DDR`: Standard DDR memory
+
+**Memory Types:**
+- `MEMORY_TYPE_WB`: Write-Back cached memory
+- `MEMORY_TYPE_WC`: Write-Combining memory
+- `MEMORY_TYPE_UC`: Uncached memory
+
+Example usage:
+```c
+// Set up a 4MB uncached DDR heap
+setup_heap(0xA0200000, 0xA0200000 + 4 * 1024 * 1024,
+          BACKING_MEMORY_DDR, MEMORY_TYPE_UC);
+
+// Allocate from the uncached heap
+void* buf = malloc_from_memory(size, BACKING_MEMORY_DDR, MEMORY_TYPE_UC);
+
+// Clean up when done
+free_from_memory(buf, BACKING_MEMORY_DDR, MEMORY_TYPE_UC);
+deregister_heap(BACKING_MEMORY_DDR, MEMORY_TYPE_UC);
+```
+
+### `get_thread_attributes_cpu_id_from_smode()`
+
+Returns the cpu id of the cpu calling the function. Can only be called from S-mode.
 
 ### `read_csr()`, `write_csr()`, `read_write_csr()`, `set_csr()`, `clear_csr()`, `read_set_csr()` and `read_clear_csr()`
 
 Operates on the specified CSR. The CSR names are passed to the RISC-V `csrr` and `csrw` instructions so the names should match what GCC expects.
 
-### `run_function_in_smode()`, `run_function_in_umode()` and `run_function_in_vsmode()`
+### `run_function_in_smode()`, `run_function_in_umode()`, `run_function_in_vsmode()` and `run_function_in_vumode()`
 
 Diags can use these functions to run functions in the corresponding modes. Each function can be passed up to 6 arguments.
 
+`run_function_in_smode()` can only be called from M-mode.
+
+`run_function_in_umode()` and `run_function_in_vsmode()` can only be called from S-mode.
+
+`run_function_in_vumode()` can only be called from VS-mode.
+
 The different modes cannot share the same pages so the functions belonging to each mode should be tagged with the corresponding linker script section name to place them in different sections.
 
-Refer to Unit Tests `test002`, `test011`, `test018`, `test045` for examples of how these functions can be called and how the memory map can be set up.
+*IMPORTANT*: The return values of these functions should be checked. The only way to tell if the function ran successfully is to check the return value.
+
+Refer to Unit Tests `test002`, `test011`, `test018`, `test045`, `test048` for examples of how these functions can be called and how the memory map can be set up.
 
 ### `disable_mmu_from_smode()`
 
 Disables the MMU. The page tables are set up and the MMU is enabled by default when the diag starts.
 
-### `sync_all_harts_from_smode()`
+### `sync_all_cpus_from_smode()`
 
-Synchronization point for all active harts in the diag.
+Synchronization point for all active cpus in the diag.
+
+### `sync_cpus_in_mask_from_smode()`
+
+Synchronization point for a specific subset of CPUs specified by a CPU mask. This function provides more flexible synchronization than `sync_all_cpus_from_smode()` by allowing diags to synchronize only specific CPUs.
+
+**Parameters:**
+- `cpu_mask`: A bitmask specifying which CPUs should participate in the synchronization. Each bit represents a CPU ID (bit 0 = CPU 0, bit 1 = CPU 1, etc.)
+- `sync_point_address`: The address of a 4-byte aligned memory location to use as the synchronization point. Each CPU combination should use its own unique sync point to avoid conflicts.
+
+**Important Notes:**
+- Each CPU combination must use its own dedicated sync point to prevent synchronization conflicts
+- The sync point must be 4-byte aligned and placed in a memory section accessible to all participating CPUs
+- Only CPUs specified in the mask will participate in the synchronization
+- The primary CPU (lowest CPU ID in the mask) coordinates the synchronization process
+
+See [test019](../tests/common/test019/) for examples of how the sync functions can be used.
 
 ### `register_mmode_trap_handler_override()` and `get_mmode_trap_handler_override()`
 
@@ -235,45 +426,3 @@ Allows the diag to register a trap handler override function for VS-mode traps. 
 ### `get_*epc_for_current_exception()` and `set_*epc_for_current_exception()`
 
 These functions can be used to get and set the MEPC/SEPC during an exception. Allows modification of the EPC before returning from the exception.
-
-## Running Diags
-
-JumpStart diags can be run on Spike and QEMU targets.
-
-The target can be specified by passing the `-Dtarget` option to `meson setup`. The target can be `spike` or `qemu`.
-
-`meson test` will attempt to run the diag on the target. To see the options being passed to the target, run `meson test` with the `-v` option.
-
-```shell
-meson test -C builddir -v
-```
-
-To generate the execution trace, pass the `generate_trace=true` option to `meson setup`.
-
-```shell
-meson setup -C builddir -Dgenerate_trace=true ...
-```
-
-If the diag requires additional arguments be passed to the target, specify them with the `spike_additional_arguments`/`qemu_additional_arguments` options to `meson setup`.
-These take a list of arguments.
-
-```shell
-meson setup -C builddir -Dspike_additional_arguments=-p2 ...
-```
-## Boot Configs
-
-The boot path can be selected at build time with the `boot_config` meson option.
-
-### `fw-none` (default)
-
-   JumpStart starts running from hardware reset. No system firmware is expected to be present.
-
-### `fw-m`
-
-JumpStart starts in M-mode at the `mmode_start_address` after running system firmware for initialization. The system firmware that runs prior to JumpStart can be overwritten by JumpStart.
-
-### `fw-sbi`
-
-JumpStart starts in S-mode at the `sbi_firmware_trampoline` address after running system firmware for initialization. The system firmware is expected to be resident and will not be overwritten by JumpStart. JumpStart will interact with the system firmware using the SBI HSM extension - for example, to boot non-booting harts.
-
-Only S-mode based diags can be run in this mode as JumpStart cannot enter M-mode.

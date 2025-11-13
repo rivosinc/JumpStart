@@ -1,10 +1,12 @@
-# SPDX-FileCopyrightText: 2024 Rivos Inc.
+# SPDX-FileCopyrightText: 2024 - 2025 Rivos Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 
 import logging as log
 import sys
 
+from .memory_mapping import MemoryMapping
+from .page_size import PageSize
 from .page_tables import TranslationStage
 
 
@@ -18,7 +20,13 @@ class LinkerScriptSection:
             raise ValueError(
                 f"Entry does not have a valid destination address for the {stage} stage: {entry}"
             )
-        self.start_address = entry.get_field(TranslationStage.get_translates_to(stage))
+
+        # Get VA as linker script is supposed to use Virtual address. For M-mode and R-code mappings
+        # fallback to PA as these don't have a virtual address.
+        self.virt_start_address = entry.get_field(TranslationStage.get_translates_from(stage))
+        self.phys_start_address = entry.get_field(TranslationStage.get_translates_to(stage))
+        if self.virt_start_address is None:
+            self.virt_start_address = self.phys_start_address
 
         if entry.get_field("num_pages") is None:
             raise ValueError(f"Entry does not have a number of pages: {entry}")
@@ -65,11 +73,17 @@ class LinkerScriptSection:
     def get_top_level_name(self):
         return self.top_level_name
 
-    def get_start_address(self):
-        return self.start_address
+    def get_virt_start_address(self):
+        return self.virt_start_address
 
-    def get_end_address(self):
-        return self.start_address + self.size
+    def get_virt_end_address(self):
+        return self.virt_start_address + self.size
+
+    def get_phys_start_address(self):
+        return self.phys_start_address
+
+    def get_phys_end_address(self):
+        return self.phys_start_address + self.size
 
     def get_size(self):
         return self.size
@@ -89,11 +103,11 @@ class LinkerScriptSection:
             if subsection not in self.subsections:
                 self.subsections.append(subsection)
 
-        if self.get_start_address() > other_section.get_start_address():
-            self.start_address = other_section.get_start_address()
+        if self.get_phys_start_address() > other_section.get_phys_start_address():
+            self.phys_start_address = other_section.get_phys_start_address()
 
-        if self.get_end_address() < other_section.get_end_address():
-            self.size = other_section.get_end_address() - self.get_start_address()
+        if self.get_phys_end_address() < other_section.get_phys_end_address():
+            self.size = other_section.get_phys_end_address() - self.get_phys_start_address()
 
         if other_section.is_padded():
             self.padded = True
@@ -102,13 +116,16 @@ class LinkerScriptSection:
             self.type = other_section.get_type()
 
     def __str__(self):
-        return f"Section: {self.get_top_level_name()}; Start Address: {hex(self.get_start_address())}; Size: {self.get_size()}; Subsections: {self.get_subsections()}; Type: {self.get_type()}; Padded: {self.is_padded()}"
+        return f"Section: {self.get_top_level_name()}; Start Address: {hex(self.get_phys_start_address())}; Size: {self.get_size()}; Subsections: {self.get_subsections()}; Type: {self.get_type()}; Padded: {self.is_padded()}"
 
 
 class LinkerScript:
-    def __init__(self, entry_label, mappings, attributes_file):
+    def __init__(self, entry_label, elf_address_range, mappings, attributes_file):
         self.entry_label = entry_label
         self.attributes_file = attributes_file
+        self.elf_start_address, self.elf_end_address = elf_address_range
+
+        self.guard_sections = None
 
         mappings_with_linker_sections = []
         for stage in TranslationStage.get_enabled_stages():
@@ -140,18 +157,62 @@ class LinkerScript:
                     f"Section names in {new_section} are used in {len(existing_sections_with_matching_subsections)} other sections."
                 )
 
-        # sort the self.sections by start address
-        self.sections.sort(key=lambda x: x.get_start_address())
+        self.sections.sort(key=lambda x: x.get_phys_start_address())
 
-        # check for overlaps in the sections
+        # Add guard sections after each section that isn't immediately followed
+        # by another section.
+        # The linker can detect overruns of a section if there is a section
+        # immediately following it in the memory layout.
+        # We will also need to generate the corresponding assembly code
+        # for each guard section. Otherwise the linker will ignore the guard section.
+        self.guard_sections = []
         for i in range(len(self.sections) - 1):
             if (
-                self.sections[i].get_start_address() + self.sections[i].get_size()
-                > self.sections[i + 1].get_start_address()
+                self.sections[i].get_phys_end_address()
+                < self.sections[i + 1].get_phys_start_address()
             ):
-                raise ValueError(
-                    f"Linker sections overlap:\n\t{self.sections[i]}\n\t{self.sections[i + 1]}"
+                self.guard_sections.append(
+                    LinkerScriptSection(
+                        MemoryMapping(
+                            {
+                                "translation_stage": TranslationStage.get_enabled_stages()[
+                                    0
+                                ],  # any stage works. We just need a valid one.
+                                TranslationStage.get_translates_to(
+                                    TranslationStage.get_enabled_stages()[0]
+                                ): self.sections[i].get_phys_end_address(),
+                                "num_pages": 1,
+                                "page_size": PageSize.SIZE_4K,
+                                "linker_script_section": f".linker_guard_section_{len(self.guard_sections)}",
+                            }
+                        )
+                    )
                 )
+        self.sections.extend(self.guard_sections)
+        self.sections.sort(key=lambda x: x.get_phys_start_address())
+
+        # check for overlaps in the sections and that sections are within ELF address range
+        for i in range(len(self.sections)):
+            section_start = self.sections[i].get_phys_start_address()
+            section_end = section_start + self.sections[i].get_size()
+
+            # Check section is within allowed ELF address range if specified
+            if self.elf_start_address is not None or self.elf_end_address is not None:
+                if self.elf_start_address is not None and section_start < self.elf_start_address:
+                    raise ValueError(
+                        f"{self.sections[i]} is outside allowed ELF address range - start address {hex(section_start)} is less than elf_start_address {hex(self.elf_start_address)}"
+                    )
+                if self.elf_end_address is not None and section_end > self.elf_end_address:
+                    raise ValueError(
+                        f"{self.sections[i]} is outside allowed ELF address range - end address {hex(section_end)} is greater than elf_end_address {hex(self.elf_end_address)}"
+                    )
+
+            # Check for overlap with next section
+            if i < len(self.sections) - 1:
+                if section_end > self.sections[i + 1].get_phys_start_address():
+                    raise ValueError(
+                        f"Linker sections overlap:\n\t{self.sections[i]}\n\t{self.sections[i + 1]}"
+                    )
 
         self.program_headers = []
         for section in self.sections:
@@ -181,6 +242,9 @@ class LinkerScript:
     def get_attributes_file(self):
         return self.attributes_file
 
+    def get_guard_sections(self):
+        return self.guard_sections
+
     def generate(self, output_linker_script):
         file = open(output_linker_script, "w")
         if file is None:
@@ -192,34 +256,51 @@ class LinkerScript:
         file.write('OUTPUT_ARCH( "riscv" )\n')
         file.write(f"ENTRY({self.get_entry_label()})\n\n")
 
+        # Add MEMORY region definitions
+        file.write("MEMORY\n{\n")
+        for section in self.get_sections():
+            memory_name = section.get_top_level_name().replace(".", "_").upper()
+            start_addr = hex(section.get_virt_start_address())
+            size = hex(section.get_size())
+            file.write(f"    {memory_name} (rwx) : ORIGIN = {start_addr}, LENGTH = {size}\n")
+        file.write("}\n\n")
+
         file.write("SECTIONS\n{\n")
         defined_sections = []
 
         # The linker script lays out the diag in physical memory. The
         # mappings are already sorted by PA.
         for section in self.get_sections():
-            file.write(f"   /* {','.join(section.get_subsections())}:\n")
+            file.write(f"\n\n   /* {','.join(section.get_subsections())}:\n")
             file.write(
-                f"       PA Range: {hex(section.get_start_address())} - {hex(section.get_start_address() + section.get_size())}\n"
+                f"       PA Range: {hex(section.get_phys_start_address())} - {hex(section.get_phys_end_address())}\n"
+                f"       VA Range: {hex(section.get_virt_start_address())} - {hex(section.get_virt_end_address())}\n"
             )
             file.write("   */\n")
-            file.write(f"   . = {hex(section.get_start_address())};\n")
+            file.write(f"   . = {hex(section.get_virt_start_address())};\n")
 
-            file.write(f"   {section.get_top_level_name()} {section.get_type()} : {{\n")
             top_level_section_variable_name_prefix = (
                 section.get_top_level_name().replace(".", "_").upper()
             )
             file.write(f"   {top_level_section_variable_name_prefix}_START = .;\n")
+            file.write(
+                f"   {section.get_top_level_name()} {section.get_type()} :  AT({hex(section.get_phys_start_address())}) {{\n"
+            )
             for section_name in section.get_subsections():
                 assert section_name not in defined_sections
                 file.write(f"      *({section_name})\n")
                 defined_sections.append(section_name)
             if section.is_padded():
                 file.write("      BYTE(0)\n")
-            file.write(f"   }} : {section.get_top_level_name()}\n\n")
-            file.write(f"   . = {hex(section.get_start_address() + section.get_size() - 1)};\n")
+            file.write(
+                f"   }} > {top_level_section_variable_name_prefix} : {section.get_top_level_name()}\n"
+            )
+            file.write(
+                f"   . = {hex(section.get_virt_start_address() + section.get_size() - 1)};\n"
+            )
             file.write(f"  {top_level_section_variable_name_prefix}_END = .;\n")
-        file.write("/DISCARD/ : { *(" + " ".join(self.get_discard_sections()) + ") }\n")
+
+        file.write("\n\n/DISCARD/ : { *(" + " ".join(self.get_discard_sections()) + ") }\n")
         file.write("\n}\n")
 
         # Specify separate load segments in the program headers for the

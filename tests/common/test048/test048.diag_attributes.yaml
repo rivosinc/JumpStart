@@ -1,0 +1,82 @@
+# SPDX-FileCopyrightText: 2023 - 2025 Rivos Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+
+satp_mode: "sv39"
+
+enable_virtualization: true
+
+mappings:
+  -
+    va: 0xd0020000
+    pa: 0xd0020000
+    xwr: "0b101"
+    page_size: 0x1000
+    num_pages: 1
+    pma_memory_type: "wb"
+    linker_script_section: ".text"
+  -
+    va: 0xd0022000
+    pa: 0xd0022000
+    xwr: "0b011"
+    page_size: 0x1000
+    num_pages: 1
+    pma_memory_type: "wb"
+    linker_script_section: ".data"
+
+  -
+    va: 0xd0023000
+    gpa: 0xd0023000
+    xwr: "0b101"
+    valid: "0b1"
+    page_size: 0x1000
+    num_pages: 1
+    pma_memory_type: "wb"
+  -
+    gpa: 0xd0023000
+    spa: 0xd0023000
+    xwr: "0b101"
+    umode: "0b1"
+    valid: "0b1"
+    page_size: 0x1000
+    num_pages: 1
+    pma_memory_type: "wb"
+    linker_script_section: ".text.vsmode"
+
+  -
+    va: 0xd0024000
+    gpa: 0xd0024000
+    xwr: "0b101"
+    umode: "0b1"
+    valid: "0b1"
+    page_size: 0x1000
+    num_pages: 2
+    pma_memory_type: "wb"
+  -
+    gpa: 0xd0024000
+    spa: 0xd0024000
+    xwr: "0b101"
+    umode: "0b1"
+    valid: "0b1"
+    page_size: 0x1000
+    num_pages: 2
+    pma_memory_type: "wb"
+    linker_script_section: ".text.vumode"
+  -
+    va: 0xd0026000
+    gpa: 0xd0026000
+    xwr: "0b011"
+    umode: "0b1"
+    page_size: 0x1000
+    num_pages: 1
+    pma_memory_type: "wb"
+
+  -
+    gpa: 0xd0026000
+    spa: 0xd0026000
+    xwr: "0b011"
+    umode: "0b1"
+    page_size: 0x1000
+    num_pages: 1
+    pma_memory_type: "wb"
+    linker_script_section: ".data.vumode"

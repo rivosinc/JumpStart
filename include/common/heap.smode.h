@@ -1,30 +1,69 @@
-// SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
-//
-// SPDX-License-Identifier: Apache-2.0
+/*
+ * SPDX-FileCopyrightText: 2025 Rivos Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+// SPDX-FileCopyrightText: 2016 by Lukasz Janyst <lukasz@jany.st>
 
 #pragma once
 
+#include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 //------------------------------------------------------------------------------
-//! Allocate memory on the heap
+// Malloc helper structs
 //------------------------------------------------------------------------------
-void *malloc(size_t size);
+struct memchunk {
+  struct memchunk *next;
+  uint64_t size;
+};
+
+typedef struct memchunk memchunk;
 
 //------------------------------------------------------------------------------
-//! Free the memory
+// Heap Constants
 //------------------------------------------------------------------------------
-void free(void *ptr);
-
-void *calloc(size_t nmemb, size_t size);
+// Allocating anything less than 8 bytes is kind of pointless, the
+// book-keeping overhead is too big.
+//------------------------------------------------------------------------------
+#define MIN_HEAP_ALLOCATION_SIZE 8
+#define PER_HEAP_ALLOCATION_METADATA_SIZE                                      \
+  sizeof(struct memchunk) // Per allocation metadata size
 
 void *memalign(size_t alignment, size_t size);
-
-void *memset(void *s, int c, size_t n);
-
-void *memcpy(void *dest, const void *src, size_t n);
 
 //------------------------------------------------------------------------------
 //! Debug Features
 //------------------------------------------------------------------------------
 void print_heap(void);
+
+//------------------------------------------------------------------------------
+// Memory type and backing memory specific versions
+//------------------------------------------------------------------------------
+void *malloc_from_memory(size_t size, uint8_t backing_memory,
+                         uint8_t memory_type);
+
+void free_from_memory(void *ptr, uint8_t backing_memory, uint8_t memory_type);
+
+void *calloc_from_memory(size_t nmemb, size_t size, uint8_t backing_memory,
+                         uint8_t memory_type);
+
+void *memalign_from_memory(size_t alignment, size_t size,
+                           uint8_t backing_memory, uint8_t memory_type);
+
+void setup_heap(uint64_t heap_start, uint64_t heap_end, uint8_t backing_memory,
+                uint8_t memory_type);
+
+void deregister_heap(uint8_t backing_memory, uint8_t memory_type);
+
+size_t get_heap_size(uint8_t backing_memory, uint8_t memory_type);
+
+//------------------------------------------------------------------------------
+// Helper functions to convert numeric values to readable strings
+//------------------------------------------------------------------------------
+const char *backing_memory_to_string(uint8_t backing_memory);
+const char *memory_type_to_string(uint8_t memory_type);
+
+bool is_valid_heap(uint8_t backing_memory, uint8_t memory_type);

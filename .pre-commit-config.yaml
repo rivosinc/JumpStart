@@ -1,10 +1,10 @@
-# SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
+# SPDX-FileCopyrightText: 2023 - 2025 Rivos Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks.git
-    rev: v4.6.0
+    rev: v5.0.0
     hooks:
       - id: check-added-large-files
       - id: check-ast
@@ -24,43 +24,43 @@ repos:
         args: [--markdown-linebreak-ext=md]
 
   - repo: https://github.com/PyCQA/isort
-    rev: 5.13.2
+    rev: 6.0.1
     hooks:
       - id: isort
 
   - repo: https://github.com/psf/black-pre-commit-mirror
-    rev: 24.4.2
+    rev: 25.1.0
     hooks:
       - id: black
 
   - repo: https://github.com/ikamensh/flynt/
-    rev: 1.0.1
+    rev: 1.0.2
     hooks:
       - id: flynt
 
   - repo: https://github.com/asottile/pyupgrade
-    rev: v3.16.0
+    rev: v3.20.0
     hooks:
       - id: pyupgrade
 
   - repo: https://github.com/pre-commit/mirrors-clang-format
-    rev: v16.0.6
+    rev: v20.1.8
     hooks:
       - id: clang-format
 
   # pull mirror of https://github.com/fsfe/reuse-tool
   - repo: https://github.com/rivosinc/reuse-tool
-    rev: '092e17c7287dad33a3da7fde22185dea29698810'
+    rev: 'da430ed605e06460b020a75410d62ddb7fc9a616'
     hooks:
       - id: reuse-annotate
         args:
-          - -c=Rivos Inc.
-          - -l=Apache-2.0
+          - -c Rivos Inc.
+          - -l Apache-2.0
           - --merge-copyrights
           - --skip-unrecognised
       - id: reuse
 
   - repo: https://github.com/pycqa/flake8
-    rev: 6.1.0
+    rev: 7.1.0
     hooks:
       - id: flake8

@@ -1,57 +1,46 @@
-# SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
+/*
+ * SPDX-FileCopyrightText: 2025 Rivos Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+# SPDX-FileCopyrightText: 2023 - 2025 Rivos Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 
-#include "jumpstart_defines.h"
 #include "cpu_bits.h"
 
 # This section should fall into the initial 4K page set up.
-.section .jumpstart.text.mmode.init.enter, "ax"
+.section .jumpstart.cpu.text.mmode.init.enter, "ax"
 
 .global _mmode_start
 _mmode_start:
   la t0, mtvec_trap_handler
   csrw mtvec, t0
 
-  csrr t0, mhartid
+  csrr a0, mhartid
 
-  li t1, MAX_NUM_HARTS_SUPPORTED
-  bge t0, t1, just_wfi_from_mmode
+  # Outputs: a0: cpu id
+  jal get_cpu_id
 
-  # Set up the stack.
-  # S-mode and M-mode share the same stack.
-  li  t1, (NUM_PAGES_PER_HART_FOR_SMODE_STACK * SMODE_STACK_PAGE_SIZE)
-  mul t3, t0, t1
-  la  t2, smode_stack_top
-  add sp, t2, t3
-  add sp, sp, t1 # We want the stack bottom.
+  # Checks if this cpu is in the active cpu mask and parks inactive cpus.
+  # Returns if the current CPU is in the active cpu mask.
+  # Inputs: a0: cpu id
+  jal handle_inactive_cpus
 
-  mv  fp, sp
+  # Inputs: a0: cpu id
+  jal setup_stack
 
-  li t1, BATCH_MODE
-  beqz t1, 1f
+  # Inputs: a0: cpu id
+  #         a1: mhartid
+  csrr a1, mhartid
+  jal setup_thread_attributes_from_mmode
 
-  # When running in batch mode, have the primary hart save away it's
-  # return address.
-  # This return address is common to all the harts and allows all
-  # harts to exit back to where they came from.
-  csrr t0, mhartid
-  li t1, PRIMARY_HART_ID
-  bne t0, t1, 1f
-  la t1, batch_mode_exit_address
-  sd ra, (t1)
-  fence rw, rw
-  la t1, batch_mode_exit_lock
-  sd zero, (t1)
+  # Any C code we run can be compiled down to use floating point and
+  # vector instructions so we need to make sure that we have these enabled.
+  jal enable_mmode_float_and_vector_instructions
 
-1:
-  # The mmode init code is expected to fit in a 4KB page for Rivos internal
-  # reasons.
-  la t0, _JUMPSTART_TEXT_MMODE_INIT_BOUNDARY
-  la t1, _JUMPSTART_TEXT_MMODE_INIT_ENTER_START
-  sub t2, t0, t1
-  li t3, 0x1000 # 4KB
-  bgt t2, t3, jumpstart_mmode_fail
+  MMODE_ROLE_ENABLE
 
   # Run the setup_mmode before running any more code. Only the first
   # 4K page of mmode code is set up to run right now. setup_mmode()
@@ -60,45 +49,20 @@ _mmode_start:
 
   jal reset_csrs
 
-  csrr  t0, mhartid
-
-  # Check if this hart is in the active hart mask.
-  li a0, ACTIVE_HART_MASK
-  li t1, 1
-  sll t1, t1, t0
-  and a0, a0, t1
-  bnez a0, 2f
-
-  # Inactive hart.
-
-  # If running in batch mode, return the inactive hart.
-  li t2, BATCH_MODE
-  bnez t2, batch_mode_return_unused_hart
-
-  # Send the hart to WFI if not running in batch mode.
-  j just_wfi_from_mmode
-
-2:
-  # Have the hart mark itself as running.
-  la t1, hart_status_tracker
+  # Have the cpu mark itself as running.
+  GET_THREAD_ATTRIBUTES_CPU_ID(t0)
+  la t1, cpu_status_tracker
   add t1, t1, t0
-  li t2, HART_RUNNING
+  li t2, CPU_RUNNING
   sb t2, 0(t1)
 
-  mv a0, t0
-  jal setup_thread_attributes_from_mmode
+  jal enable_mmode_interrupts
 
-  # Enable interrupts in machine mode.
-  li t0, MSTATUS_MIE
-  csrs mstatus, t0
-  li t0, MSTATUS_MPIE
-  csrc mstatus, t0
-  li t0, MIP_MEIP
-  csrw mie, t0
+  jal program_mstateen
+  jal program_hstateen
 
   jal program_menvcfg
-
-  jal enable_mmode_float_and_vector_instructions
+  jal program_mseccfg
 
   jal setup_smode_trap_delegation
 
@@ -112,7 +76,69 @@ _mmode_start:
 1:
   j jump_to_main
 
-.section .jumpstart.text.mmode, "ax"
+# Inputs:
+#   a0: cpu id
+.global setup_stack
+setup_stack:
+  # Set up the stack.
+  # S-mode and M-mode share the same stack.
+  li  t1, (NUM_PAGES_PER_CPU_FOR_PRIVILEGED_STACK * PRIVILEGED_STACK_PAGE_SIZE)
+  mul t3, a0, t1
+  la  t2, privileged_stack_top
+  add sp, t2, t3
+  add sp, sp, t1 # We want the stack bottom.
+
+  mv  fp, sp
+
+  ret
+
+.global enable_mmode_float_and_vector_instructions
+enable_mmode_float_and_vector_instructions:
+  li t0, (MSTATUS_VS | MSTATUS_FS)
+  csrrs t1, mstatus, t0
+
+  # Set vtype.vill=0 by running a dummy vsetvl instruction.
+  # There are vector instructions (such as vmv1r.v) that
+  # can run without running a vsetvl instruction first so we
+  # need to make sure that the reset value of vill=1 has been cleared.
+  vsetivli        zero, 8, e8, m1, ta, ma
+
+  ret
+
+# Input: a0: logical cpu id
+.global handle_inactive_cpus
+handle_inactive_cpus:
+  # Check if this cpu is in the active cpu mask.
+  li t2, ACTIVE_CPU_MASK
+  li t1, 1
+  sll t1, t1, a0
+  and t2, t2, t1
+  bnez t2, 1f
+
+  # Inactive cpu.
+  # Send the cpu to WFI.
+  j just_wfi_from_mmode
+
+1:
+  ret
+
+
+.section .jumpstart.cpu.text.mmode, "ax"
+
+.global enable_mmode_interrupts
+enable_mmode_interrupts:
+  # Enable interrupts in machine mode.
+  li t0, MSTATUS_MDT | MSTATUS_SDT
+  csrc mstatus, t0
+  li t0, MSTATUS_MIE
+  csrs mstatus, t0
+  li t0, MSTATUS_MPIE
+  csrc mstatus, t0
+  li t0, MIP_MEIP
+  csrw mie, t0
+
+  ret
+
 
 .global setup_smode_trap_delegation
 setup_smode_trap_delegation:
@@ -130,7 +156,7 @@ setup_smode_trap_delegation:
             (1 << RISCV_EXCP_INST_PAGE_FAULT) | \
             (1 << RISCV_EXCP_LOAD_PAGE_FAULT) | \
             (1 << RISCV_EXCP_STORE_PAGE_FAULT) | \
-            (1 << RISCV_EXCP_DATA_CORRUPTION_EXCEPTION) | \
+            (1 << RISCV_EXCP_HW_ERR) | \
             (1 << RISCV_EXCP_INST_GUEST_PAGE_FAULT) | \
             (1 << RISCV_EXCP_LOAD_GUEST_ACCESS_FAULT) | \
             (1 << RISCV_EXCP_VIRT_INSTRUCTION_FAULT) | \
@@ -176,6 +202,18 @@ program_henvcfg:
 
   ret
 
+.global program_mstateen
+program_mstateen:
+  li t0, (SMSTATEEN0_HSCONTXT | SMSTATEEN0_IMSIC | SMSTATEEN0_AIA | SMSTATEEN0_SVSLCT | SMSTATEEN0_HSENVCFG | SMSTATEEN_STATEEN | SMSTATEEN0_CTR)
+  csrw mstateen0, t0
+  ret
+
+.global program_hstateen
+program_hstateen:
+  li t0, (SMSTATEEN0_IMSIC | SMSTATEEN0_AIA | SMSTATEEN0_SVSLCT)
+  csrw hstateen0, t0
+  ret
+
 .global program_menvcfg
 program_menvcfg:
   # CBIE: Cache Block Invalidate instruction Enable
@@ -184,9 +222,15 @@ program_menvcfg:
   # PMBTE: Enables Svpbmt extension for S-mode and G-stage address translation.
   #        i.e., for page tables pointed to by satp or hgatp.
   # CDE: Counter Delegation Enable
-  li t0, (MENVCFG_CBIE | MENVCFG_CBCFE | MENVCFG_CBZE | MENVCFG_PBMTE | MENVCFG_CDE)
+  li t0, (MENVCFG_CBIE | MENVCFG_CBCFE | MENVCFG_CBZE | MENVCFG_PBMTE | MENVCFG_CDE | MENVCFG_STCE)
   csrrs t1, menvcfg, t0
 
+  ret
+
+.global program_mseccfg
+program_mseccfg:
+  li t0, MSECCFG_SSEED | MSECCFG_USEED
+  csrs mseccfg, t0
   ret
 
 .global reset_csrs
@@ -204,13 +248,6 @@ reset_csrs:
   csrw sip, zero
   csrw stvec, zero
   STIMER_RESET
-
-  ret
-
-.global enable_mmode_float_and_vector_instructions
-enable_mmode_float_and_vector_instructions:
-  li t0, (MSTATUS_VS | MSTATUS_FS)
-  csrrs t1, mstatus, t0
 
   ret
 
@@ -234,10 +271,13 @@ jump_to_main:
   li t0, START_TEST_IN_MMODE
   bnez t0, jump_to_main_in_mmode
 
+#ifdef SMODE_MODE_ENABLED
   jal delegate_mmode_resources_to_smode
-
   la a0, main
   jal run_function_in_smode
+#else
+  li a0, DIAG_FAILED
+#endif
 
   j _mmode_end
 
@@ -246,11 +286,14 @@ jump_to_main:
 handle_env_call_from_smode:
   # a7 will contain the syscall number
 
+#ifdef SMODE_MODE_ENABLED
   li t0, SYSCALL_RUN_FUNC_IN_SMODE_COMPLETE
   beq a7, t0, handle_syscall_run_func_in_smode_complete
+#endif
 
   j jumpstart_mmode_fail
 
+#ifdef SMODE_MODE_ENABLED
 handle_syscall_run_func_in_smode_complete:
   # This is the return to machine path for run_function_in_smode().
 
@@ -348,6 +391,8 @@ run_function_in_smode_return_point:
   addi  sp, sp, 16
   ret
 
+#endif
+
 # The mtvec.base must always be 4 byte aligned.
 .align 2
 .global mtvec_trap_handler
@@ -359,11 +404,9 @@ mtvec_trap_handler:
   li  gp, PRV_M
   SET_THREAD_ATTRIBUTES_CURRENT_MODE(gp)
 
-  # We don't currently expect mmode to handle a trap taken from VS mode.
-  # Once we do the following code will need to be updated to save and restore
-  # the V bit value across the trap handler.
-  GET_THREAD_ATTRIBUTES_CURRENT_V_BIT(gp)
-  bnez gp, jumpstart_mmode_fail
+  # We could be coming from VS or VU mode. Clear the V bit.
+  li  gp, 0
+  SET_THREAD_ATTRIBUTES_CURRENT_V_BIT(gp)
 
   # We just need to check MSB of MPP field here to determine if we came from
   # M or S mode. U mode is also handled in S mode path.
@@ -392,12 +435,27 @@ save_context:
   csrr t0, mepc
   sd t0, EPC_OFFSET_IN_SAVE_REGION(gp)
 
-  csrr t0, mstatus
-  sd t0, STATUS_OFFSET_IN_SAVE_REGION(gp)
-
   csrr t0, hstatus
   sd t0, HSTATUS_OFFSET_IN_SAVE_REGION(gp)
 
+  csrr t0, mstatus
+  sd t0, STATUS_OFFSET_IN_SAVE_REGION(gp)
+
+  # We just need to check the SPP field here to determine if we came from
+  # S or U mode.
+  bexti t0, t0, MSTATUS_MPP_SHIFT
+  bnez  t0, 1f
+
+  # We're handling a trap from umode.
+  # Switch to the S-mode stack as we can't use the Umode stack.
+  # We get the smode stack from the smode context that was saved
+  # when we ran run_function_in_umode() - the context just prior to this.
+  GET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
+  addi t0, gp, -REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES
+  ld sp, SP_OFFSET_IN_SAVE_REGION(t0)
+  GET_THREAD_ATTRIBUTES_MMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
+
+1:
   # Point to the address of the next context save region for the next
   # trap handler.
   addi gp, gp, REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES
@@ -407,8 +465,11 @@ save_context:
   csrr  a0, mcause
   call  get_mmode_trap_handler_override
 
-  beqz  a0, check_for_env_call_requests
+  bnez  a0, run_registered_trap_handler
 
+  j check_for_env_call_requests
+
+run_registered_trap_handler:
   # Jump to the registered trap handler.
   # TODO: Do we need to pass any arguments to the trap handler?
   #       If so, we need to restore them from the context save region.
@@ -432,14 +493,18 @@ restore_context:
   ld t0, STATUS_OFFSET_IN_SAVE_REGION(gp)
   csrw mstatus, t0
 
-  bexti t0, t0, MSTATUS_MPP_MSB
-  bnez  t0, restore_all_gprs
+  # We could be returning back to VS or VU mode. Set the V bit.
+  bexti t1, t0, MSTATUS_MPV_SHIFT
+  SET_THREAD_ATTRIBUTES_CURRENT_V_BIT(t1)
 
-restore_smode_context:
-  MMODE_ROLE_DISABLE
+  srli t0, t0, MSTATUS_MPP_SHIFT
+  andi t0, t0, 3
+  li   t1, PRV_M
+  beq  t0, t1, restore_all_gprs
 
-  li  t0, PRV_S
+restore_s_u_mode_context:
   SET_THREAD_ATTRIBUTES_CURRENT_MODE(t0)
+  MMODE_ROLE_DISABLE
 
 restore_all_gprs:
   RESTORE_ALL_GPRS
@@ -497,3 +562,12 @@ set_mepc_for_current_exception:
   addi t0, t0, -REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES
   sd a0, EPC_OFFSET_IN_SAVE_REGION(t0)
   ret
+
+.section .jumpstart.cpu.text.mmode.init.end, "ax"
+
+// The address of this function will be used to find the end of the mmode init
+// section.
+.global mmode_init_4k_boundary
+mmode_init_4k_boundary:
+    wfi
+    j mmode_init_4k_boundary

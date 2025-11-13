@@ -1,10 +1,15 @@
-# SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
+/*
+ * SPDX-FileCopyrightText: 2025 Rivos Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+# SPDX-FileCopyrightText: 2023 - 2025 Rivos Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 
-#include "jumpstart_defines.h"
 
-.section .jumpstart.text.umode, "ax"
+.section .jumpstart.cpu.text.umode, "ax"
 
 # Inputs:
 #   a0: address of the function to run.

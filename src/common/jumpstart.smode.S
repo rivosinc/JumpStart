@@ -1,11 +1,16 @@
-# SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
+/*
+ * SPDX-FileCopyrightText: 2025 Rivos Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+# SPDX-FileCopyrightText: 2023 - 2025 Rivos Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 
-#include "jumpstart_defines.h"
 #include "cpu_bits.h"
 
-.section .jumpstart.text.smode, "ax"
+.section .jumpstart.cpu.text.smode, "ax"
 
 .global setup_smode
 setup_smode:
@@ -22,9 +27,11 @@ setup_smode:
 
   jal setup_mmu_from_smode
 
-  jal setup_heap
-
   jal setup_uart
+
+  jal setup_default_heap
+
+  jal register_default_smode_exception_handlers
 
   li t0, 1
   SET_THREAD_ATTRIBUTES_SMODE_SETUP_DONE(t0)
@@ -52,7 +59,7 @@ setup_smode_trap_vector:
 .global setup_smode_interrupt_enables
 setup_smode_interrupt_enables:
   # Enable interrupts.
-  li t0, SSTATUS_SIE | SSTATUS_SPP
+  li t0, SSTATUS_SIE | SSTATUS_SPIE
   csrs sstatus, t0
 
   # Enable external interrupts.
@@ -182,6 +189,9 @@ disable_mmu_from_smode:
 .align 2
 .global stvec_trap_handler
 stvec_trap_handler:
+  # Save gp as we use it in this handler.
+  csrw sscratch, gp
+
   li  gp, PRV_S
   SET_THREAD_ATTRIBUTES_CURRENT_MODE(gp)
 
@@ -253,14 +263,18 @@ restore_context:
   ld t0, EPC_OFFSET_IN_SAVE_REGION(gp)
   csrw sepc, t0
 
+  ld t0, HSTATUS_OFFSET_IN_SAVE_REGION(gp)
+  csrw hstatus, t0
+
+  # We could be returning back to VS or VU mode. Set the V bit.
+  bexti t0, t0, HSTATUS_SPV_SHIFT
+  SET_THREAD_ATTRIBUTES_CURRENT_V_BIT(t0)
+
   ld t0, STATUS_OFFSET_IN_SAVE_REGION(gp)
   csrw sstatus, t0
 
   bexti t0, t0, SSTATUS_SPP_SHIFT
   beqz  t0, restore_umode_context
-
-  ld t0, HSTATUS_OFFSET_IN_SAVE_REGION(gp)
-  csrw hstatus, t0
 
   j restore_all_gprs
 
@@ -277,6 +291,9 @@ restore_all_gprs:
   GET_THREAD_ATTRIBUTES_NUM_CONTEXT_SAVES_REMAINING_IN_SMODE(gp)
   addi gp, gp, 1
   SET_THREAD_ATTRIBUTES_NUM_CONTEXT_SAVES_REMAINING_IN_SMODE(gp)
+
+  # Restore gp as we had saved it at the start of this handler.
+  csrr gp, sscratch
 
 # The return_from_stvec_trap_handler label is referenced in control transfer
 # records diag so mark it as global.
@@ -297,8 +314,10 @@ check_for_env_call_requests:
 handle_env_call_from_umode:
   # a7 will contain the syscall number
 
+#ifdef UMODE_MODE_ENABLED
   li t0, SYSCALL_RUN_FUNC_IN_UMODE_COMPLETE
   beq a7, t0, handle_syscall_run_func_in_umode_complete
+#endif
 
   j jumpstart_smode_fail
 
@@ -309,45 +328,6 @@ handle_env_call_from_vsmode:
   beq a7, t0, handle_syscall_run_func_in_vsmode_complete
 
   j jumpstart_smode_fail
-
-handle_syscall_run_func_in_umode_complete:
-  # This is the return to supervisor path for run_function_in_umode().
-
-  # Re-enable interrupts that were disabled in run_function_in_umode().
-  # Set SPIE to 1, on sret this will set SIE to 1.
-  li  t0, (PRV_S << SSTATUS_SPP_SHIFT) | SSTATUS_SPIE
-  csrs  sstatus, t0
-
-  la  t0, run_function_in_umode_return_point
-  csrw sepc, t0
-
-  # Point to the address of the context save region we used when we
-  # took the RUN_FUNC_IN_UMODE_COMPLETE syscall.
-  GET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
-  addi gp, gp, -REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES
-
-  # The return value from the umode function is in the umode
-  # context saved for a0 when we took the ecall exception from umode to
-  # smode.
-  ld t0, A0_OFFSET_IN_SAVE_REGION(gp)
-
-  # Place it in the a0 location for the mmode context we saved before calling
-  # run_function_in_umode().
-  addi gp, gp, -REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES
-  sd t0, A0_OFFSET_IN_SAVE_REGION(gp)
-
-  # Restore S mode context from before the run_function_in_umode() call.
-  RESTORE_ALL_GPRS
-
-  # This location is now free to be used by the next trap handler entry.
-  SET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
-
-  # We've freed 2 context saves.
-  GET_THREAD_ATTRIBUTES_NUM_CONTEXT_SAVES_REMAINING_IN_SMODE(gp)
-  addi gp, gp, 2
-  SET_THREAD_ATTRIBUTES_NUM_CONTEXT_SAVES_REMAINING_IN_SMODE(gp)
-
-  sret
 
 handle_syscall_run_func_in_vsmode_complete:
   # This is the return to supervisor path for run_function_in_vsmode().
@@ -379,6 +359,46 @@ handle_syscall_run_func_in_vsmode_complete:
   sd t0, A0_OFFSET_IN_SAVE_REGION(gp)
 
   # Restore S mode context from before the run_function_in_vsmode() call.
+  RESTORE_ALL_GPRS
+
+  # This location is now free to be used by the next trap handler entry.
+  SET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
+
+  # We've freed 2 context saves.
+  GET_THREAD_ATTRIBUTES_NUM_CONTEXT_SAVES_REMAINING_IN_SMODE(gp)
+  addi gp, gp, 2
+  SET_THREAD_ATTRIBUTES_NUM_CONTEXT_SAVES_REMAINING_IN_SMODE(gp)
+
+  sret
+
+#ifdef UMODE_MODE_ENABLED
+handle_syscall_run_func_in_umode_complete:
+  # This is the return to supervisor path for run_function_in_umode().
+
+  # Re-enable interrupts that were disabled in run_function_in_umode().
+  # Set SPIE to 1, on sret this will set SIE to 1.
+  li  t0, (PRV_S << SSTATUS_SPP_SHIFT) | SSTATUS_SPIE
+  csrs  sstatus, t0
+
+  la  t0, run_function_in_umode_return_point
+  csrw sepc, t0
+
+  # Point to the address of the context save region we used when we
+  # took the RUN_FUNC_IN_UMODE_COMPLETE syscall.
+  GET_THREAD_ATTRIBUTES_SMODE_REG_CONTEXT_SAVE_REGION_ADDRESS(gp)
+  addi gp, gp, -REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES
+
+  # The return value from the umode function is in the umode
+  # context saved for a0 when we took the ecall exception from umode to
+  # smode.
+  ld t0, A0_OFFSET_IN_SAVE_REGION(gp)
+
+  # Place it in the a0 location for the mmode context we saved before calling
+  # run_function_in_umode().
+  addi gp, gp, -REG_CONTEXT_SAVE_REGION_SIZE_IN_BYTES
+  sd t0, A0_OFFSET_IN_SAVE_REGION(gp)
+
+  # Restore S mode context from before the run_function_in_umode() call.
   RESTORE_ALL_GPRS
 
   # This location is now free to be used by the next trap handler entry.
@@ -430,8 +450,8 @@ run_function_in_umode:
   csrc sstatus, t0
 
   # Switch to the U-mode stack.
-  GET_THREAD_ATTRIBUTES_HART_ID(t0)
-  li  t1, (NUM_PAGES_PER_HART_FOR_UMODE_STACK * UMODE_STACK_PAGE_SIZE)
+  GET_THREAD_ATTRIBUTES_CPU_ID(t0)
+  li  t1, (NUM_PAGES_PER_CPU_FOR_UMODE_STACK * UMODE_STACK_PAGE_SIZE)
   mul t0, t0, t1
   la  t2, umode_stack_top
   add sp, t2, t0
@@ -452,6 +472,9 @@ run_function_in_umode_return_point:
   ld  fp, 0(sp)
   addi  sp, sp, 16
   ret
+
+#endif
+
 
 .global just_wfi_from_smode
 just_wfi_from_smode:

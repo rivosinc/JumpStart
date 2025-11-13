@@ -1,6 +1,8 @@
-// SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
-//
-// SPDX-License-Identifier: Apache-2.0
+/*
+ * SPDX-FileCopyrightText: 2025 Rivos Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 #include "cpu_bits.h"
 #include "jumpstart.h"
@@ -51,7 +53,7 @@ uint8_t c_check_passed_in_arguments(uint8_t a0, uint8_t a1, uint8_t a2,
 }
 
 int main(void) {
-  if (get_thread_attributes_hart_id_from_smode() != 0) {
+  if (get_thread_attributes_cpu_id_from_smode() != 0) {
     return DIAG_FAILED;
   }
 
@@ -61,6 +63,10 @@ int main(void) {
   }
 
   if (get_thread_attributes_current_mode_from_smode() != PRV_S) {
+    return DIAG_FAILED;
+  }
+
+  if (NUM_PAGES_PER_CPU_FOR_JUMPSTART_UMODE_STACK != 2) {
     return DIAG_FAILED;
   }
 

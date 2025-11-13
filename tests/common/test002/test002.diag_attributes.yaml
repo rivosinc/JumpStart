@@ -1,8 +1,10 @@
-# SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
+# SPDX-FileCopyrightText: 2023 - 2025 Rivos Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 
 satp_mode: "sv39"
+
+num_pages_per_cpu_for_jumpstart_umode_stack: 2
 
 mappings:
   -

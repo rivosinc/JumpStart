@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
+SPDX-FileCopyrightText: 2023 - 2025 Rivos Inc.
 
 SPDX-License-Identifier: Apache-2.0
 -->
@@ -9,20 +9,20 @@ SPDX-License-Identifier: Apache-2.0
 `test021` is a 2P diag that has `CPU0` update the page table mapping of a page in memory by changing the valid bit from `0` to `1`. `CPU1` reads from the page before and after the valid bit is set to `1`. The test verifies that the read from `CPU1` fails when the valid bit is `0` and eventually succeeds after the valid bit is set to `1`.
 
 The diag comprises of 2 source files:
-* [`test021.c`](../tests/common/test021.c)
-* [`test021.S`](../tests/common/test021.S)
+* [`test021.c`](../tests/common/test021/test021.c)
+* [`test021.S`](../tests/common/test021/test021.S)
 
 and a diag attributes file:
-* [`test021.diag_attributes.yaml`](../tests/common/test021.diag_attributes.yaml)
+* [`test021.diag_attributes.yaml`](../tests/common/test021/test021.diag_attributes.yaml)
 
 ## Diag Attributes YAML file
 
-[`test021.diag_attributes.yaml`](../tests/common/test021.diag_attributes.yaml) contains attributes that describe the diag. JumpStart uses these attributes to generate diag specific code, data structures and files.
+[`test021.diag_attributes.yaml`](../tests/common/test021/test021.diag_attributes.yaml) contains attributes that describe the diag. JumpStart uses these attributes to generate diag specific code, data structures and files.
 
 ```yaml
-active_hart_mask: "0b11"
+active_cpu_mask: "0b11"
 ```
-This is a 2P diag with CPUs 0 and 1 active. JumpStart will allocate enough space in data structures for 2 CPUs. Any CPUs not specified in the active_hart_mask will be considered inactive and sent to wfi if encountered.
+This is a 2P diag with CPUs 0 and 1 active. JumpStart will allocate enough space in data structures for 2 CPUs. Any CPUs not specified in the active_cpu_mask will be considered inactive and sent to wfi if encountered.
 
 ```yaml
 satp_mode: "sv39"
@@ -82,11 +82,11 @@ The diag additionally defines a `.data.diag` section at `0x80006000`. The `valid
 
 By default, the JumptStart boot code will start in machine mode, initialize the system (MMU, interrupts, exception handling etc) and then jump to the diag's `main` function in Supervisor mode.
 
-[`test021.c`](../tests/common/test021.c) contains `main()` that the JumpStart boot code will jump to after initializing the system.
+[`test021.c`](../tests/common/test021/test021.c) contains `main()` that the JumpStart boot code will jump to after initializing the system.
 
 ```c
-  uint8_t hart_id = get_thread_attributes_hart_id_from_smode();
-  if (hart_id > 1) {
+  uint8_t cpu_id = get_thread_attributes_cpu_id_from_smode();
+  if (cpu_id > 1) {
     return DIAG_FAILED;
   }
 ```
@@ -112,7 +112,7 @@ struct translation_info {
 };
 ```
 
-The `data_area` variable is a global variable defined in the `.data.diag` section by [`test021.S`](../tests/common/test021.S):
+The `data_area` variable is a global variable defined in the `.data.diag` section by [`test021.S`](../tests/common/test021/test021.S):
 
 ```asm
 .section .data.diag, "wa", @progbits
@@ -131,14 +131,14 @@ data_area:
 The diag sanity checks that the valid bit is not set for the leaf page table entry for this translation. `walk_successful` will be `0` as the translation encountered the invalid leaf page table entry but `levels_traversed` will be `3` as it would have traversed 3 levels to get to the leaf page table entry.
 
 ```c
-  if (hart_id == 1) {
+  if (cpu_id == 1) {
     register_smode_trap_handler_override(
-        SCAUSE_EC_LOAD_PAGE_FAULT, (uint64_t)(&hart1_load_page_fault_handler));
+        SCAUSE_EC_LOAD_PAGE_FAULT, (uint64_t)(&cpu1_load_page_fault_handler));
 ..
 ..
 ```
 
-CPU1 registers a supervisor mode trap handler override (`hart1_load_page_fault_handler()`) for the load page fault exception using the `register_smode_trap_handler_override()` API provided by JumpStart.
+CPU1 registers a supervisor mode trap handler override (`cpu1_load_page_fault_handler()`) for the load page fault exception using the `register_smode_trap_handler_override()` API provided by JumpStart.
 
 ```c
     if (is_load_allowed_to_data_area() == 1) {
@@ -148,7 +148,7 @@ CPU1 registers a supervisor mode trap handler override (`hart1_load_page_fault_h
 
 `CPU1` calls `is_load_allowed_to_data_area()` to check that the reads to the data area are not allowed.
 
-`is_load_allowed_to_data_area()` is defined in [`test021.S`](../tests/common/test021.S):
+`is_load_allowed_to_data_area()` is defined in [`test021.S`](../tests/common/test021/test021.S):
 
 ```asm
 .section .text, "ax", @progbits
@@ -168,10 +168,10 @@ is_load_allowed_to_data_area:
 ..
 ..
 ```
-`is_load_allowed_to_data_area()` issues a load to the `data_area` variable and returns `1` if the load succeeds. If the load faults, the load page fault exception handler `hart1_load_page_fault_handler()` simply skips over the faulting instruction:
+`is_load_allowed_to_data_area()` issues a load to the `data_area` variable and returns `1` if the load succeeds. If the load faults, the load page fault exception handler `cpu1_load_page_fault_handler()` simply skips over the faulting instruction:
 
 ```c
-void hart1_load_page_fault_handler(void) {
+void cpu1_load_page_fault_handler(void) {
 ..
 ..
   // skip over the faulting load
@@ -181,13 +181,13 @@ void hart1_load_page_fault_handler(void) {
 ```
 
 ```c
-  sync_all_harts_from_smode();
+  sync_all_cpus_from_smode();
 ```
 
 The diag syncs up the cores so that they both complete all the above steps before `CPU0` modifies the page table entry to mark it as valid.
 
 ```c
-  if (hart_id == 0) {
+  if (cpu_id == 0) {
     *((uint64_t *)xlate_info.pte_address[2]) =
         xlate_info.pte_value[2] | PTE_V;
     asm volatile("sfence.vma");

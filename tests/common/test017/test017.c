@@ -1,6 +1,8 @@
-// SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
-//
-// SPDX-License-Identifier: Apache-2.0
+/*
+ * SPDX-FileCopyrightText: 2025 Rivos Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 #include "cpu_bits.h"
 #include "jumpstart.h"
@@ -51,11 +53,14 @@ void test017_illegal_instruction_handler(void) {
 
 int test017_main(void) {
   uint64_t main_function_address = (uint64_t)&main;
+
   if (main_function_address != 0xC0020000) {
+    // If this check is broken then it's likely that some jumpstart runtime
+    // function hasn't been correctly tagged with  __attr_mtext.
     return DIAG_FAILED;
   }
 
-  if (get_thread_attributes_hart_id_from_mmode() != 0) {
+  if (get_thread_attributes_cpu_id_from_mmode() != 0) {
     return DIAG_FAILED;
   }
 

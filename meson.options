@@ -25,15 +25,15 @@ option('diag_generate_disassembly',
        value : false,
        description : 'Generate diag disassembly.')
 
-option('diag_target',
+option('run_target',
        type : 'combo',
-       choices: ['spike', 'qemu'],
+       choices: ['spike'],
        value : 'spike',
        description : 'Target to build the diag for.')
 
-option('jumpstart_source_attribute_overrides',
+option('diag_custom_defines',
        type : 'array',
-       description : 'Overrides specified JumpStart source attributes.')
+       description : 'Custom diag specific defines.')
 
 option('riscv_priv_modes_enabled',
        type : 'array',
@@ -42,23 +42,13 @@ option('riscv_priv_modes_enabled',
 
 option('boot_config',
        type : 'combo',
-       choices: ['fw-none', 'fw-m', 'fw-sbi'],
+       choices: ['fw-none'],
        value : 'fw-none',
        description : 'Select Fw to run before handover to jumpstart. \n' +
                      '- fw-none : expects direct entry into jumpstart from hardware reset without fw. \n' +
-                     '- fw-m    : expects handover to jumpstart in mmode (Non-resident fw). \n' +
-                     '- fw-sbi  : expects handover to jumpstart in smode with sbi interface (Resident M-Mode fw). \n' +
                      'Note: highest privilege level in jumpstart binary will be the entry priv level' )
 
-option('smode_start_address',
-       type : 'string',
-       value : '0x90000000',
-       description : 'Address to place the smode code.')
 
-option('mmode_start_address',
-       type : 'string',
-       value : '0x90000000',
-       description : 'Address to place the mmode code.')
 
 option('spike_binary',
        type : 'string',
@@ -79,20 +69,6 @@ option('spike_timeout',
        value : 30,
        description : 'meson test timeout when running the tests on spike.')
 
-option('qemu_binary',
-       type : 'string',
-       value : '',
-       description : 'QEMU binary to use')
-
-option('qemu_additional_arguments',
-       type : 'array',
-       description : 'Additional arguments to pass to qemu when running the diag.')
-
-option('qemu_timeout',
-       type : 'integer',
-       value : 300,
-       description : 'meson test timeout when running the tests on QEMU.')
-
 option('generate_trace',
        type : 'boolean',
        value : false,
@@ -102,3 +78,18 @@ option('rivos_internal_build',
        type : 'boolean',
        value : false,
        description : 'Build the Rivos internal version of JumpStart.')
+
+option('soc_rev',
+       type : 'combo',
+       choices: ['A0', 'B0'],
+       value : 'A0',
+       description : 'SOC Revision.')
+
+option('mcmodel',
+       type : 'combo',
+       choices: ['medlow', 'medany', 'large'],
+       value : 'medany',
+       description : 'RISC-V code model to use. \n' +
+                     '- medlow : Code and data must be within 2GB of the program counter. \n' +
+                     '- medany : Code and data must be within 2GB of the program counter or global pointer. \n' +
+                     '- large  : No restrictions on code and data placement.')

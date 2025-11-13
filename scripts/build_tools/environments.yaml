@@ -1,0 +1,26 @@
+# SPDX-FileCopyrightText: 2025 Rivos Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+
+# Environment configurations for build_diag.py
+# Each environment can extend other environments to inherit their configurations
+# Child environments override parent configurations
+
+environments:
+  # Build targets
+  # These are not currently used directly so they are hidden.
+  # The run targets extend these.
+
+  fw-none:
+    hidden: true
+    override_meson_options:
+      riscv_priv_modes_enabled: [mmode, smode, umode]
+      boot_config: fw-none
+
+  # Run targets
+  spike:
+    extends: fw-none
+    run_target: spike
+    override_meson_options:
+      diag_generate_disassembly: true
+      generate_trace: true

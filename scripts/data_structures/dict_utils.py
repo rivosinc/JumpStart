@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2024 Rivos Inc.
+# SPDX-FileCopyrightText: 2024 - 2025 Rivos Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -10,9 +10,10 @@ class DictUtils:
         original_dict, overrides_dict, original_is_superset=True, append_to_lists=False
     ):
         if original_is_superset is True:
-            assert set(original_dict.keys()).issuperset(
-                set(overrides_dict.keys())
-            ), "Overrides contain keys not present in the original dictionary"
+            extra_keys = set(overrides_dict.keys()) - set(original_dict.keys())
+            assert (
+                not extra_keys
+            ), f"Overrides contain keys not present in the original dictionary: {extra_keys}"
 
         if append_to_lists is False:
             original_dict.update(overrides_dict)
@@ -31,6 +32,14 @@ class DictUtils:
         for override in overrides_list:
             # Split at the first '='
             name_value_pair = override.split("=", 1)
+
+            # Check if the split resulted in exactly 2 parts (key and value)
+            if len(name_value_pair) != 2:
+                raise ValueError(
+                    f"Invalid override format: '{override}'. "
+                    f"Expected format is 'key=value', but no '=' found. "
+                    f"Example: 'generate_trace=true'"
+                )
 
             attribute_name = name_value_pair[0]
             attribute_value = name_value_pair[1]

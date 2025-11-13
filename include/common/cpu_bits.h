@@ -1,10 +1,12 @@
-// SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
-//
-// SPDX-License-Identifier: Apache-2.0
+/*
+ * SPDX-FileCopyrightText: 2025 Rivos Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 /* RISC-V ISA constants */
 
-/* This file is based on qemu/target/riscv/cpu_bits.h. Sync if needed. */
+/* This file is based on RISC-V CPU bits definitions. Sync if needed. */
 
 #ifndef TARGET_RISCV_CPU_BITS_H
 #define TARGET_RISCV_CPU_BITS_H
@@ -21,6 +23,7 @@
 #define BIT_MASK(start, end) ((~0ULL >> (64 - ((end) - (start) + 1))) << (start))
 
 #define BIT(nr)                 (1UL << (nr))
+#define BIT_ULL(nr)             (1ULL << (nr))
 #define ALIGN_UP_SIZE(base, size) (((base) + (size) - 1) & ~((uint64_t)(size)-1))
 
 /* Extension context status mask */
@@ -55,6 +58,9 @@
 #define FSR_VXSAT           (0x1 << FSR_VXSAT_SHIFT)
 
 /* Control and Status Registers */
+
+/* zicfiss user ssp csr */
+#define CSR_SSP             0x011
 
 /* User Trap Setup */
 #define CSR_USTATUS         0x000
@@ -153,7 +159,6 @@
 #define CSR_HPMCOUNTER29H   0xc9d
 #define CSR_HPMCOUNTER30H   0xc9e
 #define CSR_HPMCOUNTER31H   0xc9f
-#define CSR_SCOUNTINHIBIT   0x120
 
 /* Machine Timers and Counters */
 #define CSR_MCYCLE          0xb00
@@ -179,6 +184,8 @@
 
 /* 32-bit only */
 #define CSR_MSTATUSH        0x310
+#define CSR_MEDELEGH        0x312
+#define CSR_HEDELEGH        0x612
 
 /* Machine Trap Handling */
 #define CSR_MSCRATCH        0x340
@@ -193,6 +200,8 @@
 /* Machine-Level Window to Indirectly Accessed Registers (AIA) */
 #define CSR_MISELECT        0x350
 #define CSR_MIREG           0x351
+
+/* Machine Indirect Register Alias */
 #define CSR_MIREG2          0x352
 #define CSR_MIREG3          0x353
 #define CSR_MIREG4          0x355
@@ -229,6 +238,11 @@
 #define CSR_SSTATEEN2       0x10E
 #define CSR_SSTATEEN3       0x10F
 
+#define CSR_SRMCFG	    0x181
+
+/* Supervisor Counter Delegation */
+#define CSR_SCOUNTINHIBIT   0x120
+
 /* Supervisor Trap Handling */
 #define CSR_SSCRATCH        0x140
 #define CSR_SEPC            0x141
@@ -250,6 +264,8 @@
 /* Supervisor-Level Window to Indirectly Accessed Registers (AIA) */
 #define CSR_SISELECT        0x150
 #define CSR_SIREG           0x151
+
+/* Supervisor Indirect Register Alias */
 #define CSR_SIREG2          0x152
 #define CSR_SIREG3          0x153
 #define CSR_SIREG4          0x155
@@ -322,6 +338,13 @@
 #define CSR_VSISELECT       0x250
 #define CSR_VSIREG          0x251
 
+/* Virtual Supervisor Indirect Alias */
+#define CSR_VSIREG2         0x252
+#define CSR_VSIREG3         0x253
+#define CSR_VSIREG4         0x255
+#define CSR_VSIREG5         0x256
+#define CSR_VSIREG6         0x257
+
 /* VS-Level Interrupts (H-extension with AIA) */
 #define CSR_VSTOPEI         0x25c
 #define CSR_VSTOPI          0xeb0
@@ -354,6 +377,8 @@
 #define SMSTATEEN0_CS       (1ULL << 0)
 #define SMSTATEEN0_FCSR     (1ULL << 1)
 #define SMSTATEEN0_JVT      (1ULL << 2)
+#define SMSTATEEN0_CTR      (1ULL << 54)
+#define SMSTATEEN0_P1P13    (1ULL << 56)
 #define SMSTATEEN0_HSCONTXT (1ULL << 57)
 #define SMSTATEEN0_IMSIC    (1ULL << 58)
 #define SMSTATEEN0_AIA      (1ULL << 59)
@@ -390,17 +415,19 @@
 #define CSR_PMPADDR14       0x3be
 #define CSR_PMPADDR15       0x3bf
 
-/* Debug/Trace Registers (shared with Debug Mode) */
+/* Trace Registers (shared with Debug Mode) */
 #define CSR_TSELECT         0x7a0
 #define CSR_TDATA1          0x7a1
 #define CSR_TDATA2          0x7a2
 #define CSR_TDATA3          0x7a3
 #define CSR_TINFO           0x7a4
+#define CSR_MCONTEXT        0x7a8
 
 /* Debug Mode Registers */
 #define CSR_DCSR            0x7b0
 #define CSR_DPC             0x7b1
-#define CSR_DSCRATCH        0x7b2
+#define CSR_DSCRATCH0       0x7b2
+#define CSR_DSCRATCH1       0x7b3
 
 /* Performance Counters */
 #define CSR_MHPMCOUNTER3    0xb03
@@ -436,6 +463,9 @@
 /* Machine counter-inhibit register */
 #define CSR_MCOUNTINHIBIT   0x320
 
+/* Machine counter configuration registers */
+#define CSR_MCYCLECFG       0x321
+#define CSR_MINSTRETCFG     0x322
 #define CSR_MHPMEVENT3      0x323
 #define CSR_MHPMEVENT4      0x324
 #define CSR_MHPMEVENT5      0x325
@@ -465,6 +495,9 @@
 #define CSR_MHPMEVENT29     0x33d
 #define CSR_MHPMEVENT30     0x33e
 #define CSR_MHPMEVENT31     0x33f
+
+#define CSR_MCYCLECFGH      0x721
+#define CSR_MINSTRETCFGH    0x722
 
 #define CSR_MHPMEVENT3H     0x723
 #define CSR_MHPMEVENT4H     0x724
@@ -526,13 +559,6 @@
 #define CSR_MHPMCOUNTER30H  0xb9e
 #define CSR_MHPMCOUNTER31H  0xb9f
 
-#define HPMEVENT_VUINH                  0x400000000000000ULL
-#define HPMEVENT_VSINH                  0x800000000000000ULL
-#define HPMEVENT_UINH                   0x1000000000000000ULL
-#define HPMEVENT_SINH                   0x2000000000000000ULL
-#define HPMEVENT_MINH                   0x4000000000000000ULL
-#define HPMEVENT_OVF                    0x8000000000000000ULL
-
 /*
  * User PointerMasking registers
  * NB: actual CSR numbers might be changed in future
@@ -591,10 +617,17 @@
 #define MSTATUS_TVM         0x00100000 /* since: priv-1.10 */
 #define MSTATUS_TW          0x00200000 /* since: priv-1.10 */
 #define MSTATUS_TSR         0x00400000 /* since: priv-1.10 */
+#define MSTATUS_SPELP       0x00800000 /* zicfilp */
+#define MSTATUS_SDT         0x01000000
+#define MSTATUS_UXL         0x300000000ULL
+#define MSTATUS_SXL         0xC00000000ULL
 #define MSTATUS_GVA         0x4000000000ULL
 #define MSTATUS_MPV         0x8000000000ULL
+#define MSTATUS_MPELP       0x20000000000ULL /* zicfilp */
+#define MSTATUS_MDT         0x40000000000ULL /* Smdbltrp extension */
 #define MSTATUS_MPP_SHIFT   11
 #define MSTATUS_MPP_MSB     12
+#define MSTATUS_MPV_SHIFT   39
 
 #define MSTATUS64_UXL       0x0000000300000000ULL
 #define MSTATUS64_SXL       0x0000000C00000000ULL
@@ -603,21 +636,65 @@
 #define MSTATUS64_SD        0x8000000000000000ULL
 #define MSTATUSH128_SD      0x8000000000000000ULL
 
+/* mvien CSR bits */
+#define MVIEN_LCOFIEN  0x2000
+#define MVIEN_LPRIEN   0x800000000
+#define MVIEN_HPRIEN   0x80000000000
+#define MVIEN_PTIEN    0x200000000000
+
+/* mvip CSR bits */
+#define MVIP_LCOFIP    0x2000
+#define MVIP_LPRIP     0x800000000
+#define MVIP_HPRIP     0x80000000000
+#define MVIP_PTIP      0x200000000000
+
+/* hvien CSR bits */
+#define HVIEN_LCOFIEN  0x2000
+#define HVIEN_LPRIEN   0x800000000
+#define HVIEN_HPRIEN   0x80000000000
+#define HVIEN_PTIEN    0x200000000000
+
+/* hvip CSR bits */
+#define HVIP_VSTIP     0x40
+#define HVIP_VSEIP     0x400
+#define HVIP_LCOFIP    0x2000
+#define HVIP_LPRIP     0x800000000
+#define HVIP_HPRIP     0x80000000000
+#define HVIP_PTIP      0x200000000000
+
 #define MISA32_MXL          0xC0000000
 #define MISA64_MXL          0xC000000000000000ULL
 
 /* sstatus CSR bits */
-#define SSTATUS_UIE         0x00000001
-#define SSTATUS_SIE         0x00000002
-#define SSTATUS_UPIE        0x00000010
-#define SSTATUS_SPIE        0x00000020
-#define SSTATUS_SPP         0x00000100
-#define SSTATUS_VS          0x00000600
-#define SSTATUS_FS          0x00006000
-#define SSTATUS_XS          0x00018000
-#define SSTATUS_SUM         0x00040000 /* since: priv-1.10 */
-#define SSTATUS_MXR         0x00080000
-#define SSTATUS_SPP_SHIFT   8
+/* Bit positions */
+#define SSTATUS_UIE_POS     0
+#define SSTATUS_SIE_POS     1
+#define SSTATUS_UPIE_POS    4
+#define SSTATUS_SPIE_POS    5
+#define SSTATUS_UBE_POS     6
+#define SSTATUS_SBE_POS     7
+#define SSTATUS_SPP_POS     8
+#define SSTATUS_VS_POS      9
+#define SSTATUS_FS_POS      13
+#define SSTATUS_XS_POS      15
+#define SSTATUS_SUM_POS     18
+#define SSTATUS_MXR_POS     19
+
+/* Masks derived from bit positions */
+#define SSTATUS_UIE         (1 << SSTATUS_UIE_POS)
+#define SSTATUS_SIE         (1 << SSTATUS_SIE_POS)
+#define SSTATUS_UPIE        (1 << SSTATUS_UPIE_POS)
+#define SSTATUS_SPIE        (1 << SSTATUS_SPIE_POS)
+#define SSTATUS_UBE         (1 << SSTATUS_UBE_POS)
+#define SSTATUS_SBE         (1 << SSTATUS_SBE_POS)
+#define SSTATUS_SPP         (1 << SSTATUS_SPP_POS)
+#define SSTATUS_VS          0x00000600  /* Multi-bit field, keep explicit value */
+#define SSTATUS_FS          0x00006000  /* Multi-bit field, keep explicit value */
+#define SSTATUS_XS          0x00018000  /* Multi-bit field, keep explicit value */
+#define SSTATUS_SUM         (1 << SSTATUS_SUM_POS)
+#define SSTATUS_MXR         (1 << SSTATUS_MXR_POS)
+#define SSTATUS_SPELP       MSTATUS_SPELP   /* zicfilp */
+#define SSTATUS_SPP_SHIFT   SSTATUS_SPP_POS
 
 #define SSTATUS64_UXL       0x0000000300000000ULL
 
@@ -628,24 +705,69 @@
 #define HSTATUS_VSBE         0x00000020
 #define HSTATUS_GVA          0x00000040
 #define HSTATUS_SPV          0x00000080
+#define HSTATUS_SPV_SHIFT    7
 #define HSTATUS_SPVP         0x00000100
 #define HSTATUS_HU           0x00000200
 #define HSTATUS_VGEIN        0x0003F000
 #define HSTATUS_VTVM         0x00100000
 #define HSTATUS_VTW          0x00200000
 #define HSTATUS_VTSR         0x00400000
-#define HSTATUS_VSXL         0x300000000
+#define HSTATUS_VSXL         0x300000000ULL
+#define HSTATUS_VGEIN_SHIFT  12
 
 #define HSTATUS32_WPRI       0xFF8FF87E
 #define HSTATUS64_WPRI       0xFFFFFFFFFF8FF87EULL
+
+/* hie CSR bits */
+#define HIE_VSTIE 0x40
+#define HIE_VSEIE 0x400
+#define HIE_SGEIE 0x1000
 
 #define COUNTEREN_CY         (1 << 0)
 #define COUNTEREN_TM         (1 << 1)
 #define COUNTEREN_IR         (1 << 2)
 #define COUNTEREN_HPM3       (1 << 3)
+#define COUNTEREN_HPM4       (1 << 4)
+#define COUNTEREN_HPM5       (1 << 5)
+#define COUNTEREN_HPM6       (1 << 6)
+#define COUNTEREN_HPM7       (1 << 7)
+#define COUNTEREN_HPM8       (1UL << 8)
+#define COUNTEREN_HPM9       (1UL << 9)
+#define COUNTEREN_HPM10       (1UL << 10)
+#define COUNTEREN_HPM11       (1UL << 11)
+#define COUNTEREN_HPM12       (1UL << 12)
+#define COUNTEREN_HPM13       (1UL << 13)
+#define COUNTEREN_HPM14       (1UL << 14)
+#define COUNTEREN_HPM15       (1UL << 15)
+#define COUNTEREN_HPM16       (1UL << 16)
+#define COUNTEREN_HPM17       (1UL << 17)
+#define COUNTEREN_HPM18       (1UL << 18)
+#define COUNTEREN_HPM19       (1UL << 19)
+#define COUNTEREN_HPM20       (1UL << 20)
+#define COUNTEREN_HPM21       (1UL << 21)
+#define COUNTEREN_HPM22       (1UL << 22)
+#define COUNTEREN_HPM23       (1UL << 23)
+#define COUNTEREN_HPM24       (1UL << 24)
+#define COUNTEREN_HPM25       (1UL << 25)
+#define COUNTEREN_HPM26       (1UL << 26)
+#define COUNTEREN_HPM27       (1UL << 27)
+#define COUNTEREN_HPM28       (1UL << 28)
+#define COUNTEREN_HPM29       (1UL << 29)
+#define COUNTEREN_HPM30       (1UL << 30)
+#define COUNTEREN_HPM31       (1UL << 31)
 
 /* vsstatus CSR bits */
-#define VSSTATUS64_UXL       0x0000000300000000ULL
+#define VSSTATUS_SIE         0x2
+#define VSSTATUS_SPIE        0x20
+#define VSSTATUS_UBE         0x40
+#define VSSTATUS_SPP         0x100
+#define VSSTATUS_VS          0x600
+#define VSSTATUS_FS          0x6000
+#define VSSTATUS_SUM         0x40000
+#define VSSTATUS_MXR         0x80000
+#define VSSTATUS_XS          0x18000
+#define VSSTATUS_UXL         0x300000000ULL
+#define VSSTATUS_SD          0x8000000000000000ULL
 
 /* Privilege modes */
 #define PRV_U 0
@@ -682,6 +804,11 @@
 #define VM_1_10_SV57        10
 #define VM_1_10_SV64        11
 
+/* VM modes (hgsatp.mode) */
+#define VM_1_10_SV39x4      8
+#define VM_1_10_SV48x4      9
+#define VM_1_10_SV57x4      10
+
 /* Page table entry (PTE) fields */
 #define PTE_V               0x001 /* Valid */
 #define PTE_R               0x002 /* Read */
@@ -696,6 +823,10 @@
 #define PTE_N               0x8000000000000000ULL /* NAPOT translation */
 #define PTE_RESERVED        0x1FC0000000000000ULL /* Reserved bits */
 #define PTE_ATTR            (PTE_N | PTE_PBMT) /* All attributes bits */
+
+#define PTE_PBMT_PMA        0x0000000000000000ULL
+#define PTE_PBMT_NC         0x0000000000000001ULL
+#define PTE_PBMT_IO         0x0000000000000002ULL
 
 /* Page table PPN shift amount */
 #define PTE_PPN_SHIFT       10
@@ -726,12 +857,18 @@
 #define RISCV_EXCP_INST_PAGE_FAULT 		0xc /* since: priv-1.10.0 */
 #define RISCV_EXCP_LOAD_PAGE_FAULT 		0xd /* since: priv-1.10.0 */
 #define RISCV_EXCP_STORE_PAGE_FAULT 		0xf /* since: priv-1.10.0 */
-#define RISCV_EXCP_SEMIHOST 			0x10
-#define RISCV_EXCP_DATA_CORRUPTION_EXCEPTION	0x13 /* Srastraps */
+#define RISCV_EXCP_SW_CHECK 			0x12 /* since: priv-1.13.0 */
+#define RISCV_EXCP_HW_ERR			0x13 /* since: priv-1.13.0 */
 #define RISCV_EXCP_INST_GUEST_PAGE_FAULT 	0x14
 #define RISCV_EXCP_LOAD_GUEST_ACCESS_FAULT 	0x15
 #define RISCV_EXCP_VIRT_INSTRUCTION_FAULT 	0x16
 #define RISCV_EXCP_STORE_GUEST_AMO_ACCESS_FAULT 0x17
+#define RISCV_EXCP_SEMIHOST			0x3f
+
+/* zicfilp defines lp violation results in sw check with tval = 2*/
+#define RISCV_EXCP_SW_CHECK_FCFI_TVAL      2
+/* zicfiss defines ss violation results in sw check with tval = 3*/
+#define RISCV_EXCP_SW_CHECK_BCFI_TVAL      3
 
 #define RISCV_EXCP_INT_FLAG                0x80000000
 #define RISCV_EXCP_INT_MASK                0x7fffffff
@@ -751,24 +888,27 @@
 #define IRQ_M_EXT                          11
 #define IRQ_S_GEXT                         12
 #define IRQ_PMU_OVF                        13
-#define IRQ_LOCAL_MAX                      16
+#define IRQ_PWR                            45
+#define IRQ_LOCAL_MAX                      64
+/* -1 is due to bit zero of hgeip and hgeie being ROZ. */
 #define IRQ_LOCAL_GUEST_MAX                (TARGET_LONG_BITS - 1)
 
 /* mip masks */
-#define MIP_USIP                           (1 << IRQ_U_SOFT)
-#define MIP_SSIP                           (1 << IRQ_S_SOFT)
-#define MIP_VSSIP                          (1 << IRQ_VS_SOFT)
-#define MIP_MSIP                           (1 << IRQ_M_SOFT)
-#define MIP_UTIP                           (1 << IRQ_U_TIMER)
-#define MIP_STIP                           (1 << IRQ_S_TIMER)
-#define MIP_VSTIP                          (1 << IRQ_VS_TIMER)
-#define MIP_MTIP                           (1 << IRQ_M_TIMER)
-#define MIP_UEIP                           (1 << IRQ_U_EXT)
-#define MIP_SEIP                           (1 << IRQ_S_EXT)
-#define MIP_VSEIP                          (1 << IRQ_VS_EXT)
-#define MIP_MEIP                           (1 << IRQ_M_EXT)
-#define MIP_SGEIP                          (1 << IRQ_S_GEXT)
-#define MIP_LCOFIP                         (1 << IRQ_PMU_OVF)
+#define MIP_USIP                           (1ULL << IRQ_U_SOFT)
+#define MIP_SSIP                           (1ULL << IRQ_S_SOFT)
+#define MIP_VSSIP                          (1ULL << IRQ_VS_SOFT)
+#define MIP_MSIP                           (1ULL << IRQ_M_SOFT)
+#define MIP_UTIP                           (1ULL << IRQ_U_TIMER)
+#define MIP_STIP                           (1ULL << IRQ_S_TIMER)
+#define MIP_VSTIP                          (1ULL << IRQ_VS_TIMER)
+#define MIP_MTIP                           (1ULL << IRQ_M_TIMER)
+#define MIP_UEIP                           (1ULL << IRQ_U_EXT)
+#define MIP_SEIP                           (1ULL << IRQ_S_EXT)
+#define MIP_VSEIP                          (1ULL << IRQ_VS_EXT)
+#define MIP_MEIP                           (1ULL << IRQ_M_EXT)
+#define MIP_SGEIP                          (1ULL << IRQ_S_GEXT)
+#define MIP_LCOFIP                         (1ULL << IRQ_PMU_OVF)
+#define MIP_PTIP                           (1ULL << IRQ_PWR)
 
 /* sip masks */
 #define SIP_SSIP                           MIP_SSIP
@@ -778,13 +918,16 @@
 #define SIP_LCOFIP                         MIP_LCOFIP
 
 /* MIE masks */
-#define MIE_SEIE                           (1 << IRQ_S_EXT)
-#define MIE_UEIE                           (1 << IRQ_U_EXT)
-#define MIE_MTIE                           (1 << IRQ_M_TIMER)
-#define MIE_STIE                           (1 << IRQ_S_TIMER)
-#define MIE_UTIE                           (1 << IRQ_U_TIMER)
-#define MIE_SSIE                           (1 << IRQ_S_SOFT)
-#define MIE_USIE                           (1 << IRQ_U_SOFT)
+#define MIE_SEIE                           (1ULL << IRQ_S_EXT)
+#define MIE_MEIE                           (1ULL << IRQ_M_EXT)
+#define MIE_UEIE                           (1ULL << IRQ_U_EXT)
+#define MIE_MTIE                           (1ULL << IRQ_M_TIMER)
+#define MIE_STIE                           (1ULL << IRQ_S_TIMER)
+#define MIE_UTIE                           (1ULL << IRQ_U_TIMER)
+#define MIE_SSIE                           (1ULL << IRQ_S_SOFT)
+#define MIE_USIE                           (1ULL << IRQ_U_SOFT)
+#define MIE_LCOFIE                         (1ULL << IRQ_PMU_OVF)
+#define MIE_PTIE                           (1ULL << IRQ_PWR)
 
 /* General PointerMasking CSR bits */
 #define PM_ENABLE       0x00000001ULL
@@ -793,6 +936,8 @@
 
 /* Execution environment configuration bits */
 #define MENVCFG_FIOM                       BIT(0)
+#define MENVCFG_LPE                        BIT(2) /* zicfilp */
+#define MENVCFG_SSE                        BIT(3) /* zicfiss */
 #define MENVCFG_CBIE                       (3UL << 4)
 #define MENVCFG_CBCFE                      BIT(6)
 #define MENVCFG_CBZE                       BIT(7)
@@ -808,11 +953,15 @@
 #define MENVCFGH_STCE                      BIT(31)
 
 #define SENVCFG_FIOM                       MENVCFG_FIOM
+#define SENVCFG_LPE                        MENVCFG_LPE
+#define SENVCFG_SSE                        MENVCFG_SSE
 #define SENVCFG_CBIE                       MENVCFG_CBIE
 #define SENVCFG_CBCFE                      MENVCFG_CBCFE
 #define SENVCFG_CBZE                       MENVCFG_CBZE
 
 #define HENVCFG_FIOM                       MENVCFG_FIOM
+#define HENVCFG_LPE                        MENVCFG_LPE
+#define HENVCFG_SSE                        MENVCFG_SSE
 #define HENVCFG_CBIE                       MENVCFG_CBIE
 #define HENVCFG_CBCFE                      MENVCFG_CBCFE
 #define HENVCFG_CBZE                       MENVCFG_CBZE
@@ -887,10 +1036,15 @@
 #define ISELECT_IMSIC_EIE63                0xff
 #define ISELECT_IMSIC_FIRST                ISELECT_IMSIC_EIDELIVERY
 #define ISELECT_IMSIC_LAST                 ISELECT_IMSIC_EIE63
-#define ISELECT_MASK                       0x1ff
+#define ISELECT_MASK_AIA                   0x1ff
+
+/* [M|S|VS]SELCT value for Indirect CSR Access Extension */
+#define ISELECT_CD_FIRST                   0x40
+#define ISELECT_CD_LAST                    0x5f
+#define ISELECT_MASK_SXCSRIND              0xfff
 
 /* Dummy [M|S|VS]ISELECT value for emulating [M|S|VS]TOPEI CSRs */
-#define ISELECT_IMSIC_TOPEI                (ISELECT_MASK + 1)
+#define ISELECT_IMSIC_TOPEI                (ISELECT_MASK_AIA + 1)
 
 /* IMSIC bits (AIA) */
 #define IMSIC_TOPEI_IID_SHIFT              16
@@ -936,8 +1090,27 @@
 #define SEED_OPST_DEAD                     0b11U
 #define SEED_ENTROPY_MASK                  0xFFFFU
 
-/* PMU related bits */
-#define MIE_LCOFIE                         (1 << IRQ_PMU_OVF)
+#define MCYCLECFG_BIT_MINH                 BIT_ULL(62)
+#define MCYCLECFGH_BIT_MINH                BIT(30)
+#define MCYCLECFG_BIT_SINH                 BIT_ULL(61)
+#define MCYCLECFGH_BIT_SINH                BIT(29)
+#define MCYCLECFG_BIT_UINH                 BIT_ULL(60)
+#define MCYCLECFGH_BIT_UINH                BIT(28)
+#define MCYCLECFG_BIT_VSINH                BIT_ULL(59)
+#define MCYCLECFGH_BIT_VSINH               BIT(27)
+#define MCYCLECFG_BIT_VUINH                BIT_ULL(58)
+#define MCYCLECFGH_BIT_VUINH               BIT(26)
+
+#define MINSTRETCFG_BIT_MINH               BIT_ULL(62)
+#define MINSTRETCFGH_BIT_MINH              BIT(30)
+#define MINSTRETCFG_BIT_SINH               BIT_ULL(61)
+#define MINSTRETCFGH_BIT_SINH              BIT(29)
+#define MINSTRETCFG_BIT_UINH               BIT_ULL(60)
+#define MINSTRETCFGH_BIT_UINH              BIT(28)
+#define MINSTRETCFG_BIT_VSINH              BIT_ULL(59)
+#define MINSTRETCFGH_BIT_VSINH             BIT(27)
+#define MINSTRETCFG_BIT_VUINH              BIT_ULL(58)
+#define MINSTRETCFGH_BIT_VUINH             BIT(26)
 
 #define MHPMEVENT_BIT_OF                   BIT_ULL(63)
 #define MHPMEVENTH_BIT_OF                  BIT(31)
@@ -952,8 +1125,20 @@
 #define MHPMEVENT_BIT_VUINH                BIT_ULL(58)
 #define MHPMEVENTH_BIT_VUINH               BIT(26)
 
-#define MHPMEVENT_SSCOF_MASK               _ULL(0xFFFF000000000000)
-#define MHPMEVENT_IDX_MASK                 0xFFFFF
+#define MHPMEVENT_FILTER_MASK              (MHPMEVENT_BIT_MINH  | \
+                                            MHPMEVENT_BIT_SINH  | \
+                                            MHPMEVENT_BIT_UINH  | \
+                                            MHPMEVENT_BIT_VSINH | \
+                                            MHPMEVENT_BIT_VUINH)
+
+#define MHPMEVENTH_FILTER_MASK              (MHPMEVENTH_BIT_MINH  | \
+                                            MHPMEVENTH_BIT_SINH  | \
+                                            MHPMEVENTH_BIT_UINH  | \
+                                            MHPMEVENTH_BIT_VSINH | \
+                                            MHPMEVENTH_BIT_VUINH)
+
+#define MHPMEVENT_SSCOF_MASK               0xFF00000000000000ULL
+#define MHPMEVENT_IDX_MASK                 (~MHPMEVENT_SSCOF_MASK)
 #define MHPMEVENT_SSCOF_RESVD              16
 
 /* JVT CSR bits */

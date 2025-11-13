@@ -1,8 +1,13 @@
-# SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
+/*
+ * SPDX-FileCopyrightText: 2025 Rivos Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+# SPDX-FileCopyrightText: 2023 - 2025 Rivos Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 
-#include "jumpstart_defines.h"
 
 .section .text.smode, "ax"
 
@@ -42,6 +47,6 @@ asm_check_passed_in_arguments_return:
 
 .section .data.smode, "aw"
 
-.global non_primary_hart_done
-non_primary_hart_done:
+.global non_primary_cpu_done
+non_primary_cpu_done:
   .byte 0x0

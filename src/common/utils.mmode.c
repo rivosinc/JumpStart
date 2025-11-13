@@ -1,13 +1,14 @@
-// SPDX-FileCopyrightText: 2024 Rivos Inc.
-//
-// SPDX-License-Identifier: Apache-2.0
+/*
+ * SPDX-FileCopyrightText: 2025 Rivos Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 #include "utils.mmode.h"
 #include "cpu_bits.h"
 #include "jumpstart.h"
 
-__attribute__((section(".jumpstart.text.mmode"))) int32_t
-mmode_try_get_seed(void) {
+__attr_mtext int32_t mmode_try_get_seed(void) {
   uint32_t seed;
   uint32_t i = 100;
 
@@ -27,23 +28,29 @@ mmode_try_get_seed(void) {
 }
 
 #define RAND_MAX 0x7fffffff
-__attribute__((section(".jumpstart.data.smode"))) uint64_t next = 1;
-__attribute__((section(".jumpstart.text.mmode"))) uint64_t
-__mmode_random(void) {
+__attr_privdata uint64_t next = 1;
+
+__attr_mtext uint64_t __mmode_random(void) {
+  uint64_t val;
+  int64_t ret;
   /* Based on rand in diags/perf/membw/libc_replacement.h */
   /* This multiplier was obtained from Knuth, D.E., "The Art of
      Computer Programming," Vol 2, Seminumerical Algorithms, Third
      Edition, Addison-Wesley, 1998, p. 106 (line 26) & p. 108 */
-  next = next * __extension__ 6364136223846793005LL + 1;
-  return (int64_t)((next >> 32) & RAND_MAX);
+
+  do {
+    val = load_reserved_64(&next);
+    val = val * __extension__ 6364136223846793005LL + 1;
+    ret = (int64_t)((val >> 32) & RAND_MAX);
+  } while (store_conditional_64(&next, val) != 0);
+
+  return ret;
 }
 
-__attribute__((section(".jumpstart.text.mmode"))) int32_t
-get_random_number_from_mmode(void) {
+__attr_mtext int32_t get_random_number_from_mmode(void) {
   return (int32_t)__mmode_random();
 }
 
-__attribute__((section(".jumpstart.text.mmode"))) void
-set_random_seed_from_mmode(int32_t seed) {
+__attr_mtext void set_random_seed_from_mmode(int32_t seed) {
   next = (uint64_t)seed;
 }

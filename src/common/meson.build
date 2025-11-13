@@ -1,26 +1,29 @@
-# SPDX-FileCopyrightText: 2023 - 2024 Rivos Inc.
+# SPDX-FileCopyrightText: 2023 - 2025 Rivos Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 
 mmode_sources += files('jumpstart.mmode.S',
+                       'data.privileged.S',
+                       'lock.mmode.c',
+                       'thread_attributes.mmode.c',
+                       'time.mmode.c',
                        'trap_handler.mmode.c',
+                       'uart.mmode.c',
                        'utils.mmode.c')
 
-smode_sources += files('data.smode.S',
-                              'jumpstart.smode.S',
+
+smode_sources += files('jumpstart.smode.S',
                               'jumpstart.vsmode.S',
                               'tablewalk.smode.c',
                               'trap_handler.smode.c',
                               'string.smode.c',
+                              'time.smode.c',
                               'utils.smode.c',
                               'uart.smode.c',
                               'heap.smode.c',
-                              'lock.smode.c')
+                              'heap.smode.S',
+                              'lock.smode.c',
+                              'thread_attributes.smode.c')
 
-if get_option('boot_config') == 'fw-sbi'
-  smode_sources += files(
-                          'sbi_firmware_boot.smode.S',
-                        )
-endif
-
-umode_sources += files('jumpstart.umode.S')
+umode_sources += files('jumpstart.umode.S',
+                       'jumpstart.vumode.S')
