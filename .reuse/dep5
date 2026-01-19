@@ -1,0 +1,9 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: JumpStart
+Upstream-Contact: Rivos Inc.
+Source: https://github.com/rivosinc/JumpStart
+
+# Files from Meta
+Files: CODE_OF_CONDUCT.md CONTRIBUTING.md
+Copyright: Meta Platforms, Inc.
+License: Apache-2.0

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023 - 2025 Rivos Inc.
+# SPDX-FileCopyrightText: 2023 - 2026 Rivos Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -34,12 +34,12 @@ repos:
       - id: black
 
   - repo: https://github.com/ikamensh/flynt/
-    rev: 1.0.2
+    rev: 1.0.3
     hooks:
       - id: flynt
 
   - repo: https://github.com/asottile/pyupgrade
-    rev: v3.20.0
+    rev: v3.21.2
     hooks:
       - id: pyupgrade
 

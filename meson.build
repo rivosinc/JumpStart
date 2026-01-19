@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023 - 2025 Rivos Inc.
+# SPDX-FileCopyrightText: 2023 - 2026 Rivos Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -72,10 +72,8 @@ if get_option('run_target') == 'spike'
 
   else
     if spike_isa_string == ''
-      spike_isa_string = 'rv64gcvh_zba_zbb_zbs_zkr_svpbmt_smstateen_zicntr'
+      spike_isa_string = 'rv64gcvh_zba_zbb_zbs_zkr_svpbmt_smstateen_zicntr_zicclsm'
     endif
-
-    default_spike_args += ['--misaligned']
 
   endif
 
